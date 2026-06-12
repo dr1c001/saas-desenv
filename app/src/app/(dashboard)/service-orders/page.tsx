@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { Suspense } from "react"
 import { buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,6 +8,8 @@ import {
 } from "@/components/ui/table"
 import { Plus, ClipboardList } from "lucide-react"
 import { getServiceOrders } from "@/actions/service-orders"
+import { SearchBar } from "@/components/shared/search-bar"
+import { StatusFilter } from "@/components/shared/status-filter"
 import { formatCurrency } from "@/lib/utils"
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -17,8 +20,19 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   CANCELLED: { label: "Cancelada", variant: "destructive" },
 }
 
-export default async function ServiceOrdersPage() {
-  const orders = await getServiceOrders()
+const statusOptions = [
+  { value: "OPEN", label: "Aberta" },
+  { value: "IN_PROGRESS", label: "Em andamento" },
+  { value: "DONE", label: "Concluída" },
+  { value: "INVOICED", label: "Faturada" },
+  { value: "CANCELLED", label: "Cancelada" },
+]
+
+type SearchParams = Promise<{ q?: string; status?: string }>
+
+export default async function ServiceOrdersPage({ searchParams }: { searchParams: SearchParams }) {
+  const { q, status } = await searchParams
+  const orders = await getServiceOrders({ q, status })
 
   return (
     <div className="space-y-6">
@@ -30,20 +44,32 @@ export default async function ServiceOrdersPage() {
         </Link>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        <Suspense>
+          <SearchBar placeholder="Buscar por título ou cliente..." />
+          <StatusFilter options={statusOptions} placeholder="Todos os status" />
+        </Suspense>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
             {orders.length} ordem{orders.length !== 1 ? "s" : ""}
+            {(q || status) && " encontrada" + (orders.length !== 1 ? "s" : "")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {orders.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
               <ClipboardList className="size-8" />
-              <p className="text-sm">Nenhuma OS criada ainda.</p>
-              <Link href="/service-orders/new" className={buttonVariants({ variant: "outline" })}>
-                Criar primeira OS
-              </Link>
+              <p className="text-sm">
+                {q || status ? "Nenhuma OS encontrada com esses filtros." : "Nenhuma OS criada ainda."}
+              </p>
+              {!q && !status && (
+                <Link href="/service-orders/new" className={buttonVariants({ variant: "outline" })}>
+                  Criar primeira OS
+                </Link>
+              )}
             </div>
           ) : (
             <Table>
@@ -71,9 +97,7 @@ export default async function ServiceOrdersPage() {
                     <TableCell className="text-sm text-muted-foreground">
                       {os.technician?.name ?? "—"}
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {formatCurrency(Number(os.totalAmount))}
-                    </TableCell>
+                    <TableCell className="text-sm">{formatCurrency(Number(os.totalAmount))}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(os.createdAt).toLocaleDateString("pt-BR")}
                     </TableCell>

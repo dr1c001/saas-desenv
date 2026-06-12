@@ -124,12 +124,21 @@ export async function deleteServiceOrder(id: string) {
   redirect("/service-orders")
 }
 
-export async function getServiceOrders(filters?: { status?: string }) {
+export async function getServiceOrders(filters?: { status?: string; q?: string }) {
   const { tenantId } = await getTenant()
   return prisma.serviceOrder.findMany({
     where: {
       tenantId,
       ...(filters?.status ? { status: filters.status as never } : {}),
+      ...(filters?.q
+        ? {
+            OR: [
+              { title: { contains: filters.q, mode: "insensitive" } },
+              { description: { contains: filters.q, mode: "insensitive" } },
+              { client: { name: { contains: filters.q, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
     },
     include: {
       client: { select: { name: true } },

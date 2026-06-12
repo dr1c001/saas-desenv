@@ -127,10 +127,23 @@ export async function deleteClient(id: string) {
   redirect("/clients")
 }
 
-export async function getClients() {
+export async function getClients(filters?: { q?: string; status?: string }) {
   const { tenantId } = await getTenant()
   return prisma.client.findMany({
-    where: { tenantId },
+    where: {
+      tenantId,
+      ...(filters?.status ? { status: filters.status as never } : {}),
+      ...(filters?.q
+        ? {
+            OR: [
+              { name: { contains: filters.q, mode: "insensitive" } },
+              { document: { contains: filters.q, mode: "insensitive" } },
+              { email: { contains: filters.q, mode: "insensitive" } },
+              { phone: { contains: filters.q, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
     include: { address: true, _count: { select: { serviceOrders: true } } },
     orderBy: { createdAt: "desc" },
   })

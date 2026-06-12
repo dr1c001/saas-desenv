@@ -5,6 +5,8 @@ import { DollarSign, ClipboardList, Users, TrendingUp } from "lucide-react"
 import { getTenant } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import { getMonthlyRevenueChart } from "@/actions/dashboard"
+import { RevenueChart } from "@/components/dashboard/revenue-chart"
 
 async function getDashboardData(tenantId: string) {
   const now = new Date()
@@ -48,7 +50,10 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 
 export default async function DashboardPage() {
   const { tenantId } = await getTenant()
-  const data = await getDashboardData(tenantId)
+  const [data, chartData] = await Promise.all([
+    getDashboardData(tenantId),
+    getMonthlyRevenueChart(),
+  ])
 
   const stats = [
     {
@@ -94,6 +99,17 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base">Receita × Despesa (últimos 6 meses)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RevenueChart data={chartData} />
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
