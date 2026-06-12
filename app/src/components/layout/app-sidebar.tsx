@@ -7,6 +7,8 @@ import {
   Users,
   ClipboardList,
   DollarSign,
+  CalendarDays,
+  BarChart2,
   Settings,
   LogOut,
 } from "lucide-react"
@@ -29,7 +31,9 @@ const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Clientes", href: "/clients", icon: Users },
   { title: "Ordens de Serviço", href: "/service-orders", icon: ClipboardList },
+  { title: "Agendamento", href: "/schedule", icon: CalendarDays },
   { title: "Financeiro", href: "/finance", icon: DollarSign },
+  { title: "Relatórios", href: "/reports", icon: BarChart2 },
 ]
 
 export function AppSidebar() {
