@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { getServiceOrder, updateOrderStatus, deleteServiceOrder } from "@/actions/service-orders"
 import { buttonVariants } from "@/components/ui/button"
+import { FileDown } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -42,6 +43,14 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
               label={config.nextLabel!}
             />
           )}
+          <Link
+            href={`/api/pdf/service-order/${id}`}
+            target="_blank"
+            className={buttonVariants({ variant: "outline" })}
+          >
+            <FileDown className="size-4 mr-2" />
+            PDF
+          </Link>
           <DeleteButton action={deleteServiceOrder.bind(null, id)} label="Excluir OS" />
         </div>
       </div>

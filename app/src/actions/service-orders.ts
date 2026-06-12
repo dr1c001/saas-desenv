@@ -90,13 +90,31 @@ export async function updateOrderStatus(id: string, status: string) {
   const data: Record<string, unknown> = { status }
   if (status === "DONE") data.concludedAt = new Date()
 
-  await prisma.serviceOrder.update({
+  const order = await prisma.serviceOrder.update({
     where: { id, tenantId },
     data,
+    select: { number: true, title: true, totalAmount: true },
   })
+
+  // Auto-create revenue when OS is invoiced
+  if (status === "INVOICED" && Number(order.totalAmount) > 0) {
+    const existing = await prisma.revenue.findFirst({ where: { orderId: id, tenantId } })
+    if (!existing) {
+      await prisma.revenue.create({
+        data: {
+          description: `OS #${order.number} — ${order.title}`,
+          amount: order.totalAmount,
+          dueDate: new Date(),
+          tenantId,
+          orderId: id,
+        },
+      })
+    }
+  }
 
   revalidatePath("/service-orders")
   revalidatePath(`/service-orders/${id}`)
+  revalidatePath("/finance")
 }
 
 export async function deleteServiceOrder(id: string) {
