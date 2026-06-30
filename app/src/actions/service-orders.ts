@@ -93,16 +93,18 @@ export async function updateOrderStatus(id: string, status: string) {
   const order = await prisma.serviceOrder.update({
     where: { id, tenantId },
     data,
-    select: { number: true, title: true, totalAmount: true },
+    select: { number: true, title: true, totalAmount: true, createdAt: true },
   })
 
   // Auto-create revenue when OS is invoiced
   if (status === "INVOICED" && Number(order.totalAmount) > 0) {
     const existing = await prisma.revenue.findFirst({ where: { orderId: id, tenantId } })
+    const year = new Date(order.createdAt).getFullYear()
+    const osNum = `OS${year}${String(order.number).padStart(4, "0")}`
     if (!existing) {
       await prisma.revenue.create({
         data: {
-          description: `OS #${order.number} — ${order.title}`,
+          description: `${osNum} — ${order.title}`,
           amount: order.totalAmount,
           dueDate: new Date(),
           tenantId,
@@ -117,6 +119,130 @@ export async function updateOrderStatus(id: string, status: string) {
   revalidatePath("/finance")
 }
 
+export async function completeServiceOrder(
+  id: string,
+  conclusionNote: string,
+  items: { description: string; quantity: number; unitPrice: number }[],
+  invoiceImmediately: boolean
+) {
+  const { tenantId } = await getTenant()
+
+  const total = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+  const status = invoiceImmediately ? "INVOICED" : "DONE"
+
+  // Fetch order before transaction — needed for revenue description and status guard
+  const order = await prisma.serviceOrder.findUnique({
+    where: { id, tenantId },
+    select: { number: true, title: true, createdAt: true, status: true },
+  })
+  if (!order) throw new Error("Ordem não encontrada")
+  if (order.status === "DONE" || order.status === "INVOICED" || order.status === "CANCELLED") {
+    throw new Error("Esta ordem já foi concluída ou cancelada")
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // Delete existing items then create new ones explicitly
+    await tx.serviceItem.deleteMany({ where: { orderId: id } })
+
+    if (items.length > 0) {
+      await tx.serviceItem.createMany({
+        data: items.map((i) => ({
+          description: i.description,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          total: i.quantity * i.unitPrice,
+          orderId: id,
+        })),
+      })
+    }
+
+    await tx.serviceOrder.update({
+      where: { id, tenantId },
+      data: {
+        status,
+        concludedAt: new Date(),
+        conclusionNote: conclusionNote || null,
+        totalAmount: total,
+      },
+    })
+
+    if (invoiceImmediately && total > 0) {
+      const existing = await tx.revenue.findFirst({ where: { orderId: id, tenantId } })
+      if (!existing) {
+        const year = new Date(order.createdAt).getFullYear()
+        const osNum = `OS${year}${String(order.number).padStart(4, "0")}`
+        await tx.revenue.create({
+          data: {
+            description: `${osNum} — ${order.title}`,
+            amount: total,
+            dueDate: new Date(),
+            tenantId,
+            orderId: id,
+          },
+        })
+      }
+    }
+  })
+
+  revalidatePath("/service-orders")
+  revalidatePath(`/service-orders/${id}`)
+  revalidatePath("/history")
+  revalidatePath("/finance")
+}
+
+export async function updateServiceOrder(
+  id: string,
+  _prev: OrderFormState,
+  formData: FormData
+): Promise<OrderFormState> {
+  const { tenantId } = await getTenant()
+
+  const raw = Object.fromEntries(formData.entries())
+  const parsed = orderSchema.safeParse(raw)
+  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
+
+  const { title, description, clientId, technicianId, scheduledAt } = parsed.data
+
+  const itemsRaw = formData.get("items")
+  const items: { description: string; quantity: number; unitPrice: number }[] = itemsRaw
+    ? JSON.parse(itemsRaw as string)
+    : []
+
+  const total = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0)
+
+  await prisma.$transaction(async (tx) => {
+    await tx.serviceItem.deleteMany({ where: { orderId: id } })
+
+    if (items.length > 0) {
+      await tx.serviceItem.createMany({
+        data: items.map((i) => ({
+          description: i.description,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          total: i.quantity * i.unitPrice,
+          orderId: id,
+        })),
+      })
+    }
+
+    await tx.serviceOrder.update({
+      where: { id, tenantId },
+      data: {
+        title,
+        description: description || null,
+        clientId,
+        technicianId: technicianId || null,
+        totalAmount: total,
+        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+      },
+    })
+  })
+
+  revalidatePath("/service-orders")
+  revalidatePath(`/service-orders/${id}`)
+  redirect(`/service-orders/${id}`)
+}
+
 export async function deleteServiceOrder(id: string) {
   const { tenantId } = await getTenant()
   await prisma.serviceOrder.delete({ where: { id, tenantId } })
@@ -124,12 +250,16 @@ export async function deleteServiceOrder(id: string) {
   redirect("/service-orders")
 }
 
-export async function getServiceOrders(filters?: { status?: string; q?: string }) {
+export async function getServiceOrders(filters?: { status?: string; statusIn?: string[]; q?: string }) {
   const { tenantId } = await getTenant()
   return prisma.serviceOrder.findMany({
     where: {
       tenantId,
-      ...(filters?.status ? { status: filters.status as never } : {}),
+      ...(filters?.statusIn
+        ? { status: { in: filters.statusIn as never[] } }
+        : filters?.status
+          ? { status: filters.status as never }
+          : {}),
       ...(filters?.q
         ? {
             OR: [

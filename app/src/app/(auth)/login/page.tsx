@@ -34,7 +34,15 @@ export default function LoginPage() {
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword(data)
     if (error) {
-      setServerError("E-mail ou senha incorretos.")
+      if (error.message.toLowerCase().includes("email not confirmed")) {
+        setServerError("E-mail não confirmado. Verifique sua caixa de entrada e clique no link de confirmação.")
+      } else if (error.message.toLowerCase().includes("invalid login credentials") || error.message.toLowerCase().includes("invalid credentials")) {
+        setServerError("E-mail ou senha incorretos.")
+      } else if (error.message.toLowerCase().includes("rate limit") || error.message.toLowerCase().includes("too many")) {
+        setServerError("Muitas tentativas. Aguarde alguns minutos e tente novamente.")
+      } else {
+        setServerError(error.message)
+      }
       return
     }
     router.push("/dashboard")

@@ -6,8 +6,9 @@ import { buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Pencil, Trash2, Plus } from "lucide-react"
+import { Pencil, Plus } from "lucide-react"
 import { DeleteButton } from "@/components/shared/delete-button"
+import { formatCurrency, formatOsNumber } from "@/lib/utils"
 
 const statusLabel: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   ACTIVE: { label: "Ativo", variant: "default" },
@@ -79,6 +80,43 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         </Card>
       </div>
 
+      {client.serviceOrders.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total de OS</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{client.serviceOrders.length}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Faturado</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-green-600">
+                {formatCurrency(
+                  client.serviceOrders
+                    .filter((o) => o.status === "INVOICED" || o.status === "DONE")
+                    .reduce((s, o) => s + Number(o.totalAmount), 0)
+                )}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">OS Ativas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">
+                {client.serviceOrders.filter((o) => o.status === "OPEN" || o.status === "IN_PROGRESS").length}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <Separator />
 
       <div className="space-y-3">
@@ -104,9 +142,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                 className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
               >
                 <div>
-                  <p className="font-medium text-sm">OS #{os.number} — {os.title}</p>
+                  <p className="font-medium text-sm">{formatOsNumber(os.number, os.createdAt)} — {os.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(os.createdAt).toLocaleDateString("pt-BR")}
+                    {new Date(os.createdAt).toLocaleDateString("pt-BR")} · {formatCurrency(Number(os.totalAmount))}
                   </p>
                 </div>
                 <Badge variant="outline">{osStatusLabel[os.status]}</Badge>

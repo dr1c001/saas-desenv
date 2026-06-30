@@ -8,6 +8,7 @@ import { getTenant } from "@/lib/auth"
 const tenantSchema = z.object({
   name: z.string().min(2, "Nome obrigatório"),
   document: z.string().optional(),
+  logoUrl: z.string().url("URL inválida").optional().or(z.literal("")),
 })
 
 const userSchema = z.object({
@@ -29,7 +30,11 @@ export async function updateTenant(
 
   await prisma.tenant.update({
     where: { id: tenantId },
-    data: { name: parsed.data.name, document: parsed.data.document || null },
+    data: {
+      name: parsed.data.name,
+      document: parsed.data.document || null,
+      logoUrl: parsed.data.logoUrl || null,
+    },
   })
 
   revalidatePath("/settings")
@@ -57,7 +62,7 @@ export async function updateProfile(
 export async function getSettings() {
   const { tenantId, userId } = await getTenant()
   const [tenant, user] = await Promise.all([
-    prisma.tenant.findUnique({ where: { id: tenantId } }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, document: true, logoUrl: true } }),
     prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, role: true } }),
   ])
   return { tenant, user }

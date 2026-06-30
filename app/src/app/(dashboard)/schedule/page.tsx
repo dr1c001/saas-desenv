@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
 import { Plus } from "lucide-react"
+import { formatOsNumber } from "@/lib/utils"
 
 type SearchParams = Promise<{ year?: string; month?: string }>
 
@@ -49,7 +50,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Sea
                     href={`/service-orders/${ev.id}`}
                     className="block rounded-lg border p-2 hover:bg-muted/50 transition-colors"
                   >
-                    <p className="text-sm font-medium">OS #{ev.number}</p>
+                    <p className="text-sm font-medium font-mono">{formatOsNumber(ev.number, ev.createdAt)}</p>
                     <p className="text-xs text-muted-foreground truncate">{ev.title}</p>
                     <p className="text-xs text-muted-foreground">{ev.client.name}</p>
                     <p className="text-xs font-medium mt-1">

@@ -11,7 +11,8 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { DeleteButton } from "@/components/shared/delete-button"
 import { StatusButton } from "@/components/service-orders/status-button"
-import { formatCurrency, formatDate } from "@/lib/utils"
+import { formatCurrency, formatDate, formatOsNumber } from "@/lib/utils"
+import { Pencil } from "lucide-react"
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive"; next?: string; nextLabel?: string }> = {
   OPEN: { label: "Aberta", variant: "secondary", next: "IN_PROGRESS", nextLabel: "Iniciar atendimento" },
@@ -32,7 +33,7 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
     <div className="max-w-3xl space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm text-muted-foreground">OS #{os.number}</p>
+          <p className="text-sm font-mono text-muted-foreground">{formatOsNumber(os.number, os.createdAt)}</p>
           <h1 className="text-2xl font-bold">{os.title}</h1>
           <Badge variant={config.variant} className="mt-1">{config.label}</Badge>
         </div>
@@ -43,6 +44,13 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
               label={config.nextLabel!}
             />
           )}
+          <Link
+            href={`/service-orders/${id}/edit`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            <Pencil className="size-4 mr-2" />
+            Editar
+          </Link>
           <Link
             href={`/api/pdf/service-order/${id}`}
             target="_blank"
@@ -83,10 +91,21 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
         {os.description && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Observações</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Descrição do problema</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm whitespace-pre-wrap">{os.description}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {os.conclusionNote && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Serviços realizados</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm whitespace-pre-wrap">{os.conclusionNote}</p>
             </CardContent>
           </Card>
         )}

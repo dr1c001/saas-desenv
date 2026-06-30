@@ -153,6 +153,12 @@ export async function getClient(id: string) {
   const { tenantId } = await getTenant()
   return prisma.client.findUnique({
     where: { id, tenantId },
-    include: { address: true, serviceOrders: { orderBy: { createdAt: "desc" }, take: 10 } },
+    include: {
+      address: true,
+      serviceOrders: {
+        select: { id: true, number: true, title: true, status: true, totalAmount: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+      },
+    },
   })
 }

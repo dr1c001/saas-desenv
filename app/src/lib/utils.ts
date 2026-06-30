@@ -12,3 +12,13 @@ export function formatCurrency(value: number): string {
 export function formatDate(date: Date | string): string {
   return new Date(date).toLocaleDateString("pt-BR")
 }
+
+export function formatOsNumber(number: number, createdAt: Date | string): string {
+  const year = new Date(createdAt).getFullYear()
+  return `OS${year}${String(number).padStart(4, "0")}`
+}
+
+export function formatOmNumber(number: number, createdAt: Date | string): string {
+  const year = new Date(createdAt).getFullYear()
+  return `OM${year}${String(number).padStart(4, "0")}`
+}

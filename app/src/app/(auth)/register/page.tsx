@@ -24,6 +24,7 @@ type FormData = z.infer<typeof schema>
 export default function RegisterPage() {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
+  const [emailSent, setEmailSent] = useState(false)
 
   const {
     register,
@@ -34,13 +35,24 @@ export default function RegisterPage() {
   async function onSubmit(data: FormData) {
     setServerError(null)
     const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: { data: { name: data.name, company_name: data.companyName } },
     })
     if (error) {
-      setServerError(error.message)
+      if (error.message.toLowerCase().includes("rate limit") || error.message.toLowerCase().includes("email rate")) {
+        setServerError("Muitas tentativas de cadastro. Aguarde alguns minutos e tente novamente.")
+      } else if (error.message.toLowerCase().includes("already registered") || error.message.toLowerCase().includes("already been registered")) {
+        setServerError("Este e-mail já está cadastrado. Tente fazer login.")
+      } else {
+        setServerError(error.message)
+      }
+      return
+    }
+    // If session is null, email confirmation is required
+    if (!signUpData.session) {
+      setEmailSent(true)
       return
     }
     router.push("/dashboard")
@@ -77,6 +89,11 @@ export default function RegisterPage() {
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
             {serverError && <p className="text-sm text-destructive">{serverError}</p>}
+            {emailSent && (
+              <p className="text-sm text-green-600">
+                Conta criada! Verifique seu e-mail para confirmar o cadastro antes de entrar.
+              </p>
+            )}
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? "Criando conta..." : "Criar conta"}
             </Button>

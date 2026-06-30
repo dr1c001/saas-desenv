@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import { getReportData } from "@/actions/reports"
-import { formatCurrency, formatDate } from "@/lib/utils"
+import { formatCurrency, formatDate, formatOsNumber } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -171,8 +171,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
                   {data.revenues.map(r => (
                     <TableRow key={r.id}>
                       <TableCell className="text-sm">{r.description}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {r.order ? `OS #${r.order.number}` : "—"}
+                      <TableCell className="text-sm text-muted-foreground font-mono">
+                        {r.order ? formatOsNumber(r.order.number, r.order.createdAt) : "—"}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {r.paidAt ? formatDate(r.paidAt) : "—"}

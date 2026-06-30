@@ -12,7 +12,7 @@ export async function getReportData(from: string, to: string) {
   const [revenues, expenses, orders, topClients] = await Promise.all([
     prisma.revenue.findMany({
       where: { tenantId, status: "PAID", paidAt: { gte: start, lte: end } },
-      include: { order: { select: { number: true, title: true } } },
+      include: { order: { select: { number: true, title: true, createdAt: true } } },
       orderBy: { paidAt: "asc" },
     }),
     prisma.expense.findMany({

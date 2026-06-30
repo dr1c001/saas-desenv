@@ -61,29 +61,34 @@ export async function markExpensePaid(id: string) {
   revalidatePath("/finance")
 }
 
-export async function getFinanceSummary() {
+export async function getFinanceSummary(q?: string) {
   const { tenantId } = await getTenant()
 
-  const [revenues, expenses] = await Promise.all([
-    prisma.revenue.findMany({
-      where: { tenantId },
-      orderBy: { dueDate: "asc" },
-    }),
-    prisma.expense.findMany({
-      where: { tenantId },
-      orderBy: { dueDate: "asc" },
-    }),
+  // Fetch all data for KPI calculations, then filter for table display
+  const [allRevenues, allExpenses] = await Promise.all([
+    prisma.revenue.findMany({ where: { tenantId }, orderBy: { dueDate: "asc" } }),
+    prisma.expense.findMany({ where: { tenantId }, orderBy: { dueDate: "asc" } }),
   ])
 
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-  const monthlyRevenue = revenues
-    .filter((r: (typeof revenues)[0]) => r.status === "PAID" && r.paidAt && r.paidAt >= startOfMonth)
-    .reduce((sum: number, r: (typeof revenues)[0]) => sum + Number(r.amount), 0)
+  // KPIs always computed from full dataset regardless of search
+  const monthlyRevenue = allRevenues
+    .filter((r) => r.status === "PAID" && r.paidAt && r.paidAt >= startOfMonth)
+    .reduce((sum, r) => sum + Number(r.amount), 0)
 
-  const pendingRevenues = revenues.filter((r: (typeof revenues)[0]) => r.status === "PENDING")
-  const pendingExpenses = expenses.filter((e: (typeof expenses)[0]) => e.status === "PENDING")
+  const pendingRevenues = allRevenues.filter((r) => r.status === "PENDING")
+  const pendingExpenses = allExpenses.filter((e) => e.status === "PENDING")
+
+  // Table display filtered by search
+  const ql = q?.toLowerCase()
+  const revenues = ql
+    ? allRevenues.filter((r) => r.description.toLowerCase().includes(ql))
+    : allRevenues
+  const expenses = ql
+    ? allExpenses.filter((e) => e.description.toLowerCase().includes(ql))
+    : allExpenses
 
   return { revenues, expenses, monthlyRevenue, pendingRevenues, pendingExpenses }
 }

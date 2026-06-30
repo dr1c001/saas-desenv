@@ -3,8 +3,10 @@ import {
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
 } from "@react-pdf/renderer"
+import { formatOsNumber } from "@/lib/utils"
 
 const styles = StyleSheet.create({
   page: {
@@ -105,10 +107,12 @@ type OrderItem = {
 
 type Props = {
   companyName: string
+  logoUrl?: string | null
   order: {
     number: number
     title: string
     description: string | null
+    conclusionNote: string | null
     status: string
     totalAmount: unknown
     createdAt: Date
@@ -140,13 +144,14 @@ function fmtDate(date: Date | string) {
   return new Date(date).toLocaleDateString("pt-BR")
 }
 
-export function ServiceOrderPDF({ order, companyName }: Props) {
+export function ServiceOrderPDF({ order, companyName, logoUrl }: Props) {
   const addr = order.client.address
   const addressLine = addr
     ? [addr.street, addr.number, addr.city, addr.state, addr.zipCode]
         .filter(Boolean)
         .join(", ")
     : null
+  const osNumber = formatOsNumber(order.number, order.createdAt)
 
   return (
     <Document>
@@ -154,11 +159,16 @@ export function ServiceOrderPDF({ order, companyName }: Props) {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.companyName}>{companyName}</Text>
+            {logoUrl ? (
+              <Image src={logoUrl} style={{ height: 40, maxWidth: 160, objectFit: "contain" }} />
+            ) : (
+              <Text style={styles.companyName}>{companyName}</Text>
+            )}
+            {logoUrl && <Text style={{ fontSize: 11, marginTop: 4 }}>{companyName}</Text>}
           </View>
           <View>
             <Text style={styles.osTitle}>Ordem de Serviço</Text>
-            <Text style={styles.osNumber}>#{order.number}</Text>
+            <Text style={styles.osNumber}>{osNumber}</Text>
           </View>
         </View>
 
@@ -192,7 +202,13 @@ export function ServiceOrderPDF({ order, companyName }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Serviço</Text>
           <Text style={{ fontFamily: "Helvetica-Bold", marginBottom: 4 }}>{order.title}</Text>
-          {order.description && <Text style={{ color: "#555" }}>{order.description}</Text>}
+          {order.description && <Text style={{ color: "#555", marginBottom: 4 }}>{order.description}</Text>}
+          {order.conclusionNote && (
+            <View style={{ marginTop: 6 }}>
+              <Text style={[styles.sectionTitle, { marginBottom: 2 }]}>Serviços Realizados</Text>
+              <Text style={{ color: "#555" }}>{order.conclusionNote}</Text>
+            </View>
+          )}
         </View>
 
         {/* Cliente */}

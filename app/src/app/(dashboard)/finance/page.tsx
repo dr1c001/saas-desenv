@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { getFinanceSummary } from "@/actions/finance"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,10 +10,14 @@ import { Separator } from "@/components/ui/separator"
 import { TrendingUp, TrendingDown, DollarSign } from "lucide-react"
 import { ExpenseDialog } from "@/components/finance/expense-dialog"
 import { PayButton } from "@/components/finance/pay-button"
+import { SearchBar } from "@/components/shared/search-bar"
 
-export default async function FinancePage() {
+type SearchParams = Promise<{ q?: string }>
+
+export default async function FinancePage({ searchParams }: { searchParams: SearchParams }) {
+  const { q } = await searchParams
   const { revenues, expenses, monthlyRevenue, pendingRevenues, pendingExpenses } =
-    await getFinanceSummary()
+    await getFinanceSummary(q)
 
   const totalPendingRevenue = pendingRevenues.reduce((s, r) => s + Number(r.amount), 0)
   const totalPendingExpense = pendingExpenses.reduce((s, e) => s + Number(e.amount), 0)
@@ -26,6 +31,10 @@ export default async function FinancePage() {
         <h1 className="text-2xl font-bold">Financeiro</h1>
         <ExpenseDialog />
       </div>
+
+      <Suspense>
+        <SearchBar placeholder="Buscar receitas e despesas..." />
+      </Suspense>
 
       {/* KPI cards */}
       <div className="grid gap-4 md:grid-cols-3">

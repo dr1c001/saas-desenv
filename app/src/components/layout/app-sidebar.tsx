@@ -11,6 +11,10 @@ import {
   BarChart2,
   Settings,
   LogOut,
+  History,
+  Receipt,
+  Wrench,
+  HardHat,
 } from "lucide-react"
 import {
   Sidebar,
@@ -31,6 +35,10 @@ const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Clientes", href: "/clients", icon: Users },
   { title: "Ordens de Serviço", href: "/service-orders", icon: ClipboardList },
+  { title: "Histórico", href: "/history", icon: History },
+  { title: "Manutenção Interna", href: "/maintenance", icon: Wrench },
+  { title: "Prestadores", href: "/providers", icon: HardHat },
+  { title: "Recibos", href: "/receipts", icon: Receipt },
   { title: "Agendamento", href: "/schedule", icon: CalendarDays },
   { title: "Financeiro", href: "/finance", icon: DollarSign },
   { title: "Relatórios", href: "/reports", icon: BarChart2 },
