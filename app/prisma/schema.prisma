@@ -14,6 +14,9 @@ model Tenant {
   name      String
   document  String?
   logoUrl   String?
+  phone     String?
+  website   String?
+  address   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -24,20 +27,41 @@ model Tenant {
   revenues          Revenue[]
   providers         Provider[]
   maintenanceOrders MaintenanceOrder[]
+  tabPermissions    TabPermission[]
+  quotes            Quote[]
 }
 
 // ─── Usuários ─────────────────────────────────────────────────────────────────
 
 model User {
-  id       String   @id
-  name     String
-  email    String
-  role     UserRole @default(TECHNICIAN)
-  tenantId String
+  id        String   @id
+  name      String
+  email     String
+  role      UserRole @default(TECHNICIAN)
+  tenantId  String
+  document  String?
+  phone     String?
   createdAt DateTime @default(now())
 
-  tenant        Tenant         @relation(fields: [tenantId], references: [id])
-  serviceOrders ServiceOrder[]
+  tenant            Tenant             @relation(fields: [tenantId], references: [id])
+  serviceOrders     ServiceOrder[]
+  location          UserLocation?
+  pushSubscriptions PushSubscription[]
+  userAddress       UserAddress?
+}
+
+model UserAddress {
+  id         String  @id @default(cuid())
+  street     String?
+  number     String?
+  complement String?
+  district   String?
+  city       String?
+  state      String?
+  zipCode    String?
+  userId     String  @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum UserRole {
@@ -243,4 +267,75 @@ enum MaintenanceStatus {
   IN_PROGRESS
   DONE
   CANCELLED
+}
+
+// ─── Orçamentos ───────────────────────────────────────────────────────────────
+
+model Quote {
+  id            String      @id @default(cuid())
+  number        Int
+  clientName    String
+  clientAddress String?
+  clientContact String?
+  description   String
+  materials     String?
+  amount        Decimal     @default(0) @db.Decimal(12, 2)
+  notes         String?
+  status        QuoteStatus @default(DRAFT)
+  validUntil    DateTime?
+  tenantId      String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, number])
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REJECTED
+}
+
+// ─── Controle de Acesso ───────────────────────────────────────────────────────
+
+model TabPermission {
+  id       String   @id @default(cuid())
+  tenantId String
+  role     UserRole
+  tab      String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, role, tab])
+}
+
+// ─── Notificações Push ────────────────────────────────────────────────────────
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint])
+}
+
+// ─── Localização GPS ──────────────────────────────────────────────────────────
+
+model UserLocation {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  latitude  Float
+  longitude Float
+  accuracy  Float?
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

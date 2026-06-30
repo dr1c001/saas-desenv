@@ -15,6 +15,10 @@ import {
   Receipt,
   Wrench,
   HardHat,
+  UserCog,
+  MapPin,
+  Shield,
+  FileText,
 } from "lucide-react"
 import {
   Sidebar,
@@ -30,23 +34,37 @@ import {
 } from "@/components/ui/sidebar"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
+import type { TabSlug } from "@/lib/auth"
+import { Badge } from "@/components/ui/badge"
 
-const navItems = [
-  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Clientes", href: "/clients", icon: Users },
-  { title: "Ordens de Serviço", href: "/service-orders", icon: ClipboardList },
-  { title: "Histórico", href: "/history", icon: History },
-  { title: "Manutenção Interna", href: "/maintenance", icon: Wrench },
-  { title: "Prestadores", href: "/providers", icon: HardHat },
-  { title: "Recibos", href: "/receipts", icon: Receipt },
-  { title: "Agendamento", href: "/schedule", icon: CalendarDays },
-  { title: "Financeiro", href: "/finance", icon: DollarSign },
-  { title: "Relatórios", href: "/reports", icon: BarChart2 },
+const NAV_ITEMS: { title: string; href: string; icon: React.ElementType; slug: TabSlug }[] = [
+  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, slug: "dashboard" },
+  { title: "Clientes", href: "/clients", icon: Users, slug: "clients" },
+  { title: "Orçamentos", href: "/quotes", icon: FileText, slug: "quotes" },
+  { title: "Ordens de Serviço", href: "/service-orders", icon: ClipboardList, slug: "service-orders" },
+  { title: "Histórico", href: "/history", icon: History, slug: "history" },
+  { title: "Manutenção Interna", href: "/maintenance", icon: Wrench, slug: "maintenance" },
+  { title: "Prestadores", href: "/providers", icon: HardHat, slug: "providers" },
+  { title: "Recibos", href: "/receipts", icon: Receipt, slug: "receipts" },
+  { title: "Agendamento", href: "/schedule", icon: CalendarDays, slug: "schedule" },
+  { title: "Financeiro", href: "/finance", icon: DollarSign, slug: "finance" },
+  { title: "Relatórios", href: "/reports", icon: BarChart2, slug: "reports" },
+  { title: "Equipe", href: "/team", icon: UserCog, slug: "team" },
+  { title: "Mapa GPS", href: "/map", icon: MapPin, slug: "map" },
 ]
 
-export function AppSidebar() {
+type Props = {
+  allowedTabs: TabSlug[]
+  role: string
+  userId: string
+}
+
+export function AppSidebar({ allowedTabs, role }: Props) {
   const pathname = usePathname()
   const router = useRouter()
+  const allowedSet = new Set(allowedTabs)
+
+  const visibleItems = NAV_ITEMS.filter((item) => allowedSet.has(item.slug))
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -55,10 +73,21 @@ export function AppSidebar() {
     router.refresh()
   }
 
+  const roleLabel: Record<string, string> = {
+    OWNER: "Proprietário",
+    ADMIN: "Administrador",
+    TECHNICIAN: "Técnico",
+  }
+
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
-        <span className="font-bold text-lg">ServiçoOS</span>
+        <div className="flex items-center justify-between">
+          <span className="font-bold text-lg">ServiçoOS</span>
+          <Badge variant="outline" className="text-xs">
+            {roleLabel[role] ?? role}
+          </Badge>
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
@@ -66,7 +95,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
+              {visibleItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     render={<Link href={item.href} />}
@@ -84,6 +113,14 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
+          {(role === "OWNER" || role === "ADMIN") && (
+            <SidebarMenuItem>
+              <SidebarMenuButton render={<Link href="/settings/permissions" />}>
+                <Shield className="size-4" />
+                <span>Permissões</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
             <SidebarMenuButton render={<Link href="/settings" />}>
               <Settings className="size-4" />

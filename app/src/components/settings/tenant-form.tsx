@@ -6,7 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-type Tenant = { name: string; document: string | null; logoUrl: string | null } | null
+type Tenant = {
+  name: string
+  document: string | null
+  logoUrl: string | null
+  phone: string | null
+  website: string | null
+  address: string | null
+} | null
 
 export function TenantForm({ tenant }: { tenant: Tenant }) {
   const [state, formAction, isPending] = useActionState<SettingsFormState, FormData>(
@@ -24,6 +31,18 @@ export function TenantForm({ tenant }: { tenant: Tenant }) {
       <div className="space-y-1.5">
         <Label htmlFor="document">CNPJ / CPF</Label>
         <Input id="document" name="document" defaultValue={tenant?.document ?? ""} />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="phone">Telefone(s) de contato</Label>
+        <Input id="phone" name="phone" placeholder="(11) 99999-9999" defaultValue={tenant?.phone ?? ""} />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="address">Endereço</Label>
+        <Input id="address" name="address" placeholder="Rua Exemplo, 123 — São Paulo, SP" defaultValue={tenant?.address ?? ""} />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="website">Site</Label>
+        <Input id="website" name="website" placeholder="https://suaempresa.com.br" defaultValue={tenant?.website ?? ""} />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="logoUrl">URL do logotipo</Label>

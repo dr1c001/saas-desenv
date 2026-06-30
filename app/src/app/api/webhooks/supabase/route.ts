@@ -44,13 +44,9 @@ export async function POST(request: NextRequest) {
   const companyName = raw_user_meta_data?.company_name ?? `Empresa de ${name}`
 
   try {
-    await prisma.$transaction(async (tx) => {
-      const tenant = await tx.tenant.create({
-        data: { name: companyName },
-      })
-      await tx.user.create({
-        data: { id, name, email, role: "OWNER", tenantId: tenant.id },
-      })
+    const tenant = await prisma.tenant.create({ data: { name: companyName } })
+    await prisma.user.create({
+      data: { id, name, email, role: "OWNER", tenantId: tenant.id },
     })
   } catch (err) {
     console.error("Webhook error:", err)

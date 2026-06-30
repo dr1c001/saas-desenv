@@ -117,7 +117,17 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <OsActionsRow id={os.id} title={os.title} status={os.status} />
+                      <OsActionsRow
+                        id={os.id}
+                        title={os.title}
+                        status={os.status}
+                        conclusionNote={os.conclusionNote}
+                        items={os.items.map((i) => ({
+                          description: i.description,
+                          quantity: Number(i.quantity),
+                          unitPrice: Number(i.unitPrice),
+                        }))}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}

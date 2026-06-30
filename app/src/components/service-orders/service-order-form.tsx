@@ -15,14 +15,16 @@ import { Plus, Trash2 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 
 type Client = { id: string; name: string }
+type TeamMember = { id: string; name: string; role: string }
 type Item = { description: string; quantity: number; unitPrice: number }
 
 type Props = {
   clients: Client[]
+  teamMembers?: TeamMember[]
   defaultClientId?: string
 }
 
-export function ServiceOrderForm({ clients, defaultClientId }: Props) {
+export function ServiceOrderForm({ clients, teamMembers = [], defaultClientId }: Props) {
   const [items, setItems] = useState<Item[]>([
     { description: "", quantity: 1, unitPrice: 0 },
   ])
@@ -88,6 +90,22 @@ export function ServiceOrderForm({ clients, defaultClientId }: Props) {
               </SelectContent>
             </Select>
             {state.errors?.clientId && <p className="text-sm text-destructive">{state.errors.clientId[0]}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="technicianId">Técnico responsável</Label>
+            <Select name="technicianId">
+              <SelectTrigger id="technicianId">
+                <SelectValue placeholder="Selecione um técnico (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {teamMembers.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1.5">

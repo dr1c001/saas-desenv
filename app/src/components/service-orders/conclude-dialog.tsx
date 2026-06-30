@@ -23,13 +23,24 @@ type Props = {
   orderId: string
   orderTitle: string
   currentStatus: string
+  initialConclusionNote?: string | null
+  initialItems?: Item[]
 }
 
-export function ConcluirDialog({ orderId, orderTitle, currentStatus }: Props) {
+export function ConcluirDialog({
+  orderId,
+  orderTitle,
+  currentStatus,
+  initialConclusionNote,
+  initialItems,
+}: Props) {
+  const isConcluded = currentStatus === "DONE" || currentStatus === "INVOICED" || currentStatus === "CANCELLED"
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
-  const [conclusionNote, setConclusionNote] = useState("")
-  const [items, setItems] = useState<Item[]>([{ description: "", quantity: 1, unitPrice: 0 }])
+  const [conclusionNote, setConclusionNote] = useState(initialConclusionNote ?? "")
+  const [items, setItems] = useState<Item[]>(
+    initialItems && initialItems.length > 0 ? initialItems : [{ description: "", quantity: 1, unitPrice: 0 }]
+  )
   const [error, setError] = useState<string | null>(null)
 
   const total = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
@@ -54,10 +65,6 @@ export function ConcluirDialog({ orderId, orderTitle, currentStatus }: Props) {
     })
   }
 
-  if (currentStatus === "DONE" || currentStatus === "INVOICED" || currentStatus === "CANCELLED") {
-    return null
-  }
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
@@ -66,7 +73,7 @@ export function ConcluirDialog({ orderId, orderTitle, currentStatus }: Props) {
         }
       >
         <CheckCircle className="size-3.5" />
-        Concluir
+        {isConcluded ? "Editar conclusão" : "Concluir"}
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -149,14 +156,14 @@ export function ConcluirDialog({ orderId, orderTitle, currentStatus }: Props) {
               disabled={isPending}
               onClick={() => handleConclude(false)}
             >
-              {isPending ? "Salvando..." : "Concluir (sem faturar)"}
+              {isPending ? "Salvando..." : isConcluded ? "Salvar (sem faturar)" : "Concluir (sem faturar)"}
             </Button>
             <Button
               className="flex-1"
               disabled={isPending}
               onClick={() => handleConclude(true)}
             >
-              {isPending ? "Salvando..." : "Concluir e Faturar"}
+              {isPending ? "Salvando..." : isConcluded ? "Salvar e Faturar" : "Concluir e Faturar"}
             </Button>
           </div>
         </div>

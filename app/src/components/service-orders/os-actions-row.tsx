@@ -7,13 +7,17 @@ import { FileDown, Play } from "lucide-react"
 import { ConcluirDialog } from "./conclude-dialog"
 import { updateOrderStatus } from "@/actions/service-orders"
 
+type Item = { description: string; quantity: number; unitPrice: number }
+
 type Props = {
   id: string
   title: string
   status: string
+  conclusionNote?: string | null
+  items?: Item[]
 }
 
-export function OsActionsRow({ id, title, status }: Props) {
+export function OsActionsRow({ id, title, status, conclusionNote, items }: Props) {
   const [isPending, startTransition] = useTransition()
 
   function handleStart() {
@@ -34,7 +38,13 @@ export function OsActionsRow({ id, title, status }: Props) {
           Iniciar
         </Button>
       )}
-      <ConcluirDialog orderId={id} orderTitle={title} currentStatus={status} />
+      <ConcluirDialog
+        orderId={id}
+        orderTitle={title}
+        currentStatus={status}
+        initialConclusionNote={conclusionNote}
+        initialItems={items}
+      />
       <Link
         href={`/api/pdf/service-order/${id}`}
         target="_blank"

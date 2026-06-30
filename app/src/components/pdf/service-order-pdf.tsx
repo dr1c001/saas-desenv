@@ -108,6 +108,9 @@ type OrderItem = {
 type Props = {
   companyName: string
   logoUrl?: string | null
+  companyPhone?: string | null
+  companyAddress?: string | null
+  companyWebsite?: string | null
   order: {
     number: number
     title: string
@@ -144,7 +147,7 @@ function fmtDate(date: Date | string) {
   return new Date(date).toLocaleDateString("pt-BR")
 }
 
-export function ServiceOrderPDF({ order, companyName, logoUrl }: Props) {
+export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, companyAddress, companyWebsite }: Props) {
   const addr = order.client.address
   const addressLine = addr
     ? [addr.street, addr.number, addr.city, addr.state, addr.zipCode]
@@ -165,6 +168,9 @@ export function ServiceOrderPDF({ order, companyName, logoUrl }: Props) {
               <Text style={styles.companyName}>{companyName}</Text>
             )}
             {logoUrl && <Text style={{ fontSize: 11, marginTop: 4 }}>{companyName}</Text>}
+            {companyAddress && <Text style={{ fontSize: 9, color: "#555", marginTop: 3 }}>{companyAddress}</Text>}
+            {companyPhone && <Text style={{ fontSize: 9, color: "#555", marginTop: 1 }}>Tel: {companyPhone}</Text>}
+            {companyWebsite && <Text style={{ fontSize: 9, color: "#555", marginTop: 1 }}>{companyWebsite}</Text>}
           </View>
           <View>
             <Text style={styles.osTitle}>Ordem de Serviço</Text>

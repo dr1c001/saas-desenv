@@ -2,7 +2,7 @@ export const runtime = "nodejs"
 
 import { NextRequest, NextResponse } from "next/server"
 import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer"
-import { ServiceOrderPDF } from "@/components/pdf/service-order-pdf"
+import { QuotePDF } from "@/components/pdf/quote-pdf"
 import { prisma } from "@/lib/prisma"
 import { createClient } from "@/lib/supabase/server"
 import React, { type ReactElement, type JSXElementConstructor } from "react"
@@ -22,19 +22,14 @@ export async function GET(
   if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = await params
-  const order = await prisma.serviceOrder.findUnique({
+  const quote = await prisma.quote.findUnique({
     where: { id, tenantId: dbUser.tenantId },
-    include: {
-      client: { include: { address: true } },
-      technician: true,
-      items: true,
-    },
   })
 
-  if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if (!quote) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const element = React.createElement(ServiceOrderPDF, {
-    order,
+  const element = React.createElement(QuotePDF, {
+    quote,
     companyName: dbUser.tenant.name,
     logoUrl: dbUser.tenant.logoUrl,
     companyPhone: dbUser.tenant.phone,
@@ -47,7 +42,7 @@ export async function GET(
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="OS-${order.number}.pdf"`,
+      "Content-Disposition": `inline; filename="Orcamento-${quote.number}.pdf"`,
     },
   })
 }

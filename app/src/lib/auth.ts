@@ -14,24 +14,71 @@ export async function getTenant() {
 
   let dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { tenantId: true },
+    select: { tenantId: true, role: true },
   })
 
-  // Fallback: create tenant+user if webhook missed (e.g. local dev)
+  // Fallback: create tenant+user if not in DB yet
   if (!dbUser) {
     const name = user.user_metadata?.name ?? user.email?.split("@")[0] ?? "Usuário"
-    const companyName = user.user_metadata?.company_name ?? `Empresa de ${name}`
+    const existingTenantId: string | undefined = user.user_metadata?.tenantId
 
-    const result = await prisma.$transaction(async (tx) => {
-      const tenant = await tx.tenant.create({ data: { name: companyName } })
-      const created = await tx.user.create({
-        data: { id: user.id, name, email: user.email!, role: "OWNER", tenantId: tenant.id },
-        select: { tenantId: true },
-      })
-      return created
+    let tenantId: string
+    let role: "OWNER" | "ADMIN" | "TECHNICIAN" = "OWNER"
+
+    if (existingTenantId) {
+      // Invited team member — join existing tenant
+      tenantId = existingTenantId
+      role = (user.user_metadata?.role as typeof role) ?? "TECHNICIAN"
+    } else {
+      // New owner — create a tenant
+      const companyName = user.user_metadata?.company_name ?? `Empresa de ${name}`
+      const tenant = await prisma.tenant.create({ data: { name: companyName } })
+      tenantId = tenant.id
+    }
+
+    const created = await prisma.user.create({
+      data: { id: user.id, name, email: user.email!, role, tenantId },
+      select: { tenantId: true, role: true },
     })
-    dbUser = result
+    dbUser = created
   }
 
-  return { userId: user.id, tenantId: dbUser.tenantId }
+  return { userId: user.id, tenantId: dbUser.tenantId, role: dbUser.role }
+}
+
+// Tabs available in the system (slug → display info)
+export const ALL_TABS = [
+  { slug: "dashboard", label: "Dashboard" },
+  { slug: "clients", label: "Clientes" },
+  { slug: "service-orders", label: "Ordens de Serviço" },
+  { slug: "history", label: "Histórico" },
+  { slug: "maintenance", label: "Manutenção Interna" },
+  { slug: "providers", label: "Prestadores" },
+  { slug: "receipts", label: "Recibos" },
+  { slug: "schedule", label: "Agendamento" },
+  { slug: "finance", label: "Financeiro" },
+  { slug: "reports", label: "Relatórios" },
+  { slug: "team", label: "Equipe" },
+  { slug: "map", label: "Mapa GPS" },
+  { slug: "quotes", label: "Orçamentos" },
+] as const
+
+export type TabSlug = (typeof ALL_TABS)[number]["slug"]
+
+// Tabs technician gets by default (admin can change this per-tenant)
+export const DEFAULT_TECHNICIAN_TABS: TabSlug[] = ["dashboard", "service-orders", "schedule"]
+
+export async function getAllowedTabs(tenantId: string, role: string): Promise<TabSlug[]> {
+  if (role === "OWNER" || role === "ADMIN") {
+    return ALL_TABS.map((t) => t.slug)
+  }
+
+  // TECHNICIAN: check TabPermission table; fall back to defaults
+  const perms = await prisma.tabPermission.findMany({
+    where: { tenantId, role: role as never },
+    select: { tab: true },
+  })
+
+  if (perms.length === 0) return DEFAULT_TECHNICIAN_TABS
+  return perms.map((p) => p.tab as TabSlug)
 }

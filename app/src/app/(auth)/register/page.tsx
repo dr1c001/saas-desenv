@@ -50,13 +50,13 @@ export default function RegisterPage() {
       }
       return
     }
-    // If session is null, email confirmation is required
-    if (!signUpData.session) {
-      setEmailSent(true)
+    if (signUpData.session) {
+      router.push("/dashboard")
+      router.refresh()
       return
     }
-    router.push("/dashboard")
-    router.refresh()
+    // Email confirmation still required (fallback)
+    setEmailSent(true)
   }
 
   return (
