@@ -2,8 +2,10 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { getServiceOrder, updateOrderStatus, deleteServiceOrder } from "@/actions/service-orders"
 import { buttonVariants } from "@/components/ui/button"
-import { FileDown } from "lucide-react"
+import { FileDown, Pencil } from "lucide-react"
 import { NfseButton } from "@/components/service-orders/nfse-button"
+import { Checklist } from "@/components/service-orders/checklist"
+import { SignaturePad } from "@/components/service-orders/signature-pad"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -13,7 +15,6 @@ import { Separator } from "@/components/ui/separator"
 import { DeleteButton } from "@/components/shared/delete-button"
 import { StatusButton } from "@/components/service-orders/status-button"
 import { formatCurrency, formatDate, formatOsNumber } from "@/lib/utils"
-import { Pencil } from "lucide-react"
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive"; next?: string; nextLabel?: string }> = {
   OPEN: { label: "Aberta", variant: "secondary", next: "IN_PROGRESS", nextLabel: "Iniciar atendimento" },
@@ -120,6 +121,30 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
           </Card>
         )}
       </div>
+
+      {os.checklist.length > 0 || true ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Checklist de execução</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Checklist
+              orderId={id}
+              items={os.checklist}
+              readonly={os.status === "INVOICED" || os.status === "CANCELLED"}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Assinatura do cliente</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SignaturePad orderId={id} existingSignatureUrl={os.clientSignatureUrl} />
+        </CardContent>
+      </Card>
 
       <Separator />
 

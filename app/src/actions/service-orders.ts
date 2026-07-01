@@ -296,6 +296,7 @@ export async function getServiceOrder(id: string) {
       technician: true,
       items: true,
       attachments: true,
+      checklist: { orderBy: { position: "asc" } },
     },
   })
 }

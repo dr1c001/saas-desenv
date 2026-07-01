@@ -1,0 +1,41 @@
+{
+  "name": "ServiçoOS",
+  "short_name": "ServiçoOS",
+  "description": "Gestão de Ordens de Serviço para empresas",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "pt-BR",
+  "shortcuts": [
+    {
+      "name": "Nova OS",
+      "short_name": "Nova OS",
+      "description": "Criar uma nova Ordem de Serviço",
+      "url": "/service-orders/new",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

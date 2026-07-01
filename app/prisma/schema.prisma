@@ -184,17 +184,30 @@ model ServiceOrder {
   nfseNumber     String?
   nfseStatus     String?
   nfseUrl        String?
+  clientSignatureUrl String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  client      Client        @relation(fields: [clientId], references: [id])
-  tenant      Tenant        @relation(fields: [tenantId], references: [id])
-  technician  User?         @relation(fields: [technicianId], references: [id])
+  client      Client           @relation(fields: [clientId], references: [id])
+  tenant      Tenant           @relation(fields: [tenantId], references: [id])
+  technician  User?            @relation(fields: [technicianId], references: [id])
   items       ServiceItem[]
   attachments Attachment[]
   revenues    Revenue[]
+  checklist   ChecklistItem[]
 
   @@unique([tenantId, number])
+}
+
+model ChecklistItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  description String
+  completed   Boolean  @default(false)
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  order ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 enum ServiceStatus {
