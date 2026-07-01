@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
+import { sendWelcomeEmail } from "@/lib/resend"
 
 export async function getSession() {
   const supabase = await createClient()
@@ -35,6 +36,8 @@ export async function getTenant() {
       const trialEndsAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
       const tenant = await prisma.tenant.create({ data: { name: companyName, trialEndsAt } })
       tenantId = tenant.id
+      // fire-and-forget welcome email
+      sendWelcomeEmail(user.email!, name).catch(() => null)
     }
 
     const created = await prisma.user.create({
