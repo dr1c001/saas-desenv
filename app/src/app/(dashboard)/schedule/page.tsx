@@ -54,7 +54,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Sea
                     <p className="text-xs text-muted-foreground truncate">{ev.title}</p>
                     <p className="text-xs text-muted-foreground">{ev.client.name}</p>
                     <p className="text-xs font-medium mt-1">
-                      {new Date(ev.scheduledAt!).toLocaleDateString("pt-BR", {
+                      {new Date(ev.scheduledAt!).toLocaleString("pt-BR", {
                         day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
                       })}
                     </p>

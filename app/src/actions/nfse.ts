@@ -49,6 +49,7 @@ export async function registerFiscalCompany(formData: FormData) {
       fiscalMunicipalCode: cityCode,
       fiscalCityName: cityName,
       fiscalStateCode: state,
+      fiscalIssRate: issRate,
     },
   })
 
@@ -107,7 +108,7 @@ export async function emitNfse(orderId: string) {
     services: {
       description,
       amount,
-      issRate: 5,
+      issRate: tenant.fiscalIssRate ?? 5,
     },
   })
 
