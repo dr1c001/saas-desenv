@@ -65,6 +65,11 @@ export function ClientForm({ client }: Props) {
           </div>
 
           <div className="space-y-1.5">
+            <Label htmlFor="whatsapp">WhatsApp</Label>
+            <Input id="whatsapp" name="whatsapp" placeholder="(11) 99999-9999" defaultValue={(client as { whatsapp?: string | null })?.whatsapp ?? ""} />
+          </div>
+
+          <div className="space-y-1.5">
             <Label htmlFor="email">E-mail</Label>
             <Input id="email" name="email" type="email" defaultValue={client?.email ?? ""} />
             {state.errors?.email && <p className="text-sm text-destructive">{state.errors.email[0]}</p>}

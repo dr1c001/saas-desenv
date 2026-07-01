@@ -1,6 +1,7 @@
 import { getSettings } from "@/actions/settings"
 import { TenantForm } from "@/components/settings/tenant-form"
 import { ProfileForm } from "@/components/settings/profile-form"
+import { WhatsAppForm } from "@/components/settings/whatsapp-form"
 import { Separator } from "@/components/ui/separator"
 
 export default async function SettingsPage() {
@@ -26,6 +27,18 @@ export default async function SettingsPage() {
           <p className="text-sm text-muted-foreground">Seu nome e e-mail de acesso.</p>
         </div>
         <ProfileForm user={user} />
+      </section>
+
+      <Separator />
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">WhatsApp (Z-API)</h2>
+          <p className="text-sm text-muted-foreground">
+            Envie OS, orçamentos e pesquisas de satisfação diretamente pelo WhatsApp dos clientes.
+          </p>
+        </div>
+        <WhatsAppForm zapiInstance={tenant?.zapiInstance ?? null} zapiToken={tenant?.zapiToken ?? null} />
       </section>
     </div>
   )

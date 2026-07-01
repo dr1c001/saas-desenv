@@ -85,12 +85,24 @@ export async function updateProfile(
   return { message: "Perfil atualizado." }
 }
 
+export async function updateWhatsApp(
+  _prev: SettingsFormState,
+  formData: FormData
+): Promise<SettingsFormState> {
+  const { tenantId } = await getTenant()
+  const instance = (formData.get("zapiInstance") as string) || null
+  const token = (formData.get("zapiToken") as string) || null
+  await prisma.tenant.update({ where: { id: tenantId }, data: { zapiInstance: instance, zapiToken: token } })
+  revalidatePath("/settings")
+  return { message: "Configurações de WhatsApp salvas." }
+}
+
 export async function getSettings() {
   const { tenantId, userId } = await getTenant()
   const [tenant, user] = await Promise.all([
     prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { name: true, document: true, logoUrl: true, phone: true, website: true, address: true },
+      select: { name: true, document: true, logoUrl: true, phone: true, website: true, address: true, zapiInstance: true, zapiToken: true },
     }),
     prisma.user.findUnique({
       where: { id: userId },

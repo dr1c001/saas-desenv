@@ -2,12 +2,14 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { getClient } from "@/actions/clients"
 import { deleteClient } from "@/actions/clients"
+import { getClientEquipments } from "@/actions/equipment"
 import { buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Pencil, Plus } from "lucide-react"
 import { DeleteButton } from "@/components/shared/delete-button"
+import { EquipmentSection } from "@/components/clients/equipment-section"
 import { formatCurrency, formatOsNumber } from "@/lib/utils"
 
 const statusLabel: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -26,7 +28,7 @@ const osStatusLabel: Record<string, string> = {
 
 export default async function ClientPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const client = await getClient(id)
+  const [client, equipments] = await Promise.all([getClient(id), getClientEquipments(id)])
   if (!client) notFound()
 
   const addr = client.address
@@ -62,6 +64,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           <CardContent className="space-y-2 text-sm">
             {client.document && <p><span className="text-muted-foreground">Doc:</span> {client.document}</p>}
             {client.phone && <p><span className="text-muted-foreground">Tel:</span> {client.phone}</p>}
+            {(client as { whatsapp?: string | null }).whatsapp && (
+              <p><span className="text-muted-foreground">WhatsApp:</span> {(client as { whatsapp?: string | null }).whatsapp}</p>
+            )}
             {client.email && <p><span className="text-muted-foreground">E-mail:</span> {client.email}</p>}
             {!client.document && !client.phone && !client.email && (
               <p className="text-muted-foreground">Nenhum contato informado.</p>
@@ -116,6 +121,8 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           </Card>
         </div>
       )}
+
+      <EquipmentSection clientId={id} equipments={equipments} />
 
       <Separator />
 

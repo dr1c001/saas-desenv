@@ -12,6 +12,7 @@ const clientSchema = z.object({
   document: z.string().optional(),
   email: z.string().email("E-mail inválido").optional().or(z.literal("")),
   phone: z.string().optional(),
+  whatsapp: z.string().optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "DEFAULTER"]).default("ACTIVE"),
   street: z.string().optional(),
   number: z.string().optional(),
@@ -40,7 +41,7 @@ export async function createClient(
     return { errors: parsed.error.flatten().fieldErrors }
   }
 
-  const { name, document, email, phone, status, ...address } = parsed.data
+  const { name, document, email, phone, whatsapp, status, ...address } = parsed.data
 
   const coords = await geocodeAddress(address)
 
@@ -50,6 +51,7 @@ export async function createClient(
       document: document || null,
       email: email || null,
       phone: phone || null,
+      whatsapp: whatsapp || null,
       status,
       tenantId,
       address: {
@@ -86,7 +88,7 @@ export async function updateClient(
     return { errors: parsed.error.flatten().fieldErrors }
   }
 
-  const { name, document, email, phone, status, ...address } = parsed.data
+  const { name, document, email, phone, whatsapp, status, ...address } = parsed.data
 
   const coords = await geocodeAddress(address)
 
@@ -97,6 +99,7 @@ export async function updateClient(
       document: document || null,
       email: email || null,
       phone: phone || null,
+      whatsapp: whatsapp || null,
       status,
       address: {
         upsert: {

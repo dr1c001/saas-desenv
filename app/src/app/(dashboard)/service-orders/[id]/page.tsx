@@ -2,10 +2,11 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { getServiceOrder, updateOrderStatus, deleteServiceOrder } from "@/actions/service-orders"
 import { buttonVariants } from "@/components/ui/button"
-import { FileDown, Pencil } from "lucide-react"
+import { FileDown, Pencil, ExternalLink } from "lucide-react"
 import { NfseButton } from "@/components/service-orders/nfse-button"
 import { Checklist } from "@/components/service-orders/checklist"
 import { SignaturePad } from "@/components/service-orders/signature-pad"
+import { WhatsAppButton } from "@/components/service-orders/whatsapp-button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -61,6 +62,17 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
             <FileDown className="size-4 mr-2" />
             PDF
           </Link>
+          <WhatsAppButton type="os" id={id} />
+          {os.clientToken && (
+            <Link
+              href={`/p/${os.clientToken}`}
+              target="_blank"
+              className={buttonVariants({ variant: "outline" }) + " gap-2"}
+            >
+              <ExternalLink className="size-4" />
+              Portal cliente
+            </Link>
+          )}
           <DeleteButton action={deleteServiceOrder.bind(null, id)} label="Excluir OS" />
           {(os.status === "DONE" || os.status === "INVOICED") && (
             <NfseButton
