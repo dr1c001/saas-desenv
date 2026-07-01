@@ -3,6 +3,7 @@ import Link from "next/link"
 import { getServiceOrder, updateOrderStatus, deleteServiceOrder } from "@/actions/service-orders"
 import { buttonVariants } from "@/components/ui/button"
 import { FileDown } from "lucide-react"
+import { NfseButton } from "@/components/service-orders/nfse-button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -60,6 +61,15 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
             PDF
           </Link>
           <DeleteButton action={deleteServiceOrder.bind(null, id)} label="Excluir OS" />
+          {(os.status === "DONE" || os.status === "INVOICED") && (
+            <NfseButton
+              orderId={id}
+              nfseId={os.nfseId}
+              nfseStatus={os.nfseStatus}
+              nfseUrl={os.nfseUrl}
+              nfseNumber={os.nfseNumber}
+            />
+          )}
         </div>
       </div>
 

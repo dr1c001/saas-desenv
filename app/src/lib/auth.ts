@@ -63,6 +63,7 @@ export const ALL_TABS = [
   { slug: "map", label: "Mapa GPS" },
   { slug: "quotes", label: "Orçamentos" },
   { slug: "billing", label: "Assinatura" },
+  { slug: "fiscal", label: "Config. Fiscal" },
 ] as const
 
 export type TabSlug = (typeof ALL_TABS)[number]["slug"]

@@ -21,6 +21,11 @@ model Tenant {
   trialEndsAt        DateTime?
   planId             String?
   asaasCustomerId    String?
+  nfeioCompanyId     String?
+  fiscalCnpj         String?
+  fiscalMunicipalCode String?
+  fiscalCityName     String?
+  fiscalStateCode    String?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -175,6 +180,10 @@ model ServiceOrder {
   technicianId   String?
   scheduledAt    DateTime?
   concludedAt    DateTime?
+  nfseId         String?
+  nfseNumber     String?
+  nfseStatus     String?
+  nfseUrl        String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
