@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant } from "@/lib/auth"
+import { geocodeAddress } from "@/lib/geocode"
 
 const clientSchema = z.object({
   name: z.string().min(2, "Nome obrigatório"),
@@ -41,6 +42,8 @@ export async function createClient(
 
   const { name, document, email, phone, status, ...address } = parsed.data
 
+  const coords = await geocodeAddress(address)
+
   await prisma.client.create({
     data: {
       name,
@@ -58,6 +61,8 @@ export async function createClient(
           city: address.city || null,
           state: address.state || null,
           zipCode: address.zipCode || null,
+          latitude: coords?.latitude ?? null,
+          longitude: coords?.longitude ?? null,
         },
       },
     },
@@ -83,6 +88,8 @@ export async function updateClient(
 
   const { name, document, email, phone, status, ...address } = parsed.data
 
+  const coords = await geocodeAddress(address)
+
   await prisma.client.update({
     where: { id, tenantId },
     data: {
@@ -101,6 +108,8 @@ export async function updateClient(
             city: address.city || null,
             state: address.state || null,
             zipCode: address.zipCode || null,
+            latitude: coords?.latitude ?? null,
+            longitude: coords?.longitude ?? null,
           },
           update: {
             street: address.street || null,
@@ -110,6 +119,8 @@ export async function updateClient(
             city: address.city || null,
             state: address.state || null,
             zipCode: address.zipCode || null,
+            latitude: coords?.latitude ?? null,
+            longitude: coords?.longitude ?? null,
           },
         },
       },

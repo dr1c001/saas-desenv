@@ -32,7 +32,8 @@ export async function getTenant() {
     } else {
       // New owner — create a tenant
       const companyName = user.user_metadata?.company_name ?? `Empresa de ${name}`
-      const tenant = await prisma.tenant.create({ data: { name: companyName } })
+      const trialEndsAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+      const tenant = await prisma.tenant.create({ data: { name: companyName, trialEndsAt } })
       tenantId = tenant.id
     }
 
@@ -61,6 +62,7 @@ export const ALL_TABS = [
   { slug: "team", label: "Equipe" },
   { slug: "map", label: "Mapa GPS" },
   { slug: "quotes", label: "Orçamentos" },
+  { slug: "billing", label: "Assinatura" },
 ] as const
 
 export type TabSlug = (typeof ALL_TABS)[number]["slug"]

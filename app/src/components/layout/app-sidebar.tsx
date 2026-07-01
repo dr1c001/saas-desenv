@@ -19,6 +19,7 @@ import {
   MapPin,
   Shield,
   FileText,
+  CreditCard,
 } from "lucide-react"
 import {
   Sidebar,
@@ -51,6 +52,7 @@ const NAV_ITEMS: { title: string; href: string; icon: React.ElementType; slug: T
   { title: "Relatórios", href: "/reports", icon: BarChart2, slug: "reports" },
   { title: "Equipe", href: "/team", icon: UserCog, slug: "team" },
   { title: "Mapa GPS", href: "/map", icon: MapPin, slug: "map" },
+  { title: "Assinatura", href: "/billing", icon: CreditCard, slug: "billing" },
 ]
 
 type Props = {

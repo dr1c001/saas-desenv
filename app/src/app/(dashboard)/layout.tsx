@@ -5,6 +5,7 @@ import { OverdueAlerts } from "@/components/layout/overdue-alerts"
 import { PushSubscriber } from "@/components/layout/push-subscriber"
 import { LocationTracker } from "@/components/layout/location-tracker"
 import { getTenant, getAllowedTabs } from "@/lib/auth"
+import { TrialBanner } from "@/components/layout/trial-banner"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { tenantId, role, userId } = await getTenant()
@@ -17,6 +18,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <header className="h-14 border-b flex items-center px-4 gap-2">
           <SidebarTrigger />
         </header>
+        <Suspense>
+          <TrialBanner />
+        </Suspense>
         <Suspense>
           <OverdueAlerts />
         </Suspense>
