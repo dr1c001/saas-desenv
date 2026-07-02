@@ -29,6 +29,8 @@ model Tenant {
   fiscalIssRate      Float?
   zapiInstance       String?
   zapiToken          String?
+  referralCode       String?            @unique
+  referredByCode     String?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 

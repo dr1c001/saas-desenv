@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -23,6 +23,8 @@ type FormData = z.infer<typeof schema>
 
 export default function RegisterPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const refCode = searchParams.get("ref") ?? ""
   const [serverError, setServerError] = useState<string | null>(null)
   const [emailSent, setEmailSent] = useState(false)
 
@@ -38,7 +40,7 @@ export default function RegisterPage() {
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
-      options: { data: { name: data.name, company_name: data.companyName } },
+      options: { data: { name: data.name, company_name: data.companyName, ref_code: refCode } },
     })
     if (error) {
       if (error.message.toLowerCase().includes("rate limit") || error.message.toLowerCase().includes("email rate")) {
@@ -55,7 +57,6 @@ export default function RegisterPage() {
       router.refresh()
       return
     }
-    // Email confirmation still required (fallback)
     setEmailSent(true)
   }
 
@@ -64,9 +65,18 @@ export default function RegisterPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">Criar conta</CardTitle>
-          <CardDescription>Cadastre sua empresa gratuitamente</CardDescription>
+          <CardDescription>
+            {refCode
+              ? "Você foi indicado — ganhe 7 dias extras no teste grátis!"
+              : "Cadastre sua empresa gratuitamente"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
+          {refCode && (
+            <div className="mb-4 rounded-lg border border-green-300 bg-green-50 dark:bg-green-950 px-3 py-2 text-sm text-green-700 dark:text-green-300">
+              🎁 Código de indicação aplicado! Seu trial será de <strong>22 dias</strong> grátis.
+            </div>
+          )}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="companyName">Nome da empresa</Label>
@@ -95,7 +105,7 @@ export default function RegisterPage() {
               </p>
             )}
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Criando conta..." : "Criar conta"}
+              {isSubmitting ? "Criando conta..." : "Criar conta grátis"}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">

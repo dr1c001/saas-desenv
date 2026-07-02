@@ -33,10 +33,19 @@ export async function getTenant() {
     } else {
       // New owner — create a tenant
       const companyName = user.user_metadata?.company_name ?? `Empresa de ${name}`
-      const trialEndsAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
-      const tenant = await prisma.tenant.create({ data: { name: companyName, trialEndsAt } })
+      const refCode: string | undefined = user.user_metadata?.ref_code
+
+      let extraDays = 0
+      if (refCode) {
+        const referrer = await prisma.tenant.findFirst({ where: { referralCode: refCode }, select: { id: true } })
+        if (referrer) extraDays = 7
+      }
+
+      const trialEndsAt = new Date(Date.now() + (15 + extraDays) * 24 * 60 * 60 * 1000)
+      const tenant = await prisma.tenant.create({
+        data: { name: companyName, trialEndsAt, referredByCode: refCode ?? null },
+      })
       tenantId = tenant.id
-      // fire-and-forget welcome email
       sendWelcomeEmail(user.email!, name).catch(() => null)
     }
 
@@ -67,6 +76,7 @@ export const ALL_TABS = [
   { slug: "quotes", label: "Orçamentos" },
   { slug: "billing", label: "Assinatura" },
   { slug: "fiscal", label: "Config. Fiscal" },
+  { slug: "referral", label: "Indicação" },
 ] as const
 
 export type TabSlug = (typeof ALL_TABS)[number]["slug"]

@@ -103,3 +103,82 @@ export async function sendPaymentConfirmedEmail(to: string, name: string, planNa
       </div>`,
   })
 }
+
+export async function sendOnboardingDay3Email(to: string, name: string) {
+  return resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Dica do ServiçoOS: crie sua primeira OS em 2 minutos`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
+        <h1 style="color:#7c3aed;margin-bottom:8px">Olá, ${name}! 👋</h1>
+        <p style="color:#374151;line-height:1.6">
+          Você já está há 3 dias com o ServiçoOS. Que tal criar sua primeira Ordem de Serviço?
+        </p>
+        <p style="color:#374151;line-height:1.6">É simples:</p>
+        <ol style="color:#374151;line-height:2;padding-left:20px">
+          <li>Cadastre um cliente (ou use um existente)</li>
+          <li>Clique em <strong>+ Nova OS</strong></li>
+          <li>Preencha os dados e salve</li>
+          <li>Envie o PDF direto para o cliente 🎉</li>
+        </ol>
+        <a href="https://app-olive-six-67.vercel.app/service-orders/new"
+           style="display:inline-block;margin:24px 0;padding:12px 28px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
+          Criar minha primeira OS →
+        </a>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
+        <p style="color:#6b7280;font-size:13px">
+          Precisa de ajuda? Responda este e-mail que te ajudamos.<br>
+          Seu trial ainda tem <strong>12 dias</strong> — aproveite ao máximo!
+        </p>
+      </div>`,
+  })
+}
+
+export async function sendNpsEmail(to: string, name: string, osToken: string) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app-olive-six-67.vercel.app"
+  return resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Como foi sua experiência com o ServiçoOS?`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
+        <h1 style="color:#7c3aed;margin-bottom:8px">Olá, ${name}! 🙏</h1>
+        <p style="color:#374151;line-height:1.6">
+          Você concluiu uma OS no ServiçoOS. Queremos saber sua opinião!<br>
+          Em uma escala de 0 a 10, <strong>o quanto você indicaria o ServiçoOS</strong> para outros empresários?
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:24px 0">
+          ${[0,1,2,3,4,5,6,7,8,9,10].map(n => `
+            <a href="${appUrl}/api/nps?token=${osToken}&score=${n}"
+               style="display:inline-block;width:40px;height:40px;line-height:40px;text-align:center;border:1px solid #e5e7eb;border-radius:8px;color:#374151;text-decoration:none;font-weight:600;font-size:14px">
+              ${n}
+            </a>`).join("")}
+        </div>
+        <p style="color:#6b7280;font-size:12px;margin-top:8px">0 = não indicaria · 10 = com certeza indicaria</p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
+        <p style="color:#6b7280;font-size:12px">Se preferir não responder, ignore este e-mail.</p>
+      </div>`,
+  })
+}
+
+export async function sendReferralWelcomeEmail(to: string, name: string, referrerCompany: string, extraDays: number) {
+  return resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Você ganhou ${extraDays} dias extras no ServiçoOS!`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
+        <h1 style="color:#7c3aed;margin-bottom:8px">Presente de boas-vindas! 🎁</h1>
+        <p style="color:#374151;line-height:1.6">
+          Olá, ${name}!<br>
+          A empresa <strong>${referrerCompany}</strong> te indicou o ServiçoOS e você ganhou
+          <strong>${extraDays} dias extras</strong> no seu período de teste — totalizando ${15 + extraDays} dias grátis!
+        </p>
+        <a href="https://app-olive-six-67.vercel.app/dashboard"
+           style="display:inline-block;margin:24px 0;padding:12px 28px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
+          Acessar o sistema →
+        </a>
+      </div>`,
+  })
+}
