@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useState } from "react"
 import {
   LayoutDashboard,
   Users,
@@ -20,6 +21,8 @@ import {
   Shield,
   FileText,
   CreditCard,
+  Search,
+  X,
 } from "lucide-react"
 import {
   Sidebar,
@@ -65,8 +68,14 @@ export function AppSidebar({ allowedTabs, role }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const allowedSet = new Set(allowedTabs)
+  const [search, setSearch] = useState("")
 
   const visibleItems = NAV_ITEMS.filter((item) => allowedSet.has(item.slug))
+  const filteredItems = search.trim()
+    ? visibleItems.filter((item) =>
+        item.title.toLowerCase().includes(search.toLowerCase())
+      )
+    : visibleItems
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -83,21 +92,45 @@ export function AppSidebar({ allowedTabs, role }: Props) {
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <span className="font-bold text-lg">ServiçoOS</span>
           <Badge variant="outline" className="text-xs">
             {roleLabel[role] ?? role}
           </Badge>
         </div>
+        {/* Barra de pesquisa */}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Buscar aba..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-md border bg-background px-8 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            {search ? `Resultados (${filteredItems.length})` : "Menu"}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {visibleItems.map((item) => (
+              {filteredItems.length === 0 && (
+                <p className="px-3 py-2 text-xs text-muted-foreground">Nenhuma aba encontrada.</p>
+              )}
+              {filteredItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     render={<Link href={item.href} />}
