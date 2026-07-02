@@ -1,11 +1,11 @@
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
 import { AlertTriangle } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 
-export async function OverdueAlerts() {
-  const { tenantId } = await getTenant()
+type Props = { tenantId: string }
+
+export async function OverdueAlerts({ tenantId }: Props) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 

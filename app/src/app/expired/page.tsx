@@ -5,22 +5,22 @@ import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 
 export default async function ExpiredPage() {
-  const { tenantId } = await getTenant()
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    select: { subscriptionStatus: true, trialEndsAt: true, name: true },
-  })
+  const { tenantId, tenantStatus } = await getTenant()
 
   // If somehow active again, redirect to dashboard
-  if (tenant?.subscriptionStatus === "ACTIVE") redirect("/dashboard")
+  if (tenantStatus?.subscriptionStatus === "ACTIVE") redirect("/dashboard")
 
   const isTrialExpired =
-    tenant?.subscriptionStatus === "TRIAL" &&
-    tenant.trialEndsAt &&
-    new Date(tenant.trialEndsAt) < new Date()
+    tenantStatus?.subscriptionStatus === "TRIAL" &&
+    tenantStatus.trialEndsAt &&
+    new Date(tenantStatus.trialEndsAt) < new Date()
 
-  const isCancelled = tenant?.subscriptionStatus === "CANCELLED"
-  const isPastDue = tenant?.subscriptionStatus === "PAST_DUE"
+  const isCancelled = tenantStatus?.subscriptionStatus === "CANCELLED"
+  const isPastDue = tenantStatus?.subscriptionStatus === "PAST_DUE"
+
+  const tenant = isTrialExpired
+    ? await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } })
+    : null
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -33,7 +33,7 @@ export default async function ExpiredPage() {
           <>
             <h1 className="text-2xl font-bold">Seu período de teste encerrou</h1>
             <p className="text-muted-foreground">
-              Os 15 dias grátis de <strong>{tenant.name}</strong> chegaram ao fim.
+              Os 15 dias grátis de <strong>{tenant?.name ?? "sua empresa"}</strong> chegaram ao fim.
               Assine um plano para continuar usando o ServiçoOS sem perder nenhum dado.
             </p>
           </>

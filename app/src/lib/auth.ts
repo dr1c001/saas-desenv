@@ -13,23 +13,33 @@ export async function getSession() {
 export async function getTenant() {
   const user = await getSession()
 
-  let dbUser = await prisma.user.findUnique({
+  const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { tenantId: true, role: true },
+    select: {
+      tenantId: true,
+      role: true,
+      tenant: { select: { subscriptionStatus: true, trialEndsAt: true } },
+    },
   })
 
-  // Fallback: create tenant+user if not in DB yet
+  // Fallback: create tenant+user if not in DB yet (one-time cost on first login)
   if (!dbUser) {
     const name = user.user_metadata?.name ?? user.email?.split("@")[0] ?? "Usuário"
     const existingTenantId: string | undefined = user.user_metadata?.tenantId
 
     let tenantId: string
     let role: "OWNER" | "ADMIN" | "TECHNICIAN" = "OWNER"
+    let tenantStatus: { subscriptionStatus: string; trialEndsAt: Date | null }
 
     if (existingTenantId) {
       // Invited team member — join existing tenant
       tenantId = existingTenantId
       role = (user.user_metadata?.role as typeof role) ?? "TECHNICIAN"
+      const existingTenant = await prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { subscriptionStatus: true, trialEndsAt: true },
+      })
+      tenantStatus = existingTenant ?? { subscriptionStatus: "TRIAL", trialEndsAt: null }
     } else {
       // New owner — create a tenant
       const companyName = user.user_metadata?.company_name ?? `Empresa de ${name}`
@@ -46,17 +56,23 @@ export async function getTenant() {
         data: { name: companyName, trialEndsAt, referredByCode: refCode ?? null },
       })
       tenantId = tenant.id
+      tenantStatus = { subscriptionStatus: tenant.subscriptionStatus, trialEndsAt: tenant.trialEndsAt }
       sendWelcomeEmail(user.email!, name).catch(() => null)
     }
 
-    const created = await prisma.user.create({
+    await prisma.user.create({
       data: { id: user.id, name, email: user.email!, role, tenantId },
-      select: { tenantId: true, role: true },
     })
-    dbUser = created
+
+    return { userId: user.id, tenantId, role, tenantStatus }
   }
 
-  return { userId: user.id, tenantId: dbUser.tenantId, role: dbUser.role }
+  return {
+    userId: user.id,
+    tenantId: dbUser.tenantId,
+    role: dbUser.role,
+    tenantStatus: dbUser.tenant,
+  }
 }
 
 // Tabs available in the system (slug → display info)

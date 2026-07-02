@@ -6,25 +6,20 @@ import { PushSubscriber } from "@/components/layout/push-subscriber"
 import { LocationTracker } from "@/components/layout/location-tracker"
 import { getTenant, getAllowedTabs } from "@/lib/auth"
 import { TrialBanner } from "@/components/layout/trial-banner"
-import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { tenantId, role, userId } = await getTenant()
+  const { tenantId, role, userId, tenantStatus } = await getTenant()
 
   // Block access when trial expired, cancelled or past_due — /expired is outside this layout
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    select: { subscriptionStatus: true, trialEndsAt: true },
-  })
   const trialExpired =
-    tenant?.subscriptionStatus === "TRIAL" &&
-    tenant.trialEndsAt &&
-    new Date(tenant.trialEndsAt) < new Date()
+    tenantStatus?.subscriptionStatus === "TRIAL" &&
+    tenantStatus.trialEndsAt &&
+    new Date(tenantStatus.trialEndsAt) < new Date()
   if (
     trialExpired ||
-    tenant?.subscriptionStatus === "CANCELLED" ||
-    tenant?.subscriptionStatus === "PAST_DUE"
+    tenantStatus?.subscriptionStatus === "CANCELLED" ||
+    tenantStatus?.subscriptionStatus === "PAST_DUE"
   ) {
     redirect("/expired")
   }
@@ -38,11 +33,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <header className="h-14 border-b flex items-center px-4 gap-2">
           <SidebarTrigger />
         </header>
+        <TrialBanner tenantStatus={tenantStatus} />
         <Suspense>
-          <TrialBanner />
-        </Suspense>
-        <Suspense>
-          <OverdueAlerts />
+          <OverdueAlerts tenantId={tenantId} />
         </Suspense>
         <div className="flex-1 p-6">{children}</div>
       </main>

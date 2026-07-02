@@ -1,20 +1,15 @@
 import Link from "next/link"
 import { Clock, AlertTriangle } from "lucide-react"
-import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
 
-export async function TrialBanner() {
-  const { tenantId } = await getTenant()
+type Props = {
+  tenantStatus?: { subscriptionStatus: string; trialEndsAt: Date | null } | null
+}
 
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    select: { subscriptionStatus: true, trialEndsAt: true },
-  })
+export function TrialBanner({ tenantStatus }: Props) {
+  if (!tenantStatus || tenantStatus.subscriptionStatus !== "TRIAL") return null
 
-  if (!tenant || tenant.subscriptionStatus !== "TRIAL") return null
-
-  const daysLeft = tenant.trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(tenant.trialEndsAt).getTime() - Date.now()) / 86_400_000))
+  const daysLeft = tenantStatus.trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(tenantStatus.trialEndsAt).getTime() - Date.now()) / 86_400_000))
     : 0
 
   const expired = daysLeft === 0
