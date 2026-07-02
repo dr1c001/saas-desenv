@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
@@ -21,7 +21,7 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const refCode = searchParams.get("ref") ?? ""
@@ -61,61 +61,76 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/40">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Criar conta</CardTitle>
-          <CardDescription>
-            {refCode
-              ? "Você foi indicado — ganhe 7 dias extras no teste grátis!"
-              : "Cadastre sua empresa gratuitamente"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {refCode && (
-            <div className="mb-4 rounded-lg border border-green-300 bg-green-50 dark:bg-green-950 px-3 py-2 text-sm text-green-700 dark:text-green-300">
-              🎁 Código de indicação aplicado! Seu trial será de <strong>22 dias</strong> grátis.
-            </div>
+    <Card className="w-full max-w-sm">
+      <CardHeader>
+        <CardTitle className="text-2xl">Criar conta</CardTitle>
+        <CardDescription>
+          {refCode
+            ? "Você foi indicado — ganhe 7 dias extras no teste grátis!"
+            : "Cadastre sua empresa gratuitamente"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {refCode && (
+          <div className="mb-4 rounded-lg border border-green-300 bg-green-50 dark:bg-green-950 px-3 py-2 text-sm text-green-700 dark:text-green-300">
+            🎁 Código de indicação aplicado! Seu trial será de <strong>22 dias</strong> grátis.
+          </div>
+        )}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="companyName">Nome da empresa</Label>
+            <Input id="companyName" placeholder="Minha Empresa Ltda" {...register("companyName")} />
+            {errors.companyName && <p className="text-sm text-destructive">{errors.companyName.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="name">Seu nome</Label>
+            <Input id="name" placeholder="João Silva" {...register("name")} />
+            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="email">E-mail</Label>
+            <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} />
+            {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password">Senha</Label>
+            <Input id="password" type="password" {...register("password")} />
+            {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+          </div>
+          {serverError && <p className="text-sm text-destructive">{serverError}</p>}
+          {emailSent && (
+            <p className="text-sm text-green-600">
+              Conta criada! Verifique seu e-mail para confirmar o cadastro antes de entrar.
+            </p>
           )}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="companyName">Nome da empresa</Label>
-              <Input id="companyName" placeholder="Minha Empresa Ltda" {...register("companyName")} />
-              {errors.companyName && <p className="text-sm text-destructive">{errors.companyName.message}</p>}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="name">Seu nome</Label>
-              <Input id="name" placeholder="João Silva" {...register("name")} />
-              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="email">E-mail</Label>
-              <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} />
-              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" {...register("password")} />
-              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-            </div>
-            {serverError && <p className="text-sm text-destructive">{serverError}</p>}
-            {emailSent && (
-              <p className="text-sm text-green-600">
-                Conta criada! Verifique seu e-mail para confirmar o cadastro antes de entrar.
-              </p>
-            )}
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Criando conta..." : "Criar conta grátis"}
-            </Button>
-          </form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Já tem conta?{" "}
-            <Link href="/login" className="text-primary underline-offset-4 hover:underline">
-              Entrar
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Criando conta..." : "Criar conta grátis"}
+          </Button>
+        </form>
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          Já tem conta?{" "}
+          <Link href="/login" className="text-primary underline-offset-4 hover:underline">
+            Entrar
+          </Link>
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-muted/40">
+      <Suspense fallback={
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl">Criar conta</CardTitle>
+            <CardDescription>Carregando...</CardDescription>
+          </CardHeader>
+        </Card>
+      }>
+        <RegisterForm />
+      </Suspense>
     </div>
   )
 }
