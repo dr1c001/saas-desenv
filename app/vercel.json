@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npx prisma generate && npx prisma migrate deploy && next build",
+  "buildCommand": "npx prisma generate && npx prisma migrate resolve --applied 20260630000001_add_rbac_push_location 2>/dev/null | true && npx prisma migrate deploy && next build",
   "installCommand": "npm install",
   "crons": [
     {
