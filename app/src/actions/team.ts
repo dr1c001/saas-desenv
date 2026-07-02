@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant } from "@/lib/auth"
+import { sendTeamInviteEmail } from "@/lib/resend"
 
 const inviteSchema = z.object({
   name: z.string().min(2, "Nome obrigatório"),
@@ -49,6 +50,9 @@ export async function inviteTeamMember(
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 
   if (serviceRoleKey && supabaseUrl) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app-olive-six-67.vercel.app"
+    const redirectTo = `${appUrl}/api/auth/callback`
+
     // Use /admin/invite to actually send the invite email
     const res = await fetch(`${supabaseUrl}/auth/v1/admin/invite`, {
       method: "POST",
@@ -60,11 +64,13 @@ export async function inviteTeamMember(
       body: JSON.stringify({
         email,
         data: { name, tenantId, role },
+        redirectTo,
       }),
     })
     const data = await res.json()
 
     if (data.id) {
+      // Save user in DB
       await prisma.user.upsert({
         where: { id: data.id },
         create: { id: data.id, name, email, role, tenantId, document: document || null, phone: phone || null },
@@ -78,6 +84,16 @@ export async function inviteTeamMember(
           update: { street: street || null, number: number || null, complement: complement || null, district: district || null, city: city || null, state: state || null, zipCode: zipCode || null },
         })
       }
+
+      // Get tenant name for the email
+      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } })
+
+      // Send custom Resend email with the invite magic link
+      // Supabase sends its own email too; ours is the branded fallback
+      if (data.action_link) {
+        await sendTeamInviteEmail(email, name, tenant?.name ?? "sua empresa", data.action_link).catch(() => null)
+      }
+
       revalidatePath("/team")
       return { success: true, message: `Convite enviado para ${email}` }
     }

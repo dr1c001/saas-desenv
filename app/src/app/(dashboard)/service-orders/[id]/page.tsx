@@ -134,7 +134,7 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
         )}
       </div>
 
-      {os.checklist.length > 0 || true ? (
+      {os.checklist.length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Checklist de execução</CardTitle>

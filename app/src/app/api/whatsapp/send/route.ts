@@ -10,7 +10,8 @@ export async function POST(req: NextRequest) {
     const { type, id } = await req.json()
 
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } })
-    if (!tenant?.zapiInstance || !tenant?.zapiToken) {
+    if (!tenant) return NextResponse.json({ ok: false, error: "Empresa não encontrada" }, { status: 404 })
+    if (!tenant.zapiInstance || !tenant.zapiToken) {
       return NextResponse.json({ ok: false, error: "Configure o Z-API em Configurações → WhatsApp" }, { status: 400 })
     }
 

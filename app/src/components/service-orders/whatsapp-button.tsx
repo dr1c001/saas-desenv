@@ -12,18 +12,24 @@ export function WhatsAppButton({ type, id }: Props) {
 
   async function handle() {
     setState("loading")
-    const res = await fetch("/api/whatsapp/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type, id }),
-    })
-    const data = await res.json()
-    if (data.ok) {
-      setState("ok")
-      setTimeout(() => setState("idle"), 3000)
-    } else {
+    try {
+      const res = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, id }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setState("ok")
+        setTimeout(() => setState("idle"), 3000)
+      } else {
+        setState("error")
+        setMsg(data.error ?? "Erro ao enviar")
+        setTimeout(() => setState("idle"), 5000)
+      }
+    } catch {
       setState("error")
-      setMsg(data.error)
+      setMsg("Erro de conexão")
       setTimeout(() => setState("idle"), 5000)
     }
   }

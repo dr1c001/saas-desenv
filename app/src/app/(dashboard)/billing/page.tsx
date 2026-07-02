@@ -15,12 +15,12 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
 
 const PLAN_FEATURES: Record<string, string[]> = {
   starter: ["Até 3 usuários", "50 OS por mês", "Relatórios básicos", "Suporte por e-mail"],
-  pro: ["Até 10 usuários", "OS ilimitadas", "Mapa GPS", "Relatórios avançados", "Suporte prioritário"],
+  pro: ["Até 10 usuários", "OS ilimitadas", "Mapa GPS", "Checklist + Assinatura digital", "Emissão de NFS-e", "Relatórios avançados", "Suporte prioritário"],
   enterprise: ["Usuários ilimitados", "OS ilimitadas", "Emissão de NFS-e", "API de integração", "Suporte 24h"],
 }
 
-export default async function BillingPage({ searchParams }: { searchParams: Promise<{ success?: string }> }) {
-  const { success } = await searchParams
+export default async function BillingPage({ searchParams }: { searchParams: Promise<{ success?: string; error?: string }> }) {
+  const { success, error } = await searchParams
   const [billing, plans] = await Promise.all([getBillingStatus(), getPlans()])
 
   const trialDaysLeft = billing?.trialEndsAt
@@ -40,6 +40,13 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         <div className="flex items-center gap-2 rounded-lg border border-green-600 bg-green-50 dark:bg-green-950 p-4 text-green-700 dark:text-green-300">
           <CheckCircle2 className="size-5 shrink-0" />
           <span>Assinatura realizada com sucesso! O pagamento PIX foi gerado no e-mail.</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-400 bg-red-50 dark:bg-red-950 p-4 text-red-700 dark:text-red-300">
+          <span className="font-medium">Erro ao processar assinatura:</span>
+          <span>{decodeURIComponent(error)}</span>
         </div>
       )}
 
