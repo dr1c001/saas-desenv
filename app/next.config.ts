@@ -6,7 +6,8 @@ const nextConfig: NextConfig = {
 };
 
 export default withSentryConfig(nextConfig, {
-  silent: true,
+  silent: false,
+  debug: true,
   widenClientFileUpload: true,
   // org, project e authToken vêm das env vars SENTRY_ORG / SENTRY_PROJECT / SENTRY_AUTH_TOKEN
   // Se o upload de source maps falhar (token invalido/expirado), so avisa no log do build
