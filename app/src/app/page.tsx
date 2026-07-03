@@ -354,11 +354,13 @@ export default function LandingPage() {
       <footer className="border-t py-10 px-4">
         <div className="mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <p className="font-semibold text-foreground">ServiçoOS</p>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap justify-center gap-6">
             <Link href="/login" className="hover:text-foreground">Entrar</Link>
             <Link href="/register" className="hover:text-foreground">Criar conta</Link>
             <Link href="#planos" className="hover:text-foreground">Planos</Link>
             <Link href="#faq" className="hover:text-foreground">FAQ</Link>
+            <Link href="/terms" className="hover:text-foreground">Termos de Uso</Link>
+            <Link href="/privacy" className="hover:text-foreground">Privacidade</Link>
           </div>
           <p>© 2026 ServiçoOS · Todos os direitos reservados</p>
         </div>

@@ -17,6 +17,9 @@ const schema = z.object({
   name: z.string().min(2, "Seu nome é obrigatório"),
   email: z.string().email("E-mail inválido"),
   password: z.string().min(6, "Mínimo 6 caracteres"),
+  termsAccepted: z.boolean().refine((v) => v === true, {
+    message: "Você precisa aceitar os Termos de Uso e a Política de Privacidade",
+  }),
 })
 
 type FormData = z.infer<typeof schema>
@@ -96,6 +99,26 @@ function RegisterForm() {
             <Label htmlFor="password">Senha</Label>
             <Input id="password" type="password" {...register("password")} />
             {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <label className="flex items-start gap-2 text-sm text-muted-foreground select-none">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4 shrink-0 rounded border-input accent-primary"
+                {...register("termsAccepted")}
+              />
+              <span>
+                Li e aceito os{" "}
+                <Link href="/terms" target="_blank" className="text-primary underline underline-offset-2">
+                  Termos de Uso
+                </Link>{" "}
+                e a{" "}
+                <Link href="/privacy" target="_blank" className="text-primary underline underline-offset-2">
+                  Política de Privacidade
+                </Link>
+              </span>
+            </label>
+            {errors.termsAccepted && <p className="text-sm text-destructive">{errors.termsAccepted.message}</p>}
           </div>
           {serverError && <p className="text-sm text-destructive">{serverError}</p>}
           {emailSent && (
