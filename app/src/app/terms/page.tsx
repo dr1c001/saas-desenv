@@ -29,7 +29,7 @@ export default function TermsPage() {
             <h2>1. Quem presta este serviço</h2>
             <p>
               O ServiçoOS é operado por <strong>ADRIEL WELLINGTON RODRIGUES</strong>, inscrito no CNPJ nº{" "}
-              <strong>53.325.011 [completar CNPJ — número informado incompleto]</strong>, doravante
+              <strong>53.325.011/0001-08</strong>, doravante
               denominado &ldquo;ServiçoOS&rdquo;, &ldquo;nós&rdquo; ou &ldquo;prestador&rdquo;.
             </p>
             <p>

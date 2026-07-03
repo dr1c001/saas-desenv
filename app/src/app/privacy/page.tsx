@@ -37,7 +37,7 @@ export default function PrivacyPage() {
             <p>
               O controlador dos dados pessoais tratados por este sistema é{" "}
               <strong>ADRIEL WELLINGTON RODRIGUES</strong>, inscrito no CNPJ nº{" "}
-              <strong>53.325.011 [completar CNPJ — número informado incompleto]</strong>, operador do
+              <strong>53.325.011/0001-08</strong>, operador do
               ServiçoOS.
             </p>
           </section>
