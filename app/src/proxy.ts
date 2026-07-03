@@ -31,7 +31,8 @@ export async function proxy(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/register")
+    request.nextUrl.pathname.startsWith("/register") ||
+    request.nextUrl.pathname.startsWith("/forgot-password")
 
   const isPublicRoute =
     request.nextUrl.pathname === "/" ||
@@ -39,7 +40,10 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/q/") ||
     request.nextUrl.pathname.startsWith("/api/") ||
     request.nextUrl.pathname === "/terms" ||
-    request.nextUrl.pathname === "/privacy"
+    request.nextUrl.pathname === "/privacy" ||
+    // /reset-password must work whether or not a (recovery) session already exists —
+    // it should never bounce to /login nor to /dashboard.
+    request.nextUrl.pathname.startsWith("/reset-password")
 
   if (!session && !isAuthRoute && !isPublicRoute) {
     const url = request.nextUrl.clone()

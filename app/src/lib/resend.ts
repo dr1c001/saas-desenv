@@ -162,6 +162,31 @@ export async function sendNpsEmail(to: string, name: string, osToken: string) {
   })
 }
 
+export async function sendPasswordResetEmail(to: string, name: string, resetUrl: string) {
+  return resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Recuperação de senha — ServiçoOS`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
+        <h1 style="color:#7c3aed;margin-bottom:8px">Redefinir senha</h1>
+        <p style="color:#374151;line-height:1.6">
+          ${name ? `Olá, ${name}!` : "Olá!"}<br>
+          Recebemos uma solicitação para redefinir a senha da sua conta no ServiçoOS.
+        </p>
+        <a href="${resetUrl}"
+           style="display:inline-block;margin:24px 0;padding:12px 28px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
+          Criar nova senha →
+        </a>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
+        <p style="color:#6b7280;font-size:13px">
+          Se você não solicitou essa alteração, pode ignorar este e-mail com segurança —
+          sua senha atual continua válida. Este link expira em breve por segurança.
+        </p>
+      </div>`,
+  })
+}
+
 export async function sendReferralWelcomeEmail(to: string, name: string, referrerCompany: string, extraDays: number) {
   return resend.emails.send({
     from: FROM,
