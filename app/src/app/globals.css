@@ -128,3 +128,20 @@
     @apply font-sans;
   }
 }
+
+/* Barra de rolagem fina e visivel para o menu lateral — sem isso o overflow
+   existe mas fica invisivel, e as abas de baixo parecem ter sumido. */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-ring) transparent;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--sidebar-ring);
+  border-radius: 9999px;
+}
