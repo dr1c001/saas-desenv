@@ -98,7 +98,7 @@ export default function PrivacyPage() {
               <tbody>
                 <tr><td>Supabase</td><td>Autenticação de usuários e banco de dados</td></tr>
                 <tr><td>Vercel</td><td>Hospedagem da aplicação</td></tr>
-                <tr><td>Asaas</td><td>Processamento de pagamentos (PIX, boleto, cartão)</td></tr>
+                <tr><td>Asaas</td><td>Processamento de pagamentos (boleto, cartão)</td></tr>
                 <tr><td>nfe.io</td><td>Emissão de notas fiscais de serviço eletrônicas (NFS-e)</td></tr>
                 <tr><td>Resend</td><td>Envio de e-mails transacionais</td></tr>
                 <tr><td>Z-API</td><td>Integração de mensagens via WhatsApp (quando ativada pela empresa)</td></tr>

@@ -39,7 +39,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       {success && (
         <div className="flex items-center gap-2 rounded-lg border border-green-600 bg-green-50 dark:bg-green-950 p-4 text-green-700 dark:text-green-300">
           <CheckCircle2 className="size-5 shrink-0" />
-          <span>Assinatura realizada com sucesso! O pagamento PIX foi gerado no e-mail.</span>
+          <span>Assinatura realizada com sucesso! A fatura para pagamento foi enviada por e-mail.</span>
         </div>
       )}
 
@@ -178,7 +178,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Pagamentos processados com segurança via <strong>Asaas</strong>. Aceitamos PIX, boleto e cartão de crédito.
+        Pagamentos processados com segurança via <strong>Asaas</strong>. Aceitamos boleto e cartão de crédito.
         Cancele a qualquer momento.
       </p>
     </div>

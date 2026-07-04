@@ -92,7 +92,7 @@ export default function TermsPage() {
             </p>
             <p>
               Os pagamentos são processados por um parceiro de pagamentos (gateway) e podem ser feitos via
-              PIX, boleto bancário ou cartão de crédito, em ciclo mensal ou anual. O ServiçoOS não armazena
+              boleto bancário ou cartão de crédito, em ciclo mensal ou anual. O ServiçoOS não armazena
               dados completos de cartão de crédito — o processamento é feito integralmente pelo parceiro de
               pagamentos.
             </p>
