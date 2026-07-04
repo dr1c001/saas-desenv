@@ -53,8 +53,10 @@ export async function inviteTeamMember(
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app-olive-six-67.vercel.app"
     const redirectTo = `${appUrl}/api/auth/callback`
 
-    // Use /admin/invite to actually send the invite email
-    const res = await fetch(`${supabaseUrl}/auth/v1/admin/invite`, {
+    // /admin/invite foi descontinuado nesta versao do GoTrue (retorna 404 texto puro).
+    // /admin/generate_link com type "invite" e o equivalente atual — mesmo formato
+    // de resposta (id + action_link no nivel raiz).
+    const res = await fetch(`${supabaseUrl}/auth/v1/admin/generate_link`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -62,11 +64,18 @@ export async function inviteTeamMember(
         apikey: serviceRoleKey,
       },
       body: JSON.stringify({
+        type: "invite",
         email,
         data: { name, tenantId, role },
         redirectTo,
       }),
     })
+
+    if (!res.ok) {
+      const body = await res.text()
+      console.error("Supabase invite error:", res.status, body)
+      return { message: "Erro ao enviar convite. Tente novamente em instantes." }
+    }
     const data = await res.json()
 
     if (data.id) {
@@ -88,13 +97,24 @@ export async function inviteTeamMember(
       // Get tenant name for the email
       const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } })
 
-      // Send custom Resend email with the invite magic link
-      // Supabase sends its own email too; ours is the branded fallback
+      // generate_link so cria o link, nao envia e-mail — o Resend e o unico envio,
+      // entao uma falha aqui precisa aparecer pro usuario (nao ha fallback do Supabase)
+      let emailSent = false
       if (data.action_link) {
-        await sendTeamInviteEmail(email, name, tenant?.name ?? "sua empresa", data.action_link).catch(() => null)
+        emailSent = await sendTeamInviteEmail(email, name, tenant?.name ?? "sua empresa", data.action_link)
+          .then(() => true)
+          .catch((err) => {
+            console.error("Resend invite email error:", err)
+            return false
+          })
       }
 
       revalidatePath("/team")
+      if (!emailSent) {
+        return {
+          message: `Membro adicionado, mas o e-mail de convite falhou. Peça para ${email} usar "Esqueci minha senha" com este e-mail para entrar.`,
+        }
+      }
       return { success: true, message: `Convite enviado para ${email}` }
     }
     console.error("Supabase invite error:", JSON.stringify(data))
