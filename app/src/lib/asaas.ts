@@ -2,7 +2,7 @@ const BASE_URL = process.env.ASAAS_SANDBOX === "true"
   ? "https://sandbox.asaas.com/api/v3"
   : "https://www.asaas.com/api/v3"
 
-const API_KEY = process.env.ASAAS_API_KEY!
+const API_KEY = process.env.ASAAS_ACCESS_TOKEN!
 
 async function asaasRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
