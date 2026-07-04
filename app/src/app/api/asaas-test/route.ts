@@ -2,8 +2,9 @@ import { NextResponse } from "next/server"
 import { asaas } from "@/lib/asaas"
 
 export async function GET() {
-  const directRead = process.env.ASAAS_TOKEN_V3 ?? ""
-  const directInfo = { length: directRead.length, prefix: directRead.slice(0, 12) }
+  const b64Raw = process.env.ASAAS_TOKEN_B64 ?? ""
+  const decoded = b64Raw ? Buffer.from(b64Raw, "base64").toString("utf-8") : ""
+  const directInfo = { b64RawLength: b64Raw.length, decodedLength: decoded.length, decodedPrefix: decoded.slice(0, 12) }
   try {
     const customer = await asaas.createCustomer({
       name: "Teste Final Diagnostico Claude",

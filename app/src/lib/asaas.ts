@@ -2,11 +2,13 @@ const BASE_URL = process.env.ASAAS_SANDBOX === "true"
   ? "https://sandbox.asaas.com/api/v3"
   : "https://www.asaas.com/api/v3"
 
-// Nome incomum de propósito: nomes de env var que já foram removidos e
-// recriados na Vercel (ASAAS_API_KEY, ASAAS_ACCESS_TOKEN) ficam permanentemente
-// vazios em produção — um valor identico funciona sob um nome nunca antes usado.
-// Nao renomear sem confirmar que o novo nome nunca foi usado antes no projeto.
-const API_KEY = process.env.ASAAS_TOKEN_V3!
+// A chave fica em base64 na env var (ASAAS_TOKEN_B64) em vez de texto puro.
+// Isso contorna um problema real observado na Vercel de producao: o valor
+// literal da chave do Asaas (comeca com "$", contem ":") as vezes chegava
+// vazio em process.env mesmo com a variavel configurada corretamente,
+// de forma inconsistente e sem causa identificada. Em base64 o valor so
+// contem [A-Za-z0-9+/=], eliminando qualquer char especial como suspeito.
+const API_KEY = Buffer.from(process.env.ASAAS_TOKEN_B64!, "base64").toString("utf-8")
 
 async function asaasRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
