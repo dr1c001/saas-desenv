@@ -2,7 +2,11 @@ const BASE_URL = process.env.ASAAS_SANDBOX === "true"
   ? "https://sandbox.asaas.com/api/v3"
   : "https://www.asaas.com/api/v3"
 
-const API_KEY = process.env.ASAAS_ACCESS_TOKEN!
+// Nome incomum de propósito: nomes de env var que já foram removidos e
+// recriados na Vercel (ASAAS_API_KEY, ASAAS_ACCESS_TOKEN) ficam permanentemente
+// vazios em produção — um valor identico funciona sob um nome nunca antes usado.
+// Nao renomear sem confirmar que o novo nome nunca foi usado antes no projeto.
+const API_KEY = process.env.ASAAS_TOKEN_V3!
 
 async function asaasRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
