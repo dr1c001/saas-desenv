@@ -3,10 +3,13 @@ import { asaas } from "@/lib/asaas"
 
 export async function GET() {
   const token = process.env.ASAAS_ACCESS_TOKEN ?? ""
+  const v3 = process.env.ASAAS_TOKEN_V3 ?? ""
   const envInfo = {
     tokenLength: token.length,
     tokenPrefix: token.slice(0, 12),
     sandbox: process.env.ASAAS_SANDBOX ?? null,
+    v3Length: v3.length,
+    v3Prefix: v3.slice(0, 12),
   }
   try {
     const customer = await asaas.createCustomer({
