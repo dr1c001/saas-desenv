@@ -6,5 +6,6 @@ export async function GET() {
     asaasKeyLength: key.length,
     asaasKeyPrefix: key.slice(0, 12),
     asaasSandbox: process.env.ASAAS_SANDBOX ?? null,
+    dollarTest: process.env.DOLLAR_TEST ?? null,
   })
 }
