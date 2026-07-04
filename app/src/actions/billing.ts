@@ -55,6 +55,12 @@ export async function subscribeToPlan(formData: FormData) {
     if (!owner) {
       redirect("/billing?error=" + encodeURIComponent("Proprietário da conta não encontrado."))
     }
+    if (!tenant.document) {
+      redirect(
+        "/billing?error=" +
+          encodeURIComponent("Preencha o CNPJ/CPF da empresa em Configurações antes de assinar um plano.")
+      )
+    }
     const price = cycle === "YEARLY" ? Number(plan.priceYearly) : Number(plan.priceMonthly)
 
     // Create or reuse Asaas customer
@@ -63,9 +69,14 @@ export async function subscribeToPlan(formData: FormData) {
       const customer = await asaas.createCustomer({
         name: tenant.name,
         email: owner?.email ?? "",
+        cpfCnpj: tenant.document,
       })
       asaasCustomerId = customer.id
       await prisma.tenant.update({ where: { id: tenantId }, data: { asaasCustomerId } })
+    } else {
+      // Cliente ja existia (ex: tentativa anterior que falhou so na assinatura) —
+      // garante que o CPF/CNPJ esta no cadastro do Asaas, exigido pelo billingType UNDEFINED.
+      await asaas.updateCustomer(asaasCustomerId, { cpfCnpj: tenant.document })
     }
 
     // Next due date = today
@@ -73,7 +84,7 @@ export async function subscribeToPlan(formData: FormData) {
 
     const sub = await asaas.createSubscription({
       customer: asaasCustomerId,
-      billingType: "PIX",
+      billingType: "UNDEFINED",
       value: price,
       nextDueDate,
       cycle: cycle === "YEARLY" ? "YEARLY" : "MONTHLY",

@@ -49,9 +49,19 @@ export const asaas = {
     })
   },
 
+  async updateCustomer(id: string, data: { cpfCnpj?: string }) {
+    return asaasRequest<AsaasCustomer>(`/customers/${id}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
+
   async createSubscription(data: {
     customer: string
-    billingType: "BOLETO" | "CREDIT_CARD" | "PIX"
+    // PIX nao e permitido para assinaturas nesta conta Asaas (erro invalid_billingType).
+    // UNDEFINED deixa o cliente escolher a forma de pagamento na fatura gerada
+    // pelo Asaas (boleto, cartao ou pix avulso na fatura) — requer cpfCnpj no cliente.
+    billingType: "BOLETO" | "CREDIT_CARD" | "UNDEFINED"
     value: number
     nextDueDate: string
     cycle: "MONTHLY" | "YEARLY"
