@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { sendWelcomeEmail } from "@/lib/resend"
+import { Prisma } from "@/generated/prisma/client"
 
 export async function getSession() {
   const supabase = await createClient()
@@ -60,9 +61,39 @@ export async function getTenant() {
       sendWelcomeEmail(user.email!, name).catch(() => null)
     }
 
-    await prisma.user.create({
-      data: { id: user.id, name, email: user.email!, role, tenantId },
-    })
+    try {
+      await prisma.user.create({
+        data: { id: user.id, name, email: user.email!, role, tenantId },
+      })
+    } catch (err) {
+      // Duas requisicoes concorrentes podem cair aqui ao mesmo tempo no primeiro
+      // login (ex: layout + page chamando getTenant() em paralelo antes do User
+      // existir). Se outra ja ganhou a corrida e criou o User (violação de
+      // unique constraint no id), usa os dados dela em vez de duplicar tenant.
+      const lostRace =
+        err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002"
+      if (!lostRace) throw err
+
+      if (!existingTenantId) {
+        // O tenant que acabamos de criar ficou orfao (sem User) — remove.
+        await prisma.tenant.delete({ where: { id: tenantId } }).catch(() => null)
+      }
+
+      const winner = await prisma.user.findUniqueOrThrow({
+        where: { id: user.id },
+        select: {
+          tenantId: true,
+          role: true,
+          tenant: { select: { subscriptionStatus: true, trialEndsAt: true } },
+        },
+      })
+      return {
+        userId: user.id,
+        tenantId: winner.tenantId,
+        role: winner.role,
+        tenantStatus: winner.tenant,
+      }
+    }
 
     return { userId: user.id, tenantId, role, tenantStatus }
   }
