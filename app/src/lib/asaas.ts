@@ -41,6 +41,12 @@ export type AsaasSubscription = {
   cycle: "MONTHLY" | "YEARLY"
 }
 
+export type AsaasPayment = {
+  id: string
+  status: string
+  invoiceUrl: string
+}
+
 export const asaas = {
   async createCustomer(data: { name: string; email: string; cpfCnpj?: string }) {
     return asaasRequest<AsaasCustomer>("/customers", {
@@ -79,5 +85,15 @@ export const asaas = {
 
   async getSubscription(id: string) {
     return asaasRequest<AsaasSubscription>(`/subscriptions/${id}`)
+  },
+
+  // A primeira fatura ja fica disponivel logo apos criar a assinatura —
+  // invoiceUrl e a pagina hospedada pelo Asaas onde o cliente preenche os
+  // dados e o cartao (ou opta por boleto). O ServiçoOS nunca ve os dados do cartao.
+  async getFirstInvoiceUrl(subscriptionId: string): Promise<string | null> {
+    const res = await asaasRequest<{ data: AsaasPayment[] }>(
+      `/payments?subscription=${subscriptionId}&limit=1`
+    )
+    return res.data[0]?.invoiceUrl ?? null
   },
 }

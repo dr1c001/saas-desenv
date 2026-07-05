@@ -111,6 +111,14 @@ export async function subscribeToPlan(formData: FormData) {
         data: { planId, subscriptionStatus: "ACTIVE" },
       }),
     ])
+
+    revalidatePath("/billing")
+
+    // Leva o cliente direto pra pagina de pagamento hospedada pelo Asaas
+    // (preenche dados + cartao la, nunca no nosso servidor). Se por algum
+    // motivo a fatura ainda nao estiver disponivel, cai no fluxo antigo.
+    const invoiceUrl = await asaas.getFirstInvoiceUrl(sub.id).catch(() => null)
+    if (invoiceUrl) redirect(invoiceUrl)
   } catch (err) {
     // redirect() throws internally in Next.js — let it propagate
     const msg = err instanceof Error ? err.message : "Erro desconhecido"
@@ -118,7 +126,6 @@ export async function subscribeToPlan(formData: FormData) {
     redirect("/billing?error=" + encodeURIComponent(msg))
   }
 
-  revalidatePath("/billing")
   redirect("/billing?success=1")
 }
 
