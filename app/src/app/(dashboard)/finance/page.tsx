@@ -1,4 +1,6 @@
 import { Suspense } from "react"
+import { redirect } from "next/navigation"
+import { getTenant } from "@/lib/auth"
 import { getFinanceSummary } from "@/actions/finance"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,6 +18,9 @@ type SearchParams = Promise<{ q?: string }>
 
 export default async function FinancePage({ searchParams }: { searchParams: SearchParams }) {
   const { q } = await searchParams
+  const { role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") redirect("/dashboard")
+
   const { revenues, expenses, monthlyRevenue, pendingRevenues, pendingExpenses } =
     await getFinanceSummary(q)
 

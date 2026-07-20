@@ -94,23 +94,22 @@ export async function subscribeToPlan(formData: FormData) {
     const periodEnd = new Date()
     periodEnd.setMonth(periodEnd.getMonth() + (cycle === "YEARLY" ? 12 : 1))
 
-    await prisma.$transaction([
-      prisma.subscription.create({
-        data: {
-          tenantId,
-          planId,
-          asaasId: sub.id,
-          status: "ACTIVE",
-          billingCycle: cycle,
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: periodEnd,
-        },
-      }),
-      prisma.tenant.update({
-        where: { id: tenantId },
-        data: { planId, subscriptionStatus: "ACTIVE" },
-      }),
-    ])
+    // Fica PENDING até o webhook do Asaas confirmar o pagamento (evento
+    // PAYMENT_RECEIVED/PAYMENT_CONFIRMED) — nem Subscription.status nem
+    // Tenant.subscriptionStatus viram ACTIVE aqui, senão qualquer um ganha
+    // acesso pago só de preencher o formulário, sem pagar nada.
+    // (Achado em revisão de segurança 2026-07-19.)
+    await prisma.subscription.create({
+      data: {
+        tenantId,
+        planId,
+        asaasId: sub.id,
+        status: "PENDING",
+        billingCycle: cycle,
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: periodEnd,
+      },
+    })
 
     revalidatePath("/billing")
 

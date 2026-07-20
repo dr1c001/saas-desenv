@@ -22,7 +22,8 @@ export async function createExpense(
   _prev: FinanceFormState,
   formData: FormData
 ): Promise<FinanceFormState> {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
 
   const raw = Object.fromEntries(formData.entries())
   const parsed = expenseSchema.safeParse(raw)
@@ -44,7 +45,8 @@ export async function createExpense(
 }
 
 export async function markRevenuePaid(id: string) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return
   await prisma.revenue.update({
     where: { id, tenantId },
     data: { status: "PAID", paidAt: new Date() },
@@ -53,7 +55,8 @@ export async function markRevenuePaid(id: string) {
 }
 
 export async function markExpensePaid(id: string) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return
   await prisma.expense.update({
     where: { id, tenantId },
     data: { status: "PAID", paidAt: new Date() },

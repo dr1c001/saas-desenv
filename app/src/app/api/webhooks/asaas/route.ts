@@ -3,6 +3,15 @@ import { prisma } from "@/lib/prisma"
 import { sendPaymentConfirmedEmail } from "@/lib/resend"
 
 export async function POST(req: NextRequest) {
+  // Asaas ecoa o token configurado no dashboard (Integrações → Webhooks) no
+  // header "asaas-access-token" em toda chamada — sem isso, qualquer um podia
+  // forjar eventos de pagamento (ex: ativar a própria assinatura sem pagar,
+  // ou cancelar a de outro tenant). (Achado em revisão de segurança 2026-07-19.)
+  const token = req.headers.get("asaas-access-token")
+  if (!process.env.ASAAS_WEBHOOK_SECRET || token !== process.env.ASAAS_WEBHOOK_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   try {
     const body = await req.json()
     const { event, payment } = body
@@ -29,6 +38,9 @@ export async function POST(req: NextRequest) {
       const periodEnd = new Date(sub.currentPeriodEnd)
       periodEnd.setMonth(periodEnd.getMonth() + (sub.billingCycle === "YEARLY" ? 12 : 1))
 
+      // Primeira confirmação de pagamento é o único lugar que efetivamente
+      // ativa o tenant — subscribeToPlan só cria a Subscription como PENDING
+      // e não mexe no plano do tenant, então planId precisa ser setado aqui.
       await prisma.$transaction([
         prisma.subscription.update({
           where: { id: sub.id },
@@ -36,7 +48,7 @@ export async function POST(req: NextRequest) {
         }),
         prisma.tenant.update({
           where: { id: sub.tenantId },
-          data: { subscriptionStatus: "ACTIVE" },
+          data: { subscriptionStatus: "ACTIVE", planId: sub.planId },
         }),
       ])
 
@@ -46,7 +58,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (event === "PAYMENT_OVERDUE") {
+    // PAYMENT_OVERDUE/SUBSCRIPTION_DELETED só rebaixam o tenant se essa
+    // assinatura chegou a estar ACTIVE de verdade. Uma assinatura PENDING
+    // abandonada (nunca paga) que o Asaas cancela por vencimento não deve
+    // derrubar um tenant que ainda está em trial válido — ele nunca ganhou
+    // acesso por causa dela, então não há nada a revogar no tenant.
+    if (event === "PAYMENT_OVERDUE" && sub.status === "ACTIVE") {
       await prisma.$transaction([
         prisma.subscription.update({ where: { id: sub.id }, data: { status: "PAST_DUE" } }),
         prisma.tenant.update({ where: { id: sub.tenantId }, data: { subscriptionStatus: "PAST_DUE" } }),
@@ -54,16 +71,23 @@ export async function POST(req: NextRequest) {
     }
 
     if (event === "SUBSCRIPTION_DELETED") {
-      await prisma.$transaction([
-        prisma.subscription.update({
+      if (sub.status === "ACTIVE") {
+        await prisma.$transaction([
+          prisma.subscription.update({
+            where: { id: sub.id },
+            data: { status: "CANCELLED", cancelledAt: new Date() },
+          }),
+          prisma.tenant.update({
+            where: { id: sub.tenantId },
+            data: { subscriptionStatus: "CANCELLED", planId: null },
+          }),
+        ])
+      } else {
+        await prisma.subscription.update({
           where: { id: sub.id },
           data: { status: "CANCELLED", cancelledAt: new Date() },
-        }),
-        prisma.tenant.update({
-          where: { id: sub.tenantId },
-          data: { subscriptionStatus: "CANCELLED", planId: null },
-        }),
-      ])
+        })
+      }
     }
   } catch {
     // never return 5xx to Asaas or it will retry indefinitely

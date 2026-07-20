@@ -140,7 +140,7 @@ export default async function ClientPortalPage({ params }: { params: Promise<{ t
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <NpsWidget orderId={order.id} existingScore={order.npsScore} existingFeedback={order.npsFeedback} />
+              <NpsWidget orderId={order.id} clientToken={token} existingScore={order.npsScore} existingFeedback={order.npsFeedback} />
             </CardContent>
           </Card>
         )}

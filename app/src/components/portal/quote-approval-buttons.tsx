@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { CheckCircle2, XCircle } from "lucide-react"
 
-export function QuoteApprovalButtons({ quoteId }: { quoteId: string }) {
+export function QuoteApprovalButtons({ quoteId, clientToken }: { quoteId: string; clientToken: string }) {
   const [status, setStatus] = useState<"idle" | "approved" | "rejected" | "loading">("idle")
 
   async function handle(action: "APPROVED" | "REJECTED") {
@@ -11,7 +11,7 @@ export function QuoteApprovalButtons({ quoteId }: { quoteId: string }) {
     await fetch("/api/quote-approval", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ quoteId, status: action }),
+      body: JSON.stringify({ quoteId, clientToken, status: action }),
     })
     setStatus(action === "APPROVED" ? "approved" : "rejected")
   }

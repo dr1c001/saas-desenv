@@ -126,12 +126,23 @@ export async function inviteTeamMember(
 }
 
 export async function updateTeamMemberRole(memberId: string, role: "ADMIN" | "TECHNICIAN") {
-  const { tenantId, role: requesterRole } = await getTenant()
+  const { tenantId, userId, role: requesterRole } = await getTenant()
   if (requesterRole !== "OWNER" && requesterRole !== "ADMIN") return
+
+  // "ADMIN" | "TECHNICIAN" no parâmetro é só o tipo do TypeScript — apagado em
+  // runtime, então sem essa validação um ADMIN podia chamar isso com role
+  // "OWNER" e se auto-promover. Também bloqueia mexer no próprio papel ou no
+  // de um OWNER. (Achado em revisão de segurança 2026-07-19.)
+  const parsed = z.enum(["ADMIN", "TECHNICIAN"]).safeParse(role)
+  if (!parsed.success) return
+  if (memberId === userId) return
+
+  const target = await prisma.user.findUnique({ where: { id: memberId, tenantId }, select: { role: true } })
+  if (!target || target.role === "OWNER") return
 
   await prisma.user.update({
     where: { id: memberId, tenantId },
-    data: { role: role as never },
+    data: { role: parsed.data },
   })
   revalidatePath("/team")
 }
@@ -142,6 +153,25 @@ export async function removeTeamMember(memberId: string) {
   if (memberId === userId) return // can't remove yourself
 
   await prisma.user.delete({ where: { id: memberId, tenantId } })
+
+  // Defesa em profundidade: limpa tenantId/role do user_metadata no Supabase.
+  // getTenant() nunca mais confia nesses campos para atribuir tenant/papel,
+  // mas isso evita deixar dado stale (apontando pro tenant antigo) na conta
+  // da pessoa removida.
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (serviceRoleKey && supabaseUrl) {
+    await fetch(`${supabaseUrl}/auth/v1/admin/users/${memberId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceRoleKey}`,
+        apikey: serviceRoleKey,
+      },
+      body: JSON.stringify({ user_metadata: { tenantId: null, role: null } }),
+    }).catch(() => null)
+  }
+
   revalidatePath("/team")
 }
 

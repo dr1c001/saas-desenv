@@ -23,43 +23,35 @@ export async function getTenant() {
     },
   })
 
-  // Fallback: create tenant+user if not in DB yet (one-time cost on first login)
+  // Fallback: create a new tenant if this user has no User row yet (one-time
+  // cost on first login). Invited team members already get their User row
+  // created server-side at invite time (see inviteTeamMember in actions/team.ts),
+  // so reaching this branch always means a brand-new signup.
+  //
+  // IMPORTANT: never trust user.user_metadata.tenantId/role to join an existing
+  // tenant here. user_metadata is editable by the user themselves via the
+  // Supabase client SDK (supabase.auth.updateUser), so honoring it would let
+  // anyone join — or, after being removed, silently rejoin — any tenant as
+  // OWNER just by knowing its id. (Found in security review 2026-07-19.)
   if (!dbUser) {
     const name = user.user_metadata?.name ?? user.email?.split("@")[0] ?? "Usuário"
-    const existingTenantId: string | undefined = user.user_metadata?.tenantId
+    const companyName = user.user_metadata?.company_name ?? `Empresa de ${name}`
+    const refCode: string | undefined = user.user_metadata?.ref_code
 
-    let tenantId: string
-    let role: "OWNER" | "ADMIN" | "TECHNICIAN" = "OWNER"
-    let tenantStatus: { subscriptionStatus: string; trialEndsAt: Date | null }
-
-    if (existingTenantId) {
-      // Invited team member — join existing tenant
-      tenantId = existingTenantId
-      role = (user.user_metadata?.role as typeof role) ?? "TECHNICIAN"
-      const existingTenant = await prisma.tenant.findUnique({
-        where: { id: tenantId },
-        select: { subscriptionStatus: true, trialEndsAt: true },
-      })
-      tenantStatus = existingTenant ?? { subscriptionStatus: "TRIAL", trialEndsAt: null }
-    } else {
-      // New owner — create a tenant
-      const companyName = user.user_metadata?.company_name ?? `Empresa de ${name}`
-      const refCode: string | undefined = user.user_metadata?.ref_code
-
-      let extraDays = 0
-      if (refCode) {
-        const referrer = await prisma.tenant.findFirst({ where: { referralCode: refCode }, select: { id: true } })
-        if (referrer) extraDays = 7
-      }
-
-      const trialEndsAt = new Date(Date.now() + (15 + extraDays) * 24 * 60 * 60 * 1000)
-      const tenant = await prisma.tenant.create({
-        data: { name: companyName, trialEndsAt, referredByCode: refCode ?? null },
-      })
-      tenantId = tenant.id
-      tenantStatus = { subscriptionStatus: tenant.subscriptionStatus, trialEndsAt: tenant.trialEndsAt }
-      sendWelcomeEmail(user.email!, name).catch(() => null)
+    let extraDays = 0
+    if (refCode) {
+      const referrer = await prisma.tenant.findFirst({ where: { referralCode: refCode }, select: { id: true } })
+      if (referrer) extraDays = 7
     }
+
+    const trialEndsAt = new Date(Date.now() + (15 + extraDays) * 24 * 60 * 60 * 1000)
+    const tenant = await prisma.tenant.create({
+      data: { name: companyName, trialEndsAt, referredByCode: refCode ?? null },
+    })
+    const tenantId = tenant.id
+    const role = "OWNER" as const
+    const tenantStatus = { subscriptionStatus: tenant.subscriptionStatus, trialEndsAt: tenant.trialEndsAt }
+    sendWelcomeEmail(user.email!, name).catch(() => null)
 
     try {
       await prisma.user.create({
@@ -74,10 +66,8 @@ export async function getTenant() {
         err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002"
       if (!lostRace) throw err
 
-      if (!existingTenantId) {
-        // O tenant que acabamos de criar ficou orfao (sem User) — remove.
-        await prisma.tenant.delete({ where: { id: tenantId } }).catch(() => null)
-      }
+      // O tenant que acabamos de criar ficou orfao (sem User) — remove.
+      await prisma.tenant.delete({ where: { id: tenantId } }).catch(() => null)
 
       const winner = await prisma.user.findUniqueOrThrow({
         where: { id: user.id },

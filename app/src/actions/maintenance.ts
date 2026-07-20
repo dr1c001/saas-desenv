@@ -32,9 +32,21 @@ export async function createMaintenanceOrder(
   _prev: MaintenanceFormState,
   formData: FormData
 ): Promise<MaintenanceFormState> {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
   const parsed = orderSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
+
+  // providerId vem do formulário sem checagem — sem validar que pertence ao
+  // próprio tenant, dava pra linkar a OM a um Provider de outra empresa e ver
+  // os dados completos dele. (Achado em revisão de segurança 2026-07-19.)
+  if (parsed.data.providerId) {
+    const provider = await prisma.provider.findUnique({
+      where: { id: parsed.data.providerId, tenantId },
+      select: { id: true },
+    })
+    if (!provider) return { message: "Prestador não encontrado." }
+  }
 
   const itemsRaw = formData.get("items")
   const items: { description: string; quantity: number; unitPrice: number }[] = itemsRaw
@@ -70,7 +82,8 @@ export async function createMaintenanceOrder(
 }
 
 export async function updateMaintenanceStatus(id: string, status: string) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return
   const valid = ["OPEN", "IN_PROGRESS", "DONE", "CANCELLED"]
   if (!valid.includes(status)) return
 
@@ -83,7 +96,8 @@ export async function updateMaintenanceStatus(id: string, status: string) {
 }
 
 export async function deleteMaintenanceOrder(id: string) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") redirect("/maintenance")
   await prisma.maintenanceOrder.delete({ where: { id, tenantId } })
   revalidatePath("/maintenance")
   redirect("/maintenance")

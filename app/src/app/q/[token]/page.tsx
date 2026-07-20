@@ -82,7 +82,7 @@ export default async function QuotePortalPage({ params }: { params: Promise<{ to
         </Card>
 
         {isPending && (
-          <QuoteApprovalButtons quoteId={quote.id} />
+          <QuoteApprovalButtons quoteId={quote.id} clientToken={token} />
         )}
 
         {quote.status === "APPROVED" && (

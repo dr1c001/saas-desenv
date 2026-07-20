@@ -3,9 +3,9 @@
 import { useState } from "react"
 import { CheckCircle2 } from "lucide-react"
 
-type Props = { orderId: string; existingScore: number | null; existingFeedback: string | null }
+type Props = { orderId: string; clientToken: string; existingScore: number | null; existingFeedback: string | null }
 
-export function NpsWidget({ orderId, existingScore, existingFeedback }: Props) {
+export function NpsWidget({ orderId, clientToken, existingScore, existingFeedback }: Props) {
   const [score, setScore] = useState<number | null>(existingScore)
   const [feedback, setFeedback] = useState(existingFeedback ?? "")
   const [saved, setSaved] = useState(!!existingScore)
@@ -17,7 +17,7 @@ export function NpsWidget({ orderId, existingScore, existingFeedback }: Props) {
     await fetch("/api/nps", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId, score, feedback }),
+      body: JSON.stringify({ orderId, clientToken, score, feedback }),
     })
     setSaved(true)
     setSaving(false)

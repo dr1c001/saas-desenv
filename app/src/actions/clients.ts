@@ -135,7 +135,8 @@ export async function updateClient(
 }
 
 export async function deleteClient(id: string) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") redirect("/clients")
   await prisma.client.delete({ where: { id, tenantId } })
   revalidatePath("/clients")
   redirect("/clients")

@@ -36,7 +36,8 @@ export async function updateTenant(
   _prev: SettingsFormState,
   formData: FormData
 ): Promise<SettingsFormState> {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
   const parsed = tenantSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
 
@@ -89,7 +90,8 @@ export async function updateWhatsApp(
   _prev: SettingsFormState,
   formData: FormData
 ): Promise<SettingsFormState> {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
   const instance = (formData.get("zapiInstance") as string) || null
   const token = (formData.get("zapiToken") as string) || null
   await prisma.tenant.update({ where: { id: tenantId }, data: { zapiInstance: instance, zapiToken: token } })
@@ -98,7 +100,8 @@ export async function updateWhatsApp(
 }
 
 export async function getSettings() {
-  const { tenantId, userId } = await getTenant()
+  const { tenantId, userId, role } = await getTenant()
+  const isAdmin = role === "OWNER" || role === "ADMIN"
   const [tenant, user] = await Promise.all([
     prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -109,5 +112,11 @@ export async function getSettings() {
       select: { name: true, email: true, role: true, document: true, phone: true, userAddress: true },
     }),
   ])
-  return { tenant, user }
+  // zapiToken é a credencial do WhatsApp da empresa — só OWNER/ADMIN podem
+  // ver/editar isso (empresa e integração WhatsApp). (Revisão de segurança 2026-07-19.)
+  return {
+    tenant: tenant && { ...tenant, zapiInstance: isAdmin ? tenant.zapiInstance : null, zapiToken: isAdmin ? tenant.zapiToken : null },
+    user,
+    isAdmin,
+  }
 }

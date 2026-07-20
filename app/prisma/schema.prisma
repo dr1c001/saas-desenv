@@ -50,6 +50,7 @@ model Tenant {
 
 enum SubscriptionStatus {
   TRIAL
+  PENDING
   ACTIVE
   PAST_DUE
   CANCELLED

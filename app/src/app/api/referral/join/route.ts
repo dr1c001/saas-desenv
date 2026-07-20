@@ -1,13 +1,26 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { createClient } from "@/lib/supabase/server"
 
 const EXTRA_DAYS = 7
 
 // Called right after tenant creation when ?ref=CODE is in the register URL
 export async function POST(req: NextRequest) {
+  // Sem sessão + tenantId vindo do corpo, qualquer um podia chamar isso
+  // repetidas vezes pro próprio tenantId (que já conhece) e estender o
+  // trial indefinidamente. Agora o tenant vem da sessão, nunca do body.
+  // (Achado em revisão de segurança 2026-07-19.)
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ ok: false }, { status: 401 })
+
   try {
-    const { tenantId, referralCode } = await req.json()
-    if (!tenantId || !referralCode) {
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { tenantId: true } })
+    if (!dbUser) return NextResponse.json({ ok: false }, { status: 401 })
+    const tenantId = dbUser.tenantId
+
+    const { referralCode } = await req.json()
+    if (!referralCode) {
       return NextResponse.json({ ok: false }, { status: 400 })
     }
 
@@ -20,6 +33,12 @@ export async function POST(req: NextRequest) {
     // Extend trial of new tenant
     const newTenant = await prisma.tenant.findUnique({ where: { id: tenantId } })
     if (!newTenant) return NextResponse.json({ ok: false })
+
+    // Idempotência: sem isso, a mesma chamada repetida seguia somando +7 dias
+    // sem limite.
+    if (newTenant.referredByCode) {
+      return NextResponse.json({ ok: false, error: "Indicação já aplicada" })
+    }
 
     const newTrialEnd = new Date(newTenant.trialEndsAt ?? Date.now())
     newTrialEnd.setDate(newTrialEnd.getDate() + EXTRA_DAYS)

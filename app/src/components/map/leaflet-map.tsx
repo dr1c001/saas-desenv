@@ -28,6 +28,19 @@ const STATUS_COLOR: Record<string, string> = {
   IN_PROGRESS: "#3b82f6",
 }
 
+// Leaflet's bindPopup(string) sets it as innerHTML — nome/título/cidade vêm
+// de Client/ServiceOrder/User (qualquer papel pode criar/editar cliente), e
+// sem escapar isso é XSS armazenado que executa na sessão de quem abrir o
+// mapa (só OWNER/ADMIN). (Achado em revisão de segurança 2026-07-19.)
+function escapeHtml(str: string) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
 function buildSvgIcon(L: typeof import("leaflet"), color: string, label: string) {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">
@@ -104,7 +117,7 @@ export default function LeafletMap({
       const time = new Date(tech.updatedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
       const marker = L.marker([tech.latitude, tech.longitude], { icon: techIcon })
         .addTo(mapRef.current)
-        .bindPopup(`<b>👷 ${tech.name}</b><br><span style="color:#666">Técnico · atualizado ${time}</span>`)
+        .bindPopup(`<b>👷 ${escapeHtml(tech.name)}</b><br><span style="color:#666">Técnico · atualizado ${time}</span>`)
       markersRef.current.set("tech-" + tech.id, marker)
     })
 
@@ -114,12 +127,12 @@ export default function LeafletMap({
       const label = order.status === "IN_PROGRESS" ? "▶" : "OS"
       const icon = buildSvgIcon(L, color, label)
       const statusLabel = order.status === "OPEN" ? "Aberta" : "Em andamento"
-      const techLine = order.technicianName ? `<br>👷 ${order.technicianName}` : ""
+      const techLine = order.technicianName ? `<br>👷 ${escapeHtml(order.technicianName)}` : ""
       const marker = L.marker([order.latitude, order.longitude], { icon })
         .addTo(mapRef.current)
         .bindPopup(
-          `<b>OS #${order.number} — ${order.title}</b><br>` +
-            `<span style="color:#666">🏠 ${order.clientName}${order.city ? ` · ${order.city}` : ""}</span>` +
+          `<b>OS #${order.number} — ${escapeHtml(order.title)}</b><br>` +
+            `<span style="color:#666">🏠 ${escapeHtml(order.clientName)}${order.city ? ` · ${escapeHtml(order.city)}` : ""}</span>` +
             techLine +
             `<br><span style="font-size:11px;color:${color}">${statusLabel}</span>`
         )

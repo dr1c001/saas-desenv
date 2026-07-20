@@ -24,7 +24,8 @@ export async function createProvider(
   _prev: ProviderFormState,
   formData: FormData
 ): Promise<ProviderFormState> {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
   const parsed = providerSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
 
@@ -49,7 +50,8 @@ export async function updateProvider(
   _prev: ProviderFormState,
   formData: FormData
 ): Promise<ProviderFormState> {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
   const parsed = providerSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
 
@@ -70,7 +72,8 @@ export async function updateProvider(
 }
 
 export async function deleteProvider(id: string) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return
   try {
     await prisma.provider.delete({ where: { id, tenantId } })
   } catch {

@@ -47,6 +47,18 @@ export async function createServiceOrder(
 
   const { title, description, clientId, technicianId, status, scheduledAt } = parsed.data
 
+  // clientId/technicianId vêm do formulário sem checagem — sem validar que
+  // pertencem ao próprio tenant, dava pra linkar a OS a um Client/User de
+  // outra empresa e ver os dados completos dele na página da OS.
+  // (Achado em revisão de segurança 2026-07-19.)
+  const client = await prisma.client.findUnique({ where: { id: clientId, tenantId }, select: { id: true } })
+  if (!client) return { message: "Cliente não encontrado." }
+
+  if (technicianId) {
+    const technician = await prisma.user.findUnique({ where: { id: technicianId, tenantId }, select: { id: true } })
+    if (!technician) return { message: "Técnico não encontrado." }
+  }
+
   // Parse items sent as JSON string
   const itemsRaw = formData.get("items")
   const items: { description: string; quantity: number; unitPrice: number }[] = itemsRaw
@@ -82,7 +94,7 @@ export async function createServiceOrder(
   if (technicianId && technicianId !== userId) {
     try {
       const subs = await prisma.pushSubscription.findMany({
-        where: { userId: technicianId },
+        where: { userId: technicianId, user: { tenantId } },
         select: { endpoint: true, p256dh: true, auth: true },
       })
       if (subs.length > 0) {
@@ -214,6 +226,22 @@ export async function updateServiceOrder(
 
   const { title, description, clientId, technicianId, scheduledAt } = parsed.data
 
+  // Confere posse da OS e valida clientId/technicianId ANTES de tocar em
+  // ServiceItem — antes disso, um id de OS de outro tenant tinha os itens
+  // reais apagados/substituídos por itens forjados antes do update final
+  // (que é quem checava tenantId) falhar. (Achado em revisão de segurança 2026-07-19.)
+  const [order, client] = await Promise.all([
+    prisma.serviceOrder.findUnique({ where: { id, tenantId }, select: { id: true } }),
+    prisma.client.findUnique({ where: { id: clientId, tenantId }, select: { id: true } }),
+  ])
+  if (!order) return { message: "Ordem não encontrada." }
+  if (!client) return { message: "Cliente não encontrado." }
+
+  if (technicianId) {
+    const technician = await prisma.user.findUnique({ where: { id: technicianId, tenantId }, select: { id: true } })
+    if (!technician) return { message: "Técnico não encontrado." }
+  }
+
   const itemsRaw = formData.get("items")
   const items: { description: string; quantity: number; unitPrice: number }[] = itemsRaw
     ? JSON.parse(itemsRaw as string)
@@ -221,29 +249,33 @@ export async function updateServiceOrder(
 
   const total = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0)
 
-  await prisma.serviceItem.deleteMany({ where: { orderId: id } })
-  if (items.length > 0) {
-    await prisma.serviceItem.createMany({
-      data: items.map((i) => ({
-        description: i.description,
-        quantity: i.quantity,
-        unitPrice: i.unitPrice,
-        total: i.quantity * i.unitPrice,
-        orderId: id,
-      })),
-    })
-  }
-  await prisma.serviceOrder.update({
-    where: { id, tenantId },
-    data: {
-      title,
-      description: description || null,
-      clientId,
-      technicianId: technicianId || null,
-      totalAmount: total,
-      scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-    },
-  })
+  await prisma.$transaction([
+    prisma.serviceItem.deleteMany({ where: { orderId: id } }),
+    ...(items.length > 0
+      ? [
+          prisma.serviceItem.createMany({
+            data: items.map((i) => ({
+              description: i.description,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+              total: i.quantity * i.unitPrice,
+              orderId: id,
+            })),
+          }),
+        ]
+      : []),
+    prisma.serviceOrder.update({
+      where: { id, tenantId },
+      data: {
+        title,
+        description: description || null,
+        clientId,
+        technicianId: technicianId || null,
+        totalAmount: total,
+        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+      },
+    }),
+  ])
 
   revalidatePath("/service-orders")
   revalidatePath(`/service-orders/${id}`)
