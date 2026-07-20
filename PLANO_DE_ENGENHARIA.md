@@ -135,8 +135,8 @@ Cliente (navegador/PWA)
 - Chave do Asaas armazenada em base64 na env var (não em texto puro — ver seção 9)
 - Webhook do Asaas autenticado por header `asaas-access-token` contra `ASAAS_WEBHOOK_SECRET` (mesmo padrão do webhook do Supabase, que já usava `x-webhook-secret`)
 - Termos de Uso e Política de Privacidade publicados, com aceite obrigatório no cadastro
-- **Gap conhecido:** sem rate limiting em `/login` e `/register` (ver roadmap)
-- **Gap conhecido:** portabilidade de dados (exigência LGPD, prometida na Política de Privacidade) ainda não tem mecanismo self-service
+- Rate limiting em login/cadastro/recuperação de senha (por IP e por e-mail, Postgres) — login/cadastro passaram a chamar o Supabase Auth via Server Action em vez de direto do browser, já que um rate limit só numa rota nossa não protegia nada enquanto a chamada real ia direto pra API do Supabase
+- Exportação self-service de dados (LGPD art. 18) em Configurações, restrita a OWNER
 
 ### 7.1 Auditoria de segurança — 19/07/2026
 
@@ -203,12 +203,13 @@ Pedido explícito de reverificar tudo depois da 7.1. Metodologia: 6 revisões pa
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`
-- **Deploy:** manual via `npx vercel --prod --yes` (sem CI/CD automatizado ainda — todo deploy é disparado por mim/Claude após build local limpo)
+- **Deploy (CD):** automático — o projeto Vercel está conectado ao repositório GitHub, faz deploy a cada push (nativo, fora do GitHub Actions). Deploy manual via `npx vercel --prod --yes` continua disponível como alternativa pontual
+- **CI:** `.github/workflows/ci.yml` — a cada push (`master`, `improve/readme`) e PR pra `master`, roda `npm ci && npm run lint && npm test && npm run build` num runner limpo. `npm test` não precisa de nenhum segredo real (banco embutido, ver item "Testes automatizados" abaixo); `npm run build` usa valores fictícios pras env vars só pra passar no `prisma generate`/`next build`, já que nenhuma página faz fetch no banco em build time
 - **Build de produção (`vercel.json`):** `prisma generate && (prisma migrate resolve --applied 20260630000001_add_rbac_push_location || true) && prisma migrate deploy && next build` — o `migrate resolve` no meio é um patch permanente pra um drift de migration específico (ver seção 9, itens 9-10)
 - **Build local (`package.json`):** `prisma generate && next build` — **não roda `migrate deploy`**. Mudança de schema feita localmente não sobe pro banco de produção sozinha (ver seção 9, item 9)
 - **Cron:** `/api/cron/daily` às 12:00 UTC (09h BRT) via `vercel.json`
-- **Migrations:** Prisma Migrate — aplicadas de verdade só no build da Vercel (`migrate deploy`), nunca no build local
-- **Sem testes automatizados** — verificação hoje é manual (TypeScript + build + checagem de rotas + testes diretos de API)
+- **Migrations:** Prisma Migrate — aplicadas de verdade só no build da Vercel (`migrate deploy`), nunca no build local nem no CI
+- **Testes automatizados:** Vitest + PGlite (Postgres real compilado pra WASM, roda embutido no processo — sem Docker, sem conta externa, sem tocar no banco de produção). `npm test` — ver seção 9, item 13
 
 ---
 
@@ -228,34 +229,37 @@ Estes pontos custaram tempo real de debug — não repetir os mesmos caminhos:
 10. **Histórico de migrations do Prisma está com drift em relação ao schema real de produção** (descoberto 19/07/2026: `prisma migrate dev` detectou que reconstruir o schema do zero a partir das migrations não bate com o banco real, e só ofereceu `migrate reset` — que **apaga todos os dados** — como saída). Causa provável: alguma mudança de schema foi aplicada via `db push` no passado sem gerar a migration correspondente; é o que já exigiu o patch permanente `migrate resolve --applied 20260630000001_add_rbac_push_location || true` no `buildCommand` da Vercel. **Nunca rodar `prisma migrate dev` neste projeto sem entender esse contexto** (ele conecta no mesmo banco de produção — não há banco de dev separado). Usar `prisma db push` pra sincronizar schema localmente, sempre seguido de `prisma migrate resolve --applied <nome>` antes do próximo deploy (item 9). Reconciliar esse drift de vez é trabalho futuro — ver débito técnico (seção 10).
 11. **Nunca confiar em `user.user_metadata` do Supabase pra decisões de autorização.** É editável pelo próprio usuário autenticado via `supabase.auth.updateUser({data:{...}})` no client-side SDK — qualquer lógica server-side que leia esses campos pra decidir tenant/papel/permissão é, por definição, controlável por quem estiver logado. Foi a causa raiz da vulnerabilidade crítica corrigida em 19/07/2026 (seção 7.1: usuário podia se declarar OWNER de qualquer tenant). A fonte de verdade pra tenant/papel é sempre o registro `User` no Postgres, criado/atualizado só por código server-side com a service role key.
 12. **Toda função exportada de um arquivo `"use server"` já é um endpoint HTTP despachável, mesmo que nenhum componente client a importe.** Confirmado na 2ª auditoria (seção 7.2) inspecionando o `server-reference-manifest.json` gerado no build: `getFinanceSummary` (chamada só de dentro de um Server Component) já tinha um Action ID registrado e despachável pelo dispatcher do Next.js — só não estava *descoberto* por nenhum client ainda, o que é bem diferente de estar protegido. Um redirect na página que chama a função, ou o fato de "hoje nada do lado client importa isso", não é controle de acesso — é só o ID não ter vazado ainda (log, source map, erro verboso, um teammate non-admin). Toda Server Action que mexe em dado sensível precisa checar `role`/`tenantId` **dentro de si mesma**, nunca só confiar em quem a chama.
+13. **Testes de integração sem Docker: PGlite + `prisma migrate diff --from-empty` em vez de replay de `prisma/migrations/*.sql`.** Ao montar a infra de testes (roadmap #6), replay do histórico de migrations do zero falhou (`type "SubscriptionStatus" does not exist`) — confirmação na prática do drift do item 10. Contornado sem tocar no histórico de produção: `npm run pretest` gera `src/test-utils/test-schema.sql` direto do `schema.prisma` atual via `prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script` (arquivo não versionado, sempre em sincronia). `@electric-sql/pglite` roda um Postgres real (WASM) embutido no processo Node — zero Docker, zero conta externa, zero risco pro banco de produção. Server Actions são testadas mockando `@/lib/prisma` (aponta pro client PGlite) e `@/lib/auth`'s `getTenant()` (simula `{tenantId, role}` do chamador); `redirect()`/`revalidatePath()` são mockados globalmente (`vitest.config.ts` → `setupFiles`) porque exigem o "static generation store" do Next.js, que não existe em teste puro Node.
+14. **Vercel já tinha integração nativa com o GitHub (deploy automático a cada push) — a documentação antiga deste arquivo dizia "deploy manual" e estava desatualizada.** Descoberto só ao montar o CI/CD (roadmap #7). Lição: **confirmar com o usuário como a infra realmente funciona hoje antes de assumir a partir de docs antigas** — este próprio arquivo é fonte de verdade só até a próxima vez que a realidade mudar sem ele ser atualizado junto.
 
 ---
 
 ## 10. Débito técnico conhecido
 
-- Sem testes automatizados (unitários ou E2E)
-- Sem CI/CD — deploy é manual
-- Sem rate limiting em rotas públicas de auth
-- Sem SEO básico (`sitemap.xml`, `robots.txt`, Open Graph)
-- Sem mecanismo de exportação de dados (LGPD)
-- Plano Gratuito: seed criado, nunca executado, fluxo de assinatura R$0 não tratado
-- WhatsApp (Z-API): schema e UI prontos, integração nunca finalizada
-- Histórico de migrations do Prisma com drift em relação ao schema real de produção (ver seção 9, item 10) — funciona hoje com workaround manual, mas precisa ser reconciliado antes de confiar em CI/CD automatizado (roadmap #7)
+- WhatsApp (Z-API): schema e UI prontos, integração nunca finalizada (único item do roadmap original ainda em aberto)
+- Histórico de migrations do Prisma com drift em relação ao schema real de produção (ver seção 9, itens 10 e 13) — funciona hoje com workaround manual (`db push` + `migrate resolve --applied`) tanto pra deploy quanto pra testes, mas a reconciliação de verdade (fazer o histórico bater com o schema real) continua pendente
 - Bônus de indicação via `user_metadata.ref_code` no cadastro (`/register?ref=CODE`) sem rate-limit/captcha — decisão consciente de não corrigir agora (ver seção 7.2); o cadastro base já não tem essa proteção independente de indicação, então o risco real é baixo
+- Ícones do PWA quebrados: `manifest.json` referencia `/icon-192.png` e `/icon-512.png`, nenhum dos dois existe em `public/` — achado ao procurar uma imagem pra usar no Open Graph (roadmap #3). App instalável fica com ícone quebrado
+- Sem imagem `og:image` (1200x630) — preview ao compartilhar link fica só texto. Precisa de asset de design real, não dá pra gerar
+- Cobertura de testes automatizados ainda pequena (16 testes, 3 arquivos — `rate-limit.ts`, `clients.ts`, `quotes.ts`) — infraestrutura pronta e validada (seção 9, item 13), mas a maior parte das Server Actions (principalmente `service-orders.ts`, `nfse.ts`, `billing.ts`) ainda não tem teste cobrindo isolamento entre tenants/checagem de papel
 
 ---
 
 ## 11. Roadmap priorizado
 
+Itens #2-#7 do roadmap anterior (rate limiting, SEO básico, exportação LGPD,
+decisão sobre Plano Gratuito, testes automatizados, CI/CD) foram concluídos
+em 20/07/2026 — detalhes na seção 7.2, seção 9 (itens 13-14) e commits
+correspondentes. Plano Gratuito: decisão foi remover a ideia (trial de 15
+dias já cobre esse papel).
+
 | # | Item | Por quê |
 |---|---|---|
 | 1 | Ativar WhatsApp (Z-API) | Pendência mais antiga, diferencial de venda citado na própria landing page |
-| 2 | Rate limiting em login/cadastro | Fecha brecha de segurança real, implementação rápida |
-| 3 | SEO básico (sitemap, robots.txt, OG tags) | Afeta descoberta orgânica e preview ao compartilhar link |
-| 4 | Exportação de dados (LGPD) | Compromisso já assumido publicamente na Política de Privacidade |
-| 5 | Decidir sobre Plano Gratuito | Definir se ainda faz sentido no funil antes de investir tempo nisso |
-| 6 | Testes automatizados | Reduz risco conforme o sistema cresce |
-| 7 | CI/CD | Reduz dependência de deploy manual |
+| 2 | Reconciliar drift de migrations | Pré-requisito real pra confiar 100% em `migrate deploy`/CI futuro (ver seção 9, itens 10 e 13) |
+| 3 | Expandir cobertura de testes | Infra pronta (seção 9, item 13) — faltam testes para `service-orders.ts`, `nfse.ts`, `billing.ts` |
+| 4 | Ícones PWA + imagem `og:image` | Precisa de asset de design real (192x192, 512x512, 1200x630) |
+| 5 | Decidir sobre bônus de indicação sem rate-limit | Risco baixo hoje, mas fica registrado pra decisão consciente (ver seção 7.2) |
 
 ---
 
