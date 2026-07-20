@@ -6,7 +6,11 @@ import { nfeio } from "@/lib/nfeio"
 import { revalidatePath } from "next/cache"
 
 export async function registerFiscalCompany(formData: FormData) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  // Página /settings/fiscal já é OWNER-only — a action precisa da mesma
+  // checagem, senão ADMIN/TECHNICIAN chamam direto e sobrescrevem o CNPJ/
+  // config fiscal usado em toda nota futura. (Achado em revisão de segurança 2026-07-19.)
+  if (role !== "OWNER") throw new Error("Sem permissão.")
 
   const cnpj = (formData.get("cnpj") as string).replace(/\D/g, "")
   const municipalTaxNumber = formData.get("municipalTaxNumber") as string
@@ -57,7 +61,11 @@ export async function registerFiscalCompany(formData: FormData) {
 }
 
 export async function emitNfse(orderId: string) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  // Emite nota fiscal real e irreversível (sem cancelamento implementado no
+  // produto) — não pode ficar acessível a qualquer papel.
+  // (Achado em revisão de segurança 2026-07-19.)
+  if (role !== "OWNER" && role !== "ADMIN") throw new Error("Sem permissão.")
 
   const [order, tenant] = await Promise.all([
     prisma.serviceOrder.findUnique({

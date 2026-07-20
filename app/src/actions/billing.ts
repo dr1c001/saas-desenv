@@ -34,7 +34,10 @@ export async function getPlans() {
 }
 
 export async function subscribeToPlan(formData: FormData) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") {
+    redirect("/billing?error=" + encodeURIComponent("Sem permissão."))
+  }
   const planId = formData.get("planId") as string
   const cycle = (formData.get("cycle") as "MONTHLY" | "YEARLY") ?? "MONTHLY"
 
@@ -129,23 +132,35 @@ export async function subscribeToPlan(formData: FormData) {
 }
 
 export async function cancelSubscription() {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return
 
   const sub = await prisma.subscription.findFirst({
     where: { tenantId, status: "ACTIVE" },
     orderBy: { createdAt: "desc" },
   })
 
-  if (sub?.asaasId) {
-    await asaas.cancelSubscription(sub.asaasId).catch(() => null)
+  // Sem assinatura ACTIVE, não há nada real pra cancelar — antes disso o
+  // tenant era marcado CANCELLED incondicionalmente aqui embaixo, o que
+  // bloqueava até um tenant só em TRIAL. (Achado em revisão de segurança 2026-07-19.)
+  if (!sub) return
+
+  if (sub.asaasId) {
+    try {
+      await asaas.cancelSubscription(sub.asaasId)
+    } catch (err) {
+      // Não marca como cancelado localmente se o cancelamento real no Asaas
+      // falhou — senão o app mostra "cancelado" enquanto o Asaas continua
+      // cobrando, sem ninguém saber. (Achado em revisão de segurança 2026-07-19.)
+      console.error("Falha ao cancelar assinatura no Asaas:", err)
+      redirect("/billing?error=" + encodeURIComponent("Não foi possível cancelar agora. Tente novamente em instantes."))
+    }
   }
 
-  if (sub) {
-    await prisma.subscription.update({
-      where: { id: sub.id },
-      data: { status: "CANCELLED", cancelledAt: new Date() },
-    })
-  }
+  await prisma.subscription.update({
+    where: { id: sub.id },
+    data: { status: "CANCELLED", cancelledAt: new Date() },
+  })
 
   await prisma.tenant.update({
     where: { id: tenantId },

@@ -33,9 +33,6 @@ export async function POST(req: NextRequest) {
     // Extend trial of new tenant
     const newTenant = await prisma.tenant.findUnique({ where: { id: tenantId } })
     if (!newTenant) return NextResponse.json({ ok: false })
-
-    // Idempotência: sem isso, a mesma chamada repetida seguia somando +7 dias
-    // sem limite.
     if (newTenant.referredByCode) {
       return NextResponse.json({ ok: false, error: "Indicação já aplicada" })
     }
@@ -43,10 +40,18 @@ export async function POST(req: NextRequest) {
     const newTrialEnd = new Date(newTenant.trialEndsAt ?? Date.now())
     newTrialEnd.setDate(newTrialEnd.getDate() + EXTRA_DAYS)
 
-    await prisma.tenant.update({
-      where: { id: tenantId },
+    // Idempotência atômica: a condição referredByCode:null no próprio UPDATE
+    // garante que só uma requisição concorrente aplica o bônus — o check
+    // separado acima (findUnique + if) sozinho permitia duas requisições
+    // simultâneas passarem antes de qualquer uma escrever.
+    // (Achado em revisão de segurança 2026-07-19.)
+    const result = await prisma.tenant.updateMany({
+      where: { id: tenantId, referredByCode: null },
       data: { trialEndsAt: newTrialEnd, referredByCode: referralCode },
     })
+    if (result.count === 0) {
+      return NextResponse.json({ ok: false, error: "Indicação já aplicada" })
+    }
 
     return NextResponse.json({ ok: true, referrerName: referrer.name, extraDays: EXTRA_DAYS })
   } catch {

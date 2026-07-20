@@ -37,7 +37,11 @@ export async function createEquipment(clientId: string, formData: FormData) {
 }
 
 export async function deleteEquipment(equipmentId: string, clientId: string) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  // createEquipment fica sem checagem (technician cadastra equipamento em
+  // campo, fluxo legítimo), mas exclusão permanente sem confirmação exige
+  // OWNER/ADMIN. (Achado em revisão de segurança 2026-07-19.)
+  if (role !== "OWNER" && role !== "ADMIN") return
   await prisma.equipment.deleteMany({ where: { id: equipmentId, tenantId } })
   revalidatePath(`/clients/${clientId}`)
 }

@@ -79,7 +79,12 @@ export async function updateClient(
   _prev: ClientFormState,
   formData: FormData
 ): Promise<ClientFormState> {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  // createClient fica sem checagem (technician cadastra cliente em campo,
+  // fluxo legítimo), mas updateClient também permite marcar o cliente como
+  // DEFAULTER (inadimplente) — isso precisa de OWNER/ADMIN.
+  // (Achado em revisão de segurança 2026-07-19.)
+  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
 
   const raw = Object.fromEntries(formData.entries())
   const parsed = clientSchema.safeParse(raw)

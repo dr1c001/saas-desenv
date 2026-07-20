@@ -3,7 +3,13 @@ import { prisma } from "@/lib/prisma"
 import { getTenant } from "@/lib/auth"
 
 export async function GET() {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  // A página /map já é OWNER/ADMIN-only, mas essa API é uma rota
+  // independente — sem essa checagem, qualquer papel via endereço/GPS de
+  // todas as OS abertas do tenant. (Achado em revisão de segurança 2026-07-19.)
+  if (role !== "OWNER" && role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
   const orders = await prisma.serviceOrder.findMany({
     where: {

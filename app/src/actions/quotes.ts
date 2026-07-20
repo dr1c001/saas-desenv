@@ -36,7 +36,8 @@ export async function createQuote(
   _prev: QuoteFormState,
   formData: FormData
 ): Promise<QuoteFormState> {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
   const raw = Object.fromEntries(formData.entries())
   const parsed = quoteSchema.safeParse(raw)
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
@@ -69,7 +70,8 @@ export async function updateQuote(
   _prev: QuoteFormState,
   formData: FormData
 ): Promise<QuoteFormState> {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
   const raw = Object.fromEntries(formData.entries())
   const parsed = quoteSchema.safeParse(raw)
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
@@ -97,7 +99,8 @@ export async function updateQuote(
 }
 
 export async function updateQuoteStatus(id: string, status: string) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return
   const valid = ["DRAFT", "SENT", "APPROVED", "REJECTED"]
   if (!valid.includes(status)) return
   await prisma.quote.update({ where: { id, tenantId }, data: { status: status as never } })
@@ -106,7 +109,8 @@ export async function updateQuoteStatus(id: string, status: string) {
 }
 
 export async function deleteQuote(id: string) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return
   await prisma.quote.delete({ where: { id, tenantId } })
   revalidatePath("/quotes")
   redirect("/quotes")

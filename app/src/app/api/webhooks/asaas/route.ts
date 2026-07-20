@@ -34,7 +34,13 @@ export async function POST(req: NextRequest) {
     })
     if (!sub) return NextResponse.json({ ok: true })
 
-    if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") {
+    // Uma assinatura já CANCELLED (localmente) não deve ser reativada por um
+    // pagamento atrasado/duplicado/reenviado do Asaas — isso "ressuscitava"
+    // silenciosamente uma assinatura abandonada e sobrescrevia o plano do
+    // tenant. PENDING/PAST_DUE → ACTIVE continuam permitidos (primeiro
+    // pagamento e recuperação de inadimplência são fluxos legítimos).
+    // (Achado em revisão de segurança 2026-07-19.)
+    if ((event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") && sub.status !== "CANCELLED") {
       const periodEnd = new Date(sub.currentPeriodEnd)
       periodEnd.setMonth(periodEnd.getMonth() + (sub.billingCycle === "YEARLY" ? 12 : 1))
 

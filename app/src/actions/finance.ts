@@ -65,7 +65,12 @@ export async function markExpensePaid(id: string) {
 }
 
 export async function getFinanceSummary(q?: string) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  // Auto-defesa: essa função já tem um Action ID registrado e despachável
+  // pelo Next.js independente de quem a importa hoje — não dá pra confiar
+  // só na página chamadora redirecionar antes. Mesmo padrão do getSettings().
+  // (Achado em revisão de segurança 2026-07-19.)
+  if (role !== "OWNER" && role !== "ADMIN") throw new Error("Sem permissão.")
 
   // Fetch all data for KPI calculations, then filter for table display
   const [allRevenues, allExpenses] = await Promise.all([
