@@ -1,11 +1,22 @@
 import { Resend } from "resend"
 
-export const resend = new Resend(process.env.RESEND_API_KEY)
+let resendClient: Resend | null = null
+
+// Lazy: construir o client no import (nível de módulo) quebra o build em
+// qualquer ambiente sem RESEND_API_KEY (ex.: CI) — o Next.js avalia rotas
+// mesmo dinâmicas durante "collect page data", então o throw do construtor
+// acontecia só de importar este arquivo, sem nenhum e-mail ser enviado.
+function getResend(): Resend {
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY)
+  }
+  return resendClient
+}
 
 const FROM = "ServiçoOS <noreply@app-olive-six-67.vercel.app>"
 
 export async function sendWelcomeEmail(to: string, name: string, trialDays = 15) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to,
     subject: `Bem-vindo ao ServiçoOS — seu teste de ${trialDays} dias começa agora!`,
@@ -30,7 +41,7 @@ export async function sendWelcomeEmail(to: string, name: string, trialDays = 15)
 }
 
 export async function sendTrialExpiringEmail(to: string, name: string, daysLeft: number) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to,
     subject: `Seu teste gratuito expira em ${daysLeft} dia${daysLeft !== 1 ? "s" : ""} — ServiçoOS`,
@@ -58,7 +69,7 @@ export async function sendTrialExpiringEmail(to: string, name: string, daysLeft:
 }
 
 export async function sendTeamInviteEmail(to: string, name: string, companyName: string, inviteUrl: string) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to,
     subject: `Você foi convidado para a equipe ${companyName} — ServiçoOS`,
@@ -85,7 +96,7 @@ export async function sendTeamInviteEmail(to: string, name: string, companyName:
 }
 
 export async function sendPaymentConfirmedEmail(to: string, name: string, planName: string) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to,
     subject: `Pagamento confirmado — Plano ${planName} ativo!`,
@@ -105,7 +116,7 @@ export async function sendPaymentConfirmedEmail(to: string, name: string, planNa
 }
 
 export async function sendOnboardingDay3Email(to: string, name: string) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to,
     subject: `Dica do ServiçoOS: crie sua primeira OS em 2 minutos`,
@@ -137,7 +148,7 @@ export async function sendOnboardingDay3Email(to: string, name: string) {
 
 export async function sendNpsEmail(to: string, name: string, osToken: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app-olive-six-67.vercel.app"
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to,
     subject: `Como foi sua experiência com o ServiçoOS?`,
@@ -163,7 +174,7 @@ export async function sendNpsEmail(to: string, name: string, osToken: string) {
 }
 
 export async function sendPasswordResetEmail(to: string, name: string, resetUrl: string) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to,
     subject: `Recuperação de senha — ServiçoOS`,
@@ -188,7 +199,7 @@ export async function sendPasswordResetEmail(to: string, name: string, resetUrl:
 }
 
 export async function sendReferralWelcomeEmail(to: string, name: string, referrerCompany: string, extraDays: number) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to,
     subject: `Você ganhou ${extraDays} dias extras no ServiçoOS!`,

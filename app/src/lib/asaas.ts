@@ -8,13 +8,19 @@ const BASE_URL = process.env.ASAAS_SANDBOX === "true"
 // vazio em process.env mesmo com a variavel configurada corretamente,
 // de forma inconsistente e sem causa identificada. Em base64 o valor so
 // contem [A-Za-z0-9+/=], eliminando qualquer char especial como suspeito.
-const API_KEY = Buffer.from(process.env.ASAAS_TOKEN_B64!, "base64").toString("utf-8")
+//
+// Decodificada dentro da função (não no escopo do módulo): em ambientes sem
+// essa env var (ex.: CI) o Buffer.from(undefined, ...) lançaria só de importar
+// este arquivo, quebrando o build de qualquer rota que use Asaas.
+function getApiKey(): string {
+  return Buffer.from(process.env.ASAAS_TOKEN_B64!, "base64").toString("utf-8")
+}
 
 async function asaasRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
-      "access_token": API_KEY,
+      "access_token": getApiKey(),
       "Content-Type": "application/json",
       ...(options.headers ?? {}),
     },
