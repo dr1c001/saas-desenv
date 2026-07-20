@@ -13,6 +13,10 @@ export function formatDate(date: Date | string): string {
   return new Date(date).toLocaleDateString("pt-BR")
 }
 
+export function daysUntil(date: Date | string): number {
+  return Math.ceil((new Date(date).getTime() - Date.now()) / 86_400_000)
+}
+
 export function formatOsNumber(number: number, createdAt: Date | string): string {
   const year = new Date(createdAt).getFullYear()
   return `OS${year}${String(number).padStart(4, "0")}`

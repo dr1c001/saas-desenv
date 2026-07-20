@@ -1,5 +1,5 @@
 import { getBillingStatus, getPlans, subscribeToPlan } from "@/actions/billing"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, daysUntil } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { CheckCircle2, Clock, CreditCard, Zap } from "lucide-react"
@@ -24,7 +24,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const [billing, plans] = await Promise.all([getBillingStatus(), getPlans()])
 
   const trialDaysLeft = billing?.trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(billing.trialEndsAt).getTime() - Date.now()) / 86_400_000))
+    ? Math.max(0, daysUntil(billing.trialEndsAt))
     : 0
 
   const statusInfo = STATUS_LABEL[billing?.subscriptionStatus ?? "TRIAL"]

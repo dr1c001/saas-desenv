@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Clock, AlertTriangle } from "lucide-react"
+import { daysUntil } from "@/lib/utils"
 
 type Props = {
   tenantStatus?: { subscriptionStatus: string; trialEndsAt: Date | null } | null
@@ -9,7 +10,7 @@ export function TrialBanner({ tenantStatus }: Props) {
   if (!tenantStatus || tenantStatus.subscriptionStatus !== "TRIAL") return null
 
   const daysLeft = tenantStatus.trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(tenantStatus.trialEndsAt).getTime() - Date.now()) / 86_400_000))
+    ? Math.max(0, daysUntil(tenantStatus.trialEndsAt))
     : 0
 
   const expired = daysLeft === 0

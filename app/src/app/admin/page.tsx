@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, daysUntil } from "@/lib/utils"
 import { Users, Building2, TrendingUp, AlertCircle, CheckCircle2, Clock } from "lucide-react"
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -42,7 +42,7 @@ export default async function AdminPage() {
 
   const trialExpiringSoon = tenants.filter(t => {
     if (t.subscriptionStatus !== "TRIAL" || !t.trialEndsAt) return false
-    const days = Math.ceil((new Date(t.trialEndsAt).getTime() - Date.now()) / 86_400_000)
+    const days = daysUntil(t.trialEndsAt)
     return days <= 3 && days >= 0
   })
 
@@ -113,9 +113,10 @@ export default async function AdminPage() {
                   const owner = tenant.users.find(u => u.role === "OWNER")
 
                   let dateLabel = "—"
+                  let trialDaysLeft: number | null = null
                   if (tenant.subscriptionStatus === "TRIAL" && tenant.trialEndsAt) {
-                    const days = Math.ceil((new Date(tenant.trialEndsAt).getTime() - Date.now()) / 86_400_000)
-                    dateLabel = days > 0 ? `${days}d restantes` : "Expirado"
+                    trialDaysLeft = daysUntil(tenant.trialEndsAt)
+                    dateLabel = trialDaysLeft > 0 ? `${trialDaysLeft}d restantes` : "Expirado"
                   } else if (sub?.currentPeriodEnd) {
                     dateLabel = new Date(sub.currentPeriodEnd).toLocaleDateString("pt-BR")
                   }
@@ -144,8 +145,7 @@ export default async function AdminPage() {
                       <td className="px-4 py-3 text-center">{tenant._count.clients}</td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-medium ${
-                          tenant.subscriptionStatus === "TRIAL" && tenant.trialEndsAt &&
-                          Math.ceil((new Date(tenant.trialEndsAt).getTime() - Date.now()) / 86_400_000) <= 3
+                          trialDaysLeft !== null && trialDaysLeft <= 3
                             ? "text-red-600" : "text-muted-foreground"
                         }`}>
                           {dateLabel}
