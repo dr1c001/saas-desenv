@@ -1,6 +1,6 @@
 # Plano de Engenharia — ServiçoOS
 
-> Última atualização: 19/07/2026
+> Última atualização: 20/07/2026
 > Este documento é a referência técnica viva do projeto. Deve ser atualizado sempre que uma decisão de arquitetura importante for tomada.
 
 ---
@@ -170,6 +170,34 @@ Revisão completa do app: 5 frentes paralelas (auth/sessão, pagamentos/webhooks
 - Configurar `ASAAS_WEBHOOK_SECRET` no dashboard do Asaas (Integrações → Webhooks → Token de autenticação), mesmo valor do `.env` local
 - Adicionar `ASAAS_WEBHOOK_SECRET` nas env vars de produção da Vercel — sem isso o webhook do Asaas rejeita tudo com 401 em produção
 
+### 7.2 Segunda auditoria de segurança — 20/07/2026
+
+Pedido explícito de reverificar tudo depois da 7.1. Metodologia: 6 revisões paralelas (4 focadas em atacar adversarialmente as próprias correções da 7.1, 2 fazendo varredura fresca no resto do app) + verificação adversarial independente por achado. 12 vulnerabilidades novas confirmadas — nenhuma sobreposta com a 7.1, nenhuma refutada. Corrigidas no commit `2dfe2a1`.
+
+**Altas:**
+
+| Achado | Correção |
+|---|---|
+| `billing.ts` (`subscribeToPlan`/`cancelSubscription`) sem checagem de papel — qualquer technician cancelava a assinatura paga da empresa toda navegando direto pra `/billing` | Guard OWNER/ADMIN em ambas |
+| `cancelSubscription()` marcava o tenant `CANCELLED` incondicionalmente (mesmo sem assinatura ativa) e engolia falhas do cancelamento no Asaas em silêncio | Só marca `CANCELLED` se achou e cancelou de verdade; loga falha e mostra erro em vez de fingir sucesso |
+| `nfse.ts` (`emitNfse`/`registerFiscalCompany`) sem checagem de papel — technician emitia NFS-e real (e a função de cancelar nota existe na lib mas nunca é chamada em lugar nenhum) | `emitNfse` exige OWNER/ADMIN; `registerFiscalCompany` exige OWNER (mesma restrição já aplicada à página) |
+| `quotes.ts` sem checagem de papel — technician deletava ou forjava aprovação de qualquer orçamento | Guard OWNER/ADMIN em create/update/status/delete |
+| SSRF via URL do logo da empresa — `@react-pdf/renderer` busca a URL no servidor a cada PDF gerado, sem validar host | Bloqueia IPs privados/loopback/link-local e exige `https`. Não cobre DNS rebinding (domínio que resolve pra IP público na validação e pra IP privado no fetch real) — mitigação completa exigiria buscar a imagem nós mesmos com IP pinning, fora do escopo desta correção |
+| `/api/location/list` e `/api/location/orders` sem checagem de papel — a página `/map` já é OWNER/ADMIN-only, as APIs por trás não eram | Guard OWNER/ADMIN nas duas rotas |
+
+**Médias:**
+- Webhook do Asaas podia reativar (`PAYMENT_RECEIVED`) uma assinatura já `CANCELLED` via pagamento atrasado/duplicado, sobrescrevendo o plano do tenant → guard `sub.status !== "CANCELLED"` (PENDING/PAST_DUE → ACTIVE continuam permitidos)
+- `getFinanceSummary` sem checagem de papel — o Action ID já existe registrado e é despachável pelo Next.js independente de quem importa a função hoje, então não dava pra confiar só no redirect da página → auto-defesa igual ao `getSettings()`
+- `clients.ts`: `updateClient` sem checagem (permite marcar cliente como `DEFAULTER`); `createClient` ficou de fora da correção — technician cadastra cliente em campo, fluxo legítimo
+- `equipment.ts`: `deleteEquipment` sem checagem nem confirmação; `createEquipment` ficou de fora — technician cadastra equipamento em campo
+
+**Baixa:**
+- Race condition no `/api/referral/join` (check-then-act, não atômico) → trocado por `updateMany` condicionado a `referredByCode: null`
+
+**Não corrigido (decisão consciente, não esquecimento):** o bônus de indicação também é concedido via `user_metadata.ref_code` no cadastro (`/register?ref=CODE` → `auth.ts`), caminho totalmente separado do `/api/referral/join` e sem rate-limit. Mas o cadastro em si já não tem rate-limit/captcha nenhum independente de indicação — corrigir isso de verdade exigiria CAPTCHA ou redesenhar o mecanismo de indicação, uma decisão de produto, não um patch de segurança pontual.
+
+**Lição arquitetural confirmada nesta rodada** (ver seção 9, item 12): toda função exportada de um arquivo `"use server"` vira um endpoint despachável pelo Next.js assim que é exportada — não quando alguém a chama do client. Um redirect na página que chama a função **não protege a função em si**. Cada Server Action sensível precisa se defender sozinha.
+
 ---
 
 ## 8. Infraestrutura e deploy
@@ -199,6 +227,7 @@ Estes pontos custaram tempo real de debug — não repetir os mesmos caminhos:
 9. **Mudança de schema local não sobe sozinha pra produção.** O build local só roda `prisma generate && next build` (sem `migrate deploy`) — só o build da Vercel aplica migrations de verdade no banco. Se uma mudança de schema for aplicada localmente via `prisma db push` (necessário quando `migrate dev` detecta drift — item 10) e precisar estar no banco antes do próximo deploy, rodar também `prisma migrate resolve --applied <nome_da_migration>` — senão o `migrate deploy` da Vercel tenta rodar o SQL de novo e falha (`already exists`), quebrando o build de produção. Foi o que aconteceu com a migration `20260719214104_add_pending_subscription_status` (seção 7.1), resolvido manualmente antes do próximo deploy.
 10. **Histórico de migrations do Prisma está com drift em relação ao schema real de produção** (descoberto 19/07/2026: `prisma migrate dev` detectou que reconstruir o schema do zero a partir das migrations não bate com o banco real, e só ofereceu `migrate reset` — que **apaga todos os dados** — como saída). Causa provável: alguma mudança de schema foi aplicada via `db push` no passado sem gerar a migration correspondente; é o que já exigiu o patch permanente `migrate resolve --applied 20260630000001_add_rbac_push_location || true` no `buildCommand` da Vercel. **Nunca rodar `prisma migrate dev` neste projeto sem entender esse contexto** (ele conecta no mesmo banco de produção — não há banco de dev separado). Usar `prisma db push` pra sincronizar schema localmente, sempre seguido de `prisma migrate resolve --applied <nome>` antes do próximo deploy (item 9). Reconciliar esse drift de vez é trabalho futuro — ver débito técnico (seção 10).
 11. **Nunca confiar em `user.user_metadata` do Supabase pra decisões de autorização.** É editável pelo próprio usuário autenticado via `supabase.auth.updateUser({data:{...}})` no client-side SDK — qualquer lógica server-side que leia esses campos pra decidir tenant/papel/permissão é, por definição, controlável por quem estiver logado. Foi a causa raiz da vulnerabilidade crítica corrigida em 19/07/2026 (seção 7.1: usuário podia se declarar OWNER de qualquer tenant). A fonte de verdade pra tenant/papel é sempre o registro `User` no Postgres, criado/atualizado só por código server-side com a service role key.
+12. **Toda função exportada de um arquivo `"use server"` já é um endpoint HTTP despachável, mesmo que nenhum componente client a importe.** Confirmado na 2ª auditoria (seção 7.2) inspecionando o `server-reference-manifest.json` gerado no build: `getFinanceSummary` (chamada só de dentro de um Server Component) já tinha um Action ID registrado e despachável pelo dispatcher do Next.js — só não estava *descoberto* por nenhum client ainda, o que é bem diferente de estar protegido. Um redirect na página que chama a função, ou o fato de "hoje nada do lado client importa isso", não é controle de acesso — é só o ID não ter vazado ainda (log, source map, erro verboso, um teammate non-admin). Toda Server Action que mexe em dado sensível precisa checar `role`/`tenantId` **dentro de si mesma**, nunca só confiar em quem a chama.
 
 ---
 
@@ -212,6 +241,7 @@ Estes pontos custaram tempo real de debug — não repetir os mesmos caminhos:
 - Plano Gratuito: seed criado, nunca executado, fluxo de assinatura R$0 não tratado
 - WhatsApp (Z-API): schema e UI prontos, integração nunca finalizada
 - Histórico de migrations do Prisma com drift em relação ao schema real de produção (ver seção 9, item 10) — funciona hoje com workaround manual, mas precisa ser reconciliado antes de confiar em CI/CD automatizado (roadmap #7)
+- Bônus de indicação via `user_metadata.ref_code` no cadastro (`/register?ref=CODE`) sem rate-limit/captcha — decisão consciente de não corrigir agora (ver seção 7.2); o cadastro base já não tem essa proteção independente de indicação, então o risco real é baixo
 
 ---
 
