@@ -6,7 +6,7 @@ import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { createClient } from "@/lib/supabase/client"
+import { signIn } from "@/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -31,17 +31,17 @@ export default function LoginPage() {
 
   async function onSubmit(data: FormData) {
     setServerError(null)
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword(data)
+    const { error } = await signIn(data.email, data.password)
     if (error) {
-      if (error.message.toLowerCase().includes("email not confirmed")) {
+      const msg = error.toLowerCase()
+      if (msg.includes("email not confirmed")) {
         setServerError("E-mail não confirmado. Verifique sua caixa de entrada e clique no link de confirmação.")
-      } else if (error.message.toLowerCase().includes("invalid login credentials") || error.message.toLowerCase().includes("invalid credentials")) {
+      } else if (msg.includes("invalid login credentials") || msg.includes("invalid credentials")) {
         setServerError("E-mail ou senha incorretos.")
-      } else if (error.message.toLowerCase().includes("rate limit") || error.message.toLowerCase().includes("too many")) {
+      } else if (msg.includes("rate limit") || msg.includes("too many")) {
         setServerError("Muitas tentativas. Aguarde alguns minutos e tente novamente.")
       } else {
-        setServerError(error.message)
+        setServerError(error)
       }
       return
     }

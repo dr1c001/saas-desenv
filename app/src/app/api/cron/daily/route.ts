@@ -16,7 +16,15 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date()
-  const results = { day3: 0, trialExpiring3: 0, trialExpiring1: 0, nps: 0, errors: 0 }
+  const results = { day3: 0, trialExpiring3: 0, trialExpiring1: 0, nps: 0, rateLimitCleanup: 0, errors: 0 }
+
+  // ── Limpeza de rate limit expirado (janelas de no máximo 60min — qualquer
+  // linha com mais de 24h já não afeta nenhuma checagem) ──────────────────────
+  try {
+    const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    const deleted = await prisma.authRateLimit.deleteMany({ where: { windowStart: { lt: cutoff } } })
+    results.rateLimitCleanup = deleted.count
+  } catch { results.errors++ }
 
   // ── Day 3 onboarding tip ─────────────────────────────────────────────────────
   const day3Start = new Date(now)

@@ -6,7 +6,7 @@ import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { createClient } from "@/lib/supabase/client"
+import { signUpUser } from "@/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -39,23 +39,25 @@ function RegisterForm() {
 
   async function onSubmit(data: FormData) {
     setServerError(null)
-    const supabase = createClient()
-    const { data: signUpData, error } = await supabase.auth.signUp({
+    const { error, needsEmailConfirmation } = await signUpUser({
       email: data.email,
       password: data.password,
-      options: { data: { name: data.name, company_name: data.companyName, ref_code: refCode } },
+      name: data.name,
+      companyName: data.companyName,
+      refCode,
     })
     if (error) {
-      if (error.message.toLowerCase().includes("rate limit") || error.message.toLowerCase().includes("email rate")) {
+      const msg = error.toLowerCase()
+      if (msg.includes("rate limit") || msg.includes("email rate")) {
         setServerError("Muitas tentativas de cadastro. Aguarde alguns minutos e tente novamente.")
-      } else if (error.message.toLowerCase().includes("already registered") || error.message.toLowerCase().includes("already been registered")) {
+      } else if (msg.includes("already registered") || msg.includes("already been registered")) {
         setServerError("Este e-mail já está cadastrado. Tente fazer login.")
       } else {
-        setServerError(error.message)
+        setServerError(error)
       }
       return
     }
-    if (signUpData.session) {
+    if (!needsEmailConfirmation) {
       router.push("/dashboard")
       router.refresh()
       return

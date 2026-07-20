@@ -434,6 +434,14 @@ model PushSubscription {
   @@unique([userId, endpoint])
 }
 
+// ─── Rate limiting (login/cadastro/recuperação de senha) ─────────────────────
+
+model AuthRateLimit {
+  key         String   @id
+  attempts    Int      @default(1)
+  windowStart DateTime @default(now())
+}
+
 // ─── Localização GPS ──────────────────────────────────────────────────────────
 
 model UserLocation {
