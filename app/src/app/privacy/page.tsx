@@ -21,7 +21,7 @@ export default function PrivacyPage() {
       <main className="mx-auto max-w-3xl px-4 py-12 space-y-8">
         <div>
           <h1 className="text-3xl font-bold">Política de Privacidade</h1>
-          <p className="text-sm text-muted-foreground mt-2">Última atualização: 3 de julho de 2026</p>
+          <p className="text-sm text-muted-foreground mt-2">Última atualização: 20 de julho de 2026</p>
         </div>
 
         <div className="space-y-8 text-sm leading-relaxed text-muted-foreground [&_h2]:text-foreground [&_h2]:font-semibold [&_h2]:text-lg [&_h2]:mb-3 [&_strong]:text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_p+p]:mt-3 [&_table]:w-full [&_table]:text-xs [&_th]:text-left [&_th]:font-medium [&_th]:text-foreground [&_th]:py-2 [&_td]:py-2 [&_tr]:border-b">
@@ -150,7 +150,10 @@ export default function PrivacyPage() {
           <section>
             <h2>8. Como exercer seus direitos</h2>
             <p>
-              Para exercer qualquer um desses direitos, entre em contato pelo e-mail{" "}
+              O proprietário da conta (perfil Owner) pode baixar uma cópia de todos os dados da empresa
+              a qualquer momento, de forma self-service, em Configurações → Exportar dados. Para os demais
+              direitos (correção, eliminação, revogação de consentimento, esclarecimentos), entre em
+              contato pelo e-mail{" "}
               <a href="mailto:olisuporte1@gmail.com" className="text-primary underline underline-offset-2">
                 olisuporte1@gmail.com
               </a>{" "}

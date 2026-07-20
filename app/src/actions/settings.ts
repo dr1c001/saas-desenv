@@ -158,5 +158,6 @@ export async function getSettings() {
     tenant: tenant && { ...tenant, zapiInstance: isAdmin ? tenant.zapiInstance : null, zapiToken: isAdmin ? tenant.zapiToken : null },
     user,
     isAdmin,
+    isOwner: role === "OWNER",
   }
 }

@@ -2,10 +2,11 @@ import { getSettings } from "@/actions/settings"
 import { TenantForm } from "@/components/settings/tenant-form"
 import { ProfileForm } from "@/components/settings/profile-form"
 import { WhatsAppForm } from "@/components/settings/whatsapp-form"
+import { ExportDataButton } from "@/components/settings/export-data-button"
 import { Separator } from "@/components/ui/separator"
 
 export default async function SettingsPage() {
-  const { tenant, user, isAdmin } = await getSettings()
+  const { tenant, user, isAdmin, isOwner } = await getSettings()
 
   return (
     <div className="max-w-2xl space-y-8">
@@ -45,6 +46,24 @@ export default async function SettingsPage() {
               </p>
             </div>
             <WhatsAppForm zapiInstance={tenant?.zapiInstance ?? null} zapiToken={tenant?.zapiToken ?? null} />
+          </section>
+        </>
+      )}
+
+      {isOwner && (
+        <>
+          <Separator />
+
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Exportar dados</h2>
+              <p className="text-sm text-muted-foreground">
+                Baixe uma cópia de todos os dados da sua empresa (clientes, ordens de serviço, orçamentos,
+                financeiro e equipe) em um arquivo <code>.json</code>, conforme seu direito de portabilidade
+                previsto na LGPD (art. 18).
+              </p>
+            </div>
+            <ExportDataButton />
           </section>
         </>
       )}
