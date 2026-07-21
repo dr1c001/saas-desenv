@@ -10,6 +10,18 @@ import { Prisma } from "@/generated/prisma/client"
 // em api/referral/join/route.ts (mesmo conceito, caminho de cadastro diferente).
 const NEW_SIGNUP_DISCOUNT_PERCENT = 10
 
+// Allowlist estrita pro parâmetro "next" usado nos redirects pós-autenticação
+// (callback OAuth, confirmação de convite/recuperação de senha): só caminho
+// relativo simples. String concatenation direta (`${origin}${next}`) seria
+// vulnerável a "next=@evil.com/x" — a URL resultante "https://real-app.com@evil.com/x"
+// é interpretada com "real-app.com" como userinfo e "evil.com" como host de
+// verdade. Bloqueia também "//evil.com" e "/\evil.com" (protocol-relative —
+// navegadores tratam \ como / em URLs http/https). (Revisão de segurança 2026-07-19.)
+export function safeNextPath(next: string | null): string {
+  if (next && !next.startsWith("//") && /^\/[a-zA-Z0-9\-_/]*$/.test(next)) return next
+  return "/dashboard"
+}
+
 export async function getSession() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

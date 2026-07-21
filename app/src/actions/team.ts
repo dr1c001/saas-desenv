@@ -51,11 +51,12 @@ export async function inviteTeamMember(
 
   if (serviceRoleKey && supabaseUrl) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app-olive-six-67.vercel.app"
-    const redirectTo = `${appUrl}/api/auth/callback`
 
     // /admin/invite foi descontinuado nesta versao do GoTrue (retorna 404 texto puro).
     // /admin/generate_link com type "invite" e o equivalente atual — mesmo formato
-    // de resposta (id + action_link no nivel raiz).
+    // de resposta (id + action_link no nivel raiz). redirectTo aqui so precisa ser
+    // uma URL valida pra API aceitar a chamada — nao usamos o action_link que ela
+    // geraria (ver comentario abaixo sobre hashed_token).
     const res = await fetch(`${supabaseUrl}/auth/v1/admin/generate_link`, {
       method: "POST",
       headers: {
@@ -67,7 +68,7 @@ export async function inviteTeamMember(
         type: "invite",
         email,
         data: { name, tenantId, role },
-        redirectTo,
+        redirectTo: appUrl,
       }),
     })
 
@@ -98,10 +99,19 @@ export async function inviteTeamMember(
       const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } })
 
       // generate_link so cria o link, nao envia e-mail — o Resend e o unico envio,
-      // entao uma falha aqui precisa aparecer pro usuario (nao ha fallback do Supabase)
+      // entao uma falha aqui precisa aparecer pro usuario (nao ha fallback do Supabase).
+      //
+      // Usamos hashed_token direto (nao data.action_link): o action_link aponta pro
+      // /auth/v1/verify hospedado pelo Supabase, que entrega a sessao via fragmento
+      // de URL (#access_token=...) — fragmento nunca chega no servidor, entao
+      // /api/auth/callback (que so entende ?code=) nunca conseguiria processar isso.
+      // /api/auth/confirm recebe o hashed_token bruto por query string e chama
+      // verifyOtp() no servidor, que estabelece a sessao via cookie de verdade.
+      // (Achado testando o convite de equipe de ponta a ponta, 21/07/2026.)
       let emailSent = false
-      if (data.action_link) {
-        emailSent = await sendTeamInviteEmail(email, name, tenant?.name ?? "sua empresa", data.action_link)
+      if (data.hashed_token) {
+        const inviteLink = `${appUrl}/api/auth/confirm?token_hash=${data.hashed_token}&type=invite&next=/dashboard`
+        emailSent = await sendTeamInviteEmail(email, name, tenant?.name ?? "sua empresa", inviteLink)
           .then(() => true)
           .catch((err) => {
             console.error("Resend invite email error:", err)

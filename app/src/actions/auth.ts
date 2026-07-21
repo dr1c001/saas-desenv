@@ -80,8 +80,8 @@ export async function requestPasswordReset(email: string) {
   }
 
   try {
-    const redirectTo = `${appUrl}/api/auth/callback?next=/reset-password`
-
+    // redirectTo aqui so precisa ser uma URL valida pra API aceitar a chamada —
+    // nao usamos o action_link que ela geraria (ver comentario abaixo).
     const res = await fetch(`${supabaseUrl}/auth/v1/admin/generate_link`, {
       method: "POST",
       headers: {
@@ -89,13 +89,21 @@ export async function requestPasswordReset(email: string) {
         Authorization: `Bearer ${serviceRoleKey}`,
         apikey: serviceRoleKey,
       },
-      body: JSON.stringify({ type: "recovery", email, options: { redirectTo } }),
+      body: JSON.stringify({ type: "recovery", email, redirectTo: appUrl }),
     })
     const data = await res.json()
 
-    if (data.action_link) {
+    // Usamos hashed_token direto (nao data.action_link): o action_link aponta pro
+    // /auth/v1/verify hospedado pelo Supabase, que entrega a sessao via fragmento
+    // de URL (#access_token=...) — fragmento nunca chega no servidor, entao
+    // /api/auth/callback (que so entende ?code=) nunca conseguiria processar isso.
+    // /api/auth/confirm recebe o hashed_token bruto por query string e chama
+    // verifyOtp() no servidor, que estabelece a sessao via cookie de verdade.
+    // (Achado testando o convite de equipe de ponta a ponta, 21/07/2026.)
+    if (data.hashed_token) {
+      const resetLink = `${appUrl}/api/auth/confirm?token_hash=${data.hashed_token}&type=recovery&next=/reset-password`
       const user = await prisma.user.findFirst({ where: { email }, select: { name: true } })
-      await sendPasswordResetEmail(email, user?.name ?? "", data.action_link).catch(() => null)
+      await sendPasswordResetEmail(email, user?.name ?? "", resetLink).catch(() => null)
     }
   } catch (err) {
     console.error("requestPasswordReset error:", err)
