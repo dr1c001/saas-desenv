@@ -1,6 +1,6 @@
 # Plano de Engenharia — ServiçoOS
 
-> Última atualização: 20/07/2026
+> Última atualização: 21/07/2026
 > Este documento é a referência técnica viva do projeto. Deve ser atualizado sempre que uma decisão de arquitetura importante for tomada.
 
 ---
@@ -11,7 +11,19 @@
 
 **Proposta de valor:** substituir o controle manual via WhatsApp/planilha/papel por um sistema único que cobre todo o ciclo — orçamento, ordem de serviço, execução em campo, financeiro e nota fiscal.
 
-**Modelo de negócio:** SaaS multi-tenant por assinatura, com teste grátis de 15 dias (sem cartão), 3 planos pagos (Starter/Pro/Enterprise) cobrados via Asaas.
+**Modelo de negócio:** SaaS multi-tenant por assinatura, 3 planos pagos (Starter/Pro/Enterprise) cobrados via Asaas. **Sem trial gratuito** — cadastro não dá acesso; é preciso assinar (boleto ou cartão) para usar o sistema (ver seção 1.1).
+
+### 1.1 Mudança de modelo: fim do trial gratuito (21/07/2026)
+
+Decisão de produto: o trial gratuito de 15 dias foi removido. Cadastro não dá mais acesso — o tenant nasce bloqueado e só libera com uma assinatura `ACTIVE` confirmada pelo webhook do Asaas. Vale pra todo mundo, inclusive os clientes piloto que já estavam usando de graça (decisão explícita, não descuido).
+
+**Gating simplificado** (`(dashboard)/layout.tsx`): de "trial dentro do prazo, não cancelado, não inadimplente" pra só `subscriptionStatus === ACTIVE`. Única exceção: `PAST_DUE` (falha numa renovação) ganha 3 dias de carência antes de bloquear de vez, reaproveitando o `currentPeriodEnd` que já existia na `Subscription` (sem campo novo) — evita perder cliente por uma falha pontual de cobrança que uma nova tentativa resolveria. `TRIAL` (nunca assinou), `PENDING` (aguardando confirmação) e `CANCELLED` bloqueiam na hora, sem carência. `/billing` continua acessível pra um tenant bloqueado poder se pagar e se desbloquear sozinho.
+
+**Programa de indicação redesenhado.** O bônus antigo ("dias extra de trial") nunca tinha sido de fato aplicado em lugar nenhum — `extraDaysEarned` era só um número calculado (`converted * 30`) pra mostrar na tela do `/referral`, sem nenhum trigger real que estendesse o trial de ninguém. Sem trial pra estender, virou um campo `referralDiscountPercent` de verdade no `Tenant`: quem indica ganha 20% (acumulável, até 100%) por indicado convertido — creditado no webhook do Asaas, na primeira confirmação de pagamento de cada indicado (não em renovações); quem se cadastra com código ganha 10% no primeiro pagamento. Aplicado ao preço e consumido (zerado) dentro de `subscribeToPlan`.
+
+**Limpeza decorrente:** banner de contagem regressiva do trial (removido, tinha virado código morto), stats/alerta de "trial expirando" no `/admin`, os 2 blocos do cron diário que buscavam trial expirando em 3/1 dias (nunca mais achariam nada), e-mail de trial expirando (sem chamador depois disso, removido), e-mail de onboarding do dia 3 (linkava pra `/service-orders/new` — quem não assinou não acessa mais essa rota; reescrito pra apontar pra `/billing`), e todos os textos de "15 dias grátis sem cartão" na landing page, registro e plano de marketing.
+
+**Pendência que virou ainda mais crítica:** `ASAAS_WEBHOOK_SECRET` continua sem configurar no Asaas/Vercel (seção 7.1) — sem isso, ninguém é liberado depois de pagar. Antes disso já era importante; agora é o único caminho de entrada no sistema inteiro.
 
 ---
 
@@ -103,14 +115,14 @@ Cliente (navegador/PWA)
 | Equipe | `/team` | Convite por e-mail, RBAC (Owner/Admin/Técnico) |
 | Mapa GPS | `/map` | Localização de técnicos em tempo real |
 | Assinatura/Billing | `/billing` | Asaas, redireciona pro checkout hospedado |
-| Indicação (referral) | `/referral` | Link único, dias extras de trial/assinatura |
-| Painel admin | `/admin` | Visão de todos os tenants, MRR, alertas de trial (acesso restrito ao dono) |
+| Indicação (referral) | `/referral` | Link único, desconto percentual (não mais dias de trial — ver seção 1.1) |
+| Painel admin | `/admin` | Visão de todos os tenants, MRR (acesso restrito ao dono) |
 | Configurações | `/settings`, `/settings/fiscal`, `/settings/permissions` | Dados da empresa, config fiscal (NFS-e), RBAC por aba |
-| Bloqueio por trial vencido | `/expired` | Bloqueia tudo exceto `/billing` |
+| Bloqueio de acesso | `/expired` | Bloqueia tudo exceto `/billing` — cobre "nunca assinou", pagamento em confirmação, cancelado e inadimplente |
 | Termos e Privacidade | `/terms`, `/privacy` | LGPD |
 | Busca na sidebar | — | Filtra abas por nome |
 
-**E-mails automáticos (via cron diário, 09h BRT):** boas-vindas, dica de onboarding (dia 3), trial expirando (D-3 e D-1), pagamento confirmado, convite de equipe, recuperação de senha, NPS pós-OS concluída.
+**E-mails automáticos (via cron diário, 09h BRT):** boas-vindas (aponta pra escolher um plano, não mais "seu teste começa agora"), lembrete no dia 3 pra quem se cadastrou e ainda não assinou, pagamento confirmado, convite de equipe, recuperação de senha, NPS pós-OS concluída.
 
 ---
 
@@ -250,8 +262,9 @@ Estes pontos custaram tempo real de debug — não repetir os mesmos caminhos:
 Itens #2-#7 do roadmap anterior (rate limiting, SEO básico, exportação LGPD,
 decisão sobre Plano Gratuito, testes automatizados, CI/CD) foram concluídos
 em 20/07/2026 — detalhes na seção 7.2, seção 9 (itens 13-14) e commits
-correspondentes. Plano Gratuito: decisão foi remover a ideia (trial de 15
-dias já cobre esse papel).
+correspondentes. Plano Gratuito: decisão foi remover a ideia (na época, o
+trial de 15 dias cobria esse papel; o trial em si foi removido depois, em
+21/07/2026 — ver seção 1.1).
 
 | # | Item | Por quê |
 |---|---|---|
