@@ -20,11 +20,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Sem trial: acesso exige assinatura ACTIVE. Um tenant recém-criado (status
   // TRIAL, nunca assinou), PENDING (assinou, aguardando confirmação do
   // Asaas) ou CANCELLED fica bloqueado imediatamente. PAST_DUE tem os dias de
-  // carência acima antes de bloquear. /billing fica sempre acessível, pra um
-  // tenant bloqueado poder se pagar e se desbloquear sozinho. /expired (o
-  // destino do redirect) vive fora deste layout.
+  // carência acima antes de bloquear. /billing e /settings ficam sempre
+  // acessíveis — subscribeToPlan exige tenant.document, que só é preenchido
+  // em /settings, então bloquear as duas rotas junto criava um beco sem
+  // saída: ninguém bloqueado conseguia chegar em /settings pra preencher o
+  // documento exigido por /billing (achado testando o fluxo de ponta a
+  // ponta, 21/07/2026). /expired (o destino do redirect) vive fora deste layout.
   const pathname = (await headers()).get("x-pathname") ?? ""
-  const isBillingPage = pathname.startsWith("/billing")
+  const isExemptPage = pathname.startsWith("/billing") || pathname.startsWith("/settings")
 
   let accessBlocked = tenantStatus?.subscriptionStatus !== "ACTIVE"
 
@@ -41,7 +44,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }
   }
 
-  if (accessBlocked && !isBillingPage) {
+  if (accessBlocked && !isExemptPage) {
     redirect("/expired")
   }
 
