@@ -1,7 +1,7 @@
 import Link from "next/link"
 import {
   ClipboardList, MapPin, DollarSign, BarChart2, CheckCircle2,
-  FileText, Users, Zap, Shield, Clock, Star, ArrowRight,
+  FileText, Users, Zap, Shield, Star, ArrowRight, CreditCard,
   X, MessageCircle, ChevronDown, Wrench, Receipt,
 } from "lucide-react"
 
@@ -41,8 +41,8 @@ const testimonials = [
 
 const faqs = [
   {
-    q: "Preciso de cartão de crédito para testar?",
-    a: "Não. Os 15 dias de teste são completamente gratuitos e sem necessidade de cadastrar cartão. Só cobramos se você decidir continuar.",
+    q: "Existe período de teste grátis?",
+    a: "Não — para usar o sistema é preciso assinar um dos planos. Aceitamos boleto ou cartão de crédito, com pagamento processado com segurança pelo Asaas.",
   },
   {
     q: "Posso cancelar a qualquer momento?",
@@ -89,7 +89,7 @@ export default function LandingPage() {
               href="/register"
               className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
             >
-              Testar grátis
+              Criar conta
             </Link>
           </div>
         </div>
@@ -99,7 +99,7 @@ export default function LandingPage() {
       <section className="mx-auto max-w-6xl px-4 py-24 text-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm text-primary mb-6">
           <Zap className="size-3.5" />
-          15 dias grátis · Sem cartão de crédito
+          Configure em minutos · Cancele quando quiser
         </div>
         <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-tight">
           Chega de controlar OS<br />
@@ -113,7 +113,7 @@ export default function LandingPage() {
             href="/register"
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-4 text-lg font-semibold text-primary-foreground hover:bg-primary/90"
           >
-            Começar teste grátis
+            Criar conta e assinar
             <ArrowRight className="size-5" />
           </Link>
           <Link
@@ -200,8 +200,8 @@ export default function LandingPage() {
             <div className="hidden sm:block absolute top-8 left-1/3 right-1/3 h-px bg-border" />
             {[
               { step: "1", title: "Crie sua conta", desc: "Cadastre sua empresa em menos de 2 minutos. Nenhuma configuração técnica necessária." },
-              { step: "2", title: "Configure e convide", desc: "Adicione seus técnicos, clientes e personalize o sistema com o nome da sua empresa." },
-              { step: "3", title: "Abra sua primeira OS", desc: "Crie ordens de serviço, acompanhe no mapa e envie o PDF ao cliente automaticamente." },
+              { step: "2", title: "Escolha seu plano", desc: "Assine em segundos — aceita boleto ou cartão, direto pelo Asaas, com total segurança." },
+              { step: "3", title: "Comece a usar", desc: "Adicione técnicos e clientes, abra sua primeira OS e envie o PDF automaticamente." },
             ].map((s) => (
               <div key={s.step} className="text-center space-y-4 relative">
                 <div className="size-16 rounded-full bg-primary text-primary-foreground text-2xl font-bold flex items-center justify-center mx-auto">
@@ -217,7 +217,7 @@ export default function LandingPage() {
               href="/register"
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-4 font-semibold text-primary-foreground hover:bg-primary/90"
             >
-              Criar conta grátis agora
+              Criar conta agora
               <ArrowRight className="size-5" />
             </Link>
           </div>
@@ -270,7 +270,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-5xl px-4">
           <h2 className="text-3xl font-bold text-center mb-4">Planos simples e transparentes</h2>
           <p className="text-center text-muted-foreground mb-12">
-            Todos os planos incluem 15 dias grátis. Cancele quando quiser.
+            Escolha o plano ideal para o tamanho da sua equipe. Cancele quando quiser.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {plans.map((plan) => (
@@ -302,7 +302,7 @@ export default function LandingPage() {
                   href="/register"
                   className={`text-center rounded-lg py-3 font-semibold text-sm transition-colors ${plan.popular ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border hover:bg-muted"}`}
                 >
-                  Começar grátis
+                  Assinar
                 </Link>
               </div>
             ))}
@@ -334,17 +334,17 @@ export default function LandingPage() {
         <h2 className="text-3xl font-bold mb-4">Pronto para organizar sua empresa?</h2>
         <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
           Junte-se a dezenas de empresas que já usam o ServiçoOS.<br />
-          Sem cartão de crédito. Configure em minutos.
+          Configure em minutos e comece hoje mesmo.
         </p>
         <Link
           href="/register"
           className="inline-flex items-center gap-2 rounded-xl bg-primary px-10 py-4 text-lg font-semibold text-primary-foreground hover:bg-primary/90"
         >
-          Criar conta grátis
+          Criar conta
           <ArrowRight className="size-5" />
         </Link>
         <div className="mt-6 flex justify-center gap-8 text-sm text-muted-foreground flex-wrap">
-          <span className="flex items-center gap-1"><Clock className="size-4" /> 15 dias grátis</span>
+          <span className="flex items-center gap-1"><CreditCard className="size-4" /> Boleto ou cartão</span>
           <span className="flex items-center gap-1"><Shield className="size-4" /> Dados seguros (LGPD)</span>
           <span className="flex items-center gap-1"><Zap className="size-4" /> Cancele quando quiser</span>
         </div>

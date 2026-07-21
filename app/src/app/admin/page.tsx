@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatCurrency, daysUntil } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils"
 import { Users, Building2, TrendingUp, AlertCircle, CheckCircle2, Clock } from "lucide-react"
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  TRIAL:     { label: "Trial",      variant: "secondary" },
+  TRIAL:     { label: "Sem assinatura", variant: "secondary" },
+  PENDING:   { label: "Confirmando pagamento", variant: "secondary" },
   ACTIVE:    { label: "Ativo",      variant: "default" },
   PAST_DUE:  { label: "Inadimplente", variant: "destructive" },
   CANCELLED: { label: "Cancelado",  variant: "outline" },
@@ -40,12 +41,6 @@ export default async function AdminPage() {
       }, 0),
   }
 
-  const trialExpiringSoon = tenants.filter(t => {
-    if (t.subscriptionStatus !== "TRIAL" || !t.trialEndsAt) return false
-    const days = daysUntil(t.trialEndsAt)
-    return days <= 3 && days >= 0
-  })
-
   return (
     <div className="space-y-6 max-w-7xl">
       {/* Stats */}
@@ -59,7 +54,7 @@ export default async function AdminPage() {
           <CardContent><p className="text-2xl font-bold text-green-600">{stats.active}</p></CardContent>
         </Card>
         <Card className="border-yellow-200 dark:border-yellow-800">
-          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="size-3.5 text-yellow-500"/>Trial</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="size-3.5 text-yellow-500"/>Sem assinatura</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold text-yellow-600">{stats.trial}</p></CardContent>
         </Card>
         <Card className="border-red-200 dark:border-red-800">
@@ -71,17 +66,6 @@ export default async function AdminPage() {
           <CardContent><p className="text-2xl font-bold text-purple-600">{formatCurrency(stats.mrr)}</p></CardContent>
         </Card>
       </div>
-
-      {/* Alert: trial expirando */}
-      {trialExpiringSoon.length > 0 && (
-        <div className="rounded-lg border border-yellow-400 bg-yellow-50 dark:bg-yellow-950 p-4">
-          <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300 flex items-center gap-2">
-            <AlertCircle className="size-4" />
-            {trialExpiringSoon.length} empresa(s) com trial expirando em até 3 dias:
-            {" "}{trialExpiringSoon.map(t => t.name).join(", ")}
-          </p>
-        </div>
-      )}
 
       {/* Tabela de tenants */}
       <Card>
@@ -102,7 +86,7 @@ export default async function AdminPage() {
                   <th className="text-center px-4 py-3 font-medium">Usuários</th>
                   <th className="text-center px-4 py-3 font-medium">OS</th>
                   <th className="text-center px-4 py-3 font-medium">Clientes</th>
-                  <th className="text-left px-4 py-3 font-medium">Trial / Renova</th>
+                  <th className="text-left px-4 py-3 font-medium">Renova</th>
                   <th className="text-left px-4 py-3 font-medium">Cadastro</th>
                 </tr>
               </thead>
@@ -112,14 +96,9 @@ export default async function AdminPage() {
                   const sub = tenant.subscriptions[0]
                   const owner = tenant.users.find(u => u.role === "OWNER")
 
-                  let dateLabel = "—"
-                  let trialDaysLeft: number | null = null
-                  if (tenant.subscriptionStatus === "TRIAL" && tenant.trialEndsAt) {
-                    trialDaysLeft = daysUntil(tenant.trialEndsAt)
-                    dateLabel = trialDaysLeft > 0 ? `${trialDaysLeft}d restantes` : "Expirado"
-                  } else if (sub?.currentPeriodEnd) {
-                    dateLabel = new Date(sub.currentPeriodEnd).toLocaleDateString("pt-BR")
-                  }
+                  const dateLabel = sub?.currentPeriodEnd
+                    ? new Date(sub.currentPeriodEnd).toLocaleDateString("pt-BR")
+                    : "—"
 
                   return (
                     <tr key={tenant.id} className={`border-b hover:bg-muted/30 transition-colors ${i % 2 === 0 ? "" : "bg-muted/10"}`}>
@@ -144,12 +123,7 @@ export default async function AdminPage() {
                       <td className="px-4 py-3 text-center">{tenant._count.orders}</td>
                       <td className="px-4 py-3 text-center">{tenant._count.clients}</td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs font-medium ${
-                          trialDaysLeft !== null && trialDaysLeft <= 3
-                            ? "text-red-600" : "text-muted-foreground"
-                        }`}>
-                          {dateLabel}
-                        </span>
+                        <span className="text-xs font-medium text-muted-foreground">{dateLabel}</span>
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">
                         {new Date(tenant.createdAt).toLocaleDateString("pt-BR")}

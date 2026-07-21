@@ -9,7 +9,7 @@ export async function getReferralInfo() {
 
   let tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
-    select: { referralCode: true },
+    select: { referralCode: true, referralDiscountPercent: true },
   })
 
   // Auto-generate referral code if not set
@@ -18,7 +18,7 @@ export async function getReferralInfo() {
     tenant = await prisma.tenant.update({
       where: { id: tenantId },
       data: { referralCode: code },
-      select: { referralCode: true },
+      select: { referralCode: true, referralDiscountPercent: true },
     })
   }
 
@@ -35,6 +35,9 @@ export async function getReferralInfo() {
   return {
     code: tenant!.referralCode!,
     referralCount,
-    extraDaysEarned: converted * 30,
+    converted,
+    // Saldo de desconto pendente — creditado pelo webhook do Asaas na primeira
+    // conversão de cada indicado, consumido no próximo subscribeToPlan.
+    discountPercent: tenant!.referralDiscountPercent,
   }
 }

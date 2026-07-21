@@ -13,7 +13,6 @@ export async function getBillingStatus() {
     where: { id: tenantId },
     select: {
       subscriptionStatus: true,
-      trialEndsAt: true,
       plan: { select: { id: true, name: true, slug: true, priceMonthly: true, priceYearly: true } },
       subscriptions: {
         orderBy: { createdAt: "desc" },
@@ -64,7 +63,12 @@ export async function subscribeToPlan(formData: FormData) {
           encodeURIComponent("Preencha o CNPJ/CPF da empresa em Configurações antes de assinar um plano.")
       )
     }
-    const price = cycle === "YEARLY" ? Number(plan.priceYearly) : Number(plan.priceMonthly)
+    const fullPrice = cycle === "YEARLY" ? Number(plan.priceYearly) : Number(plan.priceMonthly)
+    // Desconto de indicação (creditado por quem indicou/foi indicado — ver
+    // lib/auth.ts, api/referral/join, api/webhooks/asaas) aplicado uma vez,
+    // no primeiro pagamento desta assinatura, e consumido logo abaixo.
+    const discountPercent = tenant.referralDiscountPercent
+    const price = fullPrice * (1 - discountPercent / 100)
 
     // Create or reuse Asaas customer
     let asaasCustomerId = tenant.asaasCustomerId
@@ -113,6 +117,10 @@ export async function subscribeToPlan(formData: FormData) {
         currentPeriodEnd: periodEnd,
       },
     })
+
+    if (discountPercent > 0) {
+      await prisma.tenant.update({ where: { id: tenantId }, data: { referralDiscountPercent: 0 } })
+    }
 
     revalidatePath("/billing")
 

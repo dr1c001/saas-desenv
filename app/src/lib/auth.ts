@@ -4,6 +4,12 @@ import { redirect } from "next/navigation"
 import { sendWelcomeEmail } from "@/lib/resend"
 import { Prisma } from "@/generated/prisma/client"
 
+// Bônus de indicação pra quem se cadastra com um código válido — antes era
+// dias extra de trial; sem trial (o acesso agora exige assinatura paga),
+// virou desconto no primeiro pagamento. Espelha NEW_SIGNUP_DISCOUNT_PERCENT
+// em api/referral/join/route.ts (mesmo conceito, caminho de cadastro diferente).
+const NEW_SIGNUP_DISCOUNT_PERCENT = 10
+
 export async function getSession() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -38,15 +44,16 @@ export async function getTenant() {
     const companyName = user.user_metadata?.company_name ?? `Empresa de ${name}`
     const refCode: string | undefined = user.user_metadata?.ref_code
 
-    let extraDays = 0
+    let referralDiscountPercent = 0
     if (refCode) {
       const referrer = await prisma.tenant.findFirst({ where: { referralCode: refCode }, select: { id: true } })
-      if (referrer) extraDays = 7
+      if (referrer) referralDiscountPercent = NEW_SIGNUP_DISCOUNT_PERCENT
     }
 
-    const trialEndsAt = new Date(Date.now() + (15 + extraDays) * 24 * 60 * 60 * 1000)
+    // Sem trial: o tenant nasce sem acesso, bloqueado até a primeira assinatura
+    // ser confirmada (ver gating em (dashboard)/layout.tsx).
     const tenant = await prisma.tenant.create({
-      data: { name: companyName, trialEndsAt, referredByCode: refCode ?? null },
+      data: { name: companyName, referredByCode: refCode ?? null, referralDiscountPercent },
     })
     const tenantId = tenant.id
     const role = "OWNER" as const

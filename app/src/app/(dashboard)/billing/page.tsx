@@ -1,5 +1,5 @@
 import { getBillingStatus, getPlans, subscribeToPlan } from "@/actions/billing"
-import { formatCurrency, daysUntil } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { CheckCircle2, Clock, CreditCard, Zap } from "lucide-react"
@@ -7,7 +7,8 @@ import Link from "next/link"
 import { CancelSubscriptionButton } from "@/components/billing/cancel-button"
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
-  TRIAL: { label: "Teste grátis", color: "bg-yellow-500" },
+  TRIAL: { label: "Sem assinatura", color: "bg-yellow-500" },
+  PENDING: { label: "Confirmando pagamento", color: "bg-blue-500" },
   ACTIVE: { label: "Ativo", color: "bg-green-500" },
   PAST_DUE: { label: "Pagamento pendente", color: "bg-red-500" },
   CANCELLED: { label: "Cancelado", color: "bg-gray-500" },
@@ -22,10 +23,6 @@ const PLAN_FEATURES: Record<string, string[]> = {
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ success?: string; error?: string }> }) {
   const { success, error } = await searchParams
   const [billing, plans] = await Promise.all([getBillingStatus(), getPlans()])
-
-  const trialDaysLeft = billing?.trialEndsAt
-    ? Math.max(0, daysUntil(billing.trialEndsAt))
-    : 0
 
   const statusInfo = STATUS_LABEL[billing?.subscriptionStatus ?? "TRIAL"]
 
@@ -65,10 +62,15 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         {billing?.subscriptionStatus === "TRIAL" && (
           <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
             <Clock className="size-4" />
+            <span className="text-sm">Escolha um plano abaixo para começar a usar o sistema.</span>
+          </div>
+        )}
+
+        {billing?.subscriptionStatus === "PENDING" && (
+          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+            <Clock className="size-4" />
             <span className="text-sm">
-              {trialDaysLeft > 0
-                ? `${trialDaysLeft} dias restantes no período de teste gratuito.`
-                : "Seu período de teste expirou. Assine um plano para continuar."}
+              Aguardando confirmação do pagamento — o acesso libera automaticamente assim que confirmar.
             </span>
           </div>
         )}

@@ -5,27 +5,41 @@ import { OverdueAlerts } from "@/components/layout/overdue-alerts"
 import { PushSubscriber } from "@/components/layout/push-subscriber"
 import { LocationTracker } from "@/components/layout/location-tracker"
 import { getTenant, getAllowedTabs } from "@/lib/auth"
-import { TrialBanner } from "@/components/layout/trial-banner"
+import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { headers } from "next/headers"
+
+// Dias de carência após o fim do período pago antes de bloquear de vez um
+// tenant PAST_DUE — evita perder cliente por uma falha pontual de cobrança
+// (cartão expirado, saldo momentâneo) que uma nova tentativa resolveria.
+const PAST_DUE_GRACE_DAYS = 3
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { tenantId, role, userId, tenantStatus } = await getTenant()
 
-  // Block access when trial expired, cancelled or past_due — except /billing, so a
-  // blocked tenant can still reach the page that lets them buy a plan and unblock
-  // themselves. /expired (the redirect target) lives outside this layout.
+  // Sem trial: acesso exige assinatura ACTIVE. Um tenant recém-criado (status
+  // TRIAL, nunca assinou), PENDING (assinou, aguardando confirmação do
+  // Asaas) ou CANCELLED fica bloqueado imediatamente. PAST_DUE tem os dias de
+  // carência acima antes de bloquear. /billing fica sempre acessível, pra um
+  // tenant bloqueado poder se pagar e se desbloquear sozinho. /expired (o
+  // destino do redirect) vive fora deste layout.
   const pathname = (await headers()).get("x-pathname") ?? ""
   const isBillingPage = pathname.startsWith("/billing")
 
-  const trialExpired =
-    tenantStatus?.subscriptionStatus === "TRIAL" &&
-    tenantStatus.trialEndsAt &&
-    new Date(tenantStatus.trialEndsAt) < new Date()
-  const accessBlocked =
-    trialExpired ||
-    tenantStatus?.subscriptionStatus === "CANCELLED" ||
-    tenantStatus?.subscriptionStatus === "PAST_DUE"
+  let accessBlocked = tenantStatus?.subscriptionStatus !== "ACTIVE"
+
+  if (accessBlocked && tenantStatus?.subscriptionStatus === "PAST_DUE") {
+    const latestSub = await prisma.subscription.findFirst({
+      where: { tenantId },
+      orderBy: { createdAt: "desc" },
+      select: { currentPeriodEnd: true },
+    })
+    if (latestSub) {
+      const graceEnd = new Date(latestSub.currentPeriodEnd)
+      graceEnd.setDate(graceEnd.getDate() + PAST_DUE_GRACE_DAYS)
+      accessBlocked = new Date() >= graceEnd
+    }
+  }
 
   if (accessBlocked && !isBillingPage) {
     redirect("/expired")
@@ -40,7 +54,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <header className="h-14 border-b flex items-center px-4 gap-2">
           <SidebarTrigger />
         </header>
-        <TrialBanner tenantStatus={tenantStatus} />
         <Suspense>
           <OverdueAlerts tenantId={tenantId} />
         </Suspense>

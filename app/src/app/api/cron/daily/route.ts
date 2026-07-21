@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import {
-  sendTrialExpiringEmail,
   sendOnboardingDay3Email,
   sendNpsEmail,
 } from "@/lib/resend"
@@ -16,7 +15,7 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date()
-  const results = { day3: 0, trialExpiring3: 0, trialExpiring1: 0, nps: 0, rateLimitCleanup: 0, errors: 0 }
+  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, errors: 0 }
 
   // ── Limpeza de rate limit expirado (janelas de no máximo 60min — qualquer
   // linha com mais de 24h já não afeta nenhuma checagem) ──────────────────────
@@ -26,7 +25,7 @@ export async function GET(req: NextRequest) {
     results.rateLimitCleanup = deleted.count
   } catch { results.errors++ }
 
-  // ── Day 3 onboarding tip ─────────────────────────────────────────────────────
+  // ── Lembrete no dia 3 pra quem se cadastrou e ainda não assinou ──────────────
   const day3Start = new Date(now)
   day3Start.setDate(day3Start.getDate() - 3)
   day3Start.setHours(0, 0, 0, 0)
@@ -43,46 +42,6 @@ export async function GET(req: NextRequest) {
     try {
       await sendOnboardingDay3Email(owner.email, owner.name)
       results.day3++
-    } catch { results.errors++ }
-  }
-
-  // ── Trial expiring in 3 days ──────────────────────────────────────────────────
-  const in3Start = new Date(now)
-  in3Start.setDate(in3Start.getDate() + 3)
-  in3Start.setHours(0, 0, 0, 0)
-  const in3End = new Date(in3Start)
-  in3End.setHours(23, 59, 59, 999)
-
-  const expiring3 = await prisma.tenant.findMany({
-    where: { trialEndsAt: { gte: in3Start, lte: in3End }, subscriptionStatus: "TRIAL" },
-    include: { users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } } },
-  })
-  for (const t of expiring3) {
-    const owner = t.users[0]
-    if (!owner?.email) continue
-    try {
-      await sendTrialExpiringEmail(owner.email, owner.name, 3)
-      results.trialExpiring3++
-    } catch { results.errors++ }
-  }
-
-  // ── Trial expiring in 1 day ───────────────────────────────────────────────────
-  const in1Start = new Date(now)
-  in1Start.setDate(in1Start.getDate() + 1)
-  in1Start.setHours(0, 0, 0, 0)
-  const in1End = new Date(in1Start)
-  in1End.setHours(23, 59, 59, 999)
-
-  const expiring1 = await prisma.tenant.findMany({
-    where: { trialEndsAt: { gte: in1Start, lte: in1End }, subscriptionStatus: "TRIAL" },
-    include: { users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } } },
-  })
-  for (const t of expiring1) {
-    const owner = t.users[0]
-    if (!owner?.email) continue
-    try {
-      await sendTrialExpiringEmail(owner.email, owner.name, 1)
-      results.trialExpiring1++
     } catch { results.errors++ }
   }
 

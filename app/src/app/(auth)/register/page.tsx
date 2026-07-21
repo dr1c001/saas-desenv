@@ -58,7 +58,7 @@ function RegisterForm() {
       return
     }
     if (!needsEmailConfirmation) {
-      router.push("/dashboard")
+      router.push("/billing")
       router.refresh()
       return
     }
@@ -71,14 +71,14 @@ function RegisterForm() {
         <CardTitle className="text-2xl">Criar conta</CardTitle>
         <CardDescription>
           {refCode
-            ? "Você foi indicado — ganhe 7 dias extras no teste grátis!"
-            : "Cadastre sua empresa gratuitamente"}
+            ? "Você foi indicado — ganhe 10% de desconto no seu plano!"
+            : "Crie sua conta e escolha um plano para começar"}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {refCode && (
           <div className="mb-4 rounded-lg border border-green-300 bg-green-50 dark:bg-green-950 px-3 py-2 text-sm text-green-700 dark:text-green-300">
-            🎁 Código de indicação aplicado! Seu trial será de <strong>22 dias</strong> grátis.
+            🎁 Código de indicação aplicado! Você ganhou <strong>10% de desconto</strong> no seu primeiro pagamento.
           </div>
         )}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -129,7 +129,7 @@ function RegisterForm() {
             </p>
           )}
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Criando conta..." : "Criar conta grátis"}
+            {isSubmitting ? "Criando conta..." : "Criar conta"}
           </Button>
         </form>
         <p className="mt-4 text-center text-sm text-muted-foreground">

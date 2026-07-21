@@ -9,7 +9,7 @@ import { getReferralInfo } from "@/actions/referral"
 
 export default function ReferralPage() {
   const [copied, setCopied] = useState(false)
-  const [info, setInfo] = useState<{ code: string; referralCount: number; extraDaysEarned: number } | null>(null)
+  const [info, setInfo] = useState<{ code: string; referralCount: number; converted: number; discountPercent: number } | null>(null)
 
   useEffect(() => {
     getReferralInfo().then(setInfo)
@@ -30,7 +30,7 @@ export default function ReferralPage() {
       <div>
         <h1 className="text-2xl font-bold">Programa de Indicação</h1>
         <p className="text-muted-foreground mt-1">
-          Indique o ServiçoOS para outros empresários e ganhe dias extras no seu plano.
+          Indique o ServiçoOS para outros empresários e ganhe desconto no seu plano.
         </p>
       </div>
 
@@ -38,8 +38,8 @@ export default function ReferralPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { icon: "🔗", title: "Compartilhe seu link", desc: "Envie o link único de indicação para outros empresários" },
-          { icon: "✅", title: "Eles se cadastram", desc: "Seu indicado ganha +7 dias extras no período de teste" },
-          { icon: "🎁", title: "Você ganha também", desc: "Para cada indicação que assinar, você ganha 30 dias extras" },
+          { icon: "✅", title: "Eles se cadastram", desc: "Seu indicado ganha 10% de desconto no primeiro pagamento" },
+          { icon: "🎁", title: "Você ganha também", desc: "Para cada indicação que assinar, você ganha 20% de desconto" },
         ].map((s) => (
           <Card key={s.title}>
             <CardContent className="pt-6 text-center space-y-2">
@@ -76,10 +76,10 @@ export default function ReferralPage() {
             <div className="flex gap-4 text-sm">
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <Users className="size-4" />
-                <strong>{info.referralCount}</strong> indicações
+                <strong>{info.referralCount}</strong> indicações ({info.converted} converteram)
               </span>
               <Badge variant="secondary">
-                +{info.extraDaysEarned} dias ganhos
+                {info.discountPercent}% de desconto disponível
               </Badge>
             </div>
           )}
@@ -87,8 +87,8 @@ export default function ReferralPage() {
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Os dias extras são creditados automaticamente quando seu indicado assina qualquer plano pago.
-        Sem limite de indicações — quanto mais você indica, mais dias você ganha.
+        O desconto é creditado automaticamente quando seu indicado assina um plano pago, e aplicado
+        na sua próxima assinatura. Sem limite de indicações — quanto mais você indica, mais desconto acumula (até 100%).
       </p>
     </div>
   )

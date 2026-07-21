@@ -15,55 +15,26 @@ function getResend(): Resend {
 
 const FROM = "ServiçoOS <noreply@app-olive-six-67.vercel.app>"
 
-export async function sendWelcomeEmail(to: string, name: string, trialDays = 15) {
+export async function sendWelcomeEmail(to: string, name: string) {
   return getResend().emails.send({
     from: FROM,
     to,
-    subject: `Bem-vindo ao ServiçoOS — seu teste de ${trialDays} dias começa agora!`,
+    subject: `Bem-vindo ao ServiçoOS — escolha seu plano para começar`,
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
         <h1 style="color:#7c3aed;margin-bottom:8px">Bem-vindo, ${name}! 🎉</h1>
         <p style="color:#374151;line-height:1.6">
           Sua conta no <strong>ServiçoOS</strong> foi criada com sucesso.<br>
-          Você tem <strong>${trialDays} dias grátis</strong> para testar tudo sem precisar de cartão.
+          Falta só um passo: escolha um plano para liberar o acesso ao sistema.
         </p>
-        <a href="https://app-olive-six-67.vercel.app/dashboard"
+        <a href="https://app-olive-six-67.vercel.app/billing"
            style="display:inline-block;margin:24px 0;padding:12px 28px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
-          Acessar o sistema →
+          Ver planos e assinar →
         </a>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
         <p style="color:#6b7280;font-size:13px">
-          Tem dúvidas? Responda este e-mail que te ajudamos.<br>
-          <a href="https://app-olive-six-67.vercel.app/billing" style="color:#7c3aed">Ver planos e preços</a>
+          Tem dúvidas? Responda este e-mail que te ajudamos.
         </p>
-      </div>`,
-  })
-}
-
-export async function sendTrialExpiringEmail(to: string, name: string, daysLeft: number) {
-  return getResend().emails.send({
-    from: FROM,
-    to,
-    subject: `Seu teste gratuito expira em ${daysLeft} dia${daysLeft !== 1 ? "s" : ""} — ServiçoOS`,
-    html: `
-      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
-        <h1 style="color:#f97316;margin-bottom:8px">⏰ Atenção, ${name}!</h1>
-        <p style="color:#374151;line-height:1.6">
-          Seu período de teste gratuito no <strong>ServiçoOS</strong> expira em
-          <strong>${daysLeft} dia${daysLeft !== 1 ? "s" : ""}</strong>.
-        </p>
-        <p style="color:#374151;line-height:1.6">
-          Para continuar usando sem interrupções, assine um dos nossos planos:
-        </p>
-        <ul style="color:#374151;line-height:2">
-          <li><strong>Starter</strong> — R$ 97/mês (até 3 usuários)</li>
-          <li><strong>Pro</strong> — R$ 197/mês (até 10 usuários + Mapa GPS)</li>
-          <li><strong>Enterprise</strong> — R$ 397/mês (ilimitado + NFS-e)</li>
-        </ul>
-        <a href="https://app-olive-six-67.vercel.app/billing"
-           style="display:inline-block;margin:24px 0;padding:12px 28px;background:#f97316;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
-          Escolher meu plano →
-        </a>
       </div>`,
   })
 }
@@ -119,28 +90,28 @@ export async function sendOnboardingDay3Email(to: string, name: string) {
   return getResend().emails.send({
     from: FROM,
     to,
-    subject: `Dica do ServiçoOS: crie sua primeira OS em 2 minutos`,
+    subject: `Sua empresa ainda não está usando o ServiçoOS`,
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
         <h1 style="color:#7c3aed;margin-bottom:8px">Olá, ${name}! 👋</h1>
         <p style="color:#374151;line-height:1.6">
-          Você já está há 3 dias com o ServiçoOS. Que tal criar sua primeira Ordem de Serviço?
+          Você criou sua conta no <strong>ServiçoOS</strong> há 3 dias, mas ainda não escolheu um plano —
+          por isso o acesso ao sistema continua bloqueado.
         </p>
-        <p style="color:#374151;line-height:1.6">É simples:</p>
+        <p style="color:#374151;line-height:1.6">Assine agora e comece a usar na hora:</p>
         <ol style="color:#374151;line-height:2;padding-left:20px">
           <li>Cadastre um cliente (ou use um existente)</li>
           <li>Clique em <strong>+ Nova OS</strong></li>
           <li>Preencha os dados e salve</li>
           <li>Envie o PDF direto para o cliente 🎉</li>
         </ol>
-        <a href="https://app-olive-six-67.vercel.app/service-orders/new"
+        <a href="https://app-olive-six-67.vercel.app/billing"
            style="display:inline-block;margin:24px 0;padding:12px 28px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
-          Criar minha primeira OS →
+          Ver planos e assinar →
         </a>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
         <p style="color:#6b7280;font-size:13px">
-          Precisa de ajuda? Responda este e-mail que te ajudamos.<br>
-          Seu trial ainda tem <strong>12 dias</strong> — aproveite ao máximo!
+          Precisa de ajuda? Responda este e-mail que te ajudamos.
         </p>
       </div>`,
   })

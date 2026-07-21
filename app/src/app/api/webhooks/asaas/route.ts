@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { sendPaymentConfirmedEmail } from "@/lib/resend"
 
+// Espelha REFERRAL_DISCOUNT_PERCENT/NEW_SIGNUP_DISCOUNT_PERCENT em
+// lib/auth.ts e api/referral/join/route.ts — bônus de quem indicou, creditado
+// só na primeira confirmação de pagamento do indicado (não em renovações).
+const REFERRER_DISCOUNT_PERCENT = 20
+const MAX_DISCOUNT_PERCENT = 100
+
 export async function POST(req: NextRequest) {
   // Asaas ecoa o token configurado no dashboard (Integrações → Webhooks) no
   // header "asaas-access-token" em toda chamada — sem isso, qualquer um podia
@@ -27,12 +33,18 @@ export async function POST(req: NextRequest) {
           select: {
             id: true,
             name: true,
+            referredByCode: true,
             users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } },
           },
         },
       },
     })
     if (!sub) return NextResponse.json({ ok: true })
+
+    // Só a primeira confirmação de pagamento desse tenant conta como
+    // "conversão" pro bônus de quem indicou — renovações (sub já ACTIVE) e
+    // recuperação de inadimplência (PAST_DUE) não geram um bônus novo.
+    const isFirstConfirmation = sub.status === "PENDING"
 
     // Uma assinatura já CANCELLED (localmente) não deve ser reativada por um
     // pagamento atrasado/duplicado/reenviado do Asaas — isso "ressuscitava"
@@ -57,6 +69,30 @@ export async function POST(req: NextRequest) {
           data: { subscriptionStatus: "ACTIVE", planId: sub.planId },
         }),
       ])
+
+      // Bônus de quem indicou — melhor esforço, nunca deve derrubar a
+      // ativação do tenant que acabou de pagar nem o e-mail de confirmação.
+      if (isFirstConfirmation && sub.tenant.referredByCode) {
+        try {
+          const referrer = await prisma.tenant.findUnique({
+            where: { referralCode: sub.tenant.referredByCode },
+            select: { id: true, referralDiscountPercent: true },
+          })
+          if (referrer) {
+            await prisma.tenant.update({
+              where: { id: referrer.id },
+              data: {
+                referralDiscountPercent: Math.min(
+                  referrer.referralDiscountPercent + REFERRER_DISCOUNT_PERCENT,
+                  MAX_DISCOUNT_PERCENT
+                ),
+              },
+            })
+          }
+        } catch (err) {
+          console.error("Falha ao creditar bônus de indicação:", err)
+        }
+      }
 
       const owner = sub.tenant.users[0]
       if (owner?.email) {
