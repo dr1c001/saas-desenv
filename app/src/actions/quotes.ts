@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 
 const quoteSchema = z.object({
   clientName: z.string().min(2, "Nome do cliente obrigatório"),
@@ -37,6 +37,7 @@ export async function createQuote(
   formData: FormData
 ): Promise<QuoteFormState> {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
   const raw = Object.fromEntries(formData.entries())
   const parsed = quoteSchema.safeParse(raw)
@@ -71,6 +72,7 @@ export async function updateQuote(
   formData: FormData
 ): Promise<QuoteFormState> {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
   const raw = Object.fromEntries(formData.entries())
   const parsed = quoteSchema.safeParse(raw)
@@ -100,6 +102,7 @@ export async function updateQuote(
 
 export async function updateQuoteStatus(id: string, status: string) {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return
   const valid = ["DRAFT", "SENT", "APPROVED", "REJECTED"]
   if (!valid.includes(status)) return
@@ -110,6 +113,7 @@ export async function updateQuoteStatus(id: string, status: string) {
 
 export async function deleteQuote(id: string) {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return
   await prisma.quote.delete({ where: { id, tenantId } })
   revalidatePath("/quotes")
@@ -118,6 +122,7 @@ export async function deleteQuote(id: string) {
 
 export async function getQuotes(filters?: { q?: string; status?: string }) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   return prisma.quote.findMany({
     where: {
       tenantId,
@@ -138,5 +143,6 @@ export async function getQuotes(filters?: { q?: string; status?: string }) {
 
 export async function getQuote(id: string) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   return prisma.quote.findUnique({ where: { id, tenantId } })
 }

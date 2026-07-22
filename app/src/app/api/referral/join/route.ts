@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server"
 // Espelha NEW_SIGNUP_DISCOUNT_PERCENT em lib/auth.ts (mesmo conceito, caminho
 // de aplicar o código depois do cadastro em vez de na hora do cadastro).
 const NEW_SIGNUP_DISCOUNT_PERCENT = 10
+const MAX_DISCOUNT_PERCENT = 100
 
 // Called right after tenant creation when ?ref=CODE is in the register URL
 export async function POST(req: NextRequest) {
@@ -31,6 +32,12 @@ export async function POST(req: NextRequest) {
       select: { id: true, name: true },
     })
     if (!referrer) return NextResponse.json({ ok: false, error: "Código inválido" })
+    // Sem isso, o próprio tenant podia usar o próprio código e creditar
+    // desconto pra si mesmo sem nunca ter indicado ninguém de verdade.
+    // (Achado em revisão de segurança 2026-07-21.)
+    if (referrer.id === tenantId) {
+      return NextResponse.json({ ok: false, error: "Você não pode usar seu próprio código de indicação" })
+    }
 
     const newTenant = await prisma.tenant.findUnique({ where: { id: tenantId } })
     if (!newTenant) return NextResponse.json({ ok: false })
@@ -53,6 +60,16 @@ export async function POST(req: NextRequest) {
     if (result.count === 0) {
       return NextResponse.json({ ok: false, error: "Indicação já aplicada" })
     }
+
+    // Esse tenant pode já estar perto do teto por bônus de indicador (webhook
+    // do Asaas) — sem isso, o increment acima podia passar de 100% e virar
+    // preço negativo em subscribeToPlan. Condicionado no valor atual da linha
+    // (não num valor lido antes), seguro mesmo sob corrida.
+    // (Achado em revisão de segurança 2026-07-21.)
+    await prisma.tenant.updateMany({
+      where: { id: tenantId, referralDiscountPercent: { gt: MAX_DISCOUNT_PERCENT } },
+      data: { referralDiscountPercent: MAX_DISCOUNT_PERCENT },
+    })
 
     return NextResponse.json({ ok: true, referrerName: referrer.name, discountPercent: NEW_SIGNUP_DISCOUNT_PERCENT })
   } catch {

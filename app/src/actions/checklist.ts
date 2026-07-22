@@ -1,11 +1,12 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 
 export async function addChecklistItem(orderId: string, description: string) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   const order = await prisma.serviceOrder.findUnique({ where: { id: orderId, tenantId } })
   if (!order) throw new Error("OS não encontrada")
 
@@ -16,6 +17,7 @@ export async function addChecklistItem(orderId: string, description: string) {
 
 export async function toggleChecklistItem(itemId: string, completed: boolean) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   const item = await prisma.checklistItem.findFirst({
     where: { id: itemId, order: { tenantId } },
   })
@@ -26,6 +28,7 @@ export async function toggleChecklistItem(itemId: string, completed: boolean) {
 
 export async function deleteChecklistItem(itemId: string) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   const item = await prisma.checklistItem.findFirst({
     where: { id: itemId, order: { tenantId } },
   })

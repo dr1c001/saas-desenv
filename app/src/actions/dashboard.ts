@@ -1,10 +1,11 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 
 export async function getMonthlyRevenueChart() {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
 
   // Last 6 months
   const now = new Date()

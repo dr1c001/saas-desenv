@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { geocodeAddress } from "@/lib/geocode"
 
 const clientSchema = z.object({
@@ -33,6 +33,7 @@ export async function createClient(
   formData: FormData
 ): Promise<ClientFormState> {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
 
   const raw = Object.fromEntries(formData.entries())
   const parsed = clientSchema.safeParse(raw)
@@ -80,6 +81,7 @@ export async function updateClient(
   formData: FormData
 ): Promise<ClientFormState> {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   // createClient fica sem checagem (technician cadastra cliente em campo,
   // fluxo legítimo), mas updateClient também permite marcar o cliente como
   // DEFAULTER (inadimplente) — isso precisa de OWNER/ADMIN.
@@ -141,6 +143,7 @@ export async function updateClient(
 
 export async function deleteClient(id: string) {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") redirect("/clients")
   await prisma.client.delete({ where: { id, tenantId } })
   revalidatePath("/clients")
@@ -149,6 +152,7 @@ export async function deleteClient(id: string) {
 
 export async function getClients(filters?: { q?: string; status?: string }) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   return prisma.client.findMany({
     where: {
       tenantId,
@@ -171,6 +175,7 @@ export async function getClients(filters?: { q?: string; status?: string }) {
 
 export async function getClient(id: string) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   return prisma.client.findUnique({
     where: { id, tenantId },
     include: {

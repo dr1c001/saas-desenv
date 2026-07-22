@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { checkRateLimit, clientIp } from "@/lib/rate-limit"
 import { sendTeamInviteEmail } from "@/lib/resend"
 
 const inviteSchema = z.object({
@@ -32,6 +33,7 @@ export async function inviteTeamMember(
   formData: FormData
 ): Promise<TeamFormState> {
   const { tenantId, role: requesterRole } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (requesterRole !== "OWNER" && requesterRole !== "ADMIN") {
     return { message: "Sem permissão." }
   }
@@ -41,9 +43,32 @@ export async function inviteTeamMember(
 
   const { name, email, role, document, phone, street, number, complement, district, city, state, zipCode } = parsed.data
 
-  // Check if email already in this tenant
-  const existing = await prisma.user.findFirst({ where: { email, tenantId } })
-  if (existing) return { message: "Este e-mail já pertence à sua equipe." }
+  // Limite por IP (probing de vários e-mails) e por e-mail alvo (spam de
+  // convite pra mesma caixa de entrada, ou reenvio repetido do mesmo link).
+  // (Achado em revisão de segurança 2026-07-21.)
+  const ip = await clientIp()
+  const [ipCheck, emailCheck] = await Promise.all([
+    checkRateLimit(`invite:ip:${ip}`, 20, 15),
+    checkRateLimit(`invite:email:${email.toLowerCase()}`, 5, 60),
+  ])
+  if (!ipCheck.allowed || !emailCheck.allowed) {
+    return { message: "Muitas tentativas. Aguarde alguns minutos e tente novamente." }
+  }
+
+  // Checagem GLOBAL (não só deste tenant): o generate_link abaixo, pra um
+  // e-mail que já tem auth.users em outro tenant (ou convite pendente lá),
+  // reaproveita o mesmo id — e o upsert por id mais abaixo reatribuiria
+  // esse usuário (tenantId/role) pra este tenant, sequestrando a conta dele.
+  // (Achado em revisão de segurança 2026-07-21.)
+  const existing = await prisma.user.findFirst({ where: { email } })
+  if (existing) {
+    return {
+      message:
+        existing.tenantId === tenantId
+          ? "Este e-mail já pertence à sua equipe."
+          : "Este e-mail já está em uso no sistema.",
+    }
+  }
 
   // Try to use Supabase Admin API to invite
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -137,6 +162,7 @@ export async function inviteTeamMember(
 
 export async function updateTeamMemberRole(memberId: string, role: "ADMIN" | "TECHNICIAN") {
   const { tenantId, userId, role: requesterRole } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (requesterRole !== "OWNER" && requesterRole !== "ADMIN") return
 
   // "ADMIN" | "TECHNICIAN" no parâmetro é só o tipo do TypeScript — apagado em
@@ -159,6 +185,7 @@ export async function updateTeamMemberRole(memberId: string, role: "ADMIN" | "TE
 
 export async function removeTeamMember(memberId: string) {
   const { tenantId, userId, role: requesterRole } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (requesterRole !== "OWNER" && requesterRole !== "ADMIN") return
   if (memberId === userId) return // can't remove yourself
 
@@ -187,6 +214,7 @@ export async function removeTeamMember(memberId: string) {
 
 export async function getTeamMembers() {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   return prisma.user.findMany({
     where: { tenantId },
     select: {

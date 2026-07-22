@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 
 const orderSchema = z.object({
   title: z.string().min(2, "Título obrigatório"),
@@ -33,6 +33,7 @@ export async function createMaintenanceOrder(
   formData: FormData
 ): Promise<MaintenanceFormState> {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
   const parsed = orderSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
@@ -83,6 +84,7 @@ export async function createMaintenanceOrder(
 
 export async function updateMaintenanceStatus(id: string, status: string) {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return
   const valid = ["OPEN", "IN_PROGRESS", "DONE", "CANCELLED"]
   if (!valid.includes(status)) return
@@ -97,6 +99,7 @@ export async function updateMaintenanceStatus(id: string, status: string) {
 
 export async function deleteMaintenanceOrder(id: string) {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") redirect("/maintenance")
   await prisma.maintenanceOrder.delete({ where: { id, tenantId } })
   revalidatePath("/maintenance")
@@ -105,6 +108,7 @@ export async function deleteMaintenanceOrder(id: string) {
 
 export async function getMaintenanceOrders(filters?: { status?: string; q?: string }) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   return prisma.maintenanceOrder.findMany({
     where: {
       tenantId,
@@ -126,6 +130,7 @@ export async function getMaintenanceOrders(filters?: { status?: string; q?: stri
 
 export async function getMaintenanceOrder(id: string) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   return prisma.maintenanceOrder.findUnique({
     where: { id, tenantId },
     include: { provider: true, items: true },

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { safeNextPath } from "@/lib/auth"
+import { checkRateLimit, clientIp } from "@/lib/rate-limit"
 import { NextResponse } from "next/server"
 
 // Convite de equipe e recuperação de senha usam links de e-mail (GoTrue
@@ -25,10 +26,19 @@ export async function GET(request: Request) {
   const next = safeNextPath(searchParams.get("next"))
 
   if (tokenHash && isValidType(type)) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
-    if (!error) {
-      return NextResponse.redirect(new URL(next, origin))
+    // token_hash é sha224(email + otp de 6 dígitos) — só 10^6 combinações
+    // possíveis por e-mail, todas pré-computáveis offline por quem conhece o
+    // e-mail alvo. Rate limit por IP é a defesa prática contra tentar esse
+    // espaço de busca inteiro contra este endpoint. (Achado em revisão de
+    // segurança 2026-07-21.)
+    const ip = await clientIp()
+    const rateLimit = await checkRateLimit(`confirm:ip:${ip}`, 20, 15)
+    if (rateLimit.allowed) {
+      const supabase = await createClient()
+      const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
+      if (!error) {
+        return NextResponse.redirect(new URL(next, origin))
+      }
     }
   }
 

@@ -1,11 +1,12 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 
 export async function getClientEquipments(clientId: string) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   return prisma.equipment.findMany({
     where: { clientId, tenantId },
     orderBy: { createdAt: "desc" },
@@ -14,6 +15,7 @@ export async function getClientEquipments(clientId: string) {
 
 export async function createEquipment(clientId: string, formData: FormData) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   const client = await prisma.client.findUnique({ where: { id: clientId, tenantId } })
   if (!client) throw new Error("Cliente não encontrado")
 
@@ -38,6 +40,7 @@ export async function createEquipment(clientId: string, formData: FormData) {
 
 export async function deleteEquipment(equipmentId: string, clientId: string) {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   // createEquipment fica sem checagem (technician cadastra equipamento em
   // campo, fluxo legítimo), mas exclusão permanente sem confirmação exige
   // OWNER/ADMIN. (Achado em revisão de segurança 2026-07-19.)

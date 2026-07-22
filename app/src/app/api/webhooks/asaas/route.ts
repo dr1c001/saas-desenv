@@ -53,8 +53,15 @@ export async function POST(req: NextRequest) {
     // pagamento e recuperação de inadimplência são fluxos legítimos).
     // (Achado em revisão de segurança 2026-07-19.)
     if ((event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") && sub.status !== "CANCELLED") {
+      // Na primeira confirmação, currentPeriodEnd já foi calculado certo em
+      // subscribeToPlan (criação + 1 ciclo) — somar mais um ciclo aqui em cima
+      // dava 2 ciclos de acesso pelo preço de 1. Só renovação (assinatura já
+      // tinha sido ACTIVE/PAST_DUE antes) de fato estende o período.
+      // (Achado em revisão de segurança 2026-07-21.)
       const periodEnd = new Date(sub.currentPeriodEnd)
-      periodEnd.setMonth(periodEnd.getMonth() + (sub.billingCycle === "YEARLY" ? 12 : 1))
+      if (!isFirstConfirmation) {
+        periodEnd.setMonth(periodEnd.getMonth() + (sub.billingCycle === "YEARLY" ? 12 : 1))
+      }
 
       // Primeira confirmação de pagamento é o único lugar que efetivamente
       // ativa o tenant — subscribeToPlan só cria a Subscription como PENDING
@@ -76,17 +83,23 @@ export async function POST(req: NextRequest) {
         try {
           const referrer = await prisma.tenant.findUnique({
             where: { referralCode: sub.tenant.referredByCode },
-            select: { id: true, referralDiscountPercent: true },
+            select: { id: true },
           })
           if (referrer) {
+            // increment é atômico no banco (SET col = col + N) — não lê o
+            // valor antes, então duas confirmações concorrentes pro mesmo
+            // indicador não perdem incremento uma da outra (o que acontecia
+            // com o Math.min(valor lido + 20, 100) anterior, um lost update
+            // clássico). O teto vem depois, num update condicionado no valor
+            // atual da linha — também seguro sob corrida.
+            // (Achado em revisão de segurança 2026-07-21.)
             await prisma.tenant.update({
               where: { id: referrer.id },
-              data: {
-                referralDiscountPercent: Math.min(
-                  referrer.referralDiscountPercent + REFERRER_DISCOUNT_PERCENT,
-                  MAX_DISCOUNT_PERCENT
-                ),
-              },
+              data: { referralDiscountPercent: { increment: REFERRER_DISCOUNT_PERCENT } },
+            })
+            await prisma.tenant.updateMany({
+              where: { id: referrer.id, referralDiscountPercent: { gt: MAX_DISCOUNT_PERCENT } },
+              data: { referralDiscountPercent: MAX_DISCOUNT_PERCENT },
             })
           }
         } catch (err) {

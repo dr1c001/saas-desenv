@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 
 const expenseSchema = z.object({
   description: z.string().min(2, "Descrição obrigatória"),
@@ -23,6 +23,7 @@ export async function createExpense(
   formData: FormData
 ): Promise<FinanceFormState> {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
 
   const raw = Object.fromEntries(formData.entries())
@@ -46,6 +47,7 @@ export async function createExpense(
 
 export async function markRevenuePaid(id: string) {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return
   await prisma.revenue.update({
     where: { id, tenantId },
@@ -56,6 +58,7 @@ export async function markRevenuePaid(id: string) {
 
 export async function markExpensePaid(id: string) {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return
   await prisma.expense.update({
     where: { id, tenantId },
@@ -71,6 +74,7 @@ export async function getFinanceSummary(q?: string) {
   // só na página chamadora redirecionar antes. Mesmo padrão do getSettings().
   // (Achado em revisão de segurança 2026-07-19.)
   if (role !== "OWNER" && role !== "ADMIN") throw new Error("Sem permissão.")
+  await requireActiveSubscription(tenantId)
 
   // Fetch all data for KPI calculations, then filter for table display
   const [allRevenues, allExpenses] = await Promise.all([

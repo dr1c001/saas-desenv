@@ -99,7 +99,7 @@ enum BillingCycle {
 model User {
   id        String   @id
   name      String
-  email     String
+  email     String   @unique
   role      UserRole @default(TECHNICIAN)
   tenantId  String
   document  String?

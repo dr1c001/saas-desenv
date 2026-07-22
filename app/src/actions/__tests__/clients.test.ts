@@ -7,7 +7,10 @@ const mockGetTenant = vi.fn()
 beforeAll(async () => {
   testDb = await createTestDatabase()
   vi.doMock("@/lib/prisma", () => ({ prisma: testDb.db }))
-  vi.doMock("@/lib/auth", () => ({ getTenant: mockGetTenant }))
+  vi.doMock("@/lib/auth", () => ({
+    getTenant: mockGetTenant,
+    requireActiveSubscription: vi.fn().mockResolvedValue(undefined),
+  }))
 })
 
 afterAll(async () => {

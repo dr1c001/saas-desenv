@@ -1,10 +1,11 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 
 export async function getScheduledOrders(year: number, month: number) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
 
   const start = new Date(year, month - 1, 1)
   const end = new Date(year, month, 0, 23, 59, 59)

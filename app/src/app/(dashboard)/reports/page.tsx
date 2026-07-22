@@ -1,4 +1,6 @@
 import { Suspense } from "react"
+import { redirect } from "next/navigation"
+import { getTenant } from "@/lib/auth"
 import { getReportData } from "@/actions/reports"
 import { formatCurrency, formatDate, formatOsNumber } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,6 +29,9 @@ const osStatusLabel: Record<string, string> = {
 }
 
 export default async function ReportsPage({ searchParams }: { searchParams: SearchParams }) {
+  const { role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") redirect("/dashboard")
+
   const sp = await searchParams
   const { from: defFrom, to: defTo } = defaultDates()
   const from = sp.from ?? defFrom

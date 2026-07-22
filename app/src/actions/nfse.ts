@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { nfeio } from "@/lib/nfeio"
 import { revalidatePath } from "next/cache"
 
@@ -11,6 +11,7 @@ export async function registerFiscalCompany(formData: FormData) {
   // checagem, senão ADMIN/TECHNICIAN chamam direto e sobrescrevem o CNPJ/
   // config fiscal usado em toda nota futura. (Achado em revisão de segurança 2026-07-19.)
   if (role !== "OWNER") throw new Error("Sem permissão.")
+  await requireActiveSubscription(tenantId)
 
   const cnpj = (formData.get("cnpj") as string).replace(/\D/g, "")
   const municipalTaxNumber = formData.get("municipalTaxNumber") as string
@@ -66,6 +67,7 @@ export async function emitNfse(orderId: string) {
   // produto) — não pode ficar acessível a qualquer papel.
   // (Achado em revisão de segurança 2026-07-19.)
   if (role !== "OWNER" && role !== "ADMIN") throw new Error("Sem permissão.")
+  await requireActiveSubscription(tenantId)
 
   const [order, tenant] = await Promise.all([
     prisma.serviceOrder.findUnique({
@@ -137,6 +139,7 @@ export async function emitNfse(orderId: string) {
 
 export async function getFiscalStatus() {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   return prisma.tenant.findUnique({
     where: { id: tenantId },
     select: {

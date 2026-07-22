@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 
 // logoUrl é buscado pelo servidor (@react-pdf/renderer faz fetch() dela ao
 // gerar PDFs) — sem bloquear IPs privados/loopback/link-local, qualquer
@@ -15,7 +15,11 @@ import { getTenant } from "@/lib/auth"
 // imagem nós mesmos com IP pinning, fora do escopo desta correção.
 // (Achado em revisão de segurança 2026-07-19.)
 function isPrivateOrLoopbackHost(hostname: string): boolean {
-  const h = hostname.toLowerCase()
+  // new URL(...).hostname preserva colchetes em literais IPv6 (ex: "[::1]",
+  // não "::1") — sem remover isso, nenhuma comparação abaixo pra IPv6 batia,
+  // deixando o bloqueio de loopback/link-local burlável via IPv6 literal.
+  // (Achado em revisão de segurança 2026-07-21.)
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, "")
   if (h === "localhost" || h === "0.0.0.0" || h === "::1") return true
   if (h.startsWith("fe80:") || h.startsWith("fc") || h.startsWith("fd")) return true
 
@@ -131,6 +135,7 @@ export async function updateWhatsApp(
   formData: FormData
 ): Promise<SettingsFormState> {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
   const instance = (formData.get("zapiInstance") as string) || null
   const token = (formData.get("zapiToken") as string) || null

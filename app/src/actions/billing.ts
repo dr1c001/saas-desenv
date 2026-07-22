@@ -119,7 +119,15 @@ export async function subscribeToPlan(formData: FormData) {
     })
 
     if (discountPercent > 0) {
-      await prisma.tenant.update({ where: { id: tenantId }, data: { referralDiscountPercent: 0 } })
+      // CAS: só zera se o valor não mudou desde que lemos acima — evita tanto
+      // apagar um crédito mais novo (ex: webhook creditando bônus de
+      // indicação enquanto essa chamada à Asaas estava em andamento) quanto
+      // duas submissões concorrentes gastarem o mesmo saldo de desconto duas
+      // vezes. (Achado em revisão de segurança 2026-07-21.)
+      await prisma.tenant.updateMany({
+        where: { id: tenantId, referralDiscountPercent: discountPercent },
+        data: { referralDiscountPercent: 0 },
+      })
     }
 
     revalidatePath("/billing")

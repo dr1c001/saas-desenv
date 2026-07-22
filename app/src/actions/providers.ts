@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 
 const providerSchema = z.object({
   name: z.string().min(2, "Nome obrigatório"),
@@ -25,6 +25,7 @@ export async function createProvider(
   formData: FormData
 ): Promise<ProviderFormState> {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
   const parsed = providerSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
@@ -51,6 +52,7 @@ export async function updateProvider(
   formData: FormData
 ): Promise<ProviderFormState> {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
   const parsed = providerSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
@@ -73,6 +75,7 @@ export async function updateProvider(
 
 export async function deleteProvider(id: string) {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return
   try {
     await prisma.provider.delete({ where: { id, tenantId } })
@@ -85,6 +88,7 @@ export async function deleteProvider(id: string) {
 
 export async function getProviders(q?: string) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   return prisma.provider.findMany({
     where: {
       tenantId,
@@ -99,5 +103,6 @@ export async function getProviders(q?: string) {
 
 export async function getProvider(id: string) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   return prisma.provider.findUnique({ where: { id, tenantId } })
 }

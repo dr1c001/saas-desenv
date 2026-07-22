@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
-import { getTenant, ALL_TABS, DEFAULT_TECHNICIAN_TABS, type TabSlug } from "@/lib/auth"
+import { getTenant, requireActiveSubscription, ALL_TABS, DEFAULT_TECHNICIAN_TABS, type TabSlug } from "@/lib/auth"
 
 export async function getPermissions() {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   const perms = await prisma.tabPermission.findMany({
     where: { tenantId, role: "TECHNICIAN" },
     select: { tab: true },
@@ -30,6 +31,7 @@ export async function getPermissions() {
 
 export async function savePermissions(allowedTabs: string[]) {
   const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return
 
   // Delete all TECHNICIAN permissions for this tenant and recreate
