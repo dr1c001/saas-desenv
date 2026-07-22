@@ -115,6 +115,47 @@ export async function getTenant() {
   }
 }
 
+// Dias de carência após o fim do período pago antes de bloquear de vez um
+// tenant PAST_DUE — evita perder cliente por uma falha pontual de cobrança
+// (cartão expirado, saldo momentâneo) que uma nova tentativa resolveria.
+// Compartilhado entre o gating de página ((dashboard)/layout.tsx) e o de
+// Server Action (requireActiveSubscription) — nunca duplicar essa conta.
+const PAST_DUE_GRACE_DAYS = 3
+
+export async function hasActiveSubscription(tenantId: string): Promise<boolean> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { subscriptionStatus: true },
+  })
+  if (tenant?.subscriptionStatus === "ACTIVE") return true
+  if (tenant?.subscriptionStatus !== "PAST_DUE") return false
+
+  // A carência olha só pra Subscription que está de fato PAST_DUE — pegar "a
+  // mais recente" sem esse filtro deixava qualquer Subscription PENDING nova
+  // (criada só ao clicar "Assinar", antes de qualquer pagamento) resetar o
+  // acesso sem nunca pagar. (Achado em revisão de segurança 2026-07-21.)
+  const latestSub = await prisma.subscription.findFirst({
+    where: { tenantId, status: "PAST_DUE" },
+    orderBy: { createdAt: "desc" },
+    select: { currentPeriodEnd: true },
+  })
+  if (!latestSub) return false
+
+  const graceEnd = new Date(latestSub.currentPeriodEnd)
+  graceEnd.setDate(graceEnd.getDate() + PAST_DUE_GRACE_DAYS)
+  return new Date() < graceEnd
+}
+
+// Toda Server Action que usa dado/recurso do produto precisa chamar isso —
+// bloqueio de página (layout) não protege a Action em si, que é um endpoint
+// despachável independente de qual UI a invoca. (Achado em revisão de
+// segurança 2026-07-21 — nenhuma Action verificava assinatura, só papel.)
+export async function requireActiveSubscription(tenantId: string) {
+  if (!(await hasActiveSubscription(tenantId))) {
+    throw new Error("Assinatura inativa. Assine um plano para continuar usando o sistema.")
+  }
+}
+
 // Tabs available in the system (slug → display info)
 export const ALL_TABS = [
   { slug: "dashboard", label: "Dashboard" },

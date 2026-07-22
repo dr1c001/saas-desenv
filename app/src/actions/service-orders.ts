@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { sendPushToUser } from "@/lib/push"
 
 const orderSchema = z.object({
@@ -37,6 +37,7 @@ export async function createServiceOrder(
   formData: FormData
 ): Promise<OrderFormState> {
   const { tenantId, userId } = await getTenant()
+  await requireActiveSubscription(tenantId)
 
   const raw = Object.fromEntries(formData.entries())
   const parsed = orderSchema.safeParse(raw)
@@ -115,6 +116,7 @@ export async function createServiceOrder(
 
 export async function updateOrderStatus(id: string, status: string) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
 
   const validStatus = ["OPEN", "IN_PROGRESS", "DONE", "INVOICED", "CANCELLED"]
   if (!validStatus.includes(status)) return
@@ -158,6 +160,7 @@ export async function completeServiceOrder(
   invoiceImmediately: boolean
 ) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
 
   const total = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
   const status = invoiceImmediately ? "INVOICED" : "DONE"
@@ -219,6 +222,7 @@ export async function updateServiceOrder(
   formData: FormData
 ): Promise<OrderFormState> {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
 
   const raw = Object.fromEntries(formData.entries())
   const parsed = orderSchema.safeParse(raw)
@@ -284,6 +288,7 @@ export async function updateServiceOrder(
 
 export async function deleteServiceOrder(id: string) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   await prisma.serviceOrder.delete({ where: { id, tenantId } })
   revalidatePath("/service-orders")
   redirect("/service-orders")
@@ -291,6 +296,7 @@ export async function deleteServiceOrder(id: string) {
 
 export async function getServiceOrders(filters?: { status?: string; statusIn?: string[]; q?: string }) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   return prisma.serviceOrder.findMany({
     where: {
       tenantId,
@@ -321,6 +327,7 @@ export async function getServiceOrders(filters?: { status?: string; statusIn?: s
 
 export async function getServiceOrder(id: string) {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
   return prisma.serviceOrder.findUnique({
     where: { id, tenantId },
     include: {
