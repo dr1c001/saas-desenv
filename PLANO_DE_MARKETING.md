@@ -1,6 +1,6 @@
 # Plano de Marketing — ServiçoOS
 
-> Última atualização: 20/07/2026
+> Última atualização: 22/07/2026
 > Contexto assumido: orçamento zero/quase zero (100% orgânico), sem foco em um nicho único (anunciar para todos os segmentos que o sistema já atende), já existem clientes piloto/beta usando o produto.
 > Este documento é a referência viva da estratégia de aquisição. Atualizar sempre que um canal for testado (o que funcionou / o que não funcionou).
 
@@ -86,6 +86,16 @@ Sem orçamento, isso é trabalho manual, mas é o canal mais controlável no cur
 - **Contadores** que atendem MEI/pequenas empresas de serviço — veem a dor de nota fiscal e financeiro bagunçado o tempo todo, e não competem com o produto
 - Distribuidores/fornecedores de peças e insumos dos segmentos-alvo (elétrica, refrigeração) — têm relação direta com a base de clientes
 - Associações comerciais locais
+
+### 3.7 Diretórios e marketplaces de software (cadastro gratuito)
+Complementar aos canais acima — aqui o objetivo é aparecer pra quem já está *procurando* uma solução, não construir relação:
+- **Google Meu Negócio (Perfil da Empresa)** — grátis, essencial: aparece em buscas locais ("sistema para desentupidora perto de mim") e acumula avaliações reais dos pilotos
+- **B2B Stack** — marketplace brasileiro de SaaS B2B, cadastro grátis, público já é dono de pequena/média empresa buscando ferramenta
+- **Capterra / GetApp / Software Advice** (rede Gartner, têm versão BR) — listagem básica grátis, aparecem em buscas tipo "sistema de ordem de serviço"
+- **Product Hunt** — grátis, bom pra um pico de lançamento e primeiros usuários "early adopter"
+- **AlternativeTo** — grátis, captura quem busca "alternativa a X" (bom se algum concorrente for bem conhecido no nicho)
+
+**Ressalva:** pra esse público (dono de assistência técnica/elétrica/desentupidora), esses diretórios tendem a converter menos que os canais 3.1-3.6 — o comprador não navega em Capterra pra escolher sistema de OS. Vale fazer (é grátis e rápido, principalmente Google Meu Negócio e B2B Stack), mas não substitui prospecção/indicação/grupos.
 
 ---
 
