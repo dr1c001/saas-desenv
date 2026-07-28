@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { randomUUID } from "crypto"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
@@ -59,6 +60,13 @@ export async function createQuote(
       notes: notes || null,
       validUntil: validUntil ? new Date(validUntil) : null,
       status,
+      // @default(uuid()) do schema não está de fato aplicado na coluna do
+      // banco (drift confirmado via information_schema — column_default
+      // nulo) — sem gerar aqui, clientToken ficava sempre nulo, quebrando a
+      // aprovação online do orçamento pelo cliente (depende desse token no
+      // link público /q/[token]). (Achado verificando o sistema de NPS,
+      // 2026-07-22.)
+      clientToken: randomUUID(),
     },
   })
 

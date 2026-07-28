@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { randomUUID } from "crypto"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
@@ -79,6 +80,12 @@ export async function createServiceOrder(
       technicianId: technicianId || userId,
       status,
       totalAmount: total,
+      // @default(uuid()) do schema não está de fato aplicado na coluna do
+      // banco (drift confirmado via information_schema — column_default nulo)
+      // — sem gerar aqui, clientToken ficava sempre nulo, quebrando o portal
+      // do cliente e o NPS (ambos dependem desse token nos links públicos).
+      // (Achado verificando o sistema de NPS, 2026-07-22.)
+      clientToken: randomUUID(),
       scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
       items: {
         create: items.map((i) => ({
