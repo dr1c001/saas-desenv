@@ -45,17 +45,29 @@ export async function GET(req: NextRequest) {
     } catch { results.errors++ }
   }
 
-  // ── NPS: OS concluded 7 days ago without NPS score ───────────────────────────
-  const nps7Start = new Date(now)
-  nps7Start.setDate(nps7Start.getDate() - 7)
-  nps7Start.setHours(0, 0, 0, 0)
-  const nps7End = new Date(nps7Start)
-  nps7End.setHours(23, 59, 59, 999)
+  // ── NPS: OS concluída há 7+ dias, nunca contatada ────────────────────────────
+  // Três correções juntas aqui (achado verificando o cron de NPS, 2026-07-28):
+  // 1. status só considerava "DONE" — completeServiceOrder com
+  //    invoiceImmediately=true vai direto pra "INVOICED" sem nunca passar por
+  //    "DONE" (concludedAt é setado nos dois casos). Na prática, a maioria
+  //    das OS concluídas em produção está em "INVOICED" e nunca era pega.
+  // 2. concludedAt exigia bater EXATAMENTE 7 dias atrás — se o cron não
+  //    rodasse naquele dia exato (ou clientToken estivesse nulo, como estava
+  //    até a correção anterior), a OS ficava pra sempre sem chance de NPS.
+  //    Agora pega qualquer OS com 7+ dias ainda não contatada, cobrindo
+  //    atrasados.
+  // 3. usava npsScore como trava de "já processado" — só é setado quando o
+  //    cliente responde, então quem ignora o e-mail (a própria mensagem diz
+  //    "se preferir não responder, ignore") receberia um e-mail novo por dia,
+  //    pra sempre. npsSentAt marca a tentativa, independente da resposta.
+  const sevenDaysAgo = new Date(now)
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
   const npsOrders = await prisma.serviceOrder.findMany({
     where: {
-      status: "DONE",
-      concludedAt: { gte: nps7Start, lte: nps7End },
+      status: { in: ["DONE", "INVOICED"] },
+      concludedAt: { lte: sevenDaysAgo },
+      npsSentAt: null,
       npsScore: null,
       clientToken: { not: null },
     },
@@ -66,6 +78,7 @@ export async function GET(req: NextRequest) {
     if (!os.client.email || !os.clientToken) continue
     try {
       await sendNpsEmail(os.client.email, os.client.name, os.clientToken)
+      await prisma.serviceOrder.update({ where: { id: os.id }, data: { npsSentAt: new Date() } })
       results.nps++
     } catch { results.errors++ }
   }

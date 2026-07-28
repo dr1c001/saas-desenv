@@ -198,6 +198,7 @@ model ServiceOrder {
   clientToken    String?       @unique @default(uuid())
   npsScore       Int?
   npsFeedback    String?
+  npsSentAt      DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
