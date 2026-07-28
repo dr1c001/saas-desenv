@@ -13,7 +13,12 @@ export async function registerFiscalCompany(formData: FormData) {
   if (role !== "OWNER") throw new Error("Sem permissão.")
   await requireActiveSubscription(tenantId)
 
-  const cnpj = (formData.get("cnpj") as string).replace(/\D/g, "")
+  // A partir de 01/08/2026 a Receita Federal passa a emitir CNPJ alfanumérico
+  // (letras nas 12 primeiras posições, ex: "12ABC345000A92") — \D removia
+  // qualquer letra, corrompendo o documento antes de mandar pro nfe.io.
+  // Mantém letras/dígitos, só remove pontuação (., /, -).
+  // (Achado verificando o sistema de NFS-e, 2026-07-22.)
+  const cnpj = (formData.get("cnpj") as string).replace(/[^A-Za-z0-9]/g, "").toUpperCase()
   const municipalTaxNumber = formData.get("municipalTaxNumber") as string
   const email = formData.get("email") as string
   const postalCode = (formData.get("postalCode") as string).replace(/\D/g, "")
@@ -92,7 +97,10 @@ export async function emitNfse(orderId: string) {
       ? order.items.map((i) => i.description).join("; ")
       : order.title
 
-  const clientDoc = order.client.document?.replace(/\D/g, "") || undefined
+  // Mesmo motivo do cnpj em registerFiscalCompany acima — o documento do
+  // cliente (CNPJ, se for pessoa jurídica) pode vir com letras a partir de
+  // 01/08/2026. CPF continua só numérico, então isso não afeta esse caso.
+  const clientDoc = order.client.document?.replace(/[^A-Za-z0-9]/g, "").toUpperCase() || undefined
   const addr = order.client.address
 
   const invoice = await nfeio.emitNfse(tenant.nfeioCompanyId, {
