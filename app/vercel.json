@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
   "regions": ["gru1"],
-  "buildCommand": "npx prisma generate && (npx prisma migrate resolve --applied 20260630000001_add_rbac_push_location || true) && (npx prisma migrate resolve --applied 20260722122932_add_user_email_unique || true) && (npx prisma migrate resolve --applied 20260728103001_add_nps_sent_at || true) && npx prisma migrate deploy && next build",
+  "buildCommand": "npx prisma generate && npx prisma migrate deploy && next build",
   "installCommand": "npm install",
   "crons": [
     {
