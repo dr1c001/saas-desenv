@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { sendWhatsApp, buildOsMessage, buildQuoteMessage } from "@/lib/whatsapp"
 import { formatCurrency, formatOsNumber } from "@/lib/utils"
 
 export async function POST(req: NextRequest) {
   try {
     const { tenantId } = await getTenant()
+    // Bloqueio de assinatura é só de página — essa rota é despachável direto
+    // via HTTP, independente da UI. (Achado em revisão de segurança
+    // pré-lançamento, 2026-07-28.)
+    await requireActiveSubscription(tenantId)
     const { type, id } = await req.json()
 
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } })

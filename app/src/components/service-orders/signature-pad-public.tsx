@@ -4,9 +4,9 @@ import { useRef, useState } from "react"
 import SignatureCanvas from "react-signature-canvas"
 import { CheckCircle2, RotateCcw, PenLine } from "lucide-react"
 
-type Props = { orderId: string; existingSignatureUrl?: string | null }
+type Props = { orderId: string; clientToken: string; existingSignatureUrl?: string | null }
 
-export function SignaturePadPublic({ orderId, existingSignatureUrl }: Props) {
+export function SignaturePadPublic({ orderId, clientToken, existingSignatureUrl }: Props) {
   const sigRef = useRef<SignatureCanvas>(null)
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -23,7 +23,7 @@ export function SignaturePadPublic({ orderId, existingSignatureUrl }: Props) {
     const res = await fetch("/api/signature", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId, signature: dataUrl }),
+      body: JSON.stringify({ orderId, clientToken, signature: dataUrl }),
     })
     const data = await res.json()
     if (data.ok) setSaved(true)

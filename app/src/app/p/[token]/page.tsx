@@ -125,7 +125,7 @@ export default async function ClientPortalPage({ params }: { params: Promise<{ t
           <Card>
             <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Confirmação de execução</CardTitle></CardHeader>
             <CardContent>
-              <SignaturePadPublic orderId={order.id} existingSignatureUrl={order.clientSignatureUrl} />
+              <SignaturePadPublic orderId={order.id} clientToken={token} existingSignatureUrl={order.clientSignatureUrl} />
             </CardContent>
           </Card>
         )}

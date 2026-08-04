@@ -37,6 +37,26 @@ export async function subscribeToPlan(formData: FormData) {
   if (role !== "OWNER" && role !== "ADMIN") {
     redirect("/billing?error=" + encodeURIComponent("Sem permissão."))
   }
+
+  // Sem isso, duplo clique/retry de rede cria duas Subscriptions reais na
+  // Asaas (duas cobranças recorrentes paralelas) — nada impedia reenviar o
+  // form. Também cobre reassinar enquanto já tem uma PENDING/ACTIVE (troca
+  // de plano não é suportada ainda — precisa cancelar antes).
+  // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
+  const existingSub = await prisma.subscription.findFirst({
+    where: { tenantId, status: { in: ["PENDING", "ACTIVE"] } },
+  })
+  if (existingSub) {
+    redirect(
+      "/billing?error=" +
+        encodeURIComponent(
+          existingSub.status === "PENDING"
+            ? "Você já tem uma assinatura aguardando confirmação de pagamento."
+            : "Você já tem uma assinatura ativa. Cancele antes de assinar outro plano."
+        )
+    )
+  }
+
   const planId = formData.get("planId") as string
   const cycle = (formData.get("cycle") as "MONTHLY" | "YEARLY") ?? "MONTHLY"
 
@@ -106,17 +126,26 @@ export async function subscribeToPlan(formData: FormData) {
     // Tenant.subscriptionStatus viram ACTIVE aqui, senão qualquer um ganha
     // acesso pago só de preencher o formulário, sem pagar nada.
     // (Achado em revisão de segurança 2026-07-19.)
-    await prisma.subscription.create({
-      data: {
-        tenantId,
-        planId,
-        asaasId: sub.id,
-        status: "PENDING",
-        billingCycle: cycle,
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: periodEnd,
-      },
-    })
+    // Tenant.subscriptionStatus também vira PENDING aqui — antes ficava
+    // travado em TRIAL até o webhook confirmar, e /expired (que já tem uma
+    // tela específica de "confirmando pagamento") nunca conseguia mostrar
+    // essa tela: um cliente que voltasse pro app entre assinar e o webhook
+    // confirmar via "Assine um plano" como se nunca tivesse tentado.
+    // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
+    await prisma.$transaction([
+      prisma.subscription.create({
+        data: {
+          tenantId,
+          planId,
+          asaasId: sub.id,
+          status: "PENDING",
+          billingCycle: cycle,
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: periodEnd,
+        },
+      }),
+      prisma.tenant.update({ where: { id: tenantId }, data: { subscriptionStatus: "PENDING" } }),
+    ])
 
     if (discountPercent > 0) {
       // CAS: só zera se o valor não mudou desde que lemos acima — evita tanto
@@ -135,7 +164,15 @@ export async function subscribeToPlan(formData: FormData) {
     // Leva o cliente direto pra pagina de pagamento hospedada pelo Asaas
     // (preenche dados + cartao la, nunca no nosso servidor). Se por algum
     // motivo a fatura ainda nao estiver disponivel, cai no fluxo antigo.
-    const invoiceUrl = await asaas.getFirstInvoiceUrl(sub.id).catch(() => null)
+    const invoiceUrl = await asaas.getFirstInvoiceUrl(sub.id).catch((err) => {
+      // A assinatura real já foi criada na Asaas nesse ponto — isso só afeta
+      // o link imediato na tela (o cliente ainda recebe a fatura por
+      // e-mail), mas precisa ficar visível pra debugar se acontecer de
+      // verdade. (Achado verificando o sistema antes da primeira venda,
+      // 2026-08-03.)
+      console.error("Falha ao buscar link da fatura da assinatura", sub.id, err)
+      return null
+    })
     if (invoiceUrl) redirect(invoiceUrl)
   } catch (err) {
     // redirect() throws internally in Next.js — let it propagate

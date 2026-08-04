@@ -24,6 +24,15 @@ export type QuoteFormState = {
   message?: string
 }
 
+// "1.234,56" (formato BR, o mesmo do placeholder "0,00" do campo) —
+// replace(",", ".") sozinho vira "1.234.56", e parseFloat para no segundo
+// ponto e devolve 1.234 em vez de 1234.56. Remove primeiro o separador de
+// milhar, só depois troca a vírgula decimal pelo ponto.
+// (Achado verificando o sistema antes da primeira venda, 2026-07-28.)
+function parseBrCurrency(value: string): number {
+  return parseFloat(value.replace(/\./g, "").replace(",", "."))
+}
+
 async function nextQuoteNumber(tenantId: string) {
   const last = await prisma.quote.findFirst({
     where: { tenantId },
@@ -56,7 +65,7 @@ export async function createQuote(
       clientContact: clientContact || null,
       description,
       materials: materials || null,
-      amount: amount ? parseFloat(amount.replace(",", ".")) : 0,
+      amount: amount ? parseBrCurrency(amount) : 0,
       notes: notes || null,
       validUntil: validUntil ? new Date(validUntil) : null,
       status,
@@ -96,7 +105,7 @@ export async function updateQuote(
       clientContact: clientContact || null,
       description,
       materials: materials || null,
-      amount: amount ? parseFloat(amount.replace(",", ".")) : 0,
+      amount: amount ? parseBrCurrency(amount) : 0,
       notes: notes || null,
       validUntil: validUntil ? new Date(validUntil) : null,
       status,

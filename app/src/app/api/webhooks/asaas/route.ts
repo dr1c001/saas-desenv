@@ -53,6 +53,27 @@ export async function POST(req: NextRequest) {
     // pagamento e recuperação de inadimplência são fluxos legítimos).
     // (Achado em revisão de segurança 2026-07-19.)
     if ((event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") && sub.status !== "CANCELLED") {
+      // Idempotência por pagamento: o Asaas manda PAYMENT_CONFIRMED
+      // (autorização) e depois PAYMENT_RECEIVED (liquidação) pro MESMO
+      // pagamento em cartão — fluxo normal, não reenvio de falha. Sem isso,
+      // cada pagamento em cartão (toda renovação, não só a primeira) somava
+      // um ciclo de acesso duas vezes. Update condicionado (não um read
+      // separado) — seguro mesmo com as duas entregas chegando quase juntas.
+      // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
+      const paymentId: string | undefined = payment?.id
+      const claim = paymentId
+        ? await prisma.subscription.updateMany({
+            where: {
+              id: sub.id,
+              OR: [{ lastProcessedPaymentId: null }, { lastProcessedPaymentId: { not: paymentId } }],
+            },
+            data: { lastProcessedPaymentId: paymentId },
+          })
+        : { count: 1 }
+      if (claim.count === 0) {
+        return NextResponse.json({ ok: true })
+      }
+
       // Na primeira confirmação, currentPeriodEnd já foi calculado certo em
       // subscribeToPlan (criação + 1 ciclo) — somar mais um ciclo aqui em cima
       // dava 2 ciclos de acesso pelo preço de 1. Só renovação (assinatura já

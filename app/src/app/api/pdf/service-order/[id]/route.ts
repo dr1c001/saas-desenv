@@ -5,6 +5,7 @@ import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer"
 import { ServiceOrderPDF } from "@/components/pdf/service-order-pdf"
 import { prisma } from "@/lib/prisma"
 import { createClient } from "@/lib/supabase/server"
+import { requireActiveSubscription } from "@/lib/auth"
 import React, { type ReactElement, type JSXElementConstructor } from "react"
 
 export async function GET(
@@ -20,6 +21,10 @@ export async function GET(
     select: { tenantId: true, tenant: { select: { name: true, logoUrl: true, phone: true, address: true, website: true } } },
   })
   if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  // Bloqueio de assinatura é só de página — essa rota é despachável direto
+  // via HTTP, independente da UI. (Achado em revisão de segurança
+  // pré-lançamento, 2026-07-28.)
+  await requireActiveSubscription(dbUser.tenantId)
 
   const { id } = await params
   const order = await prisma.serviceOrder.findUnique({

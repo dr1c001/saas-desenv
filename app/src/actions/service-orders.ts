@@ -294,8 +294,13 @@ export async function updateServiceOrder(
 }
 
 export async function deleteServiceOrder(id: string) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
   await requireActiveSubscription(tenantId)
+  // Única função de delete no app sem essa checagem — apagar uma OS já
+  // faturada/com NFS-e emitida é destrutivo (itens, anexos e checklist somem
+  // via cascade, Revenue vinculada fica órfã). (Achado em revisão de
+  // segurança pré-lançamento, 2026-07-28.)
+  if (role !== "OWNER" && role !== "ADMIN") redirect("/service-orders")
   await prisma.serviceOrder.delete({ where: { id, tenantId } })
   revalidatePath("/service-orders")
   redirect("/service-orders")

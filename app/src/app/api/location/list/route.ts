@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 
 export async function GET() {
   const { tenantId, role } = await getTenant()
@@ -10,6 +10,10 @@ export async function GET() {
   if (role !== "OWNER" && role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
+  // Mapa GPS é feature paga (plano Pro+) — mesmo raciocínio das Server
+  // Actions: bloqueio de página não protege rota despachável direto.
+  // (Achado em revisão de segurança pré-lançamento, 2026-07-28.)
+  await requireActiveSubscription(tenantId)
 
   const locations = await prisma.userLocation.findMany({
     where: { user: { tenantId } },
