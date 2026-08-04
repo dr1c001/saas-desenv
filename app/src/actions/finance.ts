@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 
 const expenseSchema = z.object({
   description: z.string().min(2, "Descrição obrigatória"),
@@ -82,8 +83,11 @@ export async function getFinanceSummary(q?: string) {
     prisma.expense.findMany({ where: { tenantId }, orderBy: { dueDate: "asc" } }),
   ])
 
-  const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  // Início do mês em horário de Brasília, não UTC do servidor — ver
+  // brtMidnightUTC em lib/utils.ts. (Achado verificando o sistema antes da
+  // primeira venda, 2026-08-03.)
+  const { year, month } = todayInBRT()
+  const startOfMonth = brtMidnightUTC(year, month, 1)
 
   // KPIs always computed from full dataset regardless of search
   const monthlyRevenue = allRevenues

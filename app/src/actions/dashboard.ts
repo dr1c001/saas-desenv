@@ -2,21 +2,23 @@
 
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 
 export async function getMonthlyRevenueChart() {
   const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
 
-  // Last 6 months
-  const now = new Date()
+  // Last 6 months (limites de mês em horário de Brasília, não UTC do
+  // servidor — ver brtMidnightUTC em lib/utils.ts)
+  const { year, month } = todayInBRT()
   const months: { label: string; start: Date; end: Date }[] = []
 
   for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const start = new Date(d.getFullYear(), d.getMonth(), 1)
-    const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59)
+    const m = month - i
+    const start = brtMidnightUTC(year, m, 1)
+    const end = brtMidnightUTC(year, m + 1, 1) // início do mês seguinte, exclusive
     months.push({
-      label: d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
+      label: new Date(year, m, 1).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
       start,
       end,
     })
@@ -26,11 +28,11 @@ export async function getMonthlyRevenueChart() {
     months.map(async ({ label, start, end }) => {
       const [revenue, expense] = await Promise.all([
         prisma.revenue.aggregate({
-          where: { tenantId, status: "PAID", paidAt: { gte: start, lte: end } },
+          where: { tenantId, status: "PAID", paidAt: { gte: start, lt: end } },
           _sum: { amount: true },
         }),
         prisma.expense.aggregate({
-          where: { tenantId, status: "PAID", paidAt: { gte: start, lte: end } },
+          where: { tenantId, status: "PAID", paidAt: { gte: start, lt: end } },
           _sum: { amount: true },
         }),
       ])

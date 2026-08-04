@@ -18,12 +18,20 @@ export function LocationTracker() {
           longitude: pos.coords.longitude,
           accuracy: pos.coords.accuracy,
         }),
-      })
+      }).catch((err) => console.error("Falha ao enviar localização:", err))
+    }
+
+    // Sem callback de erro, negar a permissão de localização (comum no
+    // primeiro uso) ficava indistinguível de "app fechado" ou "sem sinal" —
+    // o técnico simplesmente sumia do mapa sem nenhuma pista de por quê.
+    // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
+    function onError(err: GeolocationPositionError) {
+      console.error("Falha ao obter localização:", err.message)
     }
 
     // Get immediately, then watch
-    navigator.geolocation.getCurrentPosition(send)
-    watchId.current = navigator.geolocation.watchPosition(send, undefined, {
+    navigator.geolocation.getCurrentPosition(send, onError)
+    watchId.current = navigator.geolocation.watchPosition(send, onError, {
       enableHighAccuracy: true,
       maximumAge: 30000,
       timeout: 15000,

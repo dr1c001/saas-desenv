@@ -18,12 +18,20 @@ export function TechnicianMap({
 
   useEffect(() => {
     const interval = setInterval(async () => {
-      const [techRes, ordersRes] = await Promise.all([
-        fetch("/api/location/list"),
-        fetch("/api/location/orders"),
-      ])
-      if (techRes.ok) setTechnicians(await techRes.json())
-      if (ordersRes.ok) setOrders(await ordersRes.json())
+      // Sem isso, uma falha de rede/sessão expirada parava as atualizações
+      // silenciosamente — o mapa continuava mostrando a última posição
+      // conhecida como se estivesse atualizando a cada 30s de verdade.
+      // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
+      try {
+        const [techRes, ordersRes] = await Promise.all([
+          fetch("/api/location/list"),
+          fetch("/api/location/orders"),
+        ])
+        if (techRes.ok) setTechnicians(await techRes.json())
+        if (ordersRes.ok) setOrders(await ordersRes.json())
+      } catch (err) {
+        console.error("Falha ao atualizar posições do mapa:", err)
+      }
     }, 30_000)
     return () => clearInterval(interval)
   }, [])

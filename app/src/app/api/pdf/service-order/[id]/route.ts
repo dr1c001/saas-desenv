@@ -38,16 +38,34 @@ export async function GET(
 
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const element = React.createElement(ServiceOrderPDF, {
-    order,
-    companyName: dbUser.tenant.name,
-    logoUrl: dbUser.tenant.logoUrl,
-    companyPhone: dbUser.tenant.phone,
-    companyAddress: dbUser.tenant.address,
-    companyWebsite: dbUser.tenant.website,
-  }) as unknown as ReactElement<DocumentProps, JSXElementConstructor<DocumentProps>>
+  const buildElement = (logoUrl: string | null) => {
+    return React.createElement(ServiceOrderPDF, {
+      order,
+      companyName: dbUser.tenant.name,
+      logoUrl,
+      companyPhone: dbUser.tenant.phone,
+      companyAddress: dbUser.tenant.address,
+      companyWebsite: dbUser.tenant.website,
+    }) as unknown as ReactElement<DocumentProps, JSXElementConstructor<DocumentProps>>
+  }
 
-  const buffer = await renderToBuffer(element)
+  // @react-pdf/image busca a logoUrl de verdade durante a renderização — se
+  // o link cair/for removido, a geração do PDF quebrava inteira (500
+  // genérico) em vez de só a logo sumir. Tenta de novo sem logo antes de
+  // desistir. (Achado verificando o sistema antes da primeira venda,
+  // 2026-08-03.)
+  let buffer: Buffer
+  try {
+    buffer = await renderToBuffer(buildElement(dbUser.tenant.logoUrl))
+  } catch (err) {
+    console.error("Falha ao gerar PDF de OS com logo, tentando sem logo:", err)
+    try {
+      buffer = await renderToBuffer(buildElement(null))
+    } catch (err2) {
+      console.error("Falha ao gerar PDF de OS mesmo sem logo:", err2)
+      return NextResponse.json({ error: "Falha ao gerar PDF" }, { status: 500 })
+    }
+  }
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {

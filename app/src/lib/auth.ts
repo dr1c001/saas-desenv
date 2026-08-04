@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
@@ -29,7 +30,14 @@ export async function getSession() {
   return user
 }
 
-export async function getTenant() {
+// cache() deduplica chamadas com os mesmos argumentos dentro do mesmo
+// request/render — layout.tsx e a page chamam getTenant() em paralelo no
+// primeiro carregamento, e sem isso as duas caiam na branch de "criar tenant
+// novo" ao mesmo tempo, mandando e-mail de boas-vindas duplicado (a corrida
+// no prisma.user.create já era tratada, mas o envio do e-mail acontecia
+// antes dessa checagem). (Achado verificando o sistema antes da primeira
+// venda, 2026-08-03.)
+export const getTenant = cache(async function getTenant() {
   const user = await getSession()
 
   const dbUser = await prisma.user.findUnique({
@@ -113,7 +121,7 @@ export async function getTenant() {
     role: dbUser.role,
     tenantStatus: dbUser.tenant,
   }
-}
+})
 
 // Dias de carência após o fim do período pago antes de bloquear de vez um
 // tenant PAST_DUE — evita perder cliente por uma falha pontual de cobrança

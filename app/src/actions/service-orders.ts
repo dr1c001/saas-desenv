@@ -178,44 +178,57 @@ export async function completeServiceOrder(
     select: { number: true, title: true, createdAt: true, status: true },
   })
   if (!order) throw new Error("Ordem não encontrada")
+  // Uma OS já faturada tem consequências reais fora do banco (NFS-e emitida,
+  // assinatura do cliente coletada) — reabrir e trocar itens/total aqui
+  // dessincroniza tudo isso silenciosamente, sem nenhum aviso. Sem cancelamento
+  // de NFS-e implementado no produto, não tem como corrigir isso depois.
+  // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
+  if (order.status === "INVOICED") throw new Error("OS já faturada não pode ser editada.")
 
-  await prisma.serviceItem.deleteMany({ where: { orderId: id } })
-  if (items.length > 0) {
-    await prisma.serviceItem.createMany({
-      data: items.map((i) => ({
-        description: i.description,
-        quantity: i.quantity,
-        unitPrice: i.unitPrice,
-        total: i.quantity * i.unitPrice,
-        orderId: id,
-      })),
-    })
-  }
-  await prisma.serviceOrder.update({
-    where: { id, tenantId },
-    data: {
-      status,
-      concludedAt: new Date(),
-      conclusionNote: conclusionNote || null,
-      totalAmount: total,
-    },
-  })
-  if (invoiceImmediately && total > 0) {
-    const existing = await prisma.revenue.findFirst({ where: { orderId: id, tenantId } })
-    if (!existing) {
-      const year = new Date(order.createdAt).getFullYear()
-      const osNum = `OS${year}${String(order.number).padStart(4, "0")}`
-      await prisma.revenue.create({
-        data: {
-          description: `${osNum} — ${order.title}`,
-          amount: total,
-          dueDate: new Date(),
-          tenantId,
+  // As escritas (itens + status/total da OS + criação de Revenue) viram uma
+  // única transação — antes eram chamadas sequenciais soltas, e uma falha no
+  // meio (ex: rede caindo no celular do técnico em campo) deixava itens
+  // apagados sem os novos persistidos e sem o total/status atualizado.
+  // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
+  await prisma.$transaction(async (tx) => {
+    await tx.serviceItem.deleteMany({ where: { orderId: id } })
+    if (items.length > 0) {
+      await tx.serviceItem.createMany({
+        data: items.map((i) => ({
+          description: i.description,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          total: i.quantity * i.unitPrice,
           orderId: id,
-        },
+        })),
       })
     }
-  }
+    await tx.serviceOrder.update({
+      where: { id, tenantId },
+      data: {
+        status,
+        concludedAt: new Date(),
+        conclusionNote: conclusionNote || null,
+        totalAmount: total,
+      },
+    })
+    if (invoiceImmediately && total > 0) {
+      const existing = await tx.revenue.findFirst({ where: { orderId: id, tenantId } })
+      if (!existing) {
+        const year = new Date(order.createdAt).getFullYear()
+        const osNum = `OS${year}${String(order.number).padStart(4, "0")}`
+        await tx.revenue.create({
+          data: {
+            description: `${osNum} — ${order.title}`,
+            amount: total,
+            dueDate: new Date(),
+            tenantId,
+            orderId: id,
+          },
+        })
+      }
+    }
+  })
 
   revalidatePath("/service-orders")
   revalidatePath(`/service-orders/${id}`)
@@ -242,10 +255,15 @@ export async function updateServiceOrder(
   // reais apagados/substituídos por itens forjados antes do update final
   // (que é quem checava tenantId) falhar. (Achado em revisão de segurança 2026-07-19.)
   const [order, client] = await Promise.all([
-    prisma.serviceOrder.findUnique({ where: { id, tenantId }, select: { id: true } }),
+    prisma.serviceOrder.findUnique({ where: { id, tenantId }, select: { id: true, status: true } }),
     prisma.client.findUnique({ where: { id: clientId, tenantId }, select: { id: true } }),
   ])
   if (!order) return { message: "Ordem não encontrada." }
+  // Mesmo motivo do completeServiceOrder: OS já faturada tem NFS-e/assinatura
+  // vinculada, que ficariam dessincronizadas de qualquer edição posterior de
+  // itens/total. (Achado verificando o sistema antes da primeira venda,
+  // 2026-08-03.)
+  if (order.status === "INVOICED") return { message: "OS já faturada não pode ser editada." }
   if (!client) return { message: "Cliente não encontrado." }
 
   if (technicianId) {

@@ -13,6 +13,7 @@ export async function getBillingStatus() {
     where: { id: tenantId },
     select: {
       subscriptionStatus: true,
+      referralDiscountPercent: true,
       plan: { select: { id: true, name: true, slug: true, priceMonthly: true, priceYearly: true } },
       subscriptions: {
         orderBy: { createdAt: "desc" },
@@ -88,7 +89,13 @@ export async function subscribeToPlan(formData: FormData) {
     // lib/auth.ts, api/referral/join, api/webhooks/asaas) aplicado uma vez,
     // no primeiro pagamento desta assinatura, e consumido logo abaixo.
     const discountPercent = tenant.referralDiscountPercent
-    const price = fullPrice * (1 - discountPercent / 100)
+    // Arredondado antes de virar payload pra Asaas — fullPrice * (1 - N/100)
+    // gera resto de ponto flutuante pra praticamente qualquer desconto
+    // != 0/50 (ex: 197 * 0.8 = 157.60000000000002), e mandar isso cru numa
+    // API de pagamento não é uma prática correta de dinheiro, mesmo que a
+    // Asaas provavelmente arredonde do lado dela.
+    // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
+    const price = Math.round(fullPrice * (1 - discountPercent / 100) * 100) / 100
 
     // Create or reuse Asaas customer
     let asaasCustomerId = tenant.asaasCustomerId

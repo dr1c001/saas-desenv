@@ -31,6 +31,12 @@ export async function POST(req: NextRequest) {
           return prisma.serviceOrder.findUnique({ where: { id: orderId, tenantId } })
         })
     if (!order) return NextResponse.json({ ok: false, error: "OS não encontrada" }, { status: 404 })
+    // Nada impedia assinar uma OS cancelada — a assinatura confirma execução
+    // de um serviço que oficialmente não aconteceu. (Achado verificando o
+    // sistema antes da primeira venda, 2026-08-03.)
+    if (order.status === "CANCELLED") {
+      return NextResponse.json({ ok: false, error: "OS cancelada não pode ser assinada" }, { status: 400 })
+    }
 
     await prisma.serviceOrder.update({
       where: { id: orderId },

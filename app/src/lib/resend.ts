@@ -14,9 +14,23 @@ function getResend(): Resend {
 }
 
 const FROM = "ServiçoOS <noreply@app-olive-six-67.vercel.app>"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app-olive-six-67.vercel.app"
+
+// O SDK do Resend nunca rejeita a Promise — erro da API (domínio não
+// verificado, destinatário inválido, rate limit) e falha de rede resolvem
+// como { data: null, error }, não como exception. Todo try/catch/.catch()
+// no resto do código (convite de equipe, cron de NPS, etc.) dependia de uma
+// rejeição que nunca acontecia de verdade — falha real de envio nunca era
+// detectada em lugar nenhum. Centraliza a checagem aqui em vez de repetir
+// em cada função. (Achado verificando o sistema antes da primeira venda,
+// 2026-08-03.)
+async function send(payload: Parameters<ReturnType<typeof getResend>["emails"]["send"]>[0]) {
+  const { error } = await getResend().emails.send(payload)
+  if (error) throw new Error(`Resend: ${error.message}`)
+}
 
 export async function sendWelcomeEmail(to: string, name: string) {
-  return getResend().emails.send({
+  return send({
     from: FROM,
     to,
     subject: `Bem-vindo ao ServiçoOS — escolha seu plano para começar`,
@@ -27,7 +41,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
           Sua conta no <strong>ServiçoOS</strong> foi criada com sucesso.<br>
           Falta só um passo: escolha um plano para liberar o acesso ao sistema.
         </p>
-        <a href="https://app-olive-six-67.vercel.app/billing"
+        <a href="${APP_URL}/billing"
            style="display:inline-block;margin:24px 0;padding:12px 28px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
           Ver planos e assinar →
         </a>
@@ -40,7 +54,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
 }
 
 export async function sendTeamInviteEmail(to: string, name: string, companyName: string, inviteUrl: string) {
-  return getResend().emails.send({
+  return send({
     from: FROM,
     to,
     subject: `Você foi convidado para a equipe ${companyName} — ServiçoOS`,
@@ -67,7 +81,7 @@ export async function sendTeamInviteEmail(to: string, name: string, companyName:
 }
 
 export async function sendPaymentConfirmedEmail(to: string, name: string, planName: string) {
-  return getResend().emails.send({
+  return send({
     from: FROM,
     to,
     subject: `Pagamento confirmado — Plano ${planName} ativo!`,
@@ -78,7 +92,7 @@ export async function sendPaymentConfirmedEmail(to: string, name: string, planNa
           Olá, ${name}! Seu plano <strong>${planName}</strong> está ativo.<br>
           Obrigado por assinar o ServiçoOS!
         </p>
-        <a href="https://app-olive-six-67.vercel.app/dashboard"
+        <a href="${APP_URL}/dashboard"
            style="display:inline-block;margin:24px 0;padding:12px 28px;background:#16a34a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
           Acessar o sistema →
         </a>
@@ -87,7 +101,7 @@ export async function sendPaymentConfirmedEmail(to: string, name: string, planNa
 }
 
 export async function sendOnboardingDay3Email(to: string, name: string) {
-  return getResend().emails.send({
+  return send({
     from: FROM,
     to,
     subject: `Sua empresa ainda não está usando o ServiçoOS`,
@@ -105,7 +119,7 @@ export async function sendOnboardingDay3Email(to: string, name: string) {
           <li>Preencha os dados e salve</li>
           <li>Envie o PDF direto para o cliente 🎉</li>
         </ol>
-        <a href="https://app-olive-six-67.vercel.app/billing"
+        <a href="${APP_URL}/billing"
            style="display:inline-block;margin:24px 0;padding:12px 28px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
           Ver planos e assinar →
         </a>
@@ -118,8 +132,7 @@ export async function sendOnboardingDay3Email(to: string, name: string) {
 }
 
 export async function sendNpsEmail(to: string, name: string, osToken: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app-olive-six-67.vercel.app"
-  return getResend().emails.send({
+  return send({
     from: FROM,
     to,
     subject: `Como foi sua experiência com o ServiçoOS?`,
@@ -132,7 +145,7 @@ export async function sendNpsEmail(to: string, name: string, osToken: string) {
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin:24px 0">
           ${[0,1,2,3,4,5,6,7,8,9,10].map(n => `
-            <a href="${appUrl}/api/nps?token=${osToken}&score=${n}"
+            <a href="${APP_URL}/api/nps?token=${osToken}&score=${n}"
                style="display:inline-block;width:40px;height:40px;line-height:40px;text-align:center;border:1px solid #e5e7eb;border-radius:8px;color:#374151;text-decoration:none;font-weight:600;font-size:14px">
               ${n}
             </a>`).join("")}
@@ -145,7 +158,7 @@ export async function sendNpsEmail(to: string, name: string, osToken: string) {
 }
 
 export async function sendPasswordResetEmail(to: string, name: string, resetUrl: string) {
-  return getResend().emails.send({
+  return send({
     from: FROM,
     to,
     subject: `Recuperação de senha — ServiçoOS`,
@@ -165,27 +178,6 @@ export async function sendPasswordResetEmail(to: string, name: string, resetUrl:
           Se você não solicitou essa alteração, pode ignorar este e-mail com segurança —
           sua senha atual continua válida. Este link expira em breve por segurança.
         </p>
-      </div>`,
-  })
-}
-
-export async function sendReferralWelcomeEmail(to: string, name: string, referrerCompany: string, extraDays: number) {
-  return getResend().emails.send({
-    from: FROM,
-    to,
-    subject: `Você ganhou ${extraDays} dias extras no ServiçoOS!`,
-    html: `
-      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
-        <h1 style="color:#7c3aed;margin-bottom:8px">Presente de boas-vindas! 🎁</h1>
-        <p style="color:#374151;line-height:1.6">
-          Olá, ${name}!<br>
-          A empresa <strong>${referrerCompany}</strong> te indicou o ServiçoOS e você ganhou
-          <strong>${extraDays} dias extras</strong> no seu período de teste — totalizando ${15 + extraDays} dias grátis!
-        </p>
-        <a href="https://app-olive-six-67.vercel.app/dashboard"
-           style="display:inline-block;margin:24px 0;padding:12px 28px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
-          Acessar o sistema →
-        </a>
       </div>`,
   })
 }

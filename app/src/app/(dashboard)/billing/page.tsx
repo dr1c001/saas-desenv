@@ -25,6 +25,11 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const [billing, plans] = await Promise.all([getBillingStatus(), getPlans()])
 
   const statusInfo = STATUS_LABEL[billing?.subscriptionStatus ?? "TRIAL"]
+  // Preço mostrado aqui não batia com o que de fato ia pra Asaas em
+  // subscribeToPlan quando havia desconto de indicação — cliente só
+  // descobria o valor real já na página de pagamento da Asaas.
+  // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
+  const discountPercent = billing?.referralDiscountPercent ?? 0
 
   return (
     <div className="space-y-8 max-w-5xl">
@@ -126,14 +131,24 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                 <div>
                   <h3 className="text-lg font-bold">{plan.name}</h3>
                   <div className="mt-2">
+                    {discountPercent > 0 && (
+                      <span className="text-sm text-muted-foreground line-through mr-2">
+                        {formatCurrency(Number(plan.priceMonthly))}
+                      </span>
+                    )}
                     <span className="text-3xl font-bold">
-                      {formatCurrency(Number(plan.priceMonthly))}
+                      {formatCurrency(Number(plan.priceMonthly) * (1 - discountPercent / 100))}
                     </span>
                     <span className="text-muted-foreground text-sm">/mês</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    ou {formatCurrency(Number(plan.priceYearly))}/ano (2 meses grátis)
+                    ou {formatCurrency(Number(plan.priceYearly) * (1 - discountPercent / 100))}/ano (2 meses grátis)
                   </p>
+                  {discountPercent > 0 && (
+                    <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-1">
+                      {discountPercent}% de desconto de indicação aplicado
+                    </p>
+                  )}
                 </div>
 
                 <ul className="space-y-2 flex-1">

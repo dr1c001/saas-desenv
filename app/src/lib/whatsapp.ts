@@ -13,7 +13,15 @@ export async function sendWhatsApp(
   message: string
 ): Promise<boolean> {
   const raw = phone.replace(/\D/g, "")
-  const normalized = raw.startsWith("55") ? raw : `55${raw}`
+  // DDD 55 é real (Santa Maria/RS) — um número local "5599XXXXXXXX" (11
+  // dígitos, DDD 55 + celular) começa com "55" sem ter código de país
+  // nenhum. Só considera que já tem código de país quando o tamanho bate com
+  // isso (12 = DDD+fixo, 13 = DDD+celular), não só pelo prefixo — senão esse
+  // DDD específico ficava sempre sem o "55" do país, e a mensagem ia pra um
+  // número errado/inválido. (Achado verificando o sistema antes da primeira
+  // venda, 2026-08-03.)
+  const hasCountryCode = raw.startsWith("55") && (raw.length === 12 || raw.length === 13)
+  const normalized = hasCountryCode ? raw : `55${raw}`
 
   try {
     const res = await fetch(
