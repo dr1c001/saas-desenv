@@ -75,7 +75,7 @@ export async function inviteTeamMember(
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 
   if (serviceRoleKey && supabaseUrl) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app-olive-six-67.vercel.app"
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://servicoos.com.br"
 
     // /admin/invite foi descontinuado nesta versao do GoTrue (retorna 404 texto puro).
     // /admin/generate_link com type "invite" e o equivalente atual — mesmo formato

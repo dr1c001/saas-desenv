@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import "./globals.css"
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app-olive-six-67.vercel.app"
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://servicoos.com.br"
 const title = "ServiçoOS — Gestão de Ordens de Serviço"
 const description = "CRM, OS, Financeiro e Dashboard para empresas de serviço"
 

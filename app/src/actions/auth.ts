@@ -61,7 +61,7 @@ export async function signUpUser(input: {
 export async function requestPasswordReset(email: string) {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app-olive-six-67.vercel.app"
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://servicoos.com.br"
 
   // Always return the same generic message, whether or not the e-mail exists —
   // avoids leaking which e-mails are registered.

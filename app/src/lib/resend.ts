@@ -13,8 +13,8 @@ function getResend(): Resend {
   return resendClient
 }
 
-const FROM = "ServiçoOS <noreply@app-olive-six-67.vercel.app>"
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app-olive-six-67.vercel.app"
+const FROM = "ServiçoOS <noreply@servicoos.com.br>"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://servicoos.com.br"
 
 // O SDK do Resend nunca rejeita a Promise — erro da API (domínio não
 // verificado, destinatário inválido, rate limit) e falha de rede resolvem

@@ -16,7 +16,7 @@ export default function ReferralPage() {
   }, [])
 
   const referralUrl = info
-    ? `${process.env.NEXT_PUBLIC_APP_URL ?? "https://app-olive-six-67.vercel.app"}/register?ref=${info.code}`
+    ? `${process.env.NEXT_PUBLIC_APP_URL ?? "https://servicoos.com.br"}/register?ref=${info.code}`
     : ""
 
   function copyLink() {

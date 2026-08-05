@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Configure o Z-API em Configurações → WhatsApp" }, { status: 400 })
     }
 
-    const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app-olive-six-67.vercel.app"
+    const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://servicoos.com.br"
 
     if (type === "os") {
       const order = await prisma.serviceOrder.findUnique({
