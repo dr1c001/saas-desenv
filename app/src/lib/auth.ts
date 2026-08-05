@@ -89,9 +89,23 @@ export const getTenant = cache(async function getTenant() {
       // login (ex: layout + page chamando getTenant() em paralelo antes do User
       // existir). Se outra ja ganhou a corrida e criou o User (violação de
       // unique constraint no id), usa os dados dela em vez de duplicar tenant.
-      const lostRace =
+      const isConflict =
         err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002"
-      if (!lostRace) throw err
+      if (!isConflict) throw err
+
+      // email também é @unique — se o conflito foi nele (não no id), não é a
+      // corrida esperada: é uma linha de User órfã com este e-mail apontando
+      // pra outro id (ex: sequela de uma recriação manual de conta). Nesse
+      // caso findUniqueOrThrow por id abaixo explodiria com "not found" em
+      // vez de explicar a causa real. (Achado em auditoria pré-venda,
+      // 2026-08-05.)
+      const target = (err.meta?.target as string[] | undefined) ?? []
+      if (!target.includes("id")) {
+        await prisma.tenant.delete({ where: { id: tenantId } }).catch(() => null)
+        throw new Error(
+          `Já existe um cadastro com o e-mail ${user.email}, associado a outra conta. Contate o suporte.`
+        )
+      }
 
       // O tenant que acabamos de criar ficou orfao (sem User) — remove.
       await prisma.tenant.delete({ where: { id: tenantId } }).catch(() => null)

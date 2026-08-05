@@ -1,11 +1,10 @@
 const BASE = "https://api.nfe.io/v1"
-const KEY = process.env.NFEIO_API_KEY!
 
 async function req<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {
-      Authorization: KEY,
+      Authorization: process.env.NFEIO_API_KEY!,
       "Content-Type": "application/json",
       ...(options.headers ?? {}),
     },

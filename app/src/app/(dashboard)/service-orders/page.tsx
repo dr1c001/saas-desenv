@@ -62,7 +62,7 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {orders.length} ordem{orders.length !== 1 ? "s" : ""}
+            {orders.length} {orders.length === 1 ? "ordem" : "ordens"}
             {(!status || status === "") && " ativa" + (orders.length !== 1 ? "s" : "")}
             {(q || (status && status !== "")) && " encontrada" + (orders.length !== 1 ? "s" : "")}
           </CardTitle>

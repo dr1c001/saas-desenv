@@ -37,6 +37,13 @@ export async function POST(req: NextRequest) {
     if (order.status === "CANCELLED") {
       return NextResponse.json({ ok: false, error: "OS cancelada não pode ser assinada" }, { status: 400 })
     }
+    // Mesmo motivo do bloqueio de edição em completeServiceOrder/
+    // updateServiceOrder: uma OS já faturada tem NFS-e/recibo vinculados —
+    // trocar a assinatura depois quebraria essa consistência. (Achado em
+    // auditoria pré-venda, 2026-08-05.)
+    if (order.status === "INVOICED" && order.clientSignatureUrl) {
+      return NextResponse.json({ ok: false, error: "OS já faturada — assinatura não pode ser alterada" }, { status: 400 })
+    }
 
     await prisma.serviceOrder.update({
       where: { id: orderId },

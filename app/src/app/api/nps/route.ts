@@ -7,22 +7,23 @@ import { prisma } from "@/lib/prisma"
 // qualquer nota do e-mail dava 405. clientToken sozinho já é suficiente pra
 // achar a OS (é @unique), orderId nunca foi necessário nesse fluxo.
 // (Achado verificando o sistema antes da primeira venda, 2026-07-28.)
+//
+// O GET NUNCA grava a nota — só pré-seleciona no widget do portal e exige o
+// clique em "Enviar avaliação" (POST de verdade) pra confirmar. Antes disso
+// o GET gravava direto: qualquer scanner de e-mail corporativo que
+// pré-busca os 11 links da mensagem (comum em gateways tipo Safe Links)
+// acabava gravando uma nota aleatória sem o cliente nunca ter clicado em
+// nada. (Achado em auditoria pré-venda, 2026-08-05.)
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url)
   const clientToken = searchParams.get("token")
   if (!clientToken) return NextResponse.redirect(new URL("/", origin))
 
-  // Number(null) é 0 — sem essa checagem, um GET só com ?token= (sem score,
-  // ex: scanner de e-mail corporativo pré-buscando o link antes da entrega)
-  // gravava nota 0 sem ninguém ter clicado em nada.
-  // (Achado em revisão de segurança pré-lançamento, 2026-07-28.)
   const scoreParam = searchParams.get("score")
   const score = scoreParam === null ? NaN : Number(scoreParam)
-  if (Number.isInteger(score) && score >= 0 && score <= 10) {
-    await prisma.serviceOrder.updateMany({ where: { clientToken }, data: { npsScore: score } })
-  }
+  const prefill = Number.isInteger(score) && score >= 0 && score <= 10 ? `?prefillScore=${score}` : ""
 
-  return NextResponse.redirect(new URL(`/p/${clientToken}`, origin))
+  return NextResponse.redirect(new URL(`/p/${clientToken}${prefill}`, origin))
 }
 
 export async function POST(req: NextRequest) {

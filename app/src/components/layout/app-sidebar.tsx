@@ -24,6 +24,7 @@ import {
   Search,
   X,
   Gift,
+  Landmark,
 } from "lucide-react"
 import {
   Sidebar,
@@ -58,6 +59,12 @@ const NAV_ITEMS: { title: string; href: string; icon: React.ElementType; slug: T
   { title: "Mapa GPS", href: "/map", icon: MapPin, slug: "map" },
   { title: "Assinatura", href: "/billing", icon: CreditCard, slug: "billing" },
   { title: "Indicação", href: "/referral", icon: Gift, slug: "referral" },
+  // "fiscal" já existia em ALL_TABS (lib/auth.ts) e era atribuível em
+  // Permissões, mas não tinha link em lugar nenhum da UI — ninguém
+  // conseguia chegar em /settings/fiscal pra configurar a emissão de NFS-e,
+  // apesar da mensagem de erro de emitNfse dizer "Configurações → Fiscal".
+  // (Achado em auditoria pré-venda, 2026-08-05.)
+  { title: "Config. Fiscal", href: "/settings/fiscal", icon: Landmark, slug: "fiscal" },
 ]
 
 type Props = {

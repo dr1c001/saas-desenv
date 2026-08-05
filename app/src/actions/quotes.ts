@@ -6,6 +6,7 @@ import { randomUUID } from "crypto"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { retryOnUniqueConflict } from "@/lib/retry"
 
 const quoteSchema = z.object({
   clientName: z.string().min(2, "Nome do cliente obrigatório"),
@@ -54,29 +55,36 @@ export async function createQuote(
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
 
   const { clientName, clientAddress, clientContact, description, materials, amount, notes, validUntil, status } = parsed.data
-  const number = await nextQuoteNumber(tenantId)
 
-  await prisma.quote.create({
-    data: {
-      number,
-      tenantId,
-      clientName,
-      clientAddress: clientAddress || null,
-      clientContact: clientContact || null,
-      description,
-      materials: materials || null,
-      amount: amount ? parseBrCurrency(amount) : 0,
-      notes: notes || null,
-      validUntil: validUntil ? new Date(validUntil) : null,
-      status,
-      // @default(uuid()) do schema não está de fato aplicado na coluna do
-      // banco (drift confirmado via information_schema — column_default
-      // nulo) — sem gerar aqui, clientToken ficava sempre nulo, quebrando a
-      // aprovação online do orçamento pelo cliente (depende desse token no
-      // link público /q/[token]). (Achado verificando o sistema de NPS,
-      // 2026-07-22.)
-      clientToken: randomUUID(),
-    },
+  // nextQuoteNumber lê "o último número" sem lock — duas criações
+  // simultâneas podem calcular o mesmo número. number tem
+  // @@unique([tenantId, number]), então a segunda só falha (P2002) em vez de
+  // duplicar; retryOnUniqueConflict tenta de novo com o número atualizado.
+  // (Achado em auditoria pré-venda, 2026-08-05.)
+  await retryOnUniqueConflict(async () => {
+    const number = await nextQuoteNumber(tenantId)
+    return prisma.quote.create({
+      data: {
+        number,
+        tenantId,
+        clientName,
+        clientAddress: clientAddress || null,
+        clientContact: clientContact || null,
+        description,
+        materials: materials || null,
+        amount: amount ? parseBrCurrency(amount) : 0,
+        notes: notes || null,
+        validUntil: validUntil ? new Date(validUntil) : null,
+        status,
+        // @default(uuid()) do schema não está de fato aplicado na coluna do
+        // banco (drift confirmado via information_schema — column_default
+        // nulo) — sem gerar aqui, clientToken ficava sempre nulo, quebrando a
+        // aprovação online do orçamento pelo cliente (depende desse token no
+        // link público /q/[token]). (Achado verificando o sistema de NPS,
+        // 2026-07-22.)
+        clientToken: randomUUID(),
+      },
+    })
   })
 
   revalidatePath("/quotes")

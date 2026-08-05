@@ -62,10 +62,14 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 }
 
 export default async function DashboardPage() {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  // Gráfico mostra receita/despesa reais — financeiro é OWNER/ADMIN-only em
+  // todo o resto do sistema (finance.ts, reports.ts), a Action já se
+  // recusa a rodar pra TECHNICIAN. (Achado em auditoria pré-venda, 2026-08-05.)
+  const isAdmin = role === "OWNER" || role === "ADMIN"
   const [data, chartData] = await Promise.all([
     getDashboardData(tenantId),
-    getMonthlyRevenueChart(),
+    isAdmin ? getMonthlyRevenueChart() : Promise.resolve(null),
   ])
 
   const stats = [
@@ -124,16 +128,18 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Receita × Despesa (últimos 6 meses)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RevenueChart data={chartData} />
-          </CardContent>
-        </Card>
-      </div>
+      {chartData && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base">Receita × Despesa (últimos 6 meses)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RevenueChart data={chartData} />
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card>
         <CardHeader>

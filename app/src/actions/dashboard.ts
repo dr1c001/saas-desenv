@@ -5,7 +5,12 @@ import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 
 export async function getMonthlyRevenueChart() {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  // Financeiro é OWNER/ADMIN-only em todo o resto do sistema (finance.ts,
+  // reports.ts) — este gráfico expunha os mesmos totais de receita/despesa
+  // pra qualquer TECHNICIAN via /dashboard. (Achado em auditoria pré-venda,
+  // 2026-08-05.)
+  if (role !== "OWNER" && role !== "ADMIN") throw new Error("Sem permissão.")
   await requireActiveSubscription(tenantId)
 
   // Last 6 months (limites de mês em horário de Brasília, não UTC do

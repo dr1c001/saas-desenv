@@ -55,7 +55,7 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {orders.length} ordem{orders.length !== 1 ? "s" : ""}
+            {orders.length} {orders.length === 1 ? "ordem" : "ordens"}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">

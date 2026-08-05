@@ -7,6 +7,7 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { sendPushToUser } from "@/lib/push"
+import { retryOnUniqueConflict } from "@/lib/retry"
 
 const orderSchema = z.object({
   title: z.string().min(2, "Título obrigatório"),
@@ -68,34 +69,41 @@ export async function createServiceOrder(
     : []
 
   const total = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0)
-  const number = await nextOrderNumber(tenantId)
 
-  await prisma.serviceOrder.create({
-    data: {
-      number,
-      title,
-      description: description || null,
-      clientId,
-      tenantId,
-      technicianId: technicianId || userId,
-      status,
-      totalAmount: total,
-      // @default(uuid()) do schema não está de fato aplicado na coluna do
-      // banco (drift confirmado via information_schema — column_default nulo)
-      // — sem gerar aqui, clientToken ficava sempre nulo, quebrando o portal
-      // do cliente e o NPS (ambos dependem desse token nos links públicos).
-      // (Achado verificando o sistema de NPS, 2026-07-22.)
-      clientToken: randomUUID(),
-      scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-      items: {
-        create: items.map((i) => ({
-          description: i.description,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-          total: i.quantity * i.unitPrice,
-        })),
+  // nextOrderNumber lê "o último número" sem lock — duas criações
+  // simultâneas podem calcular o mesmo número. number tem
+  // @@unique([tenantId, number]), então a segunda só falha (P2002) em vez de
+  // duplicar; retryOnUniqueConflict tenta de novo com o número atualizado.
+  // (Achado em auditoria pré-venda, 2026-08-05.)
+  await retryOnUniqueConflict(async () => {
+    const number = await nextOrderNumber(tenantId)
+    return prisma.serviceOrder.create({
+      data: {
+        number,
+        title,
+        description: description || null,
+        clientId,
+        tenantId,
+        technicianId: technicianId || userId,
+        status,
+        totalAmount: total,
+        // @default(uuid()) do schema não está de fato aplicado na coluna do
+        // banco (drift confirmado via information_schema — column_default nulo)
+        // — sem gerar aqui, clientToken ficava sempre nulo, quebrando o portal
+        // do cliente e o NPS (ambos dependem desse token nos links públicos).
+        // (Achado verificando o sistema de NPS, 2026-07-22.)
+        clientToken: randomUUID(),
+        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+        items: {
+          create: items.map((i) => ({
+            description: i.description,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+            total: i.quantity * i.unitPrice,
+          })),
+        },
       },
-    },
+    })
   })
 
   // Send push notification to assigned technician
@@ -122,11 +130,22 @@ export async function createServiceOrder(
 }
 
 export async function updateOrderStatus(id: string, status: string) {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
   await requireActiveSubscription(tenantId)
 
   const validStatus = ["OPEN", "IN_PROGRESS", "DONE", "INVOICED", "CANCELLED"]
   if (!validStatus.includes(status)) return
+
+  // Faturar cria um Revenue de verdade, e uma OS já faturada tem NFS-e/
+  // assinatura vinculada (mesmo raciocínio de completeServiceOrder/
+  // updateServiceOrder) — sem isso, qualquer TECHNICIAN faturava uma OS
+  // direto por aqui (bypassando o fluxo de conclusão) e dava pra
+  // "desfaturar" mudando o status de novo depois. TECHNICIAN continua livre
+  // pra mover entre OPEN/IN_PROGRESS/DONE/CANCELLED, seu fluxo legítimo de
+  // campo. (Achado em auditoria pré-venda, 2026-08-05.)
+  const current = await prisma.serviceOrder.findUnique({ where: { id, tenantId }, select: { status: true } })
+  if (!current || current.status === "INVOICED") return
+  if (status === "INVOICED" && role !== "OWNER" && role !== "ADMIN") return
 
   const data: Record<string, unknown> = { status }
   if (status === "DONE") data.concludedAt = new Date()

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { retryOnUniqueConflict } from "@/lib/retry"
 
 const orderSchema = z.object({
   title: z.string().min(2, "Título obrigatório"),
@@ -55,27 +56,34 @@ export async function createMaintenanceOrder(
     : []
 
   const total = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
-  const number = await nextOmNumber(tenantId)
 
-  await prisma.maintenanceOrder.create({
-    data: {
-      number,
-      title: parsed.data.title,
-      description: parsed.data.description || null,
-      providerId: parsed.data.providerId || null,
-      status: parsed.data.status,
-      totalAmount: total,
-      tenantId,
-      scheduledAt: parsed.data.scheduledAt ? new Date(parsed.data.scheduledAt) : null,
-      items: {
-        create: items.map((i) => ({
-          description: i.description,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-          total: i.quantity * i.unitPrice,
-        })),
+  // nextOmNumber lê "o último número" sem lock — duas criações simultâneas
+  // podem calcular o mesmo número. number tem @@unique([tenantId, number]),
+  // então a segunda só falha (P2002) em vez de duplicar; retryOnUniqueConflict
+  // tenta de novo com o número atualizado. (Achado em auditoria pré-venda,
+  // 2026-08-05.)
+  await retryOnUniqueConflict(async () => {
+    const number = await nextOmNumber(tenantId)
+    return prisma.maintenanceOrder.create({
+      data: {
+        number,
+        title: parsed.data.title,
+        description: parsed.data.description || null,
+        providerId: parsed.data.providerId || null,
+        status: parsed.data.status,
+        totalAmount: total,
+        tenantId,
+        scheduledAt: parsed.data.scheduledAt ? new Date(parsed.data.scheduledAt) : null,
+        items: {
+          create: items.map((i) => ({
+            description: i.description,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+            total: i.quantity * i.unitPrice,
+          })),
+        },
       },
-    },
+    })
   })
 
   revalidatePath("/maintenance")

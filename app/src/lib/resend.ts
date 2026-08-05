@@ -14,6 +14,10 @@ function getResend(): Resend {
 }
 
 const FROM = "ServiçoOS <noreply@servicoos.com.br>"
+// Boas-vindas e onboarding convidam o cliente a "responder este e-mail", mas
+// o remetente é um noreply — sem reply-to a resposta ia pra um endereço que
+// não existe. (Achado em auditoria pré-venda, 2026-08-05.)
+const REPLY_TO = "suporte@servicoos.com.br"
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://servicoos.com.br"
 
 // O SDK do Resend nunca rejeita a Promise — erro da API (domínio não
@@ -32,6 +36,7 @@ async function send(payload: Parameters<ReturnType<typeof getResend>["emails"]["
 export async function sendWelcomeEmail(to: string, name: string) {
   return send({
     from: FROM,
+    replyTo: REPLY_TO,
     to,
     subject: `Bem-vindo ao ServiçoOS — escolha seu plano para começar`,
     html: `
@@ -56,6 +61,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
 export async function sendTeamInviteEmail(to: string, name: string, companyName: string, inviteUrl: string) {
   return send({
     from: FROM,
+    replyTo: REPLY_TO,
     to,
     subject: `Você foi convidado para a equipe ${companyName} — ServiçoOS`,
     html: `
@@ -83,6 +89,7 @@ export async function sendTeamInviteEmail(to: string, name: string, companyName:
 export async function sendPaymentConfirmedEmail(to: string, name: string, planName: string) {
   return send({
     from: FROM,
+    replyTo: REPLY_TO,
     to,
     subject: `Pagamento confirmado — Plano ${planName} ativo!`,
     html: `
@@ -103,6 +110,7 @@ export async function sendPaymentConfirmedEmail(to: string, name: string, planNa
 export async function sendOnboardingDay3Email(to: string, name: string) {
   return send({
     from: FROM,
+    replyTo: REPLY_TO,
     to,
     subject: `Sua empresa ainda não está usando o ServiçoOS`,
     html: `
@@ -134,6 +142,7 @@ export async function sendOnboardingDay3Email(to: string, name: string) {
 export async function sendNpsEmail(to: string, name: string, osToken: string) {
   return send({
     from: FROM,
+    replyTo: REPLY_TO,
     to,
     subject: `Como foi sua experiência com o ServiçoOS?`,
     html: `
@@ -160,6 +169,7 @@ export async function sendNpsEmail(to: string, name: string, osToken: string) {
 export async function sendPasswordResetEmail(to: string, name: string, resetUrl: string) {
   return send({
     from: FROM,
+    replyTo: REPLY_TO,
     to,
     subject: `Recuperação de senha — ServiçoOS`,
     html: `

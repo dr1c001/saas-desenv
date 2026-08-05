@@ -1,11 +1,12 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { nanoid } from "nanoid"
 
 export async function getReferralInfo() {
   const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
 
   let tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },

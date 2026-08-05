@@ -15,8 +15,17 @@ const statusConfig: Record<string, { label: string; icon: React.ElementType; col
   CANCELLED:   { label: "Cancelada",              icon: XCircle,     color: "text-red-500" },
 }
 
-export default async function ClientPortalPage({ params }: { params: Promise<{ token: string }> }) {
+export default async function ClientPortalPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>
+  searchParams: Promise<{ prefillScore?: string }>
+}) {
   const { token } = await params
+  const { prefillScore: prefillScoreRaw } = await searchParams
+  const prefillScoreNum = prefillScoreRaw === undefined ? NaN : Number(prefillScoreRaw)
+  const prefillScore = Number.isInteger(prefillScoreNum) && prefillScoreNum >= 0 && prefillScoreNum <= 10 ? prefillScoreNum : null
 
   const order = await prisma.serviceOrder.findUnique({
     where: { clientToken: token },
@@ -140,7 +149,13 @@ export default async function ClientPortalPage({ params }: { params: Promise<{ t
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <NpsWidget orderId={order.id} clientToken={token} existingScore={order.npsScore} existingFeedback={order.npsFeedback} />
+              <NpsWidget
+                orderId={order.id}
+                clientToken={token}
+                existingScore={order.npsScore}
+                existingFeedback={order.npsFeedback}
+                prefillScore={prefillScore}
+              />
             </CardContent>
           </Card>
         )}

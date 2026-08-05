@@ -41,8 +41,8 @@ export function ProfileForm({ user }: { user: User }) {
   return (
     <form action={formAction} className="space-y-4">
       <div className="space-y-1.5">
-        <Label htmlFor="name">Seu nome *</Label>
-        <Input id="name" name="name" defaultValue={user?.name ?? ""} required />
+        <Label htmlFor="profile-name">Seu nome *</Label>
+        <Input id="profile-name" name="name" defaultValue={user?.name ?? ""} required />
         {state.errors?.name && <p className="text-sm text-destructive">{state.errors.name[0]}</p>}
       </div>
       <div className="space-y-1.5">
@@ -55,12 +55,12 @@ export function ProfileForm({ user }: { user: User }) {
         <Input value={roleLabel[user?.role ?? ""] ?? user?.role ?? ""} disabled className="opacity-60" readOnly />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="document">CPF / CNPJ</Label>
-        <Input id="document" name="document" defaultValue={user?.document ?? ""} />
+        <Label htmlFor="profile-document">CPF / CNPJ</Label>
+        <Input id="profile-document" name="document" defaultValue={user?.document ?? ""} />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="phone">Telefone</Label>
-        <Input id="phone" name="phone" placeholder="(11) 99999-9999" defaultValue={user?.phone ?? ""} />
+        <Label htmlFor="profile-phone">Telefone</Label>
+        <Input id="profile-phone" name="phone" placeholder="(11) 99999-9999" defaultValue={user?.phone ?? ""} />
       </div>
 
       <p className="text-sm font-medium pt-2">Endereço</p>

@@ -4,6 +4,7 @@ import {
   sendOnboardingDay3Email,
   sendNpsEmail,
 } from "@/lib/resend"
+import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 
 // Vercel Cron: runs every day at 09:00 BRT (12:00 UTC)
 // vercel.json: { "crons": [{ "path": "/api/cron/daily", "schedule": "0 12 * * *" }] }
@@ -26,14 +27,18 @@ export async function GET(req: NextRequest) {
   } catch { results.errors++ }
 
   // ── Lembrete no dia 3 pra quem se cadastrou e ainda não assinou ──────────────
-  const day3Start = new Date(now)
-  day3Start.setDate(day3Start.getDate() - 3)
-  day3Start.setHours(0, 0, 0, 0)
-  const day3End = new Date(day3Start)
-  day3End.setHours(23, 59, 59, 999)
+  // new Date() + setHours(0,0,0,0) zera pra meia-noite UTC (horário do
+  // servidor), não meia-noite de Brasília — um tenant criado à noite (BRT)
+  // podia cair no dia UTC seguinte e nunca bater exatamente com essa janela,
+  // recebendo o lembrete um dia adiantado/atrasado. Mesmo padrão BRT-aware já
+  // usado em dashboard.ts/finance.ts/reports.ts. (Achado em auditoria
+  // pré-venda, 2026-08-05.)
+  const { year, month, day } = todayInBRT()
+  const day3Start = brtMidnightUTC(year, month, day - 3)
+  const day3End = brtMidnightUTC(year, month, day - 2)
 
   const day3Tenants = await prisma.tenant.findMany({
-    where: { createdAt: { gte: day3Start, lte: day3End }, subscriptionStatus: "TRIAL" },
+    where: { createdAt: { gte: day3Start, lt: day3End }, subscriptionStatus: "TRIAL" },
     include: { users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } } },
   })
   for (const t of day3Tenants) {

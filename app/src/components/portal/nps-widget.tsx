@@ -3,24 +3,45 @@
 import { useState } from "react"
 import { CheckCircle2 } from "lucide-react"
 
-type Props = { orderId: string; clientToken: string; existingScore: number | null; existingFeedback: string | null }
+type Props = {
+  orderId: string
+  clientToken: string
+  existingScore: number | null
+  existingFeedback: string | null
+  // Nota sugerida pelo link do e-mail (?score=N) — só pré-seleciona, quem
+  // decide se a nota é gravada é o clique em "Enviar avaliação" (POST de
+  // verdade). Um GET que já gravasse a nota era vulnerável a scanner de
+  // e-mail corporativo pré-buscando os 11 links e gravando uma nota
+  // aleatória sem o cliente nunca ter clicado em nada. (Achado em auditoria
+  // pré-venda, 2026-08-05.)
+  prefillScore?: number | null
+}
 
-export function NpsWidget({ orderId, clientToken, existingScore, existingFeedback }: Props) {
-  const [score, setScore] = useState<number | null>(existingScore)
+export function NpsWidget({ orderId, clientToken, existingScore, existingFeedback, prefillScore }: Props) {
+  const [score, setScore] = useState<number | null>(existingScore ?? prefillScore ?? null)
   const [feedback, setFeedback] = useState(existingFeedback ?? "")
   const [saved, setSaved] = useState(!!existingScore)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(false)
 
   async function handleSave() {
     if (score === null) return
     setSaving(true)
-    await fetch("/api/nps", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId, clientToken, score, feedback }),
-    })
-    setSaved(true)
-    setSaving(false)
+    setError(false)
+    try {
+      const res = await fetch("/api/nps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, clientToken, score, feedback }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error()
+      setSaved(true)
+    } catch {
+      setError(true)
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (saved) {
@@ -63,6 +84,7 @@ export function NpsWidget({ orderId, clientToken, existingScore, existingFeedbac
         rows={3}
         className="w-full rounded-lg border bg-background px-3 py-2 text-sm resize-none"
       />
+      {error && <p className="text-xs text-red-500">Não conseguimos salvar sua avaliação. Tente novamente.</p>}
       <button
         onClick={handleSave}
         disabled={score === null || saving}
