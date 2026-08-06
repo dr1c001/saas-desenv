@@ -251,12 +251,49 @@ apagado direto no banco, sem tocar em dado real).
 | `/settings/fiscal` (config. de NFS-e) sem nenhum link na UI — nem sidebar, nem dentro de `/settings` — apesar da própria mensagem de erro do `emitNfse` dizer "Configurações → Fiscal" | Item "Config. Fiscal" adicionado à sidebar |
 | Link de nota do e-mail de NPS (GET, grava direto) vulnerável a scanner de e-mail corporativo pré-buscando os 11 links e gravando nota aleatória sem o cliente clicar | GET não grava mais — só pré-seleciona a nota no widget do portal (`?prefillScore=`); gravação exige o clique em "Enviar avaliação" (POST de verdade) |
 | Aprovar orçamento e responder NPS no portal público mostravam "sucesso" mesmo quando a chamada ao servidor falhava (sem checar `res.ok`) | Ambos checam a resposta e mostram erro se falhar |
-| E-mails de boas-vindas/onboarding convidam "responda este e-mail" mas o remetente é `noreply@` sem reply-to | `reply-to: suporte@servicoos.com.br` em todos os envios (ver débito técnico — endereço ainda sem hospedagem de e-mail de verdade) |
+| E-mails de boas-vindas/onboarding convidam "responda este e-mail" mas o remetente é `noreply@` sem reply-to | `reply-to: suporte@servicoos.com.br` em todos os envios — endereço com hospedagem de verdade configurada no mesmo dia (Zoho Mail, ver seção 7.3.1) |
 | `nfeio.ts` lia a API key no escopo do módulo (padrão diferente do resto, que adia a leitura de propósito) | Movido pra dentro da função |
 | Cron do dia-3 calculava a janela com hora local do servidor (UTC), não horário de Brasília — mesma classe de bug já corrigida em dashboard/finance/reports | `todayInBRT`/`brtMidnightUTC` aplicados |
 | Portal público permitia reassinar (trocar a assinatura) de uma OS já faturada | Bloqueado, mesmo padrão de `completeServiceOrder`/`updateServiceOrder` |
 | Typo "ordems" (em vez de "ordens") na contagem de OS/OM — plural de "ordem" no PT-BR não é regular | Corrigido |
 | `id` HTML duplicado (`name`, `document`, `phone`) entre `TenantForm` e `ProfileForm`, ambos renderizados juntos em `/settings` — quebra a associação `label for=` (clicar no label focava o campo errado) | `id`s do `ProfileForm` prefixados (`profile-name`, etc.) |
+
+### 7.3.1 Hospedagem de e-mail pra suporte@servicoos.com.br — 06/08/2026
+
+Resolvido no mesmo dia do achado acima. Duas tentativas:
+
+1. **ImprovMX (grátis) + Gmail "enviar como"** — funcionou pro recebimento
+   (encaminha pro Gmail pessoal), mas o Gmail exigiu configurar um servidor
+   SMTP de verdade pra poder *enviar* como esse endereço, e o plano grátis do
+   ImprovMX só recebe/encaminha, não manda — sem credencial de SMTP válida
+   pra usar ali. Abandonado só pro envio (o domínio nunca chegou a ficar sem
+   receber).
+2. **Zoho Mail (plano grátis)** — caixa de e-mail de verdade, com SMTP
+   próprio. MX/SPF/DKIM do ImprovMX trocados pelos do Zoho (`mx.zoho.com`,
+   `mx2.zoho.com`, `mx3.zoho.com`, prioridades 10/20/50 — ver DNS abaixo). A
+   tabela de "e-mails transacionais" que o Zoho mostra durante o setup
+   (CNAME `bounce-zem` + DKIM `52056._domainkey`, produto ZeptoMail) foi
+   ignorada de propósito — é redundante com o Resend, que já cobre isso.
+
+**Cuidado real durante a configuração:** ao adicionar o TXT `zmail._domainkey`
+(chave do Zoho), o registro **`resend._domainkey`** (chave do Resend, já
+existente) acabou sendo sobrescrito por engano com o mesmo valor da chave do
+Zoho — os dois registros ficaram idênticos por um tempo. Não chegou a
+propagar (pego e corrigido antes do TTL de 1h expirar), mas seria um jeito
+sorrateiro de quebrar a verificação DKIM do Resend (e-mails de boas-vindas,
+recuperação de senha, etc. começarem a cair em spam ou serem rejeitados) sem
+nenhum erro óbvio no momento da mudança. **Lição:** ao adicionar um DKIM novo
+num domínio que já tem outro (padrão comum: `<algumacoisa>._domainkey`),
+conferir com cuidado que não se está editando/duplicando o valor de um
+registro `_domainkey` diferente que já existia.
+
+Fluxo final: Gmail manda usando o SMTP do Zoho (`smtp.zoho.com:587`,
+usuário/senha da caixa `suporte@`) — não é mais "tratar como alias" (esse
+caminho simples parou de funcionar pro Google mesmo com a caixa marcada,
+provavelmente restrição recente do Gmail pra contas pessoais). Testado de
+ponta a ponta: recebimento (e-mail externo → chega na caixa do Zoho) e envio
+(Gmail → sai como `suporte@servicoos.com.br`, cópia fica no enviados do Zoho)
+confirmados funcionando.
 
 **Achado não resolvido, precisa confirmação manual:** `api/webhooks/supabase/route.ts` é um SEGUNDO caminho de criação de tenant/usuário (Database Webhook do Supabase no INSERT de `auth.users`), independente do `getTenant()` — se estivesse configurado no painel do Supabase, venceria a corrida e criaria a conta sem e-mail de boas-vindas nem crédito de indicação. `WEBHOOK_SECRET` está configurado na Vercel há 54 dias (não é código morto por falta de segredo). Desativado por segurança (virou no-op 200) até confirmar no painel do Supabase (Database Webhooks / Authentication → Hooks) se algo aponta pra essa rota — se não estiver, o hook pode ser removido de lá também.
 
@@ -301,7 +338,6 @@ Estes pontos custaram tempo real de debug — não repetir os mesmos caminhos:
 
 ## 10. Débito técnico conhecido
 
-- `suporte@servicoos.com.br` (usado como reply-to nos e-mails e em `/expired`) ainda não tem hospedagem de e-mail configurada — só existem registros DNS de *envio* (DKIM, MX do Resend em `send.servicoos.com.br`), não de recebimento na raiz do domínio. Hoje uma resposta de cliente pra esse endereço provavelmente bate/falha silenciosamente. Precisa de um MX real na raiz + uma caixa de fato (Google Workspace, Zoho Mail, etc.)
 - `api/webhooks/supabase/route.ts` desativado (vira no-op) até confirmar no painel do Supabase se está mesmo configurado — ver seção 7.3
 - WhatsApp (Z-API): schema e UI prontos, integração nunca finalizada (único item do roadmap original ainda em aberto)
 - Histórico de migrations do Prisma com drift em relação ao schema real de produção (ver seção 9, itens 10 e 13) — funciona hoje com workaround manual (`db push` + `migrate resolve --applied`) tanto pra deploy quanto pra testes, mas a reconciliação de verdade (fazer o histórico bater com o schema real) continua pendente
@@ -326,12 +362,11 @@ trial de 15 dias cobria esse papel; o trial em si foi removido depois, em
 | 1 | Modo claro/escuro | Pedido explícito do usuário, 05/08/2026 — hoje `<html>` fica travado em `className="dark"` |
 | 2 | Suporte a idioma PT/EN | Pedido explícito do usuário, 05/08/2026 — projeto grande, todo texto do sistema (UI, e-mails, PDFs) está em PT-BR fixo, sem infra de i18n |
 | 3 | Confirmar/remover o Database Webhook do Supabase | Ver seção 7.3 — rota já desativada no código, falta confirmar no painel se existe algo apontando pra ela |
-| 4 | Hospedagem de e-mail pra `suporte@servicoos.com.br` | Reply-to novo (seção 7.3) só funciona de verdade com MX + caixa configurados (ver débito técnico) |
-| 5 | Ativar WhatsApp (Z-API) | Pendência mais antiga, diferencial de venda citado na própria landing page |
-| 6 | Reconciliar drift de migrations | Pré-requisito real pra confiar 100% em `migrate deploy`/CI futuro (ver seção 9, itens 10 e 13) |
-| 7 | Expandir cobertura de testes | Infra pronta (seção 9, item 13) — faltam testes para `service-orders.ts`, `nfse.ts`, `billing.ts` |
-| 8 | Ícones PWA + imagem `og:image` | Precisa de asset de design real (192x192, 512x512, 1200x630) |
-| 9 | Decidir sobre bônus de indicação sem rate-limit | Risco baixo hoje, mas fica registrado pra decisão consciente (ver seção 7.2) |
+| 4 | Ativar WhatsApp (Z-API) | Pendência mais antiga, diferencial de venda citado na própria landing page |
+| 5 | Reconciliar drift de migrations | Pré-requisito real pra confiar 100% em `migrate deploy`/CI futuro (ver seção 9, itens 10 e 13) |
+| 6 | Expandir cobertura de testes | Infra pronta (seção 9, item 13) — faltam testes para `service-orders.ts`, `nfse.ts`, `billing.ts` |
+| 7 | Ícones PWA + imagem `og:image` | Precisa de asset de design real (192x192, 512x512, 1200x630) |
+| 8 | Decidir sobre bônus de indicação sem rate-limit | Risco baixo hoje, mas fica registrado pra decisão consciente (ver seção 7.2) |
 
 ---
 
