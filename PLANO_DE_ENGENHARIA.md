@@ -295,7 +295,7 @@ ponta a ponta: recebimento (e-mail externo → chega na caixa do Zoho) e envio
 (Gmail → sai como `suporte@servicoos.com.br`, cópia fica no enviados do Zoho)
 confirmados funcionando.
 
-**Achado não resolvido, precisa confirmação manual:** `api/webhooks/supabase/route.ts` é um SEGUNDO caminho de criação de tenant/usuário (Database Webhook do Supabase no INSERT de `auth.users`), independente do `getTenant()` — se estivesse configurado no painel do Supabase, venceria a corrida e criaria a conta sem e-mail de boas-vindas nem crédito de indicação. `WEBHOOK_SECRET` está configurado na Vercel há 54 dias (não é código morto por falta de segredo). Desativado por segurança (virou no-op 200) até confirmar no painel do Supabase (Database Webhooks / Authentication → Hooks) se algo aponta pra essa rota — se não estiver, o hook pode ser removido de lá também.
+**Achado confirmado e resolvido — 06/08/2026:** `api/webhooks/supabase/route.ts` era mesmo um SEGUNDO caminho de criação de tenant/usuário, e estava ativo. Confirmado direto no banco (Database Webhooks do Supabase viram triggers reais no Postgres) — `information_schema.triggers` mostrou `auth.users → INSERT → supabase_functions.on_auth_user_created()`, a assinatura exata de um Database Webhook configurado pelo painel apontando pro INSERT de `auth.users`. Como o `getTenant()` (lib/auth.ts) já cobre 100% dessa criação sozinho, o trigger foi removido (`DROP TRIGGER on_auth_user_created ON auth.users`) — confirmado sem nenhum trigger restante na tabela. A rota HTTP (já desativada como no-op desde a auditoria) pode ser deletada do código numa limpeza futura.
 
 ---
 
@@ -338,7 +338,6 @@ Estes pontos custaram tempo real de debug — não repetir os mesmos caminhos:
 
 ## 10. Débito técnico conhecido
 
-- `api/webhooks/supabase/route.ts` desativado (vira no-op) até confirmar no painel do Supabase se está mesmo configurado — ver seção 7.3
 - WhatsApp (Z-API): schema e UI prontos, integração nunca finalizada (único item do roadmap original ainda em aberto)
 - Histórico de migrations do Prisma com drift em relação ao schema real de produção (ver seção 9, itens 10 e 13) — funciona hoje com workaround manual (`db push` + `migrate resolve --applied`) tanto pra deploy quanto pra testes, mas a reconciliação de verdade (fazer o histórico bater com o schema real) continua pendente
 - Bônus de indicação via `user_metadata.ref_code` no cadastro (`/register?ref=CODE`) sem rate-limit/captcha — decisão consciente de não corrigir agora (ver seção 7.2); o cadastro base já não tem essa proteção independente de indicação, então o risco real é baixo
@@ -361,12 +360,11 @@ trial de 15 dias cobria esse papel; o trial em si foi removido depois, em
 |---|---|---|
 | 1 | Modo claro/escuro | Pedido explícito do usuário, 05/08/2026 — hoje `<html>` fica travado em `className="dark"` |
 | 2 | Suporte a idioma PT/EN | Pedido explícito do usuário, 05/08/2026 — projeto grande, todo texto do sistema (UI, e-mails, PDFs) está em PT-BR fixo, sem infra de i18n |
-| 3 | Confirmar/remover o Database Webhook do Supabase | Ver seção 7.3 — rota já desativada no código, falta confirmar no painel se existe algo apontando pra ela |
-| 4 | Ativar WhatsApp (Z-API) | Pendência mais antiga, diferencial de venda citado na própria landing page |
-| 5 | Reconciliar drift de migrations | Pré-requisito real pra confiar 100% em `migrate deploy`/CI futuro (ver seção 9, itens 10 e 13) |
-| 6 | Expandir cobertura de testes | Infra pronta (seção 9, item 13) — faltam testes para `service-orders.ts`, `nfse.ts`, `billing.ts` |
-| 7 | Ícones PWA + imagem `og:image` | Precisa de asset de design real (192x192, 512x512, 1200x630) |
-| 8 | Decidir sobre bônus de indicação sem rate-limit | Risco baixo hoje, mas fica registrado pra decisão consciente (ver seção 7.2) |
+| 3 | Ativar WhatsApp (Z-API) | Pendência mais antiga, diferencial de venda citado na própria landing page |
+| 4 | Reconciliar drift de migrations | Pré-requisito real pra confiar 100% em `migrate deploy`/CI futuro (ver seção 9, itens 10 e 13) |
+| 5 | Expandir cobertura de testes | Infra pronta (seção 9, item 13) — faltam testes para `service-orders.ts`, `nfse.ts`, `billing.ts` |
+| 6 | Ícones PWA + imagem `og:image` | Precisa de asset de design real (192x192, 512x512, 1200x630) |
+| 7 | Decidir sobre bônus de indicação sem rate-limit | Risco baixo hoje, mas fica registrado pra decisão consciente (ver seção 7.2) |
 
 ---
 
