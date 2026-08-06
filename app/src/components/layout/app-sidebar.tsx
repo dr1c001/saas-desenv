@@ -42,6 +42,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import type { TabSlug } from "@/lib/auth"
 import { Badge } from "@/components/ui/badge"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
 
 const NAV_ITEMS: { title: string; href: string; icon: React.ElementType; slug: TabSlug }[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, slug: "dashboard" },
@@ -157,6 +158,7 @@ export function AppSidebar({ allowedTabs, role }: Props) {
 
       <SidebarFooter>
         <SidebarMenu>
+          <ThemeToggle />
           {(role === "OWNER" || role === "ADMIN") && (
             <SidebarMenuItem>
               <SidebarMenuButton render={<Link href="/settings/permissions" />}>
