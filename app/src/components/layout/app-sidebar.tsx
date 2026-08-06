@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import {
   LayoutDashboard,
   Users,
@@ -43,29 +44,30 @@ import { useRouter } from "next/navigation"
 import type { TabSlug } from "@/lib/auth"
 import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
+import { LanguageToggle } from "@/components/layout/language-toggle"
 
-const NAV_ITEMS: { title: string; href: string; icon: React.ElementType; slug: TabSlug }[] = [
-  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, slug: "dashboard" },
-  { title: "Clientes", href: "/clients", icon: Users, slug: "clients" },
-  { title: "Orçamentos", href: "/quotes", icon: FileText, slug: "quotes" },
-  { title: "Ordens de Serviço", href: "/service-orders", icon: ClipboardList, slug: "service-orders" },
-  { title: "Histórico", href: "/history", icon: History, slug: "history" },
-  { title: "Manutenção Interna", href: "/maintenance", icon: Wrench, slug: "maintenance" },
-  { title: "Prestadores", href: "/providers", icon: HardHat, slug: "providers" },
-  { title: "Recibos", href: "/receipts", icon: Receipt, slug: "receipts" },
-  { title: "Agendamento", href: "/schedule", icon: CalendarDays, slug: "schedule" },
-  { title: "Financeiro", href: "/finance", icon: DollarSign, slug: "finance" },
-  { title: "Relatórios", href: "/reports", icon: BarChart2, slug: "reports" },
-  { title: "Equipe", href: "/team", icon: UserCog, slug: "team" },
-  { title: "Mapa GPS", href: "/map", icon: MapPin, slug: "map" },
-  { title: "Assinatura", href: "/billing", icon: CreditCard, slug: "billing" },
-  { title: "Indicação", href: "/referral", icon: Gift, slug: "referral" },
+const NAV_ITEMS: { titleKey: string; href: string; icon: React.ElementType; slug: TabSlug }[] = [
+  { titleKey: "dashboard", href: "/dashboard", icon: LayoutDashboard, slug: "dashboard" },
+  { titleKey: "clients", href: "/clients", icon: Users, slug: "clients" },
+  { titleKey: "quotes", href: "/quotes", icon: FileText, slug: "quotes" },
+  { titleKey: "serviceOrders", href: "/service-orders", icon: ClipboardList, slug: "service-orders" },
+  { titleKey: "history", href: "/history", icon: History, slug: "history" },
+  { titleKey: "maintenance", href: "/maintenance", icon: Wrench, slug: "maintenance" },
+  { titleKey: "providers", href: "/providers", icon: HardHat, slug: "providers" },
+  { titleKey: "receipts", href: "/receipts", icon: Receipt, slug: "receipts" },
+  { titleKey: "schedule", href: "/schedule", icon: CalendarDays, slug: "schedule" },
+  { titleKey: "finance", href: "/finance", icon: DollarSign, slug: "finance" },
+  { titleKey: "reports", href: "/reports", icon: BarChart2, slug: "reports" },
+  { titleKey: "team", href: "/team", icon: UserCog, slug: "team" },
+  { titleKey: "map", href: "/map", icon: MapPin, slug: "map" },
+  { titleKey: "billing", href: "/billing", icon: CreditCard, slug: "billing" },
+  { titleKey: "referral", href: "/referral", icon: Gift, slug: "referral" },
   // "fiscal" já existia em ALL_TABS (lib/auth.ts) e era atribuível em
   // Permissões, mas não tinha link em lugar nenhum da UI — ninguém
   // conseguia chegar em /settings/fiscal pra configurar a emissão de NFS-e,
   // apesar da mensagem de erro de emitNfse dizer "Configurações → Fiscal".
   // (Achado em auditoria pré-venda, 2026-08-05.)
-  { title: "Config. Fiscal", href: "/settings/fiscal", icon: Landmark, slug: "fiscal" },
+  { titleKey: "fiscal", href: "/settings/fiscal", icon: Landmark, slug: "fiscal" },
 ]
 
 type Props = {
@@ -77,13 +79,14 @@ type Props = {
 export function AppSidebar({ allowedTabs, role }: Props) {
   const pathname = usePathname()
   const router = useRouter()
+  const t = useTranslations()
   const allowedSet = new Set(allowedTabs)
   const [search, setSearch] = useState("")
 
   const visibleItems = NAV_ITEMS.filter((item) => allowedSet.has(item.slug))
   const filteredItems = search.trim()
     ? visibleItems.filter((item) =>
-        item.title.toLowerCase().includes(search.toLowerCase())
+        t(`nav.${item.titleKey}` as "nav.dashboard").toLowerCase().includes(search.toLowerCase())
       )
     : visibleItems
 
@@ -94,19 +97,13 @@ export function AppSidebar({ allowedTabs, role }: Props) {
     router.refresh()
   }
 
-  const roleLabel: Record<string, string> = {
-    OWNER: "Proprietário",
-    ADMIN: "Administrador",
-    TECHNICIAN: "Técnico",
-  }
-
   return (
     <Sidebar>
       <SidebarHeader className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <span className="font-bold text-lg">ServiçoOS</span>
           <Badge variant="outline" className="text-xs">
-            {roleLabel[role] ?? role}
+            {t(`common.roles.${role}` as "common.roles.OWNER")}
           </Badge>
         </div>
         {/* Barra de pesquisa */}
@@ -114,7 +111,7 @@ export function AppSidebar({ allowedTabs, role }: Props) {
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
           <input
             type="text"
-            placeholder="Buscar aba..."
+            placeholder={t("nav.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-md border bg-background px-8 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
@@ -133,12 +130,12 @@ export function AppSidebar({ allowedTabs, role }: Props) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>
-            {search ? `Resultados (${filteredItems.length})` : "Menu"}
+            {search ? t("nav.resultsCount", { count: filteredItems.length }) : t("nav.menu")}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {filteredItems.length === 0 && (
-                <p className="px-3 py-2 text-xs text-muted-foreground">Nenhuma aba encontrada.</p>
+                <p className="px-3 py-2 text-xs text-muted-foreground">{t("nav.noResults")}</p>
               )}
               {filteredItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
@@ -147,7 +144,7 @@ export function AppSidebar({ allowedTabs, role }: Props) {
                     isActive={pathname.startsWith(item.href)}
                   >
                     <item.icon className="size-4" />
-                    <span>{item.title}</span>
+                    <span>{t(`nav.${item.titleKey}` as "nav.dashboard")}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -159,24 +156,25 @@ export function AppSidebar({ allowedTabs, role }: Props) {
       <SidebarFooter>
         <SidebarMenu>
           <ThemeToggle />
+          <LanguageToggle canChange={role === "OWNER" || role === "ADMIN"} />
           {(role === "OWNER" || role === "ADMIN") && (
             <SidebarMenuItem>
               <SidebarMenuButton render={<Link href="/settings/permissions" />}>
                 <Shield className="size-4" />
-                <span>Permissões</span>
+                <span>{t("nav.permissions")}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )}
           <SidebarMenuItem>
             <SidebarMenuButton render={<Link href="/settings" />}>
               <Settings className="size-4" />
-              <span>Configurações</span>
+              <span>{t("nav.settings")}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleSignOut}>
               <LogOut className="size-4" />
-              <span>Sair</span>
+              <span>{t("nav.signOut")}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

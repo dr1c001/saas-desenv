@@ -45,7 +45,7 @@ export const getTenant = cache(async function getTenant() {
     select: {
       tenantId: true,
       role: true,
-      tenant: { select: { subscriptionStatus: true, trialEndsAt: true } },
+      tenant: { select: { subscriptionStatus: true, trialEndsAt: true, locale: true } },
     },
   })
 
@@ -115,7 +115,7 @@ export const getTenant = cache(async function getTenant() {
         select: {
           tenantId: true,
           role: true,
-          tenant: { select: { subscriptionStatus: true, trialEndsAt: true } },
+          tenant: { select: { subscriptionStatus: true, trialEndsAt: true, locale: true } },
         },
       })
       return {
@@ -123,10 +123,11 @@ export const getTenant = cache(async function getTenant() {
         tenantId: winner.tenantId,
         role: winner.role,
         tenantStatus: winner.tenant,
+        locale: winner.tenant.locale,
       }
     }
 
-    return { userId: user.id, tenantId, role, tenantStatus }
+    return { userId: user.id, tenantId, role, tenantStatus, locale: tenant.locale }
   }
 
   return {
@@ -134,6 +135,7 @@ export const getTenant = cache(async function getTenant() {
     tenantId: dbUser.tenantId,
     role: dbUser.role,
     tenantStatus: dbUser.tenant,
+    locale: dbUser.tenant.locale,
   }
 })
 

@@ -144,6 +144,19 @@ export async function updateWhatsApp(
   return { message: "Configurações de WhatsApp salvas." }
 }
 
+// Idioma é por empresa (não por usuário/dispositivo, ao contrário do tema) —
+// governa dashboard, e-mails e PDFs gerados pro tenant inteiro, então só
+// OWNER/ADMIN pode trocar, mesmo padrão de updateTenant(). (Item 1 do
+// roadmap, 06/08/2026.)
+export async function updateLocale(locale: "pt" | "en") {
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return
+  if (locale !== "pt" && locale !== "en") return
+
+  await prisma.tenant.update({ where: { id: tenantId }, data: { locale } })
+  revalidatePath("/", "layout")
+}
+
 export async function getSettings() {
   const { tenantId, userId, role } = await getTenant()
   const isAdmin = role === "OWNER" || role === "ADMIN"

@@ -1,0 +1,78 @@
+{
+  "common": {
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "back": "Back",
+    "loading": "Loading...",
+    "confirm": "Confirm",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No",
+    "optional": "optional",
+    "required": "required",
+    "noPermission": "You don't have permission.",
+    "notFound": "Not found.",
+    "genericError": "Something went wrong. Please try again.",
+    "roles": {
+      "OWNER": "Owner",
+      "ADMIN": "Admin",
+      "TECHNICIAN": "Technician"
+    },
+    "serviceOrderStatus": {
+      "OPEN": "Open",
+      "IN_PROGRESS": "In progress",
+      "DONE": "Completed",
+      "INVOICED": "Invoiced",
+      "CANCELLED": "Cancelled"
+    },
+    "quoteStatus": {
+      "DRAFT": "Draft",
+      "SENT": "Sent",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
+    },
+    "clientStatus": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "DEFAULTER": "Delinquent"
+    },
+    "paymentStatus": {
+      "PENDING": "Pending",
+      "PAID": "Paid",
+      "OVERDUE": "Overdue"
+    }
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "clients": "Clients",
+    "quotes": "Quotes",
+    "serviceOrders": "Service Orders",
+    "history": "History",
+    "maintenance": "Internal Maintenance",
+    "providers": "Providers",
+    "receipts": "Receipts",
+    "schedule": "Schedule",
+    "finance": "Finance",
+    "reports": "Reports",
+    "team": "Team",
+    "map": "GPS Map",
+    "billing": "Billing",
+    "referral": "Referral",
+    "fiscal": "Tax Settings",
+    "permissions": "Permissions",
+    "settings": "Settings",
+    "signOut": "Sign out",
+    "searchPlaceholder": "Search tab...",
+    "noResults": "No tab found.",
+    "resultsCount": "Results ({count})",
+    "menu": "Menu",
+    "lightMode": "Light mode",
+    "darkMode": "Dark mode",
+    "language": "Language"
+  }
+}

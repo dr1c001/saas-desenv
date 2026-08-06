@@ -1,0 +1,78 @@
+{
+  "common": {
+    "save": "Salvar",
+    "saving": "Salvando...",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "create": "Criar",
+    "search": "Buscar",
+    "back": "Voltar",
+    "loading": "Carregando...",
+    "confirm": "Confirmar",
+    "close": "Fechar",
+    "yes": "Sim",
+    "no": "Não",
+    "optional": "opcional",
+    "required": "obrigatório",
+    "noPermission": "Sem permissão.",
+    "notFound": "Não encontrado.",
+    "genericError": "Algo deu errado. Tente novamente.",
+    "roles": {
+      "OWNER": "Proprietário",
+      "ADMIN": "Administrador",
+      "TECHNICIAN": "Técnico"
+    },
+    "serviceOrderStatus": {
+      "OPEN": "Aberta",
+      "IN_PROGRESS": "Em andamento",
+      "DONE": "Concluída",
+      "INVOICED": "Faturada",
+      "CANCELLED": "Cancelada"
+    },
+    "quoteStatus": {
+      "DRAFT": "Rascunho",
+      "SENT": "Enviado",
+      "APPROVED": "Aprovado",
+      "REJECTED": "Recusado"
+    },
+    "clientStatus": {
+      "ACTIVE": "Ativo",
+      "INACTIVE": "Inativo",
+      "DEFAULTER": "Inadimplente"
+    },
+    "paymentStatus": {
+      "PENDING": "Pendente",
+      "PAID": "Pago",
+      "OVERDUE": "Vencido"
+    }
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "clients": "Clientes",
+    "quotes": "Orçamentos",
+    "serviceOrders": "Ordens de Serviço",
+    "history": "Histórico",
+    "maintenance": "Manutenção Interna",
+    "providers": "Prestadores",
+    "receipts": "Recibos",
+    "schedule": "Agendamento",
+    "finance": "Financeiro",
+    "reports": "Relatórios",
+    "team": "Equipe",
+    "map": "Mapa GPS",
+    "billing": "Assinatura",
+    "referral": "Indicação",
+    "fiscal": "Config. Fiscal",
+    "permissions": "Permissões",
+    "settings": "Configurações",
+    "signOut": "Sair",
+    "searchPlaceholder": "Buscar aba...",
+    "noResults": "Nenhuma aba encontrada.",
+    "resultsCount": "Resultados ({count})",
+    "menu": "Menu",
+    "lightMode": "Modo claro",
+    "darkMode": "Modo escuro",
+    "language": "Idioma"
+  }
+}

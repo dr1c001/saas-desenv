@@ -32,6 +32,7 @@ model Tenant {
   referralCode       String?            @unique
   referredByCode     String?
   referralDiscountPercent Int           @default(0)
+  locale             Locale             @default(pt)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -47,6 +48,15 @@ model Tenant {
   quotes            Quote[]
   plan              Plan?              @relation(fields: [planId], references: [id])
   subscriptions     Subscription[]
+}
+
+// Idioma da empresa — governa dashboard, e-mails e PDFs gerados pro tenant
+// (item 1 do roadmap, 06/08/2026). Rota separada da preferência de tema
+// (essa é por dispositivo/localStorage; idioma é da empresa toda, salvo no
+// banco, porque e-mails/PDFs são gerados fora de uma sessão de navegador).
+enum Locale {
+  pt
+  en
 }
 
 enum SubscriptionStatus {
