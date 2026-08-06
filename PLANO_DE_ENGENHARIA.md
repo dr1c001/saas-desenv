@@ -358,13 +358,12 @@ trial de 15 dias cobria esse papel; o trial em si foi removido depois, em
 
 | # | Item | Por quê |
 |---|---|---|
-| 1 | Modo claro/escuro | Pedido explícito do usuário, 05/08/2026 — hoje `<html>` fica travado em `className="dark"` |
-| 2 | Suporte a idioma PT/EN | Pedido explícito do usuário, 05/08/2026 — projeto grande, todo texto do sistema (UI, e-mails, PDFs) está em PT-BR fixo, sem infra de i18n |
-| 3 | Ativar WhatsApp (Z-API) | Pendência mais antiga, diferencial de venda citado na própria landing page |
-| 4 | Reconciliar drift de migrations | Pré-requisito real pra confiar 100% em `migrate deploy`/CI futuro (ver seção 9, itens 10 e 13) |
-| 5 | Expandir cobertura de testes | Infra pronta (seção 9, item 13) — faltam testes para `service-orders.ts`, `nfse.ts`, `billing.ts` |
-| 6 | Ícones PWA + imagem `og:image` | Precisa de asset de design real (192x192, 512x512, 1200x630) |
-| 7 | Decidir sobre bônus de indicação sem rate-limit | Risco baixo hoje, mas fica registrado pra decisão consciente (ver seção 7.2) |
+| 1 | Suporte a idioma PT/EN | Pedido explícito do usuário, 05/08/2026 — projeto grande, todo texto do sistema (UI, e-mails, PDFs) está em PT-BR fixo, sem infra de i18n |
+| 2 | Ativar WhatsApp (Z-API) | Pendência mais antiga, diferencial de venda citado na própria landing page |
+| 3 | Reconciliar drift de migrations | Pré-requisito real pra confiar 100% em `migrate deploy`/CI futuro (ver seção 9, itens 10 e 13) |
+| 4 | Expandir cobertura de testes | Infra pronta (seção 9, item 13) — faltam testes para `service-orders.ts`, `nfse.ts`, `billing.ts` |
+| 5 | Ícones PWA + imagem `og:image` | Precisa de asset de design real (192x192, 512x512, 1200x630) |
+| 6 | Decidir sobre bônus de indicação sem rate-limit | Risco baixo hoje, mas fica registrado pra decisão consciente (ver seção 7.2) |
 
 ---
 
