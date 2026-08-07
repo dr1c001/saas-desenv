@@ -228,6 +228,56 @@ Pedido explícito de reverificar tudo depois da 7.1. Metodologia: 6 revisões pa
 
 **Lição arquitetural confirmada nesta rodada** (ver seção 9, item 12): toda função exportada de um arquivo `"use server"` vira um endpoint despachável pelo Next.js assim que é exportada — não quando alguém a chama do client. Um redirect na página que chama a função **não protege a função em si**. Cada Server Action sensível precisa se defender sozinha.
 
+### 7.2.1 Incidente: primeira cliente pagante sem acesso — 07/08/2026
+
+**Sintoma reportado:** cliente pagou (R$ 97, PIX, 06/08) e continuou vendo
+"Aguardando confirmação do pagamento"; junto disso, "todas as abas do sistema
+estão dando erro".
+
+**Causa raiz (uma só, para os dois sintomas):** na migração de
+`app-olive-six-67.vercel.app` para `servicoos.com.br` (seção 7.1.1) o código,
+o DNS e as env vars foram atualizados, mas **a URL dos webhooks no painel da
+Asaas não** — os dois webhooks continuaram apontando pro domínio antigo. Após
+as falhas consecutivas a Asaas os marcou `"interrupted": true` e parou de
+entregar. Sem o `PAYMENT_RECEIVED`, a `Subscription` ficou `PENDING`.
+
+E `PENDING` **bloqueia todas as abas**: `(dashboard)/layout.tsx` redireciona
+pra `/expired` tudo que não seja `/billing` ou `/settings`. Ou seja, uma falha
+de webhook não se apresenta como "pagamento pendente" — se apresenta como
+"o sistema inteiro quebrou", que foi exatamente como a cliente descreveu.
+
+**Correções:**
+1. Webhooks apontados pra `https://servicoos.com.br/api/webhooks/asaas`,
+   `interrupted` limpo e `authToken` reconfigurado. Os dois eram duplicados
+   com eventos sobrepostos (a Asaas rejeita URL igual com eventos iguais) —
+   consolidados num só, com `SUBSCRIPTION_DELETED` incluído, e o segundo
+   desativado.
+2. Acesso da cliente liberado **reenviando o evento real pelo próprio
+   webhook** (`pay_ulhdt0rtag3oafpc`) em vez de editar o banco na mão — assim
+   a correção também serviu de teste de ponta a ponta do fluxo.
+3. Rede de segurança no cron diário: reconcilia contra a Asaas qualquer
+   `Subscription` `PENDING` cujo pagamento já esteja `RECEIVED`/`CONFIRMED`,
+   loga o caso e ativa. Idempotente, mesmo caminho do webhook.
+
+**Lição:** trocar de domínio exige uma varredura em **todos os serviços
+externos que apontam de volta pra nós**, não só nos que nós chamamos. Nesta
+migração o Resend foi lembrado (DKIM/SPF) e o Asaas não. Vale reler a lista de
+integrações da seção 6 a cada troca de domínio. Pior ainda: um webhook morto é
+**silencioso por natureza** — ninguém erra, nada loga, e o primeiro sinal é o
+cliente reclamando. Daí a reconciliação diária.
+
+**Erro de diagnóstico que custou tempo (registrar pra não repetir):** ao
+investigar as "abas com erro" pelo navegador headless, todas apareciam presas
+num esqueleto de carregamento, com o conteúdo real dentro de `<template>` sem
+ser aplicado. Cheguei a fazer rollback de produção achando que era regressão
+do i18n. Não era: o painel do navegador não estava sendo exibido, então a aba
+**não compõe frames** e os scripts inline finais do streaming do React nunca
+executam. O servidor estava saudável o tempo todo (18/18 abas em 200, 15
+requisições concorrentes sem falha, em ambas as versões). **Antes de suspeitar
+do código, confirmar o sintoma por um caminho que não dependa de renderização**
+— `fetch()` do HTML e conferência de status/tamanho já teria descartado a
+hipótese em um passo.
+
 ### 7.3 Auditoria completa pré-venda — 05/08/2026
 
 Pedido explícito de revisar o código inteiro (não só o diff), todas as abas,

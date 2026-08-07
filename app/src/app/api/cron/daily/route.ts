@@ -6,6 +6,14 @@ import {
 } from "@/lib/resend"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 
+// Mesma decodificação base64 usada em lib/asaas.ts (ver o porquê lá) — aqui a
+// chave é lida direto pra não importar o módulo inteiro só por uma consulta.
+const ASAAS_BASE =
+  process.env.ASAAS_SANDBOX === "true"
+    ? "https://sandbox.asaas.com/api/v3"
+    : "https://www.asaas.com/api/v3"
+const asaasKey = () => Buffer.from(process.env.ASAAS_TOKEN_B64!, "base64").toString("utf-8")
+
 // Vercel Cron: runs every day at 09:00 BRT (12:00 UTC)
 // vercel.json: { "crons": [{ "path": "/api/cron/daily", "schedule": "0 12 * * *" }] }
 
@@ -16,7 +24,54 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date()
-  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, errors: 0 }
+  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, errors: 0 }
+
+  // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
+  // Em 07/08/2026 uma cliente pagou e ficou sem acesso por ~1 dia: os webhooks
+  // da Asaas ainda apontavam pro domínio antigo (app-olive-six-67.vercel.app)
+  // depois da migração pra servicoos.com.br, e a Asaas os marcou como
+  // "interrupted" após as falhas. Nada no sistema percebia — o único sinal era
+  // o cliente reclamando. Como PENDING bloqueia TODAS as abas (o layout do
+  // dashboard manda pra /expired), a falha do webhook não parece "pagamento
+  // não confirmado", parece "o sistema todo quebrou".
+  //
+  // Isto reconcilia direto na fonte da verdade (a Asaas) uma vez por dia, e é
+  // idempotente: usa exatamente o mesmo caminho do webhook.
+  try {
+    const stuck = await prisma.subscription.findMany({
+      where: { status: "PENDING", asaasId: { not: null } },
+      select: { id: true, asaasId: true, tenantId: true, planId: true, currentPeriodEnd: true },
+    })
+    results.stuckPending = stuck.length
+    for (const sub of stuck) {
+      const r = await fetch(`${ASAAS_BASE}/payments?subscription=${sub.asaasId}`, {
+        headers: { access_token: asaasKey() },
+      })
+      if (!r.ok) { results.errors++; continue }
+      const { data } = (await r.json()) as { data?: { id: string; status: string }[] }
+      const paid = (data ?? []).find((p) => p.status === "RECEIVED" || p.status === "CONFIRMED")
+      if (!paid) continue
+
+      console.error(
+        `[reconciliacao] assinatura ${sub.asaasId} paga na Asaas (${paid.id}) mas PENDING aqui — ` +
+          `webhook provavelmente nao chegou. Ativando tenant ${sub.tenantId}.`
+      )
+      await prisma.$transaction([
+        prisma.subscription.update({
+          where: { id: sub.id },
+          data: { status: "ACTIVE", lastProcessedPaymentId: paid.id },
+        }),
+        prisma.tenant.update({
+          where: { id: sub.tenantId },
+          data: { subscriptionStatus: "ACTIVE", planId: sub.planId },
+        }),
+      ])
+      results.reconciled++
+    }
+  } catch (err) {
+    console.error("[reconciliacao] falhou:", err)
+    results.errors++
+  }
 
   // ── Limpeza de rate limit expirado (janelas de no máximo 60min — qualquer
   // linha com mais de 24h já não afeta nenhuma checagem) ──────────────────────
