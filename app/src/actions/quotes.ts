@@ -8,11 +8,15 @@ import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { retryOnUniqueConflict } from "@/lib/retry"
 
+// As mensagens do zod são códigos estáveis, não frases prontas: quem monta o
+// texto é o formulário, via next-intl, no idioma do usuário. O schema é módulo
+// (sem acesso a hook/request), então traduzir aqui obrigaria a resolver locale
+// dentro da action. (Mesmo padrão de actions/auth.ts — i18n, item 1.)
 const quoteSchema = z.object({
-  clientName: z.string().min(2, "Nome do cliente obrigatório"),
+  clientName: z.string().min(2, "clientNameRequired"),
   clientAddress: z.string().optional(),
   clientContact: z.string().optional(),
-  description: z.string().min(3, "Descrição do serviço obrigatória"),
+  description: z.string().min(3, "descriptionRequired"),
   materials: z.string().optional(),
   amount: z.string().optional(),
   notes: z.string().optional(),
@@ -21,8 +25,9 @@ const quoteSchema = z.object({
 })
 
 export type QuoteFormState = {
+  // Valores são chaves de quotes.validation.*, resolvidas no formulário.
   errors?: Record<string, string[]>
-  message?: string
+  messageCode?: "NO_PERMISSION"
 }
 
 // "1.234,56" (formato BR, o mesmo do placeholder "0,00" do campo) —
@@ -49,7 +54,7 @@ export async function createQuote(
 ): Promise<QuoteFormState> {
   const { tenantId, role } = await getTenant()
   await requireActiveSubscription(tenantId)
-  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
+  if (role !== "OWNER" && role !== "ADMIN") return { messageCode: "NO_PERMISSION" }
   const raw = Object.fromEntries(formData.entries())
   const parsed = quoteSchema.safeParse(raw)
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
@@ -98,7 +103,7 @@ export async function updateQuote(
 ): Promise<QuoteFormState> {
   const { tenantId, role } = await getTenant()
   await requireActiveSubscription(tenantId)
-  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
+  if (role !== "OWNER" && role !== "ADMIN") return { messageCode: "NO_PERMISSION" }
   const raw = Object.fromEntries(formData.entries())
   const parsed = quoteSchema.safeParse(raw)
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }

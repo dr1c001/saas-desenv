@@ -1,6 +1,7 @@
 "use client"
 
 import { useTransition } from "react"
+import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { markRevenuePaid, markExpensePaid } from "@/actions/finance"
 import { CheckCircle } from "lucide-react"
@@ -11,6 +12,7 @@ type Props = {
 }
 
 export function PayButton({ type, id }: Props) {
+  const t = useTranslations("finance")
   const [isPending, startTransition] = useTransition()
 
   function handleClick() {
@@ -23,7 +25,7 @@ export function PayButton({ type, id }: Props) {
   return (
     <Button variant="ghost" size="sm" disabled={isPending} onClick={handleClick}>
       <CheckCircle className="size-4 mr-1" />
-      {isPending ? "..." : "Pagar"}
+      {isPending ? "..." : t("payButton.label")}
     </Button>
   )
 }

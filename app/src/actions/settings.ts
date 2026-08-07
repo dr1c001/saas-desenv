@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { getTranslations } from "next-intl/server"
+import { translateFieldErrors } from "@/lib/validation"
 
 // logoUrl é buscado pelo servidor (@react-pdf/renderer faz fetch() dela ao
 // gerar PDFs) — sem bloquear IPs privados/loopback/link-local, qualquer
@@ -45,21 +47,21 @@ function isSafeLogoUrl(url: string): boolean {
 }
 
 const tenantSchema = z.object({
-  name: z.string().min(2, "Nome obrigatório"),
+  name: z.string().min(2, "nameRequired"),
   document: z.string().optional(),
   logoUrl: z
     .string()
-    .url("URL inválida")
+    .url("invalidUrl")
     .optional()
     .or(z.literal(""))
-    .refine((url) => !url || isSafeLogoUrl(url), "URL do logotipo não permitida — use https e um host público"),
+    .refine((url) => !url || isSafeLogoUrl(url), "unsafeLogoUrl"),
   phone: z.string().optional(),
   website: z.string().optional(),
   address: z.string().optional(),
 })
 
 const userSchema = z.object({
-  name: z.string().min(2, "Nome obrigatório"),
+  name: z.string().min(2, "nameRequired"),
   document: z.string().optional(),
   phone: z.string().optional(),
   street: z.string().optional(),
@@ -81,9 +83,9 @@ export async function updateTenant(
   formData: FormData
 ): Promise<SettingsFormState> {
   const { tenantId, role } = await getTenant()
-  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
+  if (role !== "OWNER" && role !== "ADMIN") return { message: (await getTranslations("common"))("noPermission") }
   const parsed = tenantSchema.safeParse(Object.fromEntries(formData.entries()))
-  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
+  if (!parsed.success) return { errors: await translateFieldErrors(parsed.error.flatten().fieldErrors) }
 
   await prisma.tenant.update({
     where: { id: tenantId },
@@ -99,7 +101,7 @@ export async function updateTenant(
 
   revalidatePath("/settings")
   revalidatePath("/dashboard")
-  return { message: "Dados da empresa atualizados." }
+  return { message: (await getTranslations("settingsCore"))("saved.tenant") }
 }
 
 export async function updateProfile(
@@ -108,7 +110,7 @@ export async function updateProfile(
 ): Promise<SettingsFormState> {
   const { userId } = await getTenant()
   const parsed = userSchema.safeParse(Object.fromEntries(formData.entries()))
-  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
+  if (!parsed.success) return { errors: await translateFieldErrors(parsed.error.flatten().fieldErrors) }
 
   const { name, document, phone, street, number, complement, district, city, state, zipCode } = parsed.data
 
@@ -127,7 +129,7 @@ export async function updateProfile(
   }
 
   revalidatePath("/settings")
-  return { message: "Perfil atualizado." }
+  return { message: (await getTranslations("settingsCore"))("saved.profile") }
 }
 
 export async function updateWhatsApp(
@@ -136,12 +138,12 @@ export async function updateWhatsApp(
 ): Promise<SettingsFormState> {
   const { tenantId, role } = await getTenant()
   await requireActiveSubscription(tenantId)
-  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
+  if (role !== "OWNER" && role !== "ADMIN") return { message: (await getTranslations("common"))("noPermission") }
   const instance = (formData.get("zapiInstance") as string) || null
   const token = (formData.get("zapiToken") as string) || null
   await prisma.tenant.update({ where: { id: tenantId }, data: { zapiInstance: instance, zapiToken: token } })
   revalidatePath("/settings")
-  return { message: "Configurações de WhatsApp salvas." }
+  return { message: (await getTranslations("settingsCore"))("saved.whatsapp") }
 }
 
 // Idioma é por empresa (não por usuário/dispositivo, ao contrário do tema) —

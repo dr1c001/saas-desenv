@@ -2,12 +2,16 @@
 
 import { useState } from "react"
 import { CheckCircle2 } from "lucide-react"
+import { getTranslator } from "@/lib/i18n"
 
 type Props = {
   orderId: string
   clientToken: string
   existingScore: number | null
   existingFeedback: string | null
+  // Portal público não tem sessão — o idioma é o do tenant dono da OS e vem
+  // explícito da página, não do cookie do visitante. (Ver lib/i18n.ts.)
+  locale: "pt" | "en"
   // Nota sugerida pelo link do e-mail (?score=N) — só pré-seleciona, quem
   // decide se a nota é gravada é o clique em "Enviar avaliação" (POST de
   // verdade). Um GET que já gravasse a nota era vulnerável a scanner de
@@ -17,7 +21,8 @@ type Props = {
   prefillScore?: number | null
 }
 
-export function NpsWidget({ orderId, clientToken, existingScore, existingFeedback, prefillScore }: Props) {
+export function NpsWidget({ orderId, clientToken, existingScore, existingFeedback, prefillScore, locale }: Props) {
+  const t = getTranslator(locale, "portal")
   const [score, setScore] = useState<number | null>(existingScore ?? prefillScore ?? null)
   const [feedback, setFeedback] = useState(existingFeedback ?? "")
   const [saved, setSaved] = useState(!!existingScore)
@@ -48,17 +53,17 @@ export function NpsWidget({ orderId, clientToken, existingScore, existingFeedbac
     return (
       <div className="flex flex-col items-center gap-2 py-2 text-green-600">
         <CheckCircle2 className="size-8" />
-        <p className="font-semibold">Obrigado pela avaliação! ⭐</p>
+        <p className="font-semibold">{t("nps.thanks")}</p>
         {feedback && <p className="text-sm text-muted-foreground text-center">&ldquo;{feedback}&rdquo;</p>}
       </div>
     )
   }
 
-  const label = score === null ? "" : score >= 9 ? "Promotor 😊" : score >= 7 ? "Neutro 😐" : "Detrator 😟"
+  const label = score === null ? "" : score >= 9 ? t("nps.promoter") : score >= 7 ? t("nps.passive") : t("nps.detractor")
 
   return (
     <div className="space-y-4">
-      <p className="text-sm">De 0 a 10, qual a probabilidade de você nos recomendar?</p>
+      <p className="text-sm">{t("nps.question")}</p>
       <div className="flex gap-1 flex-wrap">
         {Array.from({ length: 11 }, (_, i) => (
           <button
@@ -80,17 +85,17 @@ export function NpsWidget({ orderId, clientToken, existingScore, existingFeedbac
       <textarea
         value={feedback}
         onChange={(e) => setFeedback(e.target.value)}
-        placeholder="Deixe um comentário (opcional)..."
+        placeholder={t("nps.feedbackPlaceholder")}
         rows={3}
         className="w-full rounded-lg border bg-background px-3 py-2 text-sm resize-none"
       />
-      {error && <p className="text-xs text-red-500">Não conseguimos salvar sua avaliação. Tente novamente.</p>}
+      {error && <p className="text-xs text-red-500">{t("nps.saveError")}</p>}
       <button
         onClick={handleSave}
         disabled={score === null || saving}
         className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
-        {saving ? "Enviando..." : "Enviar avaliação"}
+        {saving ? t("nps.submitting") : t("nps.submit")}
       </button>
     </div>
   )

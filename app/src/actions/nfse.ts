@@ -4,13 +4,14 @@ import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { nfeio } from "@/lib/nfeio"
 import { revalidatePath } from "next/cache"
+import { getTranslations } from "next-intl/server"
 
 export async function registerFiscalCompany(formData: FormData) {
   const { tenantId, role } = await getTenant()
   // Página /settings/fiscal já é OWNER-only — a action precisa da mesma
   // checagem, senão ADMIN/TECHNICIAN chamam direto e sobrescrevem o CNPJ/
   // config fiscal usado em toda nota futura. (Achado em revisão de segurança 2026-07-19.)
-  if (role !== "OWNER") throw new Error("Sem permissão.")
+  if (role !== "OWNER") throw new Error((await getTranslations("common"))("noPermission"))
   await requireActiveSubscription(tenantId)
 
   // A partir de 01/08/2026 a Receita Federal passa a emitir CNPJ alfanumérico
@@ -31,7 +32,7 @@ export async function registerFiscalCompany(formData: FormData) {
   const issRate = parseFloat((formData.get("issRate") as string) || "5")
 
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } })
-  if (!tenant) throw new Error("Tenant não encontrado")
+  if (!tenant) throw new Error((await getTranslations("errors"))("tenantNotFound"))
 
   const company = await nfeio.createCompany({
     name: tenant.name,
@@ -71,7 +72,7 @@ export async function emitNfse(orderId: string) {
   // Emite nota fiscal real e irreversível (sem cancelamento implementado no
   // produto) — não pode ficar acessível a qualquer papel.
   // (Achado em revisão de segurança 2026-07-19.)
-  if (role !== "OWNER" && role !== "ADMIN") throw new Error("Sem permissão.")
+  if (role !== "OWNER" && role !== "ADMIN") throw new Error((await getTranslations("common"))("noPermission"))
   await requireActiveSubscription(tenantId)
 
   const [order, tenant] = await Promise.all([
@@ -85,12 +86,13 @@ export async function emitNfse(orderId: string) {
     prisma.tenant.findUnique({ where: { id: tenantId } }),
   ])
 
-  if (!order) throw new Error("OS não encontrada")
-  if (!tenant?.nfeioCompanyId) throw new Error("Configure os dados fiscais em Configurações → Fiscal")
-  if (order.nfseId) throw new Error("NFS-e já emitida para esta OS")
+  const te = await getTranslations("errors")
+  if (!order) throw new Error(te("orderNotFound"))
+  if (!tenant?.nfeioCompanyId) throw new Error(te("configureFiscal"))
+  if (order.nfseId) throw new Error(te("nfseAlreadyIssued"))
 
   const amount = Number(order.totalAmount)
-  if (amount <= 0) throw new Error("OS sem valor — adicione itens antes de emitir NFS-e")
+  if (amount <= 0) throw new Error(te("orderWithoutAmount"))
 
   const description =
     order.items.length > 0

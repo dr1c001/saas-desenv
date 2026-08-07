@@ -6,11 +6,13 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { geocodeAddress } from "@/lib/geocode"
+import { getTranslations } from "next-intl/server"
+import { translateFieldErrors } from "@/lib/validation"
 
 const clientSchema = z.object({
-  name: z.string().min(2, "Nome obrigatório"),
+  name: z.string().min(2, "nameRequired"),
   document: z.string().optional(),
-  email: z.string().email("E-mail inválido").optional().or(z.literal("")),
+  email: z.string().email("invalidEmail").optional().or(z.literal("")),
   phone: z.string().optional(),
   whatsapp: z.string().optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "DEFAULTER"]).default("ACTIVE"),
@@ -39,7 +41,7 @@ export async function createClient(
   const parsed = clientSchema.safeParse(raw)
 
   if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors }
+    return { errors: await translateFieldErrors(parsed.error.flatten().fieldErrors) }
   }
 
   const { name, document, email, phone, whatsapp, status, ...address } = parsed.data
@@ -86,13 +88,14 @@ export async function updateClient(
   // fluxo legítimo), mas updateClient também permite marcar o cliente como
   // DEFAULTER (inadimplente) — isso precisa de OWNER/ADMIN.
   // (Achado em revisão de segurança 2026-07-19.)
-  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
+  const tCommon = await getTranslations("common")
+  if (role !== "OWNER" && role !== "ADMIN") return { message: tCommon("noPermission") }
 
   const raw = Object.fromEntries(formData.entries())
   const parsed = clientSchema.safeParse(raw)
 
   if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors }
+    return { errors: await translateFieldErrors(parsed.error.flatten().fieldErrors) }
   }
 
   const { name, document, email, phone, whatsapp, status, ...address } = parsed.data

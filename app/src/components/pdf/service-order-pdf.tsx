@@ -7,6 +7,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer"
 import { formatOsNumber } from "@/lib/utils"
+import { getTranslator } from "@/lib/i18n"
 
 const styles = StyleSheet.create({
   page: {
@@ -89,14 +90,6 @@ const styles = StyleSheet.create({
   },
 })
 
-const statusLabel: Record<string, string> = {
-  OPEN: "Aberta",
-  IN_PROGRESS: "Em andamento",
-  DONE: "Concluída",
-  INVOICED: "Faturada",
-  CANCELLED: "Cancelada",
-}
-
 type OrderItem = {
   id: string
   description: string
@@ -106,6 +99,7 @@ type OrderItem = {
 }
 
 type Props = {
+  locale: "pt" | "en"
   companyName: string
   logoUrl?: string | null
   companyPhone?: string | null
@@ -139,15 +133,24 @@ type Props = {
   }
 }
 
-function fmt(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+// Valor sempre em BRL (documento comercial brasileiro) — só o agrupamento de
+// milhar/decimal e o formato de data seguem o idioma de leitura do tenant.
+function fmtCurrency(value: number, locale: "pt" | "en") {
+  return value.toLocaleString(locale === "en" ? "en-US" : "pt-BR", { style: "currency", currency: "BRL" })
 }
 
-function fmtDate(date: Date | string) {
-  return new Date(date).toLocaleDateString("pt-BR")
+function fmtDateFor(date: Date | string, locale: "pt" | "en") {
+  return new Date(date).toLocaleDateString(locale === "en" ? "en-US" : "pt-BR")
 }
 
-export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, companyAddress, companyWebsite }: Props) {
+export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, companyAddress, companyWebsite, locale }: Props) {
+  // PDFs são gerados via renderToBuffer, fora do request context do Next.js —
+  // o locale vem explícito por prop (ver lib/i18n.ts).
+  const t = getTranslator(locale, "pdf")
+  const tc = getTranslator(locale, "common")
+  const fmt = (value: number) => fmtCurrency(value, locale)
+  const fmtDate = (date: Date | string) => fmtDateFor(date, locale)
+
   const addr = order.client.address
   const addressLine = addr
     ? [addr.street, addr.number, addr.city, addr.state, addr.zipCode]
@@ -155,6 +158,10 @@ export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, com
         .join(", ")
     : null
   const osNumber = formatOsNumber(order.number, order.createdAt)
+  // status vem do banco como string — .has() preserva o fallback pro valor cru
+  // que o mapa local tinha antes (`statusLabel[status] ?? status`).
+  const statusKey = `serviceOrderStatus.${order.status}` as "serviceOrderStatus.OPEN"
+  const statusText = tc.has(statusKey) ? tc(statusKey) : order.status
 
   return (
     <Document>
@@ -169,11 +176,11 @@ export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, com
             )}
             {logoUrl && <Text style={{ fontSize: 11, marginTop: 4 }}>{companyName}</Text>}
             {companyAddress && <Text style={{ fontSize: 9, color: "#555", marginTop: 3 }}>{companyAddress}</Text>}
-            {companyPhone && <Text style={{ fontSize: 9, color: "#555", marginTop: 1 }}>Tel: {companyPhone}</Text>}
+            {companyPhone && <Text style={{ fontSize: 9, color: "#555", marginTop: 1 }}>{t("common.phonePrefix")} {companyPhone}</Text>}
             {companyWebsite && <Text style={{ fontSize: 9, color: "#555", marginTop: 1 }}>{companyWebsite}</Text>}
           </View>
           <View>
-            <Text style={styles.osTitle}>Ordem de Serviço</Text>
+            <Text style={styles.osTitle}>{t("serviceOrder.docTitle")}</Text>
             <Text style={styles.osNumber}>{osNumber}</Text>
           </View>
         </View>
@@ -181,24 +188,24 @@ export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, com
         {/* Status + datas */}
         <View style={[styles.section, { flexDirection: "row", gap: 24 }]}>
           <View>
-            <Text style={styles.sectionTitle}>Status</Text>
+            <Text style={styles.sectionTitle}>{t("common.status")}</Text>
             <View style={styles.statusBadge}>
-              <Text>{statusLabel[order.status] ?? order.status}</Text>
+              <Text>{statusText}</Text>
             </View>
           </View>
           <View>
-            <Text style={styles.sectionTitle}>Criada em</Text>
+            <Text style={styles.sectionTitle}>{t("serviceOrder.createdAt")}</Text>
             <Text>{fmtDate(order.createdAt)}</Text>
           </View>
           {order.scheduledAt && (
             <View>
-              <Text style={styles.sectionTitle}>Agendada</Text>
+              <Text style={styles.sectionTitle}>{t("serviceOrder.scheduledAt")}</Text>
               <Text>{fmtDate(order.scheduledAt)}</Text>
             </View>
           )}
           {order.concludedAt && (
             <View>
-              <Text style={styles.sectionTitle}>Concluída</Text>
+              <Text style={styles.sectionTitle}>{t("serviceOrder.concludedAt")}</Text>
               <Text>{fmtDate(order.concludedAt)}</Text>
             </View>
           )}
@@ -206,12 +213,12 @@ export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, com
 
         {/* Serviço */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Serviço</Text>
+          <Text style={styles.sectionTitle}>{t("serviceOrder.serviceTitle")}</Text>
           <Text style={{ fontFamily: "Helvetica-Bold", marginBottom: 4 }}>{order.title}</Text>
           {order.description && <Text style={{ color: "#555", marginBottom: 4 }}>{order.description}</Text>}
           {order.conclusionNote && (
             <View style={{ marginTop: 6 }}>
-              <Text style={[styles.sectionTitle, { marginBottom: 2 }]}>Serviços Realizados</Text>
+              <Text style={[styles.sectionTitle, { marginBottom: 2 }]}>{t("serviceOrder.servicesPerformedTitle")}</Text>
               <Text style={{ color: "#555" }}>{order.conclusionNote}</Text>
             </View>
           )}
@@ -219,32 +226,32 @@ export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, com
 
         {/* Cliente */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cliente</Text>
+          <Text style={styles.sectionTitle}>{t("common.clientTitle")}</Text>
           <View style={styles.row}>
-            <Text style={styles.label}>Nome:</Text>
+            <Text style={styles.label}>{t("common.nameLabel")}</Text>
             <Text style={[styles.value, { fontFamily: "Helvetica-Bold" }]}>{order.client.name}</Text>
           </View>
           {order.client.document && (
             <View style={styles.row}>
-              <Text style={styles.label}>Documento:</Text>
+              <Text style={styles.label}>{t("serviceOrder.documentLabel")}</Text>
               <Text style={styles.value}>{order.client.document}</Text>
             </View>
           )}
           {order.client.phone && (
             <View style={styles.row}>
-              <Text style={styles.label}>Telefone:</Text>
+              <Text style={styles.label}>{t("serviceOrder.phoneLabel")}</Text>
               <Text style={styles.value}>{order.client.phone}</Text>
             </View>
           )}
           {order.client.email && (
             <View style={styles.row}>
-              <Text style={styles.label}>E-mail:</Text>
+              <Text style={styles.label}>{t("serviceOrder.emailLabel")}</Text>
               <Text style={styles.value}>{order.client.email}</Text>
             </View>
           )}
           {addressLine && (
             <View style={styles.row}>
-              <Text style={styles.label}>Endereço:</Text>
+              <Text style={styles.label}>{t("common.addressLabel")}</Text>
               <Text style={styles.value}>{addressLine}</Text>
             </View>
           )}
@@ -253,7 +260,7 @@ export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, com
         {/* Técnico */}
         {order.technician && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Responsável</Text>
+            <Text style={styles.sectionTitle}>{t("serviceOrder.responsibleTitle")}</Text>
             <Text>{order.technician.name}</Text>
           </View>
         )}
@@ -261,13 +268,13 @@ export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, com
         {/* Itens */}
         {order.items.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Itens / Serviços</Text>
+            <Text style={styles.sectionTitle}>{t("serviceOrder.itemsTitle")}</Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
-                <Text style={[styles.colDesc, { fontFamily: "Helvetica-Bold" }]}>Descrição</Text>
-                <Text style={[styles.colQty, { fontFamily: "Helvetica-Bold" }]}>Qtd.</Text>
-                <Text style={[styles.colUnit, { fontFamily: "Helvetica-Bold" }]}>Unit.</Text>
-                <Text style={[styles.colTotal, { fontFamily: "Helvetica-Bold" }]}>Total</Text>
+                <Text style={[styles.colDesc, { fontFamily: "Helvetica-Bold" }]}>{t("serviceOrder.columns.description")}</Text>
+                <Text style={[styles.colQty, { fontFamily: "Helvetica-Bold" }]}>{t("serviceOrder.columns.quantity")}</Text>
+                <Text style={[styles.colUnit, { fontFamily: "Helvetica-Bold" }]}>{t("serviceOrder.columns.unitPrice")}</Text>
+                <Text style={[styles.colTotal, { fontFamily: "Helvetica-Bold" }]}>{t("serviceOrder.columns.total")}</Text>
               </View>
               {order.items.map((item) => (
                 <View key={item.id} style={styles.tableRow}>
@@ -279,7 +286,7 @@ export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, com
               ))}
             </View>
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>TOTAL</Text>
+              <Text style={styles.totalLabel}>{t("serviceOrder.totalLabel")}</Text>
               <Text style={styles.totalValue}>{fmt(Number(order.totalAmount))}</Text>
             </View>
           </View>
@@ -287,8 +294,8 @@ export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, com
 
         {/* Assinaturas */}
         <View style={styles.signatureSection}>
-          <Text style={styles.signatureLine}>Assinatura do Cliente</Text>
-          <Text style={styles.signatureLine}>Assinatura do Responsável</Text>
+          <Text style={styles.signatureLine}>{t("common.clientSignature")}</Text>
+          <Text style={styles.signatureLine}>{t("common.responsibleSignature")}</Text>
         </View>
       </Page>
     </Document>

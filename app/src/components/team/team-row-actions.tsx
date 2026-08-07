@@ -1,6 +1,7 @@
 "use client"
 
 import { useTransition } from "react"
+import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { updateTeamMemberRole, removeTeamMember } from "@/actions/team"
 import { Trash2 } from "lucide-react"
@@ -12,6 +13,8 @@ type Props = { memberId: string; currentRole: string }
 
 export function TeamRowActions({ memberId, currentRole }: Props) {
   const [isPending, startTransition] = useTransition()
+  const t = useTranslations("team.rowActions")
+  const tc = useTranslations("common")
 
   if (currentRole === "OWNER") return null
 
@@ -23,7 +26,7 @@ export function TeamRowActions({ memberId, currentRole }: Props) {
   }
 
   function handleRemove() {
-    if (!confirm("Remover este membro da equipe?")) return
+    if (!confirm(t("confirmRemove"))) return
     startTransition(() => removeTeamMember(memberId))
   }
 
@@ -34,8 +37,8 @@ export function TeamRowActions({ memberId, currentRole }: Props) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="ADMIN">Administrador</SelectItem>
-          <SelectItem value="TECHNICIAN">Técnico</SelectItem>
+          <SelectItem value="ADMIN">{tc("roles.ADMIN")}</SelectItem>
+          <SelectItem value="TECHNICIAN">{tc("roles.TECHNICIAN")}</SelectItem>
         </SelectContent>
       </Select>
       <Button

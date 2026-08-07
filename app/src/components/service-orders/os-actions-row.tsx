@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useTransition } from "react"
+import { useTranslations } from "next-intl"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { FileDown, Play } from "lucide-react"
 import { ConcluirDialog } from "./conclude-dialog"
@@ -18,6 +19,7 @@ type Props = {
 }
 
 export function OsActionsRow({ id, title, status, conclusionNote, items }: Props) {
+  const t = useTranslations("serviceOrdersComponents")
   const [isPending, startTransition] = useTransition()
 
   function handleStart() {
@@ -35,7 +37,7 @@ export function OsActionsRow({ id, title, status, conclusionNote, items }: Props
           disabled={isPending}
         >
           <Play className="size-3.5" />
-          Iniciar
+          {t("osActionsRow.startButton")}
         </Button>
       )}
       <ConcluirDialog

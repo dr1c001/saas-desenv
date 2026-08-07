@@ -3,10 +3,20 @@
 import { useRef, useState } from "react"
 import SignatureCanvas from "react-signature-canvas"
 import { CheckCircle2, RotateCcw, PenLine } from "lucide-react"
+import { getTranslator } from "@/lib/i18n"
 
-type Props = { orderId: string; clientToken: string; existingSignatureUrl?: string | null }
+type Props = {
+  orderId: string
+  clientToken: string
+  existingSignatureUrl?: string | null
+  // Portal público não tem sessão — o idioma é o do tenant dono da OS e vem
+  // explícito da página, não do cookie do visitante. (Ver lib/i18n.ts.)
+  locale: "pt" | "en"
+}
 
-export function SignaturePadPublic({ orderId, clientToken, existingSignatureUrl }: Props) {
+export function SignaturePadPublic({ orderId, clientToken, existingSignatureUrl, locale }: Props) {
+  const t = getTranslator(locale, "portal")
+  const tc = getTranslator(locale, "common")
   const sigRef = useRef<SignatureCanvas>(null)
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -14,7 +24,7 @@ export function SignaturePadPublic({ orderId, clientToken, existingSignatureUrl 
 
   async function handleSave() {
     if (!sigRef.current || sigRef.current.isEmpty()) {
-      setError("Por favor, assine antes de confirmar.")
+      setError(t("signature.emptyError"))
       return
     }
     setSaving(true)
@@ -36,10 +46,10 @@ export function SignaturePadPublic({ orderId, clientToken, existingSignatureUrl 
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-green-600 font-medium text-sm">
           <CheckCircle2 className="size-4" />
-          Serviço confirmado pelo cliente
+          {t("signature.confirmed")}
         </div>
         {existingSignatureUrl && (
-          <img src={existingSignatureUrl} alt="Assinatura" className="border rounded bg-white max-h-24" />
+          <img src={existingSignatureUrl} alt={t("signature.altText")} className="border rounded bg-white max-h-24" />
         )}
       </div>
     )
@@ -49,7 +59,7 @@ export function SignaturePadPublic({ orderId, clientToken, existingSignatureUrl 
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground flex items-center gap-1">
         <PenLine className="size-4" />
-        Assine abaixo para confirmar a execução do serviço.
+        {t("signature.instructions")}
       </p>
       <div className="border rounded bg-white overflow-hidden touch-none">
         <SignatureCanvas
@@ -65,14 +75,14 @@ export function SignaturePadPublic({ orderId, clientToken, existingSignatureUrl 
           className="flex items-center gap-1 rounded border px-3 py-2 text-sm hover:bg-muted"
         >
           <RotateCcw className="size-3.5" />
-          Limpar
+          {t("signature.clearButton")}
         </button>
         <button
           onClick={handleSave}
           disabled={saving}
           className="flex-1 rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          {saving ? "Salvando..." : "Confirmar assinatura"}
+          {saving ? tc("saving") : t("signature.confirmButton")}
         </button>
       </div>
     </div>

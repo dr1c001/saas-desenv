@@ -10,39 +10,42 @@ import { getProviders } from "@/actions/providers"
 import { SearchBar } from "@/components/shared/search-bar"
 import { DeleteButton } from "@/components/shared/delete-button"
 import { deleteProvider } from "@/actions/providers"
+import { getTranslations } from "next-intl/server"
 
 type SearchParams = Promise<{ q?: string }>
 
 export default async function ProvidersPage({ searchParams }: { searchParams: SearchParams }) {
   const { q } = await searchParams
   const providers = await getProviders(q)
+  const t = await getTranslations("providers")
+  const tc = await getTranslations("common")
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Prestadores de Serviço</h1>
+        <h1 className="text-2xl font-bold">{t("list.title")}</h1>
         <Link href="/providers/new" className={buttonVariants()}>
           <Plus className="size-4 mr-2" />
-          Novo prestador
+          {t("list.newButton")}
         </Link>
       </div>
 
       <Suspense>
-        <SearchBar placeholder="Buscar por nome ou especialidade..." />
+        <SearchBar placeholder={t("list.searchPlaceholder")} />
       </Suspense>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{providers.length} prestador{providers.length !== 1 ? "es" : ""}</CardTitle>
+          <CardTitle className="text-base">{t("list.resultsCount", { count: providers.length })}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {providers.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
               <HardHat className="size-8" />
-              <p className="text-sm">{q ? "Nenhum prestador encontrado." : "Nenhum prestador cadastrado ainda."}</p>
+              <p className="text-sm">{q ? t("list.emptyFiltered") : t("list.emptyState")}</p>
               {!q && (
                 <Link href="/providers/new" className={buttonVariants({ variant: "outline" })}>
-                  Cadastrar primeiro prestador
+                  {t("list.emptyCta")}
                 </Link>
               )}
             </div>
@@ -50,11 +53,11 @@ export default async function ProvidersPage({ searchParams }: { searchParams: Se
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Especialidade</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Documento</TableHead>
+                  <TableHead>{t("list.columns.name")}</TableHead>
+                  <TableHead>{t("list.columns.specialty")}</TableHead>
+                  <TableHead>{t("list.columns.phone")}</TableHead>
+                  <TableHead>{t("list.columns.email")}</TableHead>
+                  <TableHead>{t("list.columns.document")}</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -69,9 +72,9 @@ export default async function ProvidersPage({ searchParams }: { searchParams: Se
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Link href={`/providers/${p.id}/edit`} className={buttonVariants({ variant: "outline", size: "sm" })}>
-                          Editar
+                          {tc("edit")}
                         </Link>
-                        <DeleteButton action={deleteProvider.bind(null, p.id)} label="Excluir prestador" />
+                        <DeleteButton action={deleteProvider.bind(null, p.id)} label={t("list.deleteButton")} />
                       </div>
                     </TableCell>
                   </TableRow>

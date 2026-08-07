@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Suspense } from "react"
+import { getTranslations } from "next-intl/server"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,22 +13,18 @@ import { SearchBar } from "@/components/shared/search-bar"
 import { StatusFilter } from "@/components/shared/status-filter"
 import { formatCurrency, formatDate, formatOsNumber } from "@/lib/utils"
 
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  DONE: { label: "Concluída", variant: "outline" },
-  INVOICED: { label: "Faturada", variant: "default" },
-  CANCELLED: { label: "Cancelada", variant: "destructive" },
+const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+  DONE: "outline",
+  INVOICED: "default",
+  CANCELLED: "destructive",
 }
-
-const statusOptions = [
-  { value: "DONE", label: "Concluída" },
-  { value: "INVOICED", label: "Faturada" },
-  { value: "CANCELLED", label: "Cancelada" },
-]
 
 type SearchParams = Promise<{ q?: string; status?: string }>
 
 export default async function HistoryPage({ searchParams }: { searchParams: SearchParams }) {
   const { q, status } = await searchParams
+  const t = await getTranslations("history")
+  const tCommon = await getTranslations("common")
   // Default to completed/invoiced/cancelled if no filter selected
   const effectiveStatus = status || undefined
   const orders = await getServiceOrders({
@@ -36,45 +33,51 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
     statusIn: effectiveStatus ? undefined : ["DONE", "INVOICED", "CANCELLED"],
   })
 
+  const statusOptions = [
+    { value: "DONE", label: tCommon("serviceOrderStatus.DONE") },
+    { value: "INVOICED", label: tCommon("serviceOrderStatus.INVOICED") },
+    { value: "CANCELLED", label: tCommon("serviceOrderStatus.CANCELLED") },
+  ]
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Histórico de Serviços</h1>
-          <p className="text-sm text-muted-foreground mt-1">Ordens concluídas, faturadas e canceladas</p>
+          <h1 className="text-2xl font-bold">{t("list.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("list.subtitle")}</p>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <Suspense>
-          <SearchBar placeholder="Buscar por título ou cliente..." />
-          <StatusFilter options={statusOptions} placeholder="Todos" />
+          <SearchBar placeholder={t("list.searchPlaceholder")} />
+          <StatusFilter options={statusOptions} placeholder={t("list.statusFilterPlaceholder")} />
         </Suspense>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {orders.length} registro{orders.length !== 1 ? "s" : ""}
+            {t("list.countRecords", { count: orders.length })}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {orders.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
               <History className="size-8" />
-              <p className="text-sm">Nenhum serviço concluído ainda.</p>
+              <p className="text-sm">{t("list.emptyNone")}</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nº</TableHead>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Responsável</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Concluída</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{t("list.columns.number")}</TableHead>
+                  <TableHead>{t("list.columns.title")}</TableHead>
+                  <TableHead>{t("list.columns.client")}</TableHead>
+                  <TableHead>{t("list.columns.responsible")}</TableHead>
+                  <TableHead>{t("list.columns.total")}</TableHead>
+                  <TableHead>{t("list.columns.concludedAt")}</TableHead>
+                  <TableHead>{t("list.columns.status")}</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -94,8 +97,8 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
                       {os.concludedAt ? formatDate(os.concludedAt) : "—"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusConfig[os.status]?.variant ?? "secondary"}>
-                        {statusConfig[os.status]?.label ?? os.status}
+                      <Badge variant={statusVariant[os.status] ?? "secondary"}>
+                        {tCommon(`serviceOrderStatus.${os.status}` as "serviceOrderStatus.OPEN")}
                       </Badge>
                     </TableCell>
                     <TableCell>

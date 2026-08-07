@@ -6,6 +6,7 @@ import { ServiceOrderPDF } from "@/components/pdf/service-order-pdf"
 import { prisma } from "@/lib/prisma"
 import { createClient } from "@/lib/supabase/server"
 import { requireActiveSubscription } from "@/lib/auth"
+import { getTranslator } from "@/lib/i18n"
 import React, { type ReactElement, type JSXElementConstructor } from "react"
 
 export async function GET(
@@ -18,7 +19,7 @@ export async function GET(
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { tenantId: true, tenant: { select: { name: true, logoUrl: true, phone: true, address: true, website: true } } },
+    select: { tenantId: true, tenant: { select: { name: true, logoUrl: true, phone: true, address: true, website: true, locale: true } } },
   })
   if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   // Bloqueio de assinatura é só de página — essa rota é despachável direto
@@ -38,6 +39,11 @@ export async function GET(
 
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
+  // O PDF é renderizado fora do request context do Next.js — o locale do
+  // tenant precisa ser passado explícito. (Item 1 do roadmap, 06/08/2026.)
+  const locale = dbUser.tenant.locale
+  const t = getTranslator(locale, "pdf")
+
   const buildElement = (logoUrl: string | null) => {
     return React.createElement(ServiceOrderPDF, {
       order,
@@ -46,6 +52,7 @@ export async function GET(
       companyPhone: dbUser.tenant.phone,
       companyAddress: dbUser.tenant.address,
       companyWebsite: dbUser.tenant.website,
+      locale,
     }) as unknown as ReactElement<DocumentProps, JSXElementConstructor<DocumentProps>>
   }
 
@@ -63,14 +70,15 @@ export async function GET(
       buffer = await renderToBuffer(buildElement(null))
     } catch (err2) {
       console.error("Falha ao gerar PDF de OS mesmo sem logo:", err2)
-      return NextResponse.json({ error: "Falha ao gerar PDF" }, { status: 500 })
+      return NextResponse.json({ error: t("errors.generateFailed") }, { status: 500 })
     }
   }
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="OS-${order.number}.pdf"`,
+      // Header HTTP é ASCII — os valores de fileNamePrefix são sem acento.
+      "Content-Disposition": `inline; filename="${t("serviceOrder.fileNamePrefix")}-${order.number}.pdf"`,
     },
   })
 }

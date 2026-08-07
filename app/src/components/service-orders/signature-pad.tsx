@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
+import { useTranslations } from "next-intl"
 import SignatureCanvas from "react-signature-canvas"
 import { buttonVariants } from "@/components/ui/button"
 import { CheckCircle2, RotateCcw, PenLine } from "lucide-react"
@@ -8,6 +9,8 @@ import { CheckCircle2, RotateCcw, PenLine } from "lucide-react"
 type Props = { orderId: string; existingSignatureUrl?: string | null }
 
 export function SignaturePad({ orderId, existingSignatureUrl }: Props) {
+  const t = useTranslations("serviceOrdersComponents")
+  const tc = useTranslations("common")
   const sigRef = useRef<SignatureCanvas>(null)
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -15,7 +18,7 @@ export function SignaturePad({ orderId, existingSignatureUrl }: Props) {
 
   async function handleSave() {
     if (!sigRef.current || sigRef.current.isEmpty()) {
-      setError("Por favor, assine antes de salvar.")
+      setError(t("signaturePad.emptyError"))
       return
     }
     setSaving(true)
@@ -42,12 +45,12 @@ export function SignaturePad({ orderId, existingSignatureUrl }: Props) {
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
           <CheckCircle2 className="size-4" />
-          Assinatura do cliente registrada
+          {t("signaturePad.registered")}
         </div>
         {existingSignatureUrl && (
           <img
             src={existingSignatureUrl}
-            alt="Assinatura do cliente"
+            alt={t("signaturePad.altText")}
             className="border rounded-md bg-white max-h-24"
           />
         )}
@@ -59,7 +62,7 @@ export function SignaturePad({ orderId, existingSignatureUrl }: Props) {
     <div className="space-y-2">
       <p className="text-sm text-muted-foreground flex items-center gap-1">
         <PenLine className="size-4" />
-        Solicite ao cliente que assine abaixo para confirmar a execução do serviço.
+        {t("signaturePad.instructions")}
       </p>
       <div className="border rounded-md bg-white overflow-hidden touch-none">
         <SignatureCanvas
@@ -75,14 +78,14 @@ export function SignaturePad({ orderId, existingSignatureUrl }: Props) {
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
           <RotateCcw className="size-3.5 mr-1" />
-          Limpar
+          {t("signaturePad.clearButton")}
         </button>
         <button
           onClick={handleSave}
           disabled={saving}
           className={buttonVariants({ size: "sm" })}
         >
-          {saving ? "Salvando..." : "Confirmar assinatura"}
+          {saving ? tc("saving") : t("signaturePad.confirmButton")}
         </button>
       </div>
     </div>

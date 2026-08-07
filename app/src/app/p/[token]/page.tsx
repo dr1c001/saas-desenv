@@ -6,13 +6,16 @@ import { CheckCircle2, Clock, Wrench, FileCheck2, XCircle, Star } from "lucide-r
 import { SignaturePadPublic } from "@/components/service-orders/signature-pad-public"
 import { NpsWidget } from "@/components/portal/nps-widget"
 import { formatCurrency } from "@/lib/utils"
+import { getTranslator } from "@/lib/i18n"
 
-const statusConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  OPEN:        { label: "Aguardando atendimento", icon: Clock,       color: "text-blue-500" },
-  IN_PROGRESS: { label: "Em andamento",           icon: Wrench,      color: "text-yellow-500" },
-  DONE:        { label: "Concluída",              icon: CheckCircle2, color: "text-green-500" },
-  INVOICED:    { label: "Faturada",               icon: FileCheck2,  color: "text-purple-500" },
-  CANCELLED:   { label: "Cancelada",              icon: XCircle,     color: "text-red-500" },
+// Só ícone e cor — os rótulos dos 5 status vêm de common.serviceOrderStatus,
+// compartilhados com o resto do app.
+const statusConfig: Record<string, { icon: React.ElementType; color: string }> = {
+  OPEN:        { icon: Clock,        color: "text-blue-500" },
+  IN_PROGRESS: { icon: Wrench,       color: "text-yellow-500" },
+  DONE:        { icon: CheckCircle2, color: "text-green-500" },
+  INVOICED:    { icon: FileCheck2,   color: "text-purple-500" },
+  CANCELLED:   { icon: XCircle,      color: "text-red-500" },
 }
 
 export default async function ClientPortalPage({
@@ -31,7 +34,7 @@ export default async function ClientPortalPage({
     where: { clientToken: token },
     include: {
       items: true,
-      tenant: { select: { name: true, phone: true, logoUrl: true } },
+      tenant: { select: { name: true, phone: true, logoUrl: true, locale: true } },
       client: { select: { name: true } },
       technician: { select: { name: true } },
     },
@@ -39,8 +42,20 @@ export default async function ClientPortalPage({
 
   if (!order) notFound()
 
+  // Portal público: não existe sessão pro src/i18n/request.ts resolver o
+  // tenant, então o idioma vem explícito de quem é dono da OS e desce por
+  // prop pros componentes client. (Ver lib/i18n.ts.)
+  const locale = order.tenant.locale
+  const t = getTranslator(locale, "portal")
+  const tc = getTranslator(locale, "common")
+  const dateLocale = locale === "en" ? "en-US" : "pt-BR"
+
   const cfg = statusConfig[order.status] ?? statusConfig.OPEN
   const Icon = cfg.icon
+  // status vem do banco como string — .has() preserva o fallback pro OPEN que
+  // o mapa local tinha antes (`statusConfig[order.status] ?? statusConfig.OPEN`).
+  const statusKey = `serviceOrderStatus.${order.status}` as "serviceOrderStatus.OPEN"
+  const statusLabel = tc.has(statusKey) ? tc(statusKey) : tc("serviceOrderStatus.OPEN")
   const year = new Date(order.createdAt).getFullYear()
   const osNum = `OS${year}${String(order.number).padStart(4, "0")}`
   const isDone = order.status === "DONE" || order.status === "INVOICED"
@@ -51,7 +66,7 @@ export default async function ClientPortalPage({
       <header className="border-b bg-card">
         <div className="mx-auto max-w-xl px-4 py-4 flex items-center justify-between">
           <div>
-            <p className="text-xs text-muted-foreground">Acompanhe sua Ordem de Serviço</p>
+            <p className="text-xs text-muted-foreground">{t("serviceOrder.headerSubtitle")}</p>
             <p className="font-bold text-primary">{order.tenant.name}</p>
           </div>
           {order.tenant.phone && (
@@ -68,15 +83,19 @@ export default async function ClientPortalPage({
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center gap-2">
               <Icon className={`size-12 ${cfg.color}`} />
-              <p className="text-lg font-bold">{cfg.label}</p>
+              <p className="text-lg font-bold">{statusLabel}</p>
               <p className="text-sm text-muted-foreground">{osNum} — {order.title}</p>
               {order.technician && (
-                <p className="text-sm text-muted-foreground">Responsável: {order.technician.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("serviceOrder.responsibleLabel", { name: order.technician.name })}
+                </p>
               )}
               {order.scheduledAt && (
                 <Badge variant="outline">
-                  Agendada: {new Date(order.scheduledAt).toLocaleString("pt-BR", {
-                    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+                  {t("serviceOrder.scheduledLabel", {
+                    date: new Date(order.scheduledAt).toLocaleString(dateLocale, {
+                      day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+                    }),
                   })}
                 </Badge>
               )}
@@ -87,7 +106,7 @@ export default async function ClientPortalPage({
         {/* Description */}
         {order.description && (
           <Card>
-            <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Descrição do serviço</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">{t("serviceOrder.descriptionTitle")}</CardTitle></CardHeader>
             <CardContent><p className="text-sm whitespace-pre-wrap">{order.description}</p></CardContent>
           </Card>
         )}
@@ -95,7 +114,7 @@ export default async function ClientPortalPage({
         {/* Conclusion note */}
         {order.conclusionNote && (
           <Card>
-            <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Serviços realizados</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">{t("serviceOrder.servicesPerformedTitle")}</CardTitle></CardHeader>
             <CardContent><p className="text-sm whitespace-pre-wrap">{order.conclusionNote}</p></CardContent>
           </Card>
         )}
@@ -103,13 +122,13 @@ export default async function ClientPortalPage({
         {/* Items */}
         {order.items.length > 0 && (
           <Card>
-            <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Itens e valores</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">{t("serviceOrder.items.title")}</CardTitle></CardHeader>
             <CardContent className="p-0">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left px-4 py-2 font-medium text-muted-foreground">Descrição</th>
-                    <th className="text-right px-4 py-2 font-medium text-muted-foreground">Total</th>
+                    <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("serviceOrder.items.description")}</th>
+                    <th className="text-right px-4 py-2 font-medium text-muted-foreground">{t("serviceOrder.items.total")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -120,7 +139,7 @@ export default async function ClientPortalPage({
                     </tr>
                   ))}
                   <tr className="font-semibold bg-muted/50">
-                    <td className="px-4 py-2">Total</td>
+                    <td className="px-4 py-2">{t("serviceOrder.items.total")}</td>
                     <td className="px-4 py-2 text-right">{formatCurrency(Number(order.totalAmount))}</td>
                   </tr>
                 </tbody>
@@ -132,9 +151,9 @@ export default async function ClientPortalPage({
         {/* Signature */}
         {isDone && (
           <Card>
-            <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Confirmação de execução</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">{t("serviceOrder.signatureTitle")}</CardTitle></CardHeader>
             <CardContent>
-              <SignaturePadPublic orderId={order.id} clientToken={token} existingSignatureUrl={order.clientSignatureUrl} />
+              <SignaturePadPublic orderId={order.id} clientToken={token} existingSignatureUrl={order.clientSignatureUrl} locale={locale} />
             </CardContent>
           </Card>
         )}
@@ -145,7 +164,7 @@ export default async function ClientPortalPage({
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Star className="size-4" />
-                Avalie o atendimento
+                {t("serviceOrder.npsTitle")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -155,6 +174,7 @@ export default async function ClientPortalPage({
                 existingScore={order.npsScore}
                 existingFeedback={order.npsFeedback}
                 prefillScore={prefillScore}
+                locale={locale}
               />
             </CardContent>
           </Card>

@@ -1,18 +1,23 @@
 import { prisma } from "@/lib/prisma"
+import { getTranslations } from "next-intl/server"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/utils"
 import { Users, Building2, TrendingUp, AlertCircle, CheckCircle2, Clock } from "lucide-react"
 
-const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  TRIAL:     { label: "Sem assinatura", variant: "secondary" },
-  PENDING:   { label: "Confirmando pagamento", variant: "secondary" },
-  ACTIVE:    { label: "Ativo",      variant: "default" },
-  PAST_DUE:  { label: "Inadimplente", variant: "destructive" },
-  CANCELLED: { label: "Cancelado",  variant: "outline" },
+type SubscriptionStatusKey = "TRIAL" | "PENDING" | "ACTIVE" | "PAST_DUE" | "CANCELLED"
+
+const STATUS_VARIANT: Record<SubscriptionStatusKey, "default" | "secondary" | "destructive" | "outline"> = {
+  TRIAL:     "secondary",
+  PENDING:   "secondary",
+  ACTIVE:    "default",
+  PAST_DUE:  "destructive",
+  CANCELLED: "outline",
 }
 
 export default async function AdminPage() {
+  const t = await getTranslations("mapAdmin")
+
   const tenants = await prisma.tenant.findMany({
     include: {
       plan: { select: { name: true, priceMonthly: true } },
@@ -29,14 +34,14 @@ export default async function AdminPage() {
 
   const stats = {
     total: tenants.length,
-    active: tenants.filter(t => t.subscriptionStatus === "ACTIVE").length,
-    trial: tenants.filter(t => t.subscriptionStatus === "TRIAL").length,
-    pastDue: tenants.filter(t => t.subscriptionStatus === "PAST_DUE").length,
+    active: tenants.filter(tenant => tenant.subscriptionStatus === "ACTIVE").length,
+    trial: tenants.filter(tenant => tenant.subscriptionStatus === "TRIAL").length,
+    pastDue: tenants.filter(tenant => tenant.subscriptionStatus === "PAST_DUE").length,
     mrr: tenants
-      .filter(t => t.subscriptionStatus === "ACTIVE" && t.plan)
-      .reduce((sum, t) => {
-        const sub = t.subscriptions[0]
-        const price = Number(t.plan!.priceMonthly)
+      .filter(tenant => tenant.subscriptionStatus === "ACTIVE" && tenant.plan)
+      .reduce((sum, tenant) => {
+        const sub = tenant.subscriptions[0]
+        const price = Number(tenant.plan!.priceMonthly)
         return sum + (sub?.billingCycle === "YEARLY" ? price : price)
       }, 0),
   }
@@ -46,23 +51,23 @@ export default async function AdminPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><Building2 className="size-3.5"/>Empresas</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><Building2 className="size-3.5"/>{t("admin.stats.companies")}</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold">{stats.total}</p></CardContent>
         </Card>
         <Card className="border-green-200 dark:border-green-800">
-          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 className="size-3.5 text-green-500"/>Ativos</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 className="size-3.5 text-green-500"/>{t("admin.stats.active")}</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold text-green-600">{stats.active}</p></CardContent>
         </Card>
         <Card className="border-yellow-200 dark:border-yellow-800">
-          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="size-3.5 text-yellow-500"/>Sem assinatura</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="size-3.5 text-yellow-500"/>{t("admin.stats.noSubscription")}</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold text-yellow-600">{stats.trial}</p></CardContent>
         </Card>
         <Card className="border-red-200 dark:border-red-800">
-          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><AlertCircle className="size-3.5 text-red-500"/>Inadimplentes</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><AlertCircle className="size-3.5 text-red-500"/>{t("admin.stats.pastDue")}</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold text-red-600">{stats.pastDue}</p></CardContent>
         </Card>
         <Card className="border-purple-200 dark:border-purple-800">
-          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><TrendingUp className="size-3.5 text-purple-500"/>MRR</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><TrendingUp className="size-3.5 text-purple-500"/>{t("admin.stats.mrr")}</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold text-purple-600">{formatCurrency(stats.mrr)}</p></CardContent>
         </Card>
       </div>
@@ -72,7 +77,7 @@ export default async function AdminPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Users className="size-4" />
-            Todos os clientes ({tenants.length})
+            {t("admin.table.title", { count: tenants.length })}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -80,19 +85,21 @@ export default async function AdminPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-left px-4 py-3 font-medium">Empresa</th>
-                  <th className="text-left px-4 py-3 font-medium">Status</th>
-                  <th className="text-left px-4 py-3 font-medium">Plano</th>
-                  <th className="text-center px-4 py-3 font-medium">Usuários</th>
-                  <th className="text-center px-4 py-3 font-medium">OS</th>
-                  <th className="text-center px-4 py-3 font-medium">Clientes</th>
-                  <th className="text-left px-4 py-3 font-medium">Renova</th>
-                  <th className="text-left px-4 py-3 font-medium">Cadastro</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("admin.table.columns.company")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("admin.table.columns.status")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("admin.table.columns.plan")}</th>
+                  <th className="text-center px-4 py-3 font-medium">{t("admin.table.columns.users")}</th>
+                  <th className="text-center px-4 py-3 font-medium">{t("admin.table.columns.orders")}</th>
+                  <th className="text-center px-4 py-3 font-medium">{t("admin.table.columns.clients")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("admin.table.columns.renews")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("admin.table.columns.signedUpAt")}</th>
                 </tr>
               </thead>
               <tbody>
                 {tenants.map((tenant, i) => {
-                  const cfg = STATUS_CONFIG[tenant.subscriptionStatus] ?? STATUS_CONFIG.TRIAL
+                  const statusKey: SubscriptionStatusKey = tenant.subscriptionStatus in STATUS_VARIANT
+                    ? tenant.subscriptionStatus
+                    : "TRIAL"
                   const sub = tenant.subscriptions[0]
                   const owner = tenant.users.find(u => u.role === "OWNER")
 
@@ -107,16 +114,16 @@ export default async function AdminPage() {
                         {tenant.document && <p className="text-xs text-muted-foreground">{tenant.document}</p>}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant={cfg.variant}>{cfg.label}</Badge>
+                        <Badge variant={STATUS_VARIANT[statusKey]}>{t(`admin.subscriptionStatus.${statusKey}`)}</Badge>
                       </td>
                       <td className="px-4 py-3">
                         {tenant.plan ? (
                           <div>
                             <p className="font-medium">{tenant.plan.name}</p>
-                            <p className="text-xs text-muted-foreground">{formatCurrency(Number(tenant.plan.priceMonthly))}/mês</p>
+                            <p className="text-xs text-muted-foreground">{formatCurrency(Number(tenant.plan.priceMonthly))}{t("admin.table.perMonth")}</p>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground text-xs">Sem plano</span>
+                          <span className="text-muted-foreground text-xs">{t("admin.table.noPlan")}</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">{tenant.users.length}</td>
@@ -135,7 +142,7 @@ export default async function AdminPage() {
             </table>
 
             {tenants.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-12">Nenhuma empresa cadastrada ainda.</p>
+              <p className="text-sm text-muted-foreground text-center py-12">{t("admin.table.empty")}</p>
             )}
           </div>
         </CardContent>

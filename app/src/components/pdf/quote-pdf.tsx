@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer"
+import { getTranslator } from "@/lib/i18n"
 
 const styles = StyleSheet.create({
   page: {
@@ -63,14 +64,8 @@ const styles = StyleSheet.create({
   },
 })
 
-const statusLabel: Record<string, string> = {
-  DRAFT: "Rascunho",
-  SENT: "Enviado",
-  APPROVED: "Aprovado",
-  REJECTED: "Recusado",
-}
-
 type Props = {
+  locale: "pt" | "en"
   companyName: string
   logoUrl?: string | null
   companyPhone?: string | null
@@ -91,12 +86,14 @@ type Props = {
   }
 }
 
-function fmt(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+// Valor sempre em BRL (documento comercial brasileiro) — só o agrupamento de
+// milhar/decimal e o formato de data seguem o idioma de leitura do tenant.
+function fmtCurrency(value: number, locale: "pt" | "en") {
+  return value.toLocaleString(locale === "en" ? "en-US" : "pt-BR", { style: "currency", currency: "BRL" })
 }
 
-function fmtDate(date: Date | string) {
-  return new Date(date).toLocaleDateString("pt-BR")
+function fmtDateFor(date: Date | string, locale: "pt" | "en") {
+  return new Date(date).toLocaleDateString(locale === "en" ? "en-US" : "pt-BR")
 }
 
 function quoteNum(number: number, createdAt: Date | string) {
@@ -104,8 +101,19 @@ function quoteNum(number: number, createdAt: Date | string) {
   return `ORC${year}${String(number).padStart(4, "0")}`
 }
 
-export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAddress, companyWebsite }: Props) {
+export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAddress, companyWebsite, locale }: Props) {
+  // PDFs são gerados via renderToBuffer, fora do request context do Next.js —
+  // o locale vem explícito por prop (ver lib/i18n.ts).
+  const t = getTranslator(locale, "pdf")
+  const tc = getTranslator(locale, "common")
+  const fmt = (value: number) => fmtCurrency(value, locale)
+  const fmtDate = (date: Date | string) => fmtDateFor(date, locale)
+
   const docNumber = quoteNum(quote.number, quote.createdAt)
+  // status vem do banco como string — .has() preserva o fallback pro valor cru
+  // que o mapa local tinha antes (`statusLabel[status] ?? status`).
+  const statusKey = `quoteStatus.${quote.status}` as "quoteStatus.DRAFT"
+  const statusText = tc.has(statusKey) ? tc(statusKey) : quote.status
 
   return (
     <Document>
@@ -120,11 +128,11 @@ export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAdd
             )}
             {logoUrl && <Text style={{ fontSize: 11, marginTop: 4 }}>{companyName}</Text>}
             {companyAddress && <Text style={{ fontSize: 9, color: "#555", marginTop: 3 }}>{companyAddress}</Text>}
-            {companyPhone && <Text style={{ fontSize: 9, color: "#555", marginTop: 1 }}>Tel: {companyPhone}</Text>}
+            {companyPhone && <Text style={{ fontSize: 9, color: "#555", marginTop: 1 }}>{t("common.phonePrefix")} {companyPhone}</Text>}
             {companyWebsite && <Text style={{ fontSize: 9, color: "#555", marginTop: 1 }}>{companyWebsite}</Text>}
           </View>
           <View>
-            <Text style={styles.docTitle}>Orçamento</Text>
+            <Text style={styles.docTitle}>{t("quote.docTitle")}</Text>
             <Text style={styles.docNumber}>{docNumber}</Text>
           </View>
         </View>
@@ -132,18 +140,18 @@ export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAdd
         {/* Status + datas */}
         <View style={[styles.section, { flexDirection: "row", gap: 24 }]}>
           <View>
-            <Text style={styles.sectionTitle}>Status</Text>
+            <Text style={styles.sectionTitle}>{t("common.status")}</Text>
             <View style={styles.statusBadge}>
-              <Text>{statusLabel[quote.status] ?? quote.status}</Text>
+              <Text>{statusText}</Text>
             </View>
           </View>
           <View>
-            <Text style={styles.sectionTitle}>Criado em</Text>
+            <Text style={styles.sectionTitle}>{t("quote.createdAt")}</Text>
             <Text>{fmtDate(quote.createdAt)}</Text>
           </View>
           {quote.validUntil && (
             <View>
-              <Text style={styles.sectionTitle}>Válido até</Text>
+              <Text style={styles.sectionTitle}>{t("quote.validUntil")}</Text>
               <Text>{fmtDate(quote.validUntil)}</Text>
             </View>
           )}
@@ -151,20 +159,20 @@ export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAdd
 
         {/* Cliente */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cliente</Text>
+          <Text style={styles.sectionTitle}>{t("common.clientTitle")}</Text>
           <View style={styles.row}>
-            <Text style={styles.label}>Nome:</Text>
+            <Text style={styles.label}>{t("common.nameLabel")}</Text>
             <Text style={[styles.value, { fontFamily: "Helvetica-Bold" }]}>{quote.clientName}</Text>
           </View>
           {quote.clientContact && (
             <View style={styles.row}>
-              <Text style={styles.label}>Contato:</Text>
+              <Text style={styles.label}>{t("quote.contactLabel")}</Text>
               <Text style={styles.value}>{quote.clientContact}</Text>
             </View>
           )}
           {quote.clientAddress && (
             <View style={styles.row}>
-              <Text style={styles.label}>Endereço:</Text>
+              <Text style={styles.label}>{t("common.addressLabel")}</Text>
               <Text style={styles.value}>{quote.clientAddress}</Text>
             </View>
           )}
@@ -172,34 +180,34 @@ export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAdd
 
         {/* Serviço */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>O que precisa ser feito</Text>
+          <Text style={styles.sectionTitle}>{t("quote.whatNeedsToBeDone")}</Text>
           <Text style={{ color: "#555" }}>{quote.description}</Text>
         </View>
 
         {quote.materials && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Materiais a serem utilizados</Text>
+            <Text style={styles.sectionTitle}>{t("quote.materialsTitle")}</Text>
             <Text style={{ color: "#555" }}>{quote.materials}</Text>
           </View>
         )}
 
         {quote.notes && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Observações</Text>
+            <Text style={styles.sectionTitle}>{t("quote.notesTitle")}</Text>
             <Text style={{ color: "#555" }}>{quote.notes}</Text>
           </View>
         )}
 
         {/* Total */}
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>VALOR TOTAL</Text>
+          <Text style={styles.totalLabel}>{t("quote.totalAmount")}</Text>
           <Text style={styles.totalValue}>{fmt(Number(quote.amount))}</Text>
         </View>
 
         {/* Assinaturas */}
         <View style={styles.signatureSection}>
-          <Text style={styles.signatureLine}>Assinatura do Cliente</Text>
-          <Text style={styles.signatureLine}>Assinatura do Responsável</Text>
+          <Text style={styles.signatureLine}>{t("common.clientSignature")}</Text>
+          <Text style={styles.signatureLine}>{t("common.responsibleSignature")}</Text>
         </View>
       </Page>
     </Document>

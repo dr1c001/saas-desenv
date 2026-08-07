@@ -1,6 +1,7 @@
 "use client"
 
 import { useTransition } from "react"
+import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
 
@@ -9,18 +10,20 @@ type Props = {
   label?: string
 }
 
-export function DeleteButton({ action, label = "Excluir" }: Props) {
+export function DeleteButton({ action, label }: Props) {
+  const t = useTranslations("sharedComponents.deleteButton")
+  const tCommon = useTranslations("common")
   const [isPending, startTransition] = useTransition()
 
   function handleClick() {
-    if (!confirm(`Tem certeza que deseja excluir? Esta ação não pode ser desfeita.`)) return
+    if (!confirm(t("confirm"))) return
     startTransition(() => action())
   }
 
   return (
     <Button variant="destructive" disabled={isPending} onClick={handleClick}>
       <Trash2 className="size-4 mr-2" />
-      {isPending ? "Excluindo..." : label}
+      {isPending ? t("deleting") : label ?? tCommon("delete")}
     </Button>
   )
 }

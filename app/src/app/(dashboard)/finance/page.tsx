@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import { redirect } from "next/navigation"
+import { getTranslations } from "next-intl/server"
 import { getTenant } from "@/lib/auth"
 import { getFinanceSummary } from "@/actions/finance"
 import { formatCurrency, formatDate } from "@/lib/utils"
@@ -18,6 +19,7 @@ type SearchParams = Promise<{ q?: string }>
 
 export default async function FinancePage({ searchParams }: { searchParams: SearchParams }) {
   const { q } = await searchParams
+  const t = await getTranslations("finance")
   const { role } = await getTenant()
   if (role !== "OWNER" && role !== "ADMIN") redirect("/dashboard")
 
@@ -33,49 +35,49 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Financeiro</h1>
+        <h1 className="text-2xl font-bold">{t("list.title")}</h1>
         <ExpenseDialog />
       </div>
 
       <Suspense>
-        <SearchBar placeholder="Buscar receitas e despesas..." />
+        <SearchBar placeholder={t("list.searchPlaceholder")} />
       </Suspense>
 
       {/* KPI cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Receita do mês</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("kpis.monthlyRevenue.title")}</CardTitle>
             <TrendingUp className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{formatCurrency(monthlyRevenue)}</div>
-            <p className="text-xs text-muted-foreground">Pagamentos recebidos este mês</p>
+            <p className="text-xs text-muted-foreground">{t("kpis.monthlyRevenue.description")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">A Receber</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("kpis.receivable.title")}</CardTitle>
             <DollarSign className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalPendingRevenue)}</div>
             <p className="text-xs text-muted-foreground">
-              {pendingRevenues.length} pagamento{pendingRevenues.length !== 1 ? "s" : ""} pendente{pendingRevenues.length !== 1 ? "s" : ""}
+              {t("kpis.receivable.description", { count: pendingRevenues.length })}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">A Pagar</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("kpis.payable.title")}</CardTitle>
             <TrendingDown className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{formatCurrency(totalPendingExpense)}</div>
             <p className="text-xs text-muted-foreground">
-              {pendingExpenses.length} despesa{pendingExpenses.length !== 1 ? "s" : ""} pendente{pendingExpenses.length !== 1 ? "s" : ""}
+              {t("kpis.payable.description", { count: pendingExpenses.length })}
             </p>
           </CardContent>
         </Card>
@@ -85,19 +87,19 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
         {/* Contas a receber */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Contas a Receber</CardTitle>
+            <CardTitle className="text-base">{t("receivables.title")}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {revenues.length === 0 ? (
-              <p className="text-sm text-muted-foreground p-4">Nenhum recebimento cadastrado.</p>
+              <p className="text-sm text-muted-foreground p-4">{t("receivables.empty")}</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{t("columns.description")}</TableHead>
+                    <TableHead>{t("columns.dueDate")}</TableHead>
+                    <TableHead className="text-right">{t("columns.amount")}</TableHead>
+                    <TableHead>{t("columns.status")}</TableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
@@ -130,19 +132,19 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
         {/* Contas a pagar */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Contas a Pagar</CardTitle>
+            <CardTitle className="text-base">{t("payables.title")}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {expenses.length === 0 ? (
-              <p className="text-sm text-muted-foreground p-4">Nenhuma despesa cadastrada.</p>
+              <p className="text-sm text-muted-foreground p-4">{t("payables.empty")}</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{t("columns.description")}</TableHead>
+                    <TableHead>{t("columns.dueDate")}</TableHead>
+                    <TableHead className="text-right">{t("columns.amount")}</TableHead>
+                    <TableHead>{t("columns.status")}</TableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
@@ -152,7 +154,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
                       <TableCell className="text-sm">
                         {e.description}
                         {e.recurring && (
-                          <Badge variant="outline" className="ml-2 text-xs">Recorrente</Badge>
+                          <Badge variant="outline" className="ml-2 text-xs">{t("payables.recurringBadge")}</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -181,16 +183,18 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
   )
 }
 
-function RevenueStatusBadge({ status, dueDate }: { status: string; dueDate: Date }) {
+async function RevenueStatusBadge({ status, dueDate }: { status: string; dueDate: Date }) {
+  const tCommon = await getTranslations("common")
   const isOverdue = status === "PENDING" && new Date(dueDate) < new Date()
-  if (isOverdue) return <Badge variant="destructive">Vencida</Badge>
-  if (status === "PAID") return <Badge variant="outline">Paga</Badge>
-  return <Badge variant="secondary">Pendente</Badge>
+  if (isOverdue) return <Badge variant="destructive">{tCommon("paymentStatus.OVERDUE")}</Badge>
+  if (status === "PAID") return <Badge variant="outline">{tCommon("paymentStatus.PAID")}</Badge>
+  return <Badge variant="secondary">{tCommon("paymentStatus.PENDING")}</Badge>
 }
 
-function ExpenseStatusBadge({ status, dueDate }: { status: string; dueDate: Date }) {
+async function ExpenseStatusBadge({ status, dueDate }: { status: string; dueDate: Date }) {
+  const tCommon = await getTranslations("common")
   const isOverdue = status === "PENDING" && new Date(dueDate) < new Date()
-  if (isOverdue) return <Badge variant="destructive">Vencida</Badge>
-  if (status === "PAID") return <Badge variant="outline">Paga</Badge>
-  return <Badge variant="secondary">Pendente</Badge>
+  if (isOverdue) return <Badge variant="destructive">{tCommon("paymentStatus.OVERDUE")}</Badge>
+  if (status === "PAID") return <Badge variant="outline">{tCommon("paymentStatus.PAID")}</Badge>
+  return <Badge variant="secondary">{tCommon("paymentStatus.PENDING")}</Badge>
 }

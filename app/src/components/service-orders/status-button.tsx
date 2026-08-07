@@ -1,6 +1,7 @@
 "use client"
 
 import { useTransition } from "react"
+import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 
 type Props = {
@@ -9,6 +10,7 @@ type Props = {
 }
 
 export function StatusButton({ action, label }: Props) {
+  const t = useTranslations("serviceOrdersComponents")
   const [isPending, startTransition] = useTransition()
 
   return (
@@ -16,7 +18,7 @@ export function StatusButton({ action, label }: Props) {
       disabled={isPending}
       onClick={() => startTransition(() => action())}
     >
-      {isPending ? "Atualizando..." : label}
+      {isPending ? t("statusButton.updating") : label}
     </Button>
   )
 }

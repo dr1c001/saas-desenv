@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Suspense } from "react"
+import { getTranslations } from "next-intl/server"
 import { buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,50 +13,52 @@ import { SearchBar } from "@/components/shared/search-bar"
 import { StatusFilter } from "@/components/shared/status-filter"
 import { formatCurrency, formatOmNumber } from "@/lib/utils"
 
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  OPEN: { label: "Aberta", variant: "secondary" },
-  IN_PROGRESS: { label: "Em andamento", variant: "default" },
-  DONE: { label: "Concluída", variant: "outline" },
-  CANCELLED: { label: "Cancelada", variant: "destructive" },
+const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+  OPEN: "secondary",
+  IN_PROGRESS: "default",
+  DONE: "outline",
+  CANCELLED: "destructive",
 }
-
-const statusOptions = [
-  { value: "OPEN", label: "Aberta" },
-  { value: "IN_PROGRESS", label: "Em andamento" },
-  { value: "DONE", label: "Concluída" },
-  { value: "CANCELLED", label: "Cancelada" },
-]
 
 type SearchParams = Promise<{ q?: string; status?: string }>
 
 export default async function MaintenancePage({ searchParams }: { searchParams: SearchParams }) {
   const { q, status } = await searchParams
   const orders = await getMaintenanceOrders({ q, status })
+  const t = await getTranslations("maintenance")
+  const tCommon = await getTranslations("common")
+
+  const statusOptions = [
+    { value: "OPEN", label: tCommon("serviceOrderStatus.OPEN") },
+    { value: "IN_PROGRESS", label: tCommon("serviceOrderStatus.IN_PROGRESS") },
+    { value: "DONE", label: tCommon("serviceOrderStatus.DONE") },
+    { value: "CANCELLED", label: tCommon("serviceOrderStatus.CANCELLED") },
+  ]
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Manutenção Interna</h1>
-          <p className="text-sm text-muted-foreground mt-1">Ordens de Manutenção (OM) internas da empresa</p>
+          <h1 className="text-2xl font-bold">{t("list.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("list.subtitle")}</p>
         </div>
         <Link href="/maintenance/new" className={buttonVariants()}>
           <Plus className="size-4 mr-2" />
-          Nova OM
+          {t("list.newButton")}
         </Link>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <Suspense>
-          <SearchBar placeholder="Buscar por título..." />
-          <StatusFilter options={statusOptions} placeholder="Todos os status" />
+          <SearchBar placeholder={t("list.searchPlaceholder")} />
+          <StatusFilter options={statusOptions} placeholder={t("list.statusFilterPlaceholder")} />
         </Suspense>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {orders.length} {orders.length === 1 ? "ordem" : "ordens"}
+            {t("list.countLabel", { count: orders.length })}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -63,11 +66,11 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
             <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
               <Wrench className="size-8" />
               <p className="text-sm">
-                {q || status ? "Nenhuma OM encontrada com esses filtros." : "Nenhuma OM criada ainda."}
+                {q || status ? t("list.emptyFiltered") : t("list.emptyNone")}
               </p>
               {!q && !status && (
                 <Link href="/maintenance/new" className={buttonVariants({ variant: "outline" })}>
-                  Criar primeira OM
+                  {t("list.createFirst")}
                 </Link>
               )}
             </div>
@@ -75,12 +78,12 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nº</TableHead>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Prestador</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{t("list.columns.number")}</TableHead>
+                  <TableHead>{t("list.columns.title")}</TableHead>
+                  <TableHead>{t("list.columns.provider")}</TableHead>
+                  <TableHead>{t("list.columns.total")}</TableHead>
+                  <TableHead>{t("list.columns.date")}</TableHead>
+                  <TableHead>{t("list.columns.status")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -98,8 +101,8 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
                       {new Date(om.createdAt).toLocaleDateString("pt-BR")}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusConfig[om.status].variant}>
-                        {statusConfig[om.status].label}
+                      <Badge variant={statusVariant[om.status]}>
+                        {tCommon(`serviceOrderStatus.${om.status}` as "serviceOrderStatus.OPEN")}
                       </Badge>
                     </TableCell>
                   </TableRow>

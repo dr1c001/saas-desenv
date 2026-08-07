@@ -1,6 +1,7 @@
 "use client"
 
 import { useActionState, useState } from "react"
+import { useTranslations } from "next-intl"
 import { updateServiceOrder, type OrderFormState } from "@/actions/service-orders"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,6 +33,8 @@ type Props = {
 }
 
 export function ServiceOrderEditForm({ order, clients }: Props) {
+  const t = useTranslations("serviceOrdersComponents")
+  const tc = useTranslations("common")
   const [items, setItems] = useState<Item[]>(
     order.items.length > 0
       ? order.items.map((i) => ({
@@ -77,25 +80,25 @@ export function ServiceOrderEditForm({ order, clients }: Props) {
     <form action={handleSubmit} className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Dados da OS</CardTitle>
+          <CardTitle className="text-base">{t("form.orderDataTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1.5 md:col-span-2">
-            <Label htmlFor="title">Título *</Label>
+            <Label htmlFor="title">{t("form.titleLabel")}</Label>
             <Input id="title" name="title" defaultValue={order.title} required />
             {state.errors?.title && <p className="text-sm text-destructive">{state.errors.title[0]}</p>}
           </div>
 
           <div className="space-y-1.5 md:col-span-2">
-            <Label htmlFor="description">Descrição do problema</Label>
+            <Label htmlFor="description">{t("form.editDescriptionLabel")}</Label>
             <Textarea id="description" name="description" rows={3} defaultValue={order.description ?? ""} />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="clientId">Cliente *</Label>
+            <Label htmlFor="clientId">{t("form.clientLabel")}</Label>
             <Select name="clientId" defaultValue={order.clientId}>
               <SelectTrigger id="clientId">
-                <SelectValue placeholder="Selecione um cliente" />
+                <SelectValue placeholder={t("form.clientPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {clients.map((c) => (
@@ -109,7 +112,7 @@ export function ServiceOrderEditForm({ order, clients }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="scheduledAt">Agendamento</Label>
+            <Label htmlFor="scheduledAt">{t("form.scheduledLabel")}</Label>
             <Input
               id="scheduledAt"
               name="scheduledAt"
@@ -122,25 +125,25 @@ export function ServiceOrderEditForm({ order, clients }: Props) {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Itens / Serviços</CardTitle>
+          <CardTitle className="text-base">{t("form.itemsTitle")}</CardTitle>
           <Button type="button" variant="outline" onClick={addItem}>
             <Plus className="size-4 mr-1" />
-            Adicionar item
+            {t("items.addButton")}
           </Button>
         </CardHeader>
         <CardContent className="space-y-3">
           {items.map((item, index) => (
             <div key={index} className="grid gap-2 md:grid-cols-[1fr_80px_120px_32px] items-end">
               <div className="space-y-1.5">
-                {index === 0 && <Label>Descrição</Label>}
+                {index === 0 && <Label>{t("items.descriptionLabel")}</Label>}
                 <Input
-                  placeholder="Descrição do serviço/peça"
+                  placeholder={t("items.descriptionPlaceholder")}
                   value={item.description}
                   onChange={(e) => updateItem(index, "description", e.target.value)}
                 />
               </div>
               <div className="space-y-1.5">
-                {index === 0 && <Label>Qtd.</Label>}
+                {index === 0 && <Label>{t("items.quantityLabel")}</Label>}
                 <Input
                   type="number"
                   min="0.001"
@@ -150,7 +153,7 @@ export function ServiceOrderEditForm({ order, clients }: Props) {
                 />
               </div>
               <div className="space-y-1.5">
-                {index === 0 && <Label>Preço unit.</Label>}
+                {index === 0 && <Label>{t("items.unitPriceLabel")}</Label>}
                 <Input
                   type="number"
                   min="0"
@@ -172,7 +175,7 @@ export function ServiceOrderEditForm({ order, clients }: Props) {
           ))}
 
           <div className="flex justify-end pt-2 border-t">
-            <p className="font-semibold">Total: {formatCurrency(total)}</p>
+            <p className="font-semibold">{t("items.totalLabel")} {formatCurrency(total)}</p>
           </div>
         </CardContent>
       </Card>
@@ -183,10 +186,10 @@ export function ServiceOrderEditForm({ order, clients }: Props) {
 
       <div className="flex gap-3">
         <Button type="submit" disabled={isPending}>
-          {isPending ? "Salvando..." : "Salvar alterações"}
+          {isPending ? tc("saving") : t("form.editSubmit")}
         </Button>
         <Link href={`/service-orders/${order.id}`} className={buttonVariants({ variant: "outline" })}>
-          Cancelar
+          {tc("cancel")}
         </Link>
       </div>
     </form>

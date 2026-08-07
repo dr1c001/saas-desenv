@@ -2,10 +2,12 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { useTransition, useRef } from "react"
+import { useTranslations } from "next-intl"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 
-export function SearchBar({ placeholder = "Buscar..." }: { placeholder?: string }) {
+export function SearchBar({ placeholder }: { placeholder?: string }) {
+  const t = useTranslations("sharedComponents.searchBar")
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -32,7 +34,7 @@ export function SearchBar({ placeholder = "Buscar..." }: { placeholder?: string 
       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
       <Input
         className="pl-8 w-60"
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("placeholder")}
         defaultValue={searchParams.get("q") ?? ""}
         onChange={handleChange}
       />

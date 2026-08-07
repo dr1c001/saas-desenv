@@ -2,18 +2,11 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { getTranslations } from "next-intl/server"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { retryOnUniqueConflict } from "@/lib/retry"
-
-const orderSchema = z.object({
-  title: z.string().min(2, "Título obrigatório"),
-  description: z.string().optional(),
-  providerId: z.string().optional(),
-  status: z.enum(["OPEN", "IN_PROGRESS", "DONE", "CANCELLED"]).default("OPEN"),
-  scheduledAt: z.string().optional(),
-})
 
 export type MaintenanceFormState = {
   errors?: Record<string, string[]>
@@ -35,7 +28,21 @@ export async function createMaintenanceOrder(
 ): Promise<MaintenanceFormState> {
   const { tenantId, role } = await getTenant()
   await requireActiveSubscription(tenantId)
-  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
+
+  // Schema montado aqui dentro (e não no escopo do módulo) porque a mensagem de
+  // erro é exibida pro usuário e precisa do t() resolvido no request, que só
+  // existe dentro da action. (i18n, item 1.)
+  const t = await getTranslations("maintenance")
+  const tCommon = await getTranslations("common")
+  const orderSchema = z.object({
+    title: z.string().min(2, t("form.errors.titleRequired")),
+    description: z.string().optional(),
+    providerId: z.string().optional(),
+    status: z.enum(["OPEN", "IN_PROGRESS", "DONE", "CANCELLED"]).default("OPEN"),
+    scheduledAt: z.string().optional(),
+  })
+
+  if (role !== "OWNER" && role !== "ADMIN") return { message: tCommon("noPermission") }
   const parsed = orderSchema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
 
@@ -47,7 +54,7 @@ export async function createMaintenanceOrder(
       where: { id: parsed.data.providerId, tenantId },
       select: { id: true },
     })
-    if (!provider) return { message: "Prestador não encontrado." }
+    if (!provider) return { message: (await getTranslations("errors"))("providerNotFound") }
   }
 
   const itemsRaw = formData.get("items")

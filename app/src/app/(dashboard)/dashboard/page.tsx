@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma"
 import { formatCurrency, formatDate, formatOsNumber } from "@/lib/utils"
 import { getMonthlyRevenueChart } from "@/actions/dashboard"
 import { RevenueChart } from "@/components/dashboard/revenue-chart"
+import { getTranslations } from "next-intl/server"
 
 async function getDashboardData(tenantId: string) {
   const now = new Date()
@@ -53,12 +54,13 @@ async function getDashboardData(tenantId: string) {
   }
 }
 
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  OPEN: { label: "Aberta", variant: "secondary" },
-  IN_PROGRESS: { label: "Em andamento", variant: "default" },
-  DONE: { label: "Concluída", variant: "outline" },
-  INVOICED: { label: "Faturada", variant: "outline" },
-  CANCELLED: { label: "Cancelada", variant: "destructive" },
+// Rótulos vêm de common.serviceOrderStatus (i18n); aqui só a variante visual do Badge por status.
+const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+  OPEN: "secondary",
+  IN_PROGRESS: "default",
+  DONE: "outline",
+  INVOICED: "outline",
+  CANCELLED: "destructive",
 }
 
 export default async function DashboardPage() {
@@ -72,36 +74,39 @@ export default async function DashboardPage() {
     isAdmin ? getMonthlyRevenueChart() : Promise.resolve(null),
   ])
 
+  const t = await getTranslations("dashboardHome")
+  const tc = await getTranslations("common")
+
   const stats = [
     {
-      title: "Faturado no mês",
+      title: t("stats.monthlyRevenue.title"),
       value: formatCurrency(data.monthlyRevenue),
       icon: DollarSign,
-      description: "Receitas pagas este mês",
+      description: t("stats.monthlyRevenue.description"),
       href: "/finance",
       alert: false,
     },
     {
-      title: "OS em Aberto",
+      title: t("stats.openOrders.title"),
       value: String(data.openOrders + data.inProgressOrders),
       icon: ClipboardList,
-      description: `${data.openOrders} abertas · ${data.inProgressOrders} em andamento`,
+      description: t("stats.openOrders.description", { open: data.openOrders, inProgress: data.inProgressOrders }),
       href: "/service-orders",
       alert: false,
     },
     {
-      title: "Recebimentos Vencidos",
+      title: t("stats.overdueRevenues.title"),
       value: String(data.overdueRevenues),
       icon: AlertTriangle,
-      description: "Receitas pendentes vencidas",
+      description: t("stats.overdueRevenues.description"),
       href: "/finance",
       alert: data.overdueRevenues > 0,
     },
     {
-      title: "Clientes Ativos",
+      title: t("stats.activeClients.title"),
       value: String(data.activeClients),
       icon: Users,
-      description: "Total de clientes ativos",
+      description: t("stats.activeClients.description"),
       href: "/clients",
       alert: false,
     },
@@ -109,7 +114,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <h1 className="text-2xl font-bold">{t("title")}</h1>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
@@ -132,7 +137,7 @@ export default async function DashboardPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle className="text-base">Receita × Despesa (últimos 6 meses)</CardTitle>
+              <CardTitle className="text-base">{t("chart.title")}</CardTitle>
             </CardHeader>
             <CardContent>
               <RevenueChart data={chartData} />
@@ -145,12 +150,12 @@ export default async function DashboardPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Wrench className="size-4" />
-            OS Ativas
+            {t("activeOrders.title")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {data.recentOrders.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma OS ativa no momento.</p>
+            <p className="text-sm text-muted-foreground">{t("activeOrders.empty")}</p>
           ) : (
             <div className="space-y-2">
               {data.recentOrders.map((os) => (
@@ -167,8 +172,8 @@ export default async function DashboardPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium">{formatCurrency(Number(os.totalAmount))}</span>
-                    <Badge variant={statusConfig[os.status].variant}>
-                      {statusConfig[os.status].label}
+                    <Badge variant={statusVariant[os.status]}>
+                      {tc(`serviceOrderStatus.${os.status}` as "serviceOrderStatus.OPEN")}
                     </Badge>
                   </div>
                 </Link>

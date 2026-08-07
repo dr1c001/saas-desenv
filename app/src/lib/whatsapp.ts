@@ -1,6 +1,10 @@
 // WhatsApp via Z-API (https://z-api.io)
 // Tenant configures zapiInstance + zapiToken in /settings
 
+import { getTranslator } from "@/lib/i18n"
+
+type Locale = "pt" | "en"
+
 interface SendTextPayload {
   phone: string // "5511999999999" (with country code, no +)
   message: string
@@ -38,26 +42,30 @@ export async function sendWhatsApp(
   }
 }
 
+// Estas mensagens vão pro cliente final do tenant (não pro usuário logado),
+// disparadas de uma rota de API — fora do request context que
+// getTranslations() usa. O idioma é o do tenant, passado explícito pelo
+// chamador, mesmo padrão de lib/resend.ts e do portal público. (i18n.)
 export function buildOsMessage(opts: {
   tenantName: string
   osNumber: string
   title: string
   status: string
   portalUrl: string
+  locale: Locale
 }) {
-  const statusMap: Record<string, string> = {
-    OPEN: "Aberta",
-    IN_PROGRESS: "Em andamento",
-    DONE: "Concluída",
-    INVOICED: "Faturada",
-    CANCELLED: "Cancelada",
-  }
+  const t = getTranslator(opts.locale, "whatsapp")
+  const tc = getTranslator(opts.locale, "common")
+  // status vem do banco como string — preserva o fallback pro valor cru que
+  // o statusMap local tinha antes.
+  const statusKey = `serviceOrderStatus.${opts.status}` as "serviceOrderStatus.OPEN"
+  const statusLabel = tc.has(statusKey) ? tc(statusKey) : opts.status
   return (
     `*${opts.tenantName}*\n\n` +
-    `Olá! Sua Ordem de Serviço foi atualizada.\n\n` +
+    `${t("os.intro")}\n\n` +
     `📋 *${opts.osNumber} — ${opts.title}*\n` +
-    `Status: ${statusMap[opts.status] ?? opts.status}\n\n` +
-    `Acompanhe sua OS: ${opts.portalUrl}`
+    `${t("os.statusLabel")}: ${statusLabel}\n\n` +
+    `${t("os.trackLink")}: ${opts.portalUrl}`
   )
 }
 
@@ -66,21 +74,24 @@ export function buildQuoteMessage(opts: {
   quoteNumber: string
   amount: string
   portalUrl: string
+  locale: Locale
 }) {
+  const t = getTranslator(opts.locale, "whatsapp")
   return (
     `*${opts.tenantName}*\n\n` +
-    `Você recebeu um novo orçamento!\n\n` +
-    `💰 *Orçamento #${opts.quoteNumber}*\n` +
-    `Valor: R$ ${opts.amount}\n\n` +
-    `Visualize e aprove: ${opts.portalUrl}`
+    `${t("quote.intro")}\n\n` +
+    `💰 *${t("quote.quoteLabel")} #${opts.quoteNumber}*\n` +
+    `${t("quote.amountLabel")}: ${opts.amount}\n\n` +
+    `${t("quote.viewLink")}: ${opts.portalUrl}`
   )
 }
 
-export function buildNpsMessage(opts: { tenantName: string; portalUrl: string }) {
+export function buildNpsMessage(opts: { tenantName: string; portalUrl: string; locale: Locale }) {
+  const t = getTranslator(opts.locale, "whatsapp")
   return (
     `*${opts.tenantName}*\n\n` +
-    `O serviço foi concluído! 🎉\n\n` +
-    `Gostaríamos muito de saber sua opinião.\n` +
-    `Avalie o atendimento (leva menos de 1 minuto): ${opts.portalUrl}/nps`
+    `${t("nps.completed")}\n\n` +
+    `${t("nps.askOpinion")}\n` +
+    `${t("nps.rateLink")}: ${opts.portalUrl}/nps`
   )
 }

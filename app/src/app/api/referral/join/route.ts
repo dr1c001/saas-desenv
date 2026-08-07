@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { createClient } from "@/lib/supabase/server"
+import { getTranslations } from "next-intl/server"
 
 // Espelha NEW_SIGNUP_DISCOUNT_PERCENT em lib/auth.ts (mesmo conceito, caminho
 // de aplicar o código depois do cadastro em vez de na hora do cadastro).
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
     if (!dbUser) return NextResponse.json({ ok: false }, { status: 401 })
     const tenantId = dbUser.tenantId
 
+    const te = await getTranslations("errors")
     const { referralCode } = await req.json()
     if (!referralCode) {
       return NextResponse.json({ ok: false }, { status: 400 })
@@ -31,18 +33,18 @@ export async function POST(req: NextRequest) {
       where: { referralCode },
       select: { id: true, name: true },
     })
-    if (!referrer) return NextResponse.json({ ok: false, error: "Código inválido" })
+    if (!referrer) return NextResponse.json({ ok: false, error: te("invalidReferralCode") })
     // Sem isso, o próprio tenant podia usar o próprio código e creditar
     // desconto pra si mesmo sem nunca ter indicado ninguém de verdade.
     // (Achado em revisão de segurança 2026-07-21.)
     if (referrer.id === tenantId) {
-      return NextResponse.json({ ok: false, error: "Você não pode usar seu próprio código de indicação" })
+      return NextResponse.json({ ok: false, error: te("ownReferralCode") })
     }
 
     const newTenant = await prisma.tenant.findUnique({ where: { id: tenantId } })
     if (!newTenant) return NextResponse.json({ ok: false })
     if (newTenant.referredByCode) {
-      return NextResponse.json({ ok: false, error: "Indicação já aplicada" })
+      return NextResponse.json({ ok: false, error: te("referralAlreadyApplied") })
     }
 
     // Idempotência atômica: a condição referredByCode:null no próprio UPDATE
@@ -58,7 +60,7 @@ export async function POST(req: NextRequest) {
       },
     })
     if (result.count === 0) {
-      return NextResponse.json({ ok: false, error: "Indicação já aplicada" })
+      return NextResponse.json({ ok: false, error: te("referralAlreadyApplied") })
     }
 
     // Esse tenant pode já estar perto do teto por bônus de indicador (webhook

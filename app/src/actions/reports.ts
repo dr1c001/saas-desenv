@@ -3,13 +3,14 @@
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { brtMidnightUTC } from "@/lib/utils"
+import { getTranslations } from "next-intl/server"
 
 export async function getReportData(from: string, to: string) {
   const { tenantId, role } = await getTenant()
   // Auto-defesa: mesmo padrão do getFinanceSummary() em finance.ts — Action
   // tem Action ID próprio, despachável independente da página que redireciona
   // antes. (Achado em revisão de segurança 2026-07-21.)
-  if (role !== "OWNER" && role !== "ADMIN") throw new Error("Sem permissão.")
+  if (role !== "OWNER" && role !== "ADMIN") throw new Error((await getTranslations("common"))("noPermission"))
   await requireActiveSubscription(tenantId)
 
   // from/to vêm do <input type="date"> como "AAAA-MM-DD" — new Date(from)

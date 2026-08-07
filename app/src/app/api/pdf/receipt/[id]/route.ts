@@ -6,6 +6,7 @@ import { ReceiptPDF } from "@/components/pdf/receipt-pdf"
 import { prisma } from "@/lib/prisma"
 import { createClient } from "@/lib/supabase/server"
 import { requireActiveSubscription } from "@/lib/auth"
+import { getTranslator } from "@/lib/i18n"
 import React, { type ReactElement, type JSXElementConstructor } from "react"
 
 export async function GET(
@@ -18,7 +19,7 @@ export async function GET(
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { tenantId: true, tenant: { select: { name: true, logoUrl: true } } },
+    select: { tenantId: true, tenant: { select: { name: true, logoUrl: true, locale: true } } },
   })
   if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   // Bloqueio de assinatura é só de página — essa rota é despachável direto
@@ -39,11 +40,17 @@ export async function GET(
 
   if (!receipt) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
+  // O PDF é renderizado fora do request context do Next.js — o locale do
+  // tenant precisa ser passado explícito. (Item 1 do roadmap, 06/08/2026.)
+  const locale = dbUser.tenant.locale
+  const t = getTranslator(locale, "pdf")
+
   const buildElement = (logoUrl: string | null) => {
     return React.createElement(ReceiptPDF, {
       receipt,
       companyName: dbUser.tenant.name,
       logoUrl,
+      locale,
     }) as unknown as ReactElement<DocumentProps, JSXElementConstructor<DocumentProps>>
   }
 
@@ -61,14 +68,15 @@ export async function GET(
       buffer = await renderToBuffer(buildElement(null))
     } catch (err2) {
       console.error("Falha ao gerar PDF de recibo mesmo sem logo:", err2)
-      return NextResponse.json({ error: "Falha ao gerar PDF" }, { status: 500 })
+      return NextResponse.json({ error: t("errors.generateFailed") }, { status: 500 })
     }
   }
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="Recibo-${id.slice(-8).toUpperCase()}.pdf"`,
+      // Header HTTP é ASCII — os valores de fileNamePrefix são sem acento.
+      "Content-Disposition": `inline; filename="${t("receipt.fileNamePrefix")}-${id.slice(-8).toUpperCase()}.pdf"`,
     },
   })
 }

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
+import { getTranslations } from "next-intl/server"
 import { getServiceOrder, updateOrderStatus, deleteServiceOrder } from "@/actions/service-orders"
 import { buttonVariants } from "@/components/ui/button"
 import { FileDown, Pencil, ExternalLink } from "lucide-react"
@@ -17,18 +18,21 @@ import { DeleteButton } from "@/components/shared/delete-button"
 import { StatusButton } from "@/components/service-orders/status-button"
 import { formatCurrency, formatDate, formatOsNumber } from "@/lib/utils"
 
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive"; next?: string; nextLabel?: string }> = {
-  OPEN: { label: "Aberta", variant: "secondary", next: "IN_PROGRESS", nextLabel: "Iniciar atendimento" },
-  IN_PROGRESS: { label: "Em andamento", variant: "default", next: "DONE", nextLabel: "Marcar como concluída" },
-  DONE: { label: "Concluída", variant: "outline", next: "INVOICED", nextLabel: "Marcar como faturada" },
-  INVOICED: { label: "Faturada", variant: "outline" },
-  CANCELLED: { label: "Cancelada", variant: "destructive" },
-}
-
 export default async function ServiceOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const os = await getServiceOrder(id)
   if (!os) notFound()
+
+  const t = await getTranslations("serviceOrdersPages")
+  const tCommon = await getTranslations("common")
+
+  const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive"; next?: string; nextLabel?: string }> = {
+    OPEN: { label: tCommon("serviceOrderStatus.OPEN"), variant: "secondary", next: "IN_PROGRESS", nextLabel: t("detail.actions.startService") },
+    IN_PROGRESS: { label: tCommon("serviceOrderStatus.IN_PROGRESS"), variant: "default", next: "DONE", nextLabel: t("detail.actions.markDone") },
+    DONE: { label: tCommon("serviceOrderStatus.DONE"), variant: "outline", next: "INVOICED", nextLabel: t("detail.actions.markInvoiced") },
+    INVOICED: { label: tCommon("serviceOrderStatus.INVOICED"), variant: "outline" },
+    CANCELLED: { label: tCommon("serviceOrderStatus.CANCELLED"), variant: "destructive" },
+  }
 
   const config = statusConfig[os.status]
 
@@ -52,7 +56,7 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
             className={buttonVariants({ variant: "outline" })}
           >
             <Pencil className="size-4 mr-2" />
-            Editar
+            {tCommon("edit")}
           </Link>
           <Link
             href={`/api/pdf/service-order/${id}`}
@@ -70,10 +74,10 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
               className={buttonVariants({ variant: "outline" }) + " gap-2"}
             >
               <ExternalLink className="size-4" />
-              Portal cliente
+              {t("detail.clientPortal")}
             </Link>
           )}
-          <DeleteButton action={deleteServiceOrder.bind(null, id)} label="Excluir OS" />
+          <DeleteButton action={deleteServiceOrder.bind(null, id)} label={t("detail.deleteLabel")} />
           {(os.status === "DONE" || os.status === "INVOICED") && (
             <NfseButton
               orderId={id}
@@ -89,24 +93,24 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Informações</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("detail.infoTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p>
-              <span className="text-muted-foreground">Cliente: </span>
+              <span className="text-muted-foreground">{t("detail.clientLabel")}</span>
               <Link href={`/clients/${os.clientId}`} className="hover:underline font-medium">
                 {os.client.name}
               </Link>
             </p>
             {os.technician && (
-              <p><span className="text-muted-foreground">Responsável: </span>{os.technician.name}</p>
+              <p><span className="text-muted-foreground">{t("detail.responsibleLabel")}</span>{os.technician.name}</p>
             )}
-            <p><span className="text-muted-foreground">Criada em: </span>{formatDate(os.createdAt)}</p>
+            <p><span className="text-muted-foreground">{t("detail.createdLabel")}</span>{formatDate(os.createdAt)}</p>
             {os.scheduledAt && (
-              <p><span className="text-muted-foreground">Agendada: </span>{formatDate(os.scheduledAt)}</p>
+              <p><span className="text-muted-foreground">{t("detail.scheduledLabel")}</span>{formatDate(os.scheduledAt)}</p>
             )}
             {os.concludedAt && (
-              <p><span className="text-muted-foreground">Concluída: </span>{formatDate(os.concludedAt)}</p>
+              <p><span className="text-muted-foreground">{t("detail.concludedLabel")}</span>{formatDate(os.concludedAt)}</p>
             )}
           </CardContent>
         </Card>
@@ -114,7 +118,7 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
         {os.description && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Descrição do problema</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">{t("detail.problemDescriptionTitle")}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm whitespace-pre-wrap">{os.description}</p>
@@ -125,7 +129,7 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
         {os.conclusionNote && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Serviços realizados</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">{t("detail.servicesPerformedTitle")}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm whitespace-pre-wrap">{os.conclusionNote}</p>
@@ -137,7 +141,7 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
       {os.checklist.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Checklist de execução</CardTitle>
+            <CardTitle className="text-base">{t("detail.checklistTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             <Checklist
@@ -151,7 +155,7 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Assinatura do cliente</CardTitle>
+          <CardTitle className="text-base">{t("detail.signatureTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <SignaturePad orderId={id} existingSignatureUrl={os.clientSignatureUrl} />
@@ -162,19 +166,19 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Itens</CardTitle>
+          <CardTitle className="text-base">{t("detail.itemsTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {os.items.length === 0 ? (
-            <p className="text-sm text-muted-foreground p-4">Nenhum item registrado.</p>
+            <p className="text-sm text-muted-foreground p-4">{t("detail.noItems")}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead className="text-right">Qtd.</TableHead>
-                  <TableHead className="text-right">Unit.</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead>{t("detail.itemColumns.description")}</TableHead>
+                  <TableHead className="text-right">{t("detail.itemColumns.quantity")}</TableHead>
+                  <TableHead className="text-right">{t("detail.itemColumns.unitPrice")}</TableHead>
+                  <TableHead className="text-right">{t("detail.itemColumns.total")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -187,7 +191,7 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
                   </TableRow>
                 ))}
                 <TableRow>
-                  <TableCell colSpan={3} className="text-right font-semibold">Total</TableCell>
+                  <TableCell colSpan={3} className="text-right font-semibold">{t("detail.itemColumns.total")}</TableCell>
                   <TableCell className="text-right font-bold text-base">
                     {formatCurrency(Number(os.totalAmount))}
                   </TableCell>

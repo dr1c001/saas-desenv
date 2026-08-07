@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import {
   BarChart,
   Bar,
@@ -18,6 +19,7 @@ function formatBRL(value: number) {
 }
 
 export function RevenueChart({ data }: { data: DataPoint[] }) {
+  const t = useTranslations("dashboardHome")
   return (
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={data} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
@@ -40,8 +42,8 @@ export function RevenueChart({ data }: { data: DataPoint[] }) {
           contentStyle={{ fontSize: 12, borderRadius: 6 }}
         />
         <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Bar dataKey="receita" name="Receita" fill="hsl(142 71% 45%)" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="despesa" name="Despesa" fill="hsl(0 72% 51%)" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="receita" name={t("chart.revenue")} fill="hsl(142 71% 45%)" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="despesa" name={t("chart.expense")} fill="hsl(0 72% 51%)" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )

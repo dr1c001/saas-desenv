@@ -3,10 +3,14 @@
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription, ALL_TABS, DEFAULT_TECHNICIAN_TABS, type TabSlug } from "@/lib/auth"
+import { getTranslations } from "next-intl/server"
 
 export async function getPermissions() {
   const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
+  // Rótulo das abas vem de `nav` (mesma fonte da sidebar) — ALL_TABS guarda só
+  // slug + navKey, sem texto. (i18n, 07/08/2026.)
+  const tNav = await getTranslations("nav")
   const perms = await prisma.tabPermission.findMany({
     where: { tenantId, role: "TECHNICIAN" },
     select: { tab: true },
@@ -16,7 +20,7 @@ export async function getPermissions() {
     // Return defaults
     return ALL_TABS.map((t) => ({
       tab: t.slug,
-      label: t.label,
+      label: tNav(t.navKey),
       allowed: DEFAULT_TECHNICIAN_TABS.includes(t.slug as TabSlug),
     }))
   }
@@ -24,7 +28,7 @@ export async function getPermissions() {
   const allowed = new Set(perms.map((p) => p.tab))
   return ALL_TABS.map((t) => ({
     tab: t.slug,
-    label: t.label,
+    label: tNav(t.navKey),
     allowed: allowed.has(t.slug),
   }))
 }

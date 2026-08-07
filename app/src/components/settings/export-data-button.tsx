@@ -1,11 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import { Download, Loader2 } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import { exportTenantData } from "@/actions/data-export"
 
 export function ExportDataButton() {
+  const t = useTranslations("settingsCore")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,7 +27,7 @@ export function ExportDataButton() {
       a.remove()
       URL.revokeObjectURL(url)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao exportar dados.")
+      setError(e instanceof Error ? e.message : t("export.error"))
     } finally {
       setLoading(false)
     }
@@ -43,7 +45,7 @@ export function ExportDataButton() {
         ) : (
           <Download className="size-4 mr-2" />
         )}
-        {loading ? "Gerando arquivo..." : "Baixar todos os meus dados (.json)"}
+        {loading ? t("export.generating") : t("export.downloadButton")}
       </button>
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>

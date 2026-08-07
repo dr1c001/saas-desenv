@@ -4,11 +4,13 @@ import { buttonVariants } from "@/components/ui/button"
 import { ChevronLeft } from "lucide-react"
 import { ProviderForm } from "@/components/providers/provider-form"
 import { getProvider, updateProvider } from "@/actions/providers"
+import { getTranslations } from "next-intl/server"
 
 export default async function EditProviderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const provider = await getProvider(id)
   if (!provider) notFound()
+  const t = await getTranslations("providers")
 
   return (
     <div className="space-y-6">
@@ -16,7 +18,7 @@ export default async function EditProviderPage({ params }: { params: Promise<{ i
         <Link href="/providers" className={buttonVariants({ variant: "ghost", size: "sm" })}>
           <ChevronLeft className="size-4" />
         </Link>
-        <h1 className="text-2xl font-bold">Editar Prestador</h1>
+        <h1 className="text-2xl font-bold">{t("edit.title")}</h1>
       </div>
       <ProviderForm provider={provider} action={updateProvider.bind(null, id)} />
     </div>

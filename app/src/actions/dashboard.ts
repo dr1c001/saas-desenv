@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
+import { getTranslations } from "next-intl/server"
 
 export async function getMonthlyRevenueChart() {
   const { tenantId, role } = await getTenant()
@@ -10,7 +11,7 @@ export async function getMonthlyRevenueChart() {
   // reports.ts) — este gráfico expunha os mesmos totais de receita/despesa
   // pra qualquer TECHNICIAN via /dashboard. (Achado em auditoria pré-venda,
   // 2026-08-05.)
-  if (role !== "OWNER" && role !== "ADMIN") throw new Error("Sem permissão.")
+  if (role !== "OWNER" && role !== "ADMIN") throw new Error((await getTranslations("common"))("noPermission"))
   await requireActiveSubscription(tenantId)
 
   // Last 6 months (limites de mês em horário de Brasília, não UTC do

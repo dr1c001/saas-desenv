@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { sendPushToUser } from "@/lib/push"
+import { getTranslations } from "next-intl/server"
+import { getTranslator } from "@/lib/i18n"
 
 export async function POST(req: NextRequest) {
   try {
     const { quoteId, clientToken, status } = await req.json()
+    // Chamado do portal público (sem sessão) — antes de achar o orçamento não
+    // há de onde tirar o idioma do tenant, então essas duas validações de
+    // formato usam o fallback do request context. (i18n.)
+    const te = await getTranslations("errors")
     if (!["APPROVED", "REJECTED"].includes(status)) {
-      return NextResponse.json({ ok: false, error: "Status inválido" }, { status: 400 })
+      return NextResponse.json({ ok: false, error: te("invalidStatus") }, { status: 400 })
     }
     if (!quoteId || !clientToken) {
-      return NextResponse.json({ ok: false, error: "Requisição inválida" }, { status: 400 })
+      return NextResponse.json({ ok: false, error: te("invalidRequest") }, { status: 400 })
     }
 
     // quoteId sozinho não autentica nada — é o mesmo id usado em URLs internas
@@ -17,9 +23,9 @@ export async function POST(req: NextRequest) {
     // portal público conhece. (Achado em revisão de segurança 2026-07-19.)
     const quote = await prisma.quote.findUnique({
       where: { id: quoteId, clientToken },
-      select: { id: true, tenantId: true, number: true, clientName: true },
+      select: { id: true, tenantId: true, number: true, clientName: true, tenant: { select: { locale: true } } },
     })
-    if (!quote) return NextResponse.json({ ok: false, error: "Orçamento não encontrado" }, { status: 404 })
+    if (!quote) return NextResponse.json({ ok: false, error: te("quoteNotFound") }, { status: 404 })
 
     await prisma.quote.update({ where: { id: quote.id }, data: { status } })
 
@@ -33,9 +39,12 @@ export async function POST(req: NextRequest) {
         select: { endpoint: true, p256dh: true, auth: true },
       })
       if (subs.length > 0) {
+        // Push vai pro staff do tenant, não pro cliente — idioma do tenant.
+        const tn = getTranslator(quote.tenant.locale, "notifications")
+        const key = status === "APPROVED" ? "quoteApproved" : "quoteRejected"
         await sendPushToUser(subs, {
-          title: status === "APPROVED" ? "Orçamento aprovado! 🎉" : "Orçamento recusado",
-          body: `${quote.clientName} ${status === "APPROVED" ? "aprovou" : "recusou"} o orçamento #${quote.number}`,
+          title: tn(`${key}.title` as "quoteApproved.title"),
+          body: tn(`${key}.body` as "quoteApproved.body", { client: quote.clientName, number: quote.number }),
           url: "/quotes",
         })
       }

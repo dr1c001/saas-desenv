@@ -1,6 +1,7 @@
 "use client"
 
 import { useActionState } from "react"
+import { useTranslations } from "next-intl"
 import { updateProfile, type SettingsFormState } from "@/actions/settings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,79 +26,83 @@ type User = {
   userAddress: UserAddress
 } | null
 
-const roleLabel: Record<string, string> = {
-  OWNER: "Proprietário",
-  ADMIN: "Administrador",
-  TECHNICIAN: "Técnico",
-}
+const ROLE_KEYS = ["OWNER", "ADMIN", "TECHNICIAN"] as const
 
 export function ProfileForm({ user }: { user: User }) {
+  const t = useTranslations("settingsCore")
+  const tc = useTranslations("common")
   const [state, formAction, isPending] = useActionState<SettingsFormState, FormData>(
     updateProfile,
     {}
   )
   const addr = user?.userAddress
+  // Mantém o fallback original: role desconhecido (ex: valor novo no banco
+  // ainda sem tradução) é exibido cru em vez de virar a chave literal.
+  const role = user?.role ?? ""
+  const roleLabel = (ROLE_KEYS as readonly string[]).includes(role)
+    ? tc(`roles.${role}` as "roles.OWNER")
+    : role
 
   return (
     <form action={formAction} className="space-y-4">
       <div className="space-y-1.5">
-        <Label htmlFor="profile-name">Seu nome *</Label>
+        <Label htmlFor="profile-name">{t("profile.form.nameLabel")}</Label>
         <Input id="profile-name" name="name" defaultValue={user?.name ?? ""} required />
         {state.errors?.name && <p className="text-sm text-destructive">{state.errors.name[0]}</p>}
       </div>
       <div className="space-y-1.5">
-        <Label>E-mail</Label>
+        <Label>{t("profile.form.emailLabel")}</Label>
         <Input value={user?.email ?? ""} disabled className="opacity-60" readOnly />
-        <p className="text-xs text-muted-foreground">O e-mail não pode ser alterado aqui.</p>
+        <p className="text-xs text-muted-foreground">{t("profile.form.emailHint")}</p>
       </div>
       <div className="space-y-1.5">
-        <Label>Perfil</Label>
-        <Input value={roleLabel[user?.role ?? ""] ?? user?.role ?? ""} disabled className="opacity-60" readOnly />
+        <Label>{t("profile.form.roleLabel")}</Label>
+        <Input value={roleLabel} disabled className="opacity-60" readOnly />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="profile-document">CPF / CNPJ</Label>
+        <Label htmlFor="profile-document">{t("profile.form.documentLabel")}</Label>
         <Input id="profile-document" name="document" defaultValue={user?.document ?? ""} />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="profile-phone">Telefone</Label>
-        <Input id="profile-phone" name="phone" placeholder="(11) 99999-9999" defaultValue={user?.phone ?? ""} />
+        <Label htmlFor="profile-phone">{t("profile.form.phoneLabel")}</Label>
+        <Input id="profile-phone" name="phone" placeholder={t("profile.form.phonePlaceholder")} defaultValue={user?.phone ?? ""} />
       </div>
 
-      <p className="text-sm font-medium pt-2">Endereço</p>
+      <p className="text-sm font-medium pt-2">{t("profile.form.addressTitle")}</p>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5 col-span-2">
-          <Label htmlFor="street">Rua / Avenida</Label>
+          <Label htmlFor="street">{t("profile.form.streetLabel")}</Label>
           <Input id="street" name="street" defaultValue={addr?.street ?? ""} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="number">Número</Label>
+          <Label htmlFor="number">{t("profile.form.numberLabel")}</Label>
           <Input id="number" name="number" defaultValue={addr?.number ?? ""} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="complement">Complemento</Label>
+          <Label htmlFor="complement">{t("profile.form.complementLabel")}</Label>
           <Input id="complement" name="complement" defaultValue={addr?.complement ?? ""} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="district">Bairro</Label>
+          <Label htmlFor="district">{t("profile.form.districtLabel")}</Label>
           <Input id="district" name="district" defaultValue={addr?.district ?? ""} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="zipCode">CEP</Label>
+          <Label htmlFor="zipCode">{t("profile.form.zipCodeLabel")}</Label>
           <Input id="zipCode" name="zipCode" defaultValue={addr?.zipCode ?? ""} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="city">Cidade</Label>
+          <Label htmlFor="city">{t("profile.form.cityLabel")}</Label>
           <Input id="city" name="city" defaultValue={addr?.city ?? ""} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="state">Estado (UF)</Label>
+          <Label htmlFor="state">{t("profile.form.stateLabel")}</Label>
           <Input id="state" name="state" maxLength={2} defaultValue={addr?.state ?? ""} />
         </div>
       </div>
 
       {state.message && <p className="text-sm text-green-600">{state.message}</p>}
       <Button type="submit" disabled={isPending}>
-        {isPending ? "Salvando..." : "Salvar"}
+        {isPending ? tc("saving") : tc("save")}
       </Button>
     </form>
   )

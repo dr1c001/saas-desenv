@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { getTranslations } from "next-intl/server"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -26,39 +27,40 @@ type SearchParams = Promise<{ q?: string }>
 
 export default async function ReceiptsPage({ searchParams }: { searchParams: SearchParams }) {
   const { q } = await searchParams
+  const t = await getTranslations("billingReferral.receipts")
   const { tenantId } = await getTenant()
   const receipts = await getReceipts(tenantId, q)
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Recibos</h1>
-        <p className="text-sm text-muted-foreground mt-1">Receitas pagas — cada linha gera um recibo em PDF</p>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("subtitle")}</p>
       </div>
 
       <Suspense>
-        <SearchBar placeholder="Buscar por descrição..." />
+        <SearchBar placeholder={t("searchPlaceholder")} />
       </Suspense>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{receipts.length} recibo{receipts.length !== 1 ? "s" : ""}</CardTitle>
+          <CardTitle className="text-base">{t("countLabel", { count: receipts.length })}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {receipts.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
               <Receipt className="size-8" />
-              <p className="text-sm">Nenhum recibo disponível. Receitas pagas aparecem aqui.</p>
+              <p className="text-sm">{t("empty")}</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Pago em</TableHead>
-                  <TableHead>OS vinculada</TableHead>
+                  <TableHead>{t("columns.description")}</TableHead>
+                  <TableHead>{t("columns.amount")}</TableHead>
+                  <TableHead>{t("columns.dueDate")}</TableHead>
+                  <TableHead>{t("columns.paidAt")}</TableHead>
+                  <TableHead>{t("columns.linkedOrder")}</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>

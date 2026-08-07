@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Suspense } from "react"
+import { getTranslations } from "next-intl/server"
 import { buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,19 +10,12 @@ import { getQuotes } from "@/actions/quotes"
 import { SearchBar } from "@/components/shared/search-bar"
 import { StatusFilter } from "@/components/shared/status-filter"
 
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  DRAFT: { label: "Rascunho", variant: "outline" },
-  SENT: { label: "Enviado", variant: "secondary" },
-  APPROVED: { label: "Aprovado", variant: "default" },
-  REJECTED: { label: "Recusado", variant: "destructive" },
+const statusVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  DRAFT: "outline",
+  SENT: "secondary",
+  APPROVED: "default",
+  REJECTED: "destructive",
 }
-
-const statusOptions = [
-  { value: "DRAFT", label: "Rascunho" },
-  { value: "SENT", label: "Enviado" },
-  { value: "APPROVED", label: "Aprovado" },
-  { value: "REJECTED", label: "Recusado" },
-]
 
 function fmt(value: unknown) {
   return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -41,29 +35,39 @@ type SearchParams = Promise<{ q?: string; status?: string }>
 export default async function QuotesPage({ searchParams }: { searchParams: SearchParams }) {
   const { q, status } = await searchParams
   const quotes = await getQuotes({ q, status })
+  const t = await getTranslations("quotes")
+  const tc = await getTranslations("common")
+
+  const statusOptions = [
+    { value: "DRAFT", label: tc("quoteStatus.DRAFT") },
+    { value: "SENT", label: tc("quoteStatus.SENT") },
+    { value: "APPROVED", label: tc("quoteStatus.APPROVED") },
+    { value: "REJECTED", label: tc("quoteStatus.REJECTED") },
+  ]
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Orçamentos</h1>
+        <h1 className="text-2xl font-bold">{t("list.title")}</h1>
         <Link href="/quotes/new" className={buttonVariants()}>
           <Plus className="size-4 mr-2" />
-          Novo orçamento
+          {t("list.newButton")}
         </Link>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <Suspense>
-          <SearchBar placeholder="Buscar por cliente, descrição..." />
-          <StatusFilter options={statusOptions} placeholder="Todos os status" />
+          <SearchBar placeholder={t("list.searchPlaceholder")} />
+          <StatusFilter options={statusOptions} placeholder={t("list.statusFilterPlaceholder")} />
         </Suspense>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {quotes.length} orçamento{quotes.length !== 1 ? "s" : ""}
-            {(q || status) && " encontrado" + (quotes.length !== 1 ? "s" : "")}
+            {(q || status)
+              ? t("list.resultsFound", { count: quotes.length })
+              : t("list.resultsCount", { count: quotes.length })}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -71,11 +75,11 @@ export default async function QuotesPage({ searchParams }: { searchParams: Searc
             <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
               <FileText className="size-8" />
               <p className="text-sm">
-                {q || status ? "Nenhum orçamento encontrado com esses filtros." : "Nenhum orçamento cadastrado ainda."}
+                {q || status ? t("list.emptyFiltered") : t("list.emptyState")}
               </p>
               {!q && !status && (
                 <Link href="/quotes/new" className={buttonVariants({ variant: "outline" })}>
-                  Criar primeiro orçamento
+                  {t("list.emptyCta")}
                 </Link>
               )}
             </div>
@@ -83,12 +87,12 @@ export default async function QuotesPage({ searchParams }: { searchParams: Searc
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Número</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Serviço</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Validade</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{t("list.columns.number")}</TableHead>
+                  <TableHead>{t("list.columns.client")}</TableHead>
+                  <TableHead>{t("list.columns.service")}</TableHead>
+                  <TableHead>{t("list.columns.amount")}</TableHead>
+                  <TableHead>{t("list.columns.validity")}</TableHead>
+                  <TableHead>{t("list.columns.status")}</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -116,8 +120,8 @@ export default async function QuotesPage({ searchParams }: { searchParams: Searc
                       {q.validUntil ? fmtDate(q.validUntil) : "—"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusConfig[q.status].variant}>
-                        {statusConfig[q.status].label}
+                      <Badge variant={statusVariant[q.status]}>
+                        {tc(`quoteStatus.${q.status}` as "quoteStatus.DRAFT")}
                       </Badge>
                     </TableCell>
                     <TableCell>

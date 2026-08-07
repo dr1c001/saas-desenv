@@ -2,6 +2,7 @@
 
 import "leaflet/dist/leaflet.css"
 import L from "leaflet"
+import { useTranslations } from "next-intl"
 import { useEffect, useRef } from "react"
 
 export type Technician = {
@@ -81,6 +82,8 @@ export default function LeafletMap({
   technicians: Technician[]
   orders: ServiceOrderPin[]
 }) {
+  const t = useTranslations("mapAdmin")
+  const tCommon = useTranslations("common")
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<import("leaflet").Map | null>(null)
   const markersRef = useRef<Map<string, import("leaflet").Marker>>(new Map())
@@ -111,33 +114,42 @@ export default function LeafletMap({
 
     const techIcon = buildTechIcon(L)
 
+    // Texto vindo de t()/tCommon() sai do messages/*.json (conteúdo nosso, não
+    // editável por usuário), então entra no HTML do popup sem escapar — só os
+    // dados de Client/ServiceOrder/User continuam passando por escapeHtml().
     technicians.forEach((tech) => {
       if (!mapRef.current) return
       const time = new Date(tech.updatedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
       const marker = L.marker([tech.latitude, tech.longitude], { icon: techIcon })
         .addTo(mapRef.current)
-        .bindPopup(`<b>👷 ${escapeHtml(tech.name)}</b><br><span style="color:#666">Técnico · atualizado ${time}</span>`)
+        .bindPopup(
+          `<b>👷 ${escapeHtml(tech.name)}</b><br>` +
+            `<span style="color:#666">${tCommon("roles.TECHNICIAN")} · ${t("map.popup.updatedAt", { time })}</span>`
+        )
       markersRef.current.set("tech-" + tech.id, marker)
     })
 
     orders.forEach((order) => {
       if (!mapRef.current) return
       const color = STATUS_COLOR[order.status] ?? "#6b7280"
-      const label = order.status === "IN_PROGRESS" ? "▶" : "OS"
+      const label = order.status === "IN_PROGRESS" ? "▶" : t("map.pin.orderLabel")
       const icon = buildSvgIcon(L, color, label)
-      const statusLabel = order.status === "OPEN" ? "Aberta" : "Em andamento"
+      const statusLabel =
+        order.status === "OPEN"
+          ? tCommon("serviceOrderStatus.OPEN")
+          : tCommon("serviceOrderStatus.IN_PROGRESS")
       const techLine = order.technicianName ? `<br>👷 ${escapeHtml(order.technicianName)}` : ""
       const marker = L.marker([order.latitude, order.longitude], { icon })
         .addTo(mapRef.current)
         .bindPopup(
-          `<b>OS #${order.number} — ${escapeHtml(order.title)}</b><br>` +
+          `<b>${t("map.orderNumber", { number: String(order.number) })} — ${escapeHtml(order.title)}</b><br>` +
             `<span style="color:#666">🏠 ${escapeHtml(order.clientName)}${order.city ? ` · ${escapeHtml(order.city)}` : ""}</span>` +
             techLine +
             `<br><span style="font-size:11px;color:${color}">${statusLabel}</span>`
         )
       markersRef.current.set("os-" + order.id, marker)
     })
-  }, [technicians, orders])
+  }, [technicians, orders, t, tCommon])
 
   return <div ref={containerRef} className="h-[520px] w-full rounded-lg border overflow-hidden" />
 }

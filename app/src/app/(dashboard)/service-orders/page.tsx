@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Suspense } from "react"
+import { getTranslations } from "next-intl/server"
 import { buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,27 +14,20 @@ import { StatusFilter } from "@/components/shared/status-filter"
 import { formatCurrency, formatOsNumber } from "@/lib/utils"
 import { OsActionsRow } from "@/components/service-orders/os-actions-row"
 
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  OPEN: { label: "Aberta", variant: "secondary" },
-  IN_PROGRESS: { label: "Em andamento", variant: "default" },
-  DONE: { label: "Concluída", variant: "outline" },
-  INVOICED: { label: "Faturada", variant: "outline" },
-  CANCELLED: { label: "Cancelada", variant: "destructive" },
+const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+  OPEN: "secondary",
+  IN_PROGRESS: "default",
+  DONE: "outline",
+  INVOICED: "outline",
+  CANCELLED: "destructive",
 }
-
-const statusOptions = [
-  { value: "all", label: "Todas" },
-  { value: "OPEN", label: "Aberta" },
-  { value: "IN_PROGRESS", label: "Em andamento" },
-  { value: "DONE", label: "Concluída" },
-  { value: "INVOICED", label: "Faturada" },
-  { value: "CANCELLED", label: "Cancelada" },
-]
 
 type SearchParams = Promise<{ q?: string; status?: string }>
 
 export default async function ServiceOrdersPage({ searchParams }: { searchParams: SearchParams }) {
   const { q, status } = await searchParams
+  const t = await getTranslations("serviceOrdersPages")
+  const tCommon = await getTranslations("common")
   // Default to active orders only; "all" shows everything
   const activeOnly = !status || (status !== "all" && !["DONE", "INVOICED", "CANCELLED", "OPEN", "IN_PROGRESS"].includes(status))
   const orders = await getServiceOrders({
@@ -42,29 +36,48 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
     statusIn: (!status || status === "") ? ["OPEN", "IN_PROGRESS"] : undefined,
   })
 
+  const statusOptions = [
+    { value: "all", label: t("list.statusAll") },
+    { value: "OPEN", label: tCommon("serviceOrderStatus.OPEN") },
+    { value: "IN_PROGRESS", label: tCommon("serviceOrderStatus.IN_PROGRESS") },
+    { value: "DONE", label: tCommon("serviceOrderStatus.DONE") },
+    { value: "INVOICED", label: tCommon("serviceOrderStatus.INVOICED") },
+    { value: "CANCELLED", label: tCommon("serviceOrderStatus.CANCELLED") },
+  ]
+
+  // Mesma logica original (flags independentes: vazio nunca ocorre pois
+  // isFilteredView é sempre true quando isActiveView é false) — só trocamos
+  // a concatenação de palavras soltas por frases completas traduzidas, já
+  // que em inglês o adjetivo vem antes do substantivo ("3 active orders").
+  const isActiveView = !status || status === ""
+  const isFilteredView = !!(q || (status && status !== ""))
+  const countText = isActiveView && isFilteredView
+    ? t("list.countActiveFound", { count: orders.length })
+    : isActiveView
+      ? t("list.countActive", { count: orders.length })
+      : t("list.countFound", { count: orders.length })
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Ordens de Serviço</h1>
+        <h1 className="text-2xl font-bold">{t("list.title")}</h1>
         <Link href="/service-orders/new" className={buttonVariants()}>
           <Plus className="size-4 mr-2" />
-          Nova OS
+          {t("list.newButton")}
         </Link>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <Suspense>
-          <SearchBar placeholder="Buscar por título ou cliente..." />
-          <StatusFilter options={statusOptions} placeholder="Todos os status" />
+          <SearchBar placeholder={t("list.searchPlaceholder")} />
+          <StatusFilter options={statusOptions} placeholder={t("list.statusFilterPlaceholder")} />
         </Suspense>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {orders.length} {orders.length === 1 ? "ordem" : "ordens"}
-            {(!status || status === "") && " ativa" + (orders.length !== 1 ? "s" : "")}
-            {(q || (status && status !== "")) && " encontrada" + (orders.length !== 1 ? "s" : "")}
+            {countText}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -72,11 +85,11 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
             <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
               <ClipboardList className="size-8" />
               <p className="text-sm">
-                {q || status ? "Nenhuma OS encontrada com esses filtros." : "Nenhuma OS criada ainda."}
+                {q || status ? t("list.emptyFiltered") : t("list.emptyNone")}
               </p>
               {!q && !status && (
                 <Link href="/service-orders/new" className={buttonVariants({ variant: "outline" })}>
-                  Criar primeira OS
+                  {t("list.createFirst")}
                 </Link>
               )}
             </div>
@@ -84,13 +97,13 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nº</TableHead>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Responsável</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{t("list.columns.number")}</TableHead>
+                  <TableHead>{t("list.columns.title")}</TableHead>
+                  <TableHead>{t("list.columns.client")}</TableHead>
+                  <TableHead>{t("list.columns.responsible")}</TableHead>
+                  <TableHead>{t("list.columns.total")}</TableHead>
+                  <TableHead>{t("list.columns.date")}</TableHead>
+                  <TableHead>{t("list.columns.status")}</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -112,8 +125,8 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
                       {new Date(os.createdAt).toLocaleDateString("pt-BR")}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusConfig[os.status].variant}>
-                        {statusConfig[os.status].label}
+                      <Badge variant={statusVariant[os.status]}>
+                        {tCommon(`serviceOrderStatus.${os.status}` as "serviceOrderStatus.OPEN")}
                       </Badge>
                     </TableCell>
                     <TableCell>

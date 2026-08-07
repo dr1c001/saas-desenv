@@ -4,27 +4,29 @@ import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { CheckCircle2, Clock, CreditCard, Zap } from "lucide-react"
 import Link from "next/link"
+import { getTranslations } from "next-intl/server"
 import { CancelSubscriptionButton } from "@/components/billing/cancel-button"
 
-const STATUS_LABEL: Record<string, { label: string; color: string }> = {
-  TRIAL: { label: "Sem assinatura", color: "bg-yellow-500" },
-  PENDING: { label: "Confirmando pagamento", color: "bg-blue-500" },
-  ACTIVE: { label: "Ativo", color: "bg-green-500" },
-  PAST_DUE: { label: "Pagamento pendente", color: "bg-red-500" },
-  CANCELLED: { label: "Cancelado", color: "bg-gray-500" },
+const STATUS_COLOR: Record<string, string> = {
+  TRIAL: "bg-yellow-500",
+  PENDING: "bg-blue-500",
+  ACTIVE: "bg-green-500",
+  PAST_DUE: "bg-red-500",
+  CANCELLED: "bg-gray-500",
 }
 
-const PLAN_FEATURES: Record<string, string[]> = {
-  starter: ["Até 3 usuários", "50 OS por mês", "Relatórios básicos", "Suporte por e-mail"],
-  pro: ["Até 10 usuários", "OS ilimitadas", "Mapa GPS", "Checklist + Assinatura digital", "Emissão de NFS-e", "Relatórios avançados", "Suporte prioritário"],
-  enterprise: ["Usuários ilimitados", "OS ilimitadas", "Emissão de NFS-e", "API de integração", "Suporte 24h"],
-}
+// Slugs que têm lista de features traduzida em messages/*.json — plano novo
+// no banco sem entrada lá cai na lista vazia, igual ao fallback anterior
+// (PLAN_FEATURES[plan.slug] ?? []).
+const PLAN_FEATURE_SLUGS = ["starter", "pro", "enterprise"]
 
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ success?: string; error?: string }> }) {
   const { success, error } = await searchParams
+  const t = await getTranslations("billingReferral.billing")
   const [billing, plans] = await Promise.all([getBillingStatus(), getPlans()])
 
-  const statusInfo = STATUS_LABEL[billing?.subscriptionStatus ?? "TRIAL"]
+  const statusKey = billing?.subscriptionStatus ?? "TRIAL"
+  const statusColor = STATUS_COLOR[statusKey]
   // Preço mostrado aqui não batia com o que de fato ia pra Asaas em
   // subscribeToPlan quando havia desconto de indicação — cliente só
   // descobria o valor real já na página de pagamento da Asaas.
@@ -34,20 +36,20 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   return (
     <div className="space-y-8 max-w-5xl">
       <div>
-        <h1 className="text-2xl font-bold">Planos e Assinatura</h1>
-        <p className="text-sm text-muted-foreground mt-1">Gerencie seu plano e forma de pagamento.</p>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("subtitle")}</p>
       </div>
 
       {success && (
         <div className="flex items-center gap-2 rounded-lg border border-green-600 bg-green-50 dark:bg-green-950 p-4 text-green-700 dark:text-green-300">
           <CheckCircle2 className="size-5 shrink-0" />
-          <span>Assinatura realizada com sucesso! A fatura para pagamento foi enviada por e-mail.</span>
+          <span>{t("successMessage")}</span>
         </div>
       )}
 
       {error && (
         <div className="flex items-center gap-2 rounded-lg border border-red-400 bg-red-50 dark:bg-red-950 p-4 text-red-700 dark:text-red-300">
-          <span className="font-medium">Erro ao processar assinatura:</span>
+          <span className="font-medium">{t("errorPrefix")}</span>
           <span>{decodeURIComponent(error)}</span>
         </div>
       )}
@@ -57,17 +59,17 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-lg flex items-center gap-2">
             <CreditCard className="size-5" />
-            Status da assinatura
+            {t("statusTitle")}
           </h2>
-          <span className={`px-3 py-1 rounded-full text-xs text-white font-medium ${statusInfo.color}`}>
-            {statusInfo.label}
+          <span className={`px-3 py-1 rounded-full text-xs text-white font-medium ${statusColor}`}>
+            {t(`subscriptionStatus.${statusKey}` as "subscriptionStatus.TRIAL")}
           </span>
         </div>
 
         {billing?.subscriptionStatus === "TRIAL" && (
           <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
             <Clock className="size-4" />
-            <span className="text-sm">Escolha um plano abaixo para começar a usar o sistema.</span>
+            <span className="text-sm">{t("trialHint")}</span>
           </div>
         )}
 
@@ -75,20 +77,21 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
             <Clock className="size-4" />
             <span className="text-sm">
-              Aguardando confirmação do pagamento — o acesso libera automaticamente assim que confirmar.
+              {t("pendingHint")}
             </span>
           </div>
         )}
 
         {billing?.plan && (
           <p className="text-sm text-muted-foreground">
-            Plano atual: <span className="font-medium text-foreground">{billing.plan.name}</span>
+            {t("currentPlanLabel")}{" "}
+            <span className="font-medium text-foreground">{billing.plan.name}</span>
           </p>
         )}
 
         {billing?.subscriptions[0] && (
           <p className="text-sm text-muted-foreground">
-            Renova em:{" "}
+            {t("renewsOnLabel")}{" "}
             <span className="font-medium text-foreground">
               {new Date(billing.subscriptions[0].currentPeriodEnd).toLocaleDateString("pt-BR")}
             </span>
@@ -106,13 +109,15 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       <div>
         <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
           <Zap className="size-5 text-yellow-500" />
-          Escolha seu plano
+          {t("plans.sectionTitle")}
         </h2>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {plans.map((plan) => {
             const isCurrentPlan = billing?.plan?.id === plan.id
-            const features = PLAN_FEATURES[plan.slug] ?? []
+            const features = PLAN_FEATURE_SLUGS.includes(plan.slug)
+              ? (t.raw(`plans.features.${plan.slug}`) as string[])
+              : []
             const isPro = plan.slug === "pro"
 
             return (
@@ -124,7 +129,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
               >
                 {isPro && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full font-medium">
-                    Mais popular
+                    {t("plans.mostPopular")}
                   </span>
                 )}
 
@@ -139,14 +144,16 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                     <span className="text-3xl font-bold">
                       {formatCurrency(Number(plan.priceMonthly) * (1 - discountPercent / 100))}
                     </span>
-                    <span className="text-muted-foreground text-sm">/mês</span>
+                    <span className="text-muted-foreground text-sm">{t("plans.perMonth")}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    ou {formatCurrency(Number(plan.priceYearly) * (1 - discountPercent / 100))}/ano (2 meses grátis)
+                    {t("plans.yearlyNote", {
+                      price: formatCurrency(Number(plan.priceYearly) * (1 - discountPercent / 100)),
+                    })}
                   </p>
                   {discountPercent > 0 && (
                     <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-1">
-                      {discountPercent}% de desconto de indicação aplicado
+                      {t("plans.referralDiscount", { percent: discountPercent })}
                     </p>
                   )}
                 </div>
@@ -162,7 +169,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
                 {isCurrentPlan ? (
                   <span className="text-center text-sm text-muted-foreground border rounded-lg py-2">
-                    Plano atual
+                    {t("plans.currentPlan")}
                   </span>
                 ) : (
                   <div className="space-y-2">
@@ -173,7 +180,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                         type="submit"
                         className={buttonVariants({ variant: isPro ? "default" : "outline", className: "w-full" })}
                       >
-                        Assinar — Mensal
+                        {t("plans.subscribeMonthly")}
                       </button>
                     </form>
                     <form action={subscribeToPlan}>
@@ -183,7 +190,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                         type="submit"
                         className={buttonVariants({ variant: "ghost", className: "w-full text-xs" })}
                       >
-                        Assinar — Anual (economize 2 meses)
+                        {t("plans.subscribeYearly")}
                       </button>
                     </form>
                   </div>
@@ -195,8 +202,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Pagamentos processados com segurança via <strong>Asaas</strong>. Aceitamos boleto e cartão de crédito.
-        Cancele a qualquer momento.
+        {t.rich("paymentNote", { strong: (chunks) => <strong>{chunks}</strong> })}
       </p>
     </div>
   )

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getTranslations } from "next-intl/server"
 
 // Os links de nota (0-10) no e-mail de NPS (lib/resend.ts, sendNpsEmail) são
 // uma navegação GET pra /api/nps?token=...&score=... — mas só existia POST
@@ -29,11 +30,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const { orderId, clientToken, score, feedback } = await req.json()
+    const te = await getTranslations("errors")
     if (typeof score !== "number" || score < 0 || score > 10) {
-      return NextResponse.json({ ok: false, error: "Score inválido" }, { status: 400 })
+      return NextResponse.json({ ok: false, error: te("invalidScore") }, { status: 400 })
     }
     if (!orderId || !clientToken) {
-      return NextResponse.json({ ok: false, error: "Requisição inválida" }, { status: 400 })
+      return NextResponse.json({ ok: false, error: te("invalidRequest") }, { status: 400 })
     }
 
     // orderId sozinho não autentica nada — é o mesmo id usado em URLs internas
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest) {
       where: { id: orderId, clientToken },
       select: { id: true },
     })
-    if (!order) return NextResponse.json({ ok: false, error: "Ordem não encontrada" }, { status: 404 })
+    if (!order) return NextResponse.json({ ok: false, error: te("orderNotFound") }, { status: 404 })
 
     await prisma.serviceOrder.update({
       where: { id: order.id },

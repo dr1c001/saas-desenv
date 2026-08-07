@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server"
 import { getSettings } from "@/actions/settings"
 import { TenantForm } from "@/components/settings/tenant-form"
 import { ProfileForm } from "@/components/settings/profile-form"
@@ -7,17 +8,18 @@ import { Separator } from "@/components/ui/separator"
 
 export default async function SettingsPage() {
   const { tenant, user, isAdmin, isOwner } = await getSettings()
+  const t = await getTranslations("settingsCore")
 
   return (
     <div className="max-w-2xl space-y-8">
-      <h1 className="text-2xl font-bold">Configurações</h1>
+      <h1 className="text-2xl font-bold">{t("title")}</h1>
 
       {isAdmin && (
         <>
           <section className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">Empresa</h2>
-              <p className="text-sm text-muted-foreground">Dados que aparecem nas OS e PDFs gerados.</p>
+              <h2 className="text-lg font-semibold">{t("company.title")}</h2>
+              <p className="text-sm text-muted-foreground">{t("company.description")}</p>
             </div>
             <TenantForm tenant={tenant} />
           </section>
@@ -28,8 +30,8 @@ export default async function SettingsPage() {
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-lg font-semibold">Meu perfil</h2>
-          <p className="text-sm text-muted-foreground">Seu nome e e-mail de acesso.</p>
+          <h2 className="text-lg font-semibold">{t("profile.title")}</h2>
+          <p className="text-sm text-muted-foreground">{t("profile.description")}</p>
         </div>
         <ProfileForm user={user} />
       </section>
@@ -40,10 +42,8 @@ export default async function SettingsPage() {
 
           <section className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">WhatsApp (Z-API)</h2>
-              <p className="text-sm text-muted-foreground">
-                Envie OS, orçamentos e pesquisas de satisfação diretamente pelo WhatsApp dos clientes.
-              </p>
+              <h2 className="text-lg font-semibold">{t("whatsapp.title")}</h2>
+              <p className="text-sm text-muted-foreground">{t("whatsapp.description")}</p>
             </div>
             <WhatsAppForm zapiInstance={tenant?.zapiInstance ?? null} zapiToken={tenant?.zapiToken ?? null} />
           </section>
@@ -56,11 +56,9 @@ export default async function SettingsPage() {
 
           <section className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">Exportar dados</h2>
+              <h2 className="text-lg font-semibold">{t("export.title")}</h2>
               <p className="text-sm text-muted-foreground">
-                Baixe uma cópia de todos os dados da sua empresa (clientes, ordens de serviço, orçamentos,
-                financeiro e equipe) em um arquivo <code>.json</code>, conforme seu direito de portabilidade
-                previsto na LGPD (art. 18).
+                {t.rich("export.description", { code: (chunks) => <code>{chunks}</code> })}
               </p>
             </div>
             <ExportDataButton />

@@ -1,5 +1,6 @@
 import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer"
 import { formatOsNumber } from "@/lib/utils"
+import { getTranslator } from "@/lib/i18n"
 
 const styles = StyleSheet.create({
   page: { fontFamily: "Helvetica", fontSize: 10, padding: 40, color: "#1a1a1a" },
@@ -35,17 +36,22 @@ const styles = StyleSheet.create({
     marginTop: 24, borderWidth: 2, borderColor: "#16a34a", borderRadius: 4,
     padding: 8, alignSelf: "center", textAlign: "center",
   },
-  stampText: { color: "#16a34a", fontFamily: "Helvetica-Bold", fontSize: 14 },
+  // O carimbo reaproveita common.paymentStatus.PAID ("Pago"/"Paid"), que vem
+  // em caixa normal — o caixa alta do carimbo fica no estilo.
+  stampText: { color: "#16a34a", fontFamily: "Helvetica-Bold", fontSize: 14, textTransform: "uppercase" },
 })
 
-function fmt(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+// Valor sempre em BRL (documento comercial brasileiro) — só o agrupamento de
+// milhar/decimal e o formato de data seguem o idioma de leitura do tenant.
+function fmtCurrency(v: number, locale: "pt" | "en") {
+  return v.toLocaleString(locale === "en" ? "en-US" : "pt-BR", { style: "currency", currency: "BRL" })
 }
-function fmtDate(d: Date | string) {
-  return new Date(d).toLocaleDateString("pt-BR")
+function fmtDateFor(d: Date | string, locale: "pt" | "en") {
+  return new Date(d).toLocaleDateString(locale === "en" ? "en-US" : "pt-BR")
 }
 
 type Props = {
+  locale: "pt" | "en"
   companyName: string
   logoUrl?: string | null
   receipt: {
@@ -58,7 +64,14 @@ type Props = {
   }
 }
 
-export function ReceiptPDF({ receipt, companyName, logoUrl }: Props) {
+export function ReceiptPDF({ receipt, companyName, logoUrl, locale }: Props) {
+  // PDFs são gerados via renderToBuffer, fora do request context do Next.js —
+  // o locale vem explícito por prop (ver lib/i18n.ts).
+  const t = getTranslator(locale, "pdf")
+  const tc = getTranslator(locale, "common")
+  const fmt = (v: number) => fmtCurrency(v, locale)
+  const fmtDate = (d: Date | string) => fmtDateFor(d, locale)
+
   const receiptNumber = `REC-${receipt.id.slice(-8).toUpperCase()}`
 
   return (
@@ -72,49 +85,49 @@ export function ReceiptPDF({ receipt, companyName, logoUrl }: Props) {
             {logoUrl && <Text style={{ fontSize: 11, marginTop: 4 }}>{companyName}</Text>}
           </View>
           <View>
-            <Text style={styles.title}>RECIBO</Text>
+            <Text style={styles.title}>{t("receipt.docTitle")}</Text>
             <Text style={styles.number}>{receiptNumber}</Text>
           </View>
         </View>
 
         <View style={styles.box}>
-          <Text style={styles.amountLabel}>Valor recebido:</Text>
+          <Text style={styles.amountLabel}>{t("receipt.amountReceivedLabel")}</Text>
           <Text style={styles.amount}>{fmt(Number(receipt.amount))}</Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dados do Pagamento</Text>
+          <Text style={styles.sectionTitle}>{t("receipt.paymentDataTitle")}</Text>
           <View style={styles.row}>
-            <Text style={styles.label}>Descrição:</Text>
+            <Text style={styles.label}>{t("receipt.descriptionLabel")}</Text>
             <Text style={styles.value}>{receipt.description}</Text>
           </View>
           {receipt.order && (
             <View style={styles.row}>
-              <Text style={styles.label}>OS vinculada:</Text>
+              <Text style={styles.label}>{t("receipt.linkedOrderLabel")}</Text>
               <Text style={styles.value}>
                 {`${formatOsNumber(receipt.order.number, receipt.order.createdAt)} — ${receipt.order.title}`}
               </Text>
             </View>
           )}
           <View style={styles.row}>
-            <Text style={styles.label}>Vencimento:</Text>
+            <Text style={styles.label}>{t("receipt.dueDateLabel")}</Text>
             <Text style={styles.value}>{fmtDate(receipt.dueDate)}</Text>
           </View>
           {receipt.paidAt && (
             <View style={styles.row}>
-              <Text style={styles.label}>Data de pagamento:</Text>
+              <Text style={styles.label}>{t("receipt.paidAtLabel")}</Text>
               <Text style={styles.value}>{fmtDate(receipt.paidAt)}</Text>
             </View>
           )}
         </View>
 
         <View style={styles.stamp}>
-          <Text style={styles.stampText}>PAGO</Text>
+          <Text style={styles.stampText}>{tc("paymentStatus.PAID")}</Text>
         </View>
 
         <View style={styles.signatureSection}>
-          <Text style={styles.signatureLine}>Assinatura do Pagador</Text>
-          <Text style={styles.signatureLine}>Assinatura do Recebedor</Text>
+          <Text style={styles.signatureLine}>{t("receipt.payerSignature")}</Text>
+          <Text style={styles.signatureLine}>{t("receipt.receiverSignature")}</Text>
         </View>
       </Page>
     </Document>

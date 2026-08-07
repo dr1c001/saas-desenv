@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
+import { getTranslations } from "next-intl/server"
 
 const SUPER_ADMIN_EMAIL = "adrielwellington02@gmail.com"
 
@@ -9,14 +10,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!user || user.email !== SUPER_ADMIN_EMAIL) redirect("/dashboard")
 
+  const t = await getTranslations("mapAdmin")
+
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="border-b bg-background px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold">ServiçoOS — Painel do Administrador</h1>
-          <p className="text-xs text-muted-foreground">Visão geral de todos os clientes do sistema</p>
+          <h1 className="text-lg font-bold">{t("admin.layout.title")}</h1>
+          <p className="text-xs text-muted-foreground">{t("admin.layout.subtitle")}</p>
         </div>
-        <a href="/dashboard" className="text-sm text-muted-foreground hover:underline">← Voltar ao sistema</a>
+        <a href="/dashboard" className="text-sm text-muted-foreground hover:underline">← {t("admin.layout.backToApp")}</a>
       </header>
       <main className="p-6">{children}</main>
     </div>

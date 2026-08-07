@@ -11,25 +11,20 @@ import { Pencil, Plus } from "lucide-react"
 import { DeleteButton } from "@/components/shared/delete-button"
 import { EquipmentSection } from "@/components/clients/equipment-section"
 import { formatCurrency, formatOsNumber } from "@/lib/utils"
+import { getTranslations } from "next-intl/server"
 
-const statusLabel: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  ACTIVE: { label: "Ativo", variant: "default" },
-  INACTIVE: { label: "Inativo", variant: "secondary" },
-  DEFAULTER: { label: "Inadimplente", variant: "destructive" },
-}
-
-const osStatusLabel: Record<string, string> = {
-  OPEN: "Aberta",
-  IN_PROGRESS: "Em andamento",
-  DONE: "Concluída",
-  INVOICED: "Faturada",
-  CANCELLED: "Cancelada",
+const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  ACTIVE: "default",
+  INACTIVE: "secondary",
+  DEFAULTER: "destructive",
 }
 
 export default async function ClientPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const [client, equipments] = await Promise.all([getClient(id), getClientEquipments(id)])
   if (!client) notFound()
+  const t = await getTranslations("clients")
+  const tc = await getTranslations("common")
 
   const addr = client.address
   const addressLine = addr
@@ -43,44 +38,44 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">{client.name}</h1>
-          <Badge variant={statusLabel[client.status].variant} className="mt-1">
-            {statusLabel[client.status].label}
+          <Badge variant={STATUS_VARIANT[client.status]} className="mt-1">
+            {tc(`clientStatus.${client.status}` as "clientStatus.ACTIVE")}
           </Badge>
         </div>
         <div className="flex gap-2">
           <Link href={`/clients/${id}/edit`} className={buttonVariants({ variant: "outline" })}>
             <Pencil className="size-4 mr-2" />
-            Editar
+            {tc("edit")}
           </Link>
-          <DeleteButton action={deleteClient.bind(null, id)} label="Excluir cliente" />
+          <DeleteButton action={deleteClient.bind(null, id)} label={t("detail.deleteButton")} />
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Contato</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("detail.contactTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            {client.document && <p><span className="text-muted-foreground">Doc:</span> {client.document}</p>}
-            {client.phone && <p><span className="text-muted-foreground">Tel:</span> {client.phone}</p>}
+            {client.document && <p><span className="text-muted-foreground">{t("detail.docLabel")}</span> {client.document}</p>}
+            {client.phone && <p><span className="text-muted-foreground">{t("detail.phoneLabel")}</span> {client.phone}</p>}
             {(client as { whatsapp?: string | null }).whatsapp && (
-              <p><span className="text-muted-foreground">WhatsApp:</span> {(client as { whatsapp?: string | null }).whatsapp}</p>
+              <p><span className="text-muted-foreground">{t("detail.whatsappLabel")}</span> {(client as { whatsapp?: string | null }).whatsapp}</p>
             )}
-            {client.email && <p><span className="text-muted-foreground">E-mail:</span> {client.email}</p>}
+            {client.email && <p><span className="text-muted-foreground">{t("detail.emailLabel")}</span> {client.email}</p>}
             {!client.document && !client.phone && !client.email && (
-              <p className="text-muted-foreground">Nenhum contato informado.</p>
+              <p className="text-muted-foreground">{t("detail.noContact")}</p>
             )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Endereço</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("detail.addressTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm">
-            {addressLine || <p className="text-muted-foreground">Não informado.</p>}
-            {addr?.zipCode && <p className="text-muted-foreground">CEP: {addr.zipCode}</p>}
+            {addressLine || <p className="text-muted-foreground">{t("detail.notProvided")}</p>}
+            {addr?.zipCode && <p className="text-muted-foreground">{t("detail.zipCodeLabel")} {addr.zipCode}</p>}
           </CardContent>
         </Card>
       </div>
@@ -89,7 +84,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total de OS</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">{t("detail.totalOrders")}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{client.serviceOrders.length}</p>
@@ -97,7 +92,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Faturado</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">{t("detail.totalInvoiced")}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-green-600">
@@ -111,7 +106,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">OS Ativas</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">{t("detail.activeOrders")}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">
@@ -128,18 +123,18 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Ordens de Serviço</h2>
+          <h2 className="text-lg font-semibold">{t("detail.ordersTitle")}</h2>
           <Link
             href={`/service-orders/new?clientId=${id}`}
             className={buttonVariants({ variant: "outline" })}
           >
             <Plus className="size-4 mr-2" />
-            Nova OS
+            {t("detail.newOrderButton")}
           </Link>
         </div>
 
         {client.serviceOrders.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma OS para este cliente.</p>
+          <p className="text-sm text-muted-foreground">{t("detail.noOrders")}</p>
         ) : (
           <div className="space-y-2">
             {client.serviceOrders.map((os) => (
@@ -154,7 +149,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                     {new Date(os.createdAt).toLocaleDateString("pt-BR")} · {formatCurrency(Number(os.totalAmount))}
                   </p>
                 </div>
-                <Badge variant="outline">{osStatusLabel[os.status]}</Badge>
+                <Badge variant="outline">{tc(`serviceOrderStatus.${os.status}` as "serviceOrderStatus.OPEN")}</Badge>
               </Link>
             ))}
           </div>

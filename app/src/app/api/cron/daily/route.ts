@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     const owner = t.users[0]
     if (!owner?.email) continue
     try {
-      await sendOnboardingDay3Email(owner.email, owner.name)
+      await sendOnboardingDay3Email(owner.email, owner.name, t.locale)
       results.day3++
     } catch { results.errors++ }
   }
@@ -76,13 +76,18 @@ export async function GET(req: NextRequest) {
       npsScore: null,
       clientToken: { not: null },
     },
-    include: { client: { select: { email: true, name: true } } },
+    include: {
+      client: { select: { email: true, name: true } },
+      // A pesquisa vai pro cliente final, mas quem "fala" é a empresa: sai no
+      // idioma dela (Tenant.locale), igual à OS e ao PDF. (i18n, item 1.)
+      tenant: { select: { locale: true } },
+    },
     take: 100,
   })
   for (const os of npsOrders) {
     if (!os.client.email || !os.clientToken) continue
     try {
-      await sendNpsEmail(os.client.email, os.client.name, os.clientToken)
+      await sendNpsEmail(os.client.email, os.client.name, os.clientToken, os.tenant.locale)
       await prisma.serviceOrder.update({ where: { id: os.id }, data: { npsSentAt: new Date() } })
       results.nps++
     } catch { results.errors++ }

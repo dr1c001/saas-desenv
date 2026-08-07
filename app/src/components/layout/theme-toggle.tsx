@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 import { Moon, Sun } from "lucide-react"
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
 
@@ -32,13 +33,17 @@ function setTheme(dark: boolean) {
 }
 
 export function ThemeToggle() {
+  // Renderizado dentro do SidebarFooter — reusa nav.lightMode/nav.darkMode,
+  // que já existiam no messages/*.json da migração da sidebar, em vez de
+  // duplicar as mesmas duas strings num namespace próprio.
+  const t = useTranslations("nav")
   const isDark = React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
   return (
     <SidebarMenuItem>
       <SidebarMenuButton onClick={() => setTheme(!isDark)}>
         {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        <span>{isDark ? "Modo claro" : "Modo escuro"}</span>
+        <span>{isDark ? t("lightMode") : t("darkMode")}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>
   )

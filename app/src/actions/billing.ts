@@ -5,6 +5,7 @@ import { getTenant } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { asaas } from "@/lib/asaas"
+import { getTranslations } from "next-intl/server"
 
 export async function getBillingStatus() {
   const { tenantId } = await getTenant()
@@ -35,8 +36,10 @@ export async function getPlans() {
 
 export async function subscribeToPlan(formData: FormData) {
   const { tenantId, role } = await getTenant()
+  const tb = await getTranslations("billingReferral")
+  const tc = await getTranslations("common")
   if (role !== "OWNER" && role !== "ADMIN") {
-    redirect("/billing?error=" + encodeURIComponent("Sem permissão."))
+    redirect("/billing?error=" + encodeURIComponent(tc("noPermission")))
   }
 
   // Sem isso, duplo clique/retry de rede cria duas Subscriptions reais na
@@ -52,8 +55,8 @@ export async function subscribeToPlan(formData: FormData) {
       "/billing?error=" +
         encodeURIComponent(
           existingSub.status === "PENDING"
-            ? "Você já tem uma assinatura aguardando confirmação de pagamento."
-            : "Você já tem uma assinatura ativa. Cancele antes de assinar outro plano."
+            ? tb("errors.subscriptionPending")
+            : tb("errors.subscriptionActive")
         )
     )
   }
@@ -71,17 +74,17 @@ export async function subscribeToPlan(formData: FormData) {
     ])
 
     if (!plan || !tenant) {
-      redirect("/billing?error=" + encodeURIComponent("Plano não encontrado."))
+      redirect("/billing?error=" + encodeURIComponent(tb("errors.planNotFound")))
     }
 
     const owner = tenant.users[0]
     if (!owner) {
-      redirect("/billing?error=" + encodeURIComponent("Proprietário da conta não encontrado."))
+      redirect("/billing?error=" + encodeURIComponent(tb("errors.ownerNotFound")))
     }
     if (!tenant.document) {
       redirect(
         "/billing?error=" +
-          encodeURIComponent("Preencha o CNPJ/CPF da empresa em Configurações antes de assinar um plano.")
+          encodeURIComponent(tb("errors.missingDocument"))
       )
     }
     const fullPrice = cycle === "YEARLY" ? Number(plan.priceYearly) : Number(plan.priceMonthly)
@@ -193,6 +196,7 @@ export async function subscribeToPlan(formData: FormData) {
 
 export async function cancelSubscription() {
   const { tenantId, role } = await getTenant()
+  const tb = await getTranslations("billingReferral")
   if (role !== "OWNER" && role !== "ADMIN") return
 
   const sub = await prisma.subscription.findFirst({
@@ -213,7 +217,7 @@ export async function cancelSubscription() {
       // falhou — senão o app mostra "cancelado" enquanto o Asaas continua
       // cobrando, sem ninguém saber. (Achado em revisão de segurança 2026-07-19.)
       console.error("Falha ao cancelar assinatura no Asaas:", err)
-      redirect("/billing?error=" + encodeURIComponent("Não foi possível cancelar agora. Tente novamente em instantes."))
+      redirect("/billing?error=" + encodeURIComponent(tb("errors.cancelFailed")))
     }
   }
 

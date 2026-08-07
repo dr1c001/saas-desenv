@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -34,6 +35,8 @@ export function ConcluirDialog({
   initialConclusionNote,
   initialItems,
 }: Props) {
+  const t = useTranslations("serviceOrdersComponents")
+  const tc = useTranslations("common")
   const isConcluded = currentStatus === "DONE" || currentStatus === "INVOICED" || currentStatus === "CANCELLED"
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -60,7 +63,7 @@ export function ConcluirDialog({
         await completeServiceOrder(orderId, conclusionNote, items, invoice)
         setOpen(false)
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Erro ao concluir serviço. Tente novamente.")
+        setError(e instanceof Error ? e.message : t("concludeDialog.concludeError"))
       }
     })
   }
@@ -73,22 +76,22 @@ export function ConcluirDialog({
         }
       >
         <CheckCircle className="size-3.5" />
-        {isConcluded ? "Editar conclusão" : "Concluir"}
+        {isConcluded ? t("concludeDialog.editTrigger") : t("concludeDialog.trigger")}
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Concluir Serviço</DialogTitle>
+          <DialogTitle>{t("concludeDialog.title")}</DialogTitle>
           <DialogDescription>{orderTitle}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
           {/* Descrição do serviço realizado */}
           <div className="space-y-1.5">
-            <Label htmlFor="conclusionNote">Descrição dos serviços realizados</Label>
+            <Label htmlFor="conclusionNote">{t("concludeDialog.notesLabel")}</Label>
             <Textarea
               id="conclusionNote"
               rows={3}
-              placeholder="Descreva o que foi feito, peças trocadas, procedimentos..."
+              placeholder={t("concludeDialog.notesPlaceholder")}
               value={conclusionNote}
               onChange={(e) => setConclusionNote(e.target.value)}
             />
@@ -97,25 +100,25 @@ export function ConcluirDialog({
           {/* Itens cobrados */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Itens / Cobrança</Label>
+              <Label>{t("concludeDialog.itemsLabel")}</Label>
               <Button type="button" variant="outline" size="sm" onClick={addItem}>
                 <Plus className="size-3.5 mr-1" />
-                Adicionar item
+                {t("items.addButton")}
               </Button>
             </div>
 
             {items.map((item, i) => (
               <div key={i} className="grid gap-2 grid-cols-[1fr_70px_110px_28px] items-end">
                 <div>
-                  {i === 0 && <p className="text-xs text-muted-foreground mb-1">Descrição</p>}
+                  {i === 0 && <p className="text-xs text-muted-foreground mb-1">{t("items.descriptionLabel")}</p>}
                   <Input
-                    placeholder="Serviço ou peça"
+                    placeholder={t("concludeDialog.itemDescriptionPlaceholder")}
                     value={item.description}
                     onChange={(e) => updateItem(i, "description", e.target.value)}
                   />
                 </div>
                 <div>
-                  {i === 0 && <p className="text-xs text-muted-foreground mb-1">Qtd.</p>}
+                  {i === 0 && <p className="text-xs text-muted-foreground mb-1">{t("items.quantityLabel")}</p>}
                   <Input
                     type="number" min="0.001" step="0.001"
                     value={item.quantity}
@@ -123,7 +126,7 @@ export function ConcluirDialog({
                   />
                 </div>
                 <div>
-                  {i === 0 && <p className="text-xs text-muted-foreground mb-1">Preço unit. (R$)</p>}
+                  {i === 0 && <p className="text-xs text-muted-foreground mb-1">{t("concludeDialog.itemUnitPriceLabel")}</p>}
                   <Input
                     type="number" min="0" step="0.01"
                     value={item.unitPrice}
@@ -142,7 +145,7 @@ export function ConcluirDialog({
             ))}
 
             <div className="flex justify-end pt-2 border-t">
-              <p className="font-semibold text-sm">Total: <span className="text-base">{formatCurrency(total)}</span></p>
+              <p className="font-semibold text-sm">{t("items.totalLabel")} <span className="text-base">{formatCurrency(total)}</span></p>
             </div>
           </div>
 
@@ -156,14 +159,14 @@ export function ConcluirDialog({
               disabled={isPending}
               onClick={() => handleConclude(false)}
             >
-              {isPending ? "Salvando..." : isConcluded ? "Salvar (sem faturar)" : "Concluir (sem faturar)"}
+              {isPending ? tc("saving") : isConcluded ? t("concludeDialog.saveNoInvoice") : t("concludeDialog.concludeNoInvoice")}
             </Button>
             <Button
               className="flex-1"
               disabled={isPending}
               onClick={() => handleConclude(true)}
             >
-              {isPending ? "Salvando..." : isConcluded ? "Salvar e Faturar" : "Concluir e Faturar"}
+              {isPending ? tc("saving") : isConcluded ? t("concludeDialog.saveAndInvoice") : t("concludeDialog.concludeAndInvoice")}
             </Button>
           </div>
         </div>

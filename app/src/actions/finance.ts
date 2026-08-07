@@ -5,11 +5,13 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
+import { getTranslations } from "next-intl/server"
+import { translateFieldErrors } from "@/lib/validation"
 
 const expenseSchema = z.object({
-  description: z.string().min(2, "Descrição obrigatória"),
-  amount: z.coerce.number().positive("Valor deve ser positivo"),
-  dueDate: z.string().min(1, "Vencimento obrigatório"),
+  description: z.string().min(2, "descriptionRequired"),
+  amount: z.coerce.number().positive("amountPositive"),
+  dueDate: z.string().min(1, "dueDateRequired"),
   category: z.enum(["FIXED", "VARIABLE", "OTHER"]).default("OTHER"),
   recurring: z.coerce.boolean().default(false),
 })
@@ -25,13 +27,13 @@ export async function createExpense(
 ): Promise<FinanceFormState> {
   const { tenantId, role } = await getTenant()
   await requireActiveSubscription(tenantId)
-  if (role !== "OWNER" && role !== "ADMIN") return { message: "Sem permissão." }
+  if (role !== "OWNER" && role !== "ADMIN") return { message: (await getTranslations("common"))("noPermission") }
 
   const raw = Object.fromEntries(formData.entries())
   const parsed = expenseSchema.safeParse(raw)
 
   if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors }
+    return { errors: await translateFieldErrors(parsed.error.flatten().fieldErrors) }
   }
 
   await prisma.expense.create({
@@ -74,7 +76,7 @@ export async function getFinanceSummary(q?: string) {
   // pelo Next.js independente de quem a importa hoje — não dá pra confiar
   // só na página chamadora redirecionar antes. Mesmo padrão do getSettings().
   // (Achado em revisão de segurança 2026-07-19.)
-  if (role !== "OWNER" && role !== "ADMIN") throw new Error("Sem permissão.")
+  if (role !== "OWNER" && role !== "ADMIN") throw new Error((await getTranslations("common"))("noPermission"))
   await requireActiveSubscription(tenantId)
 
   // Fetch all data for KPI calculations, then filter for table display

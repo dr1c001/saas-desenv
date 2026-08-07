@@ -8,11 +8,13 @@ import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { sendPushToUser } from "@/lib/push"
 import { retryOnUniqueConflict } from "@/lib/retry"
+import { getTranslations } from "next-intl/server"
+import { translateFieldErrors } from "@/lib/validation"
 
 const orderSchema = z.object({
-  title: z.string().min(2, "Título obrigatório"),
+  title: z.string().min(2, "titleRequired"),
   description: z.string().optional(),
-  clientId: z.string().min(1, "Cliente obrigatório"),
+  clientId: z.string().min(1, "clientRequired"),
   technicianId: z.string().optional(),
   status: z
     .enum(["OPEN", "IN_PROGRESS", "DONE", "INVOICED", "CANCELLED"])
@@ -45,7 +47,7 @@ export async function createServiceOrder(
   const parsed = orderSchema.safeParse(raw)
 
   if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors }
+    return { errors: await translateFieldErrors(parsed.error.flatten().fieldErrors) }
   }
 
   const { title, description, clientId, technicianId, status, scheduledAt } = parsed.data
@@ -55,11 +57,12 @@ export async function createServiceOrder(
   // outra empresa e ver os dados completos dele na página da OS.
   // (Achado em revisão de segurança 2026-07-19.)
   const client = await prisma.client.findUnique({ where: { id: clientId, tenantId }, select: { id: true } })
-  if (!client) return { message: "Cliente não encontrado." }
+  const te = await getTranslations("errors")
+  if (!client) return { message: te("clientNotFound") }
 
   if (technicianId) {
     const technician = await prisma.user.findUnique({ where: { id: technicianId, tenantId }, select: { id: true } })
-    if (!technician) return { message: "Técnico não encontrado." }
+    if (!technician) return { message: te("technicianNotFound") }
   }
 
   // Parse items sent as JSON string
@@ -115,7 +118,7 @@ export async function createServiceOrder(
       })
       if (subs.length > 0) {
         await sendPushToUser(subs, {
-          title: "Nova Ordem de Serviço",
+          title: (await getTranslations("notifications"))("newOrder.title"),
           body: title,
           url: "/service-orders",
         })
@@ -196,13 +199,14 @@ export async function completeServiceOrder(
     where: { id, tenantId },
     select: { number: true, title: true, createdAt: true, status: true },
   })
-  if (!order) throw new Error("Ordem não encontrada")
+  const te2 = await getTranslations("errors")
+  if (!order) throw new Error(te2("orderNotFound"))
   // Uma OS já faturada tem consequências reais fora do banco (NFS-e emitida,
   // assinatura do cliente coletada) — reabrir e trocar itens/total aqui
   // dessincroniza tudo isso silenciosamente, sem nenhum aviso. Sem cancelamento
   // de NFS-e implementado no produto, não tem como corrigir isso depois.
   // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
-  if (order.status === "INVOICED") throw new Error("OS já faturada não pode ser editada.")
+  if (order.status === "INVOICED") throw new Error(te2("invoicedOrderLocked"))
 
   // As escritas (itens + status/total da OS + criação de Revenue) viram uma
   // única transação — antes eram chamadas sequenciais soltas, e uma falha no
@@ -265,7 +269,7 @@ export async function updateServiceOrder(
 
   const raw = Object.fromEntries(formData.entries())
   const parsed = orderSchema.safeParse(raw)
-  if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
+  if (!parsed.success) return { errors: await translateFieldErrors(parsed.error.flatten().fieldErrors) }
 
   const { title, description, clientId, technicianId, scheduledAt } = parsed.data
 
@@ -277,17 +281,18 @@ export async function updateServiceOrder(
     prisma.serviceOrder.findUnique({ where: { id, tenantId }, select: { id: true, status: true } }),
     prisma.client.findUnique({ where: { id: clientId, tenantId }, select: { id: true } }),
   ])
-  if (!order) return { message: "Ordem não encontrada." }
+  const te3 = await getTranslations("errors")
+  if (!order) return { message: te3("orderNotFound") }
   // Mesmo motivo do completeServiceOrder: OS já faturada tem NFS-e/assinatura
   // vinculada, que ficariam dessincronizadas de qualquer edição posterior de
   // itens/total. (Achado verificando o sistema antes da primeira venda,
   // 2026-08-03.)
-  if (order.status === "INVOICED") return { message: "OS já faturada não pode ser editada." }
-  if (!client) return { message: "Cliente não encontrado." }
+  if (order.status === "INVOICED") return { message: te3("invoicedOrderLocked") }
+  if (!client) return { message: te3("clientNotFound") }
 
   if (technicianId) {
     const technician = await prisma.user.findUnique({ where: { id: technicianId, tenantId }, select: { id: true } })
-    if (!technician) return { message: "Técnico não encontrado." }
+    if (!technician) return { message: te3("technicianNotFound") }
   }
 
   const itemsRaw = formData.get("items")

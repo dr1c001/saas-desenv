@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { useTranslations } from "next-intl"
 import { CheckSquare2, Square, Trash2, Plus, Loader2 } from "lucide-react"
 import { addChecklistItem, toggleChecklistItem, deleteChecklistItem } from "@/actions/checklist"
 
 type Item = { id: string; description: string; completed: boolean }
 
 export function Checklist({ orderId, items, readonly }: { orderId: string; items: Item[]; readonly?: boolean }) {
+  const t = useTranslations("serviceOrdersComponents")
   const [newItem, setNewItem] = useState("")
   const [pending, startTransition] = useTransition()
 
@@ -26,7 +28,7 @@ export function Checklist({ orderId, items, readonly }: { orderId: string; items
       {items.length > 0 && (
         <div className="space-y-1">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{done}/{items.length} itens concluídos</span>
+            <span>{t("checklist.progressLabel", { done, total: items.length })}</span>
             <span>{pct}%</span>
           </div>
           <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
@@ -73,7 +75,7 @@ export function Checklist({ orderId, items, readonly }: { orderId: string; items
             value={newItem}
             onChange={(e) => setNewItem(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            placeholder="Adicionar item ao checklist..."
+            placeholder={t("checklist.addPlaceholder")}
             className="flex-1 rounded-md border bg-background px-3 py-1.5 text-sm"
           />
           <button

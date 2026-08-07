@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
+import { getTranslations } from "next-intl/server"
 import { getMaintenanceOrder, updateMaintenanceStatus, deleteMaintenanceOrder } from "@/actions/maintenance"
 import { buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,20 +14,23 @@ import { MaintenanceStatusButton } from "@/components/maintenance/status-button"
 import { formatCurrency, formatDate, formatOmNumber } from "@/lib/utils"
 import { ChevronLeft } from "lucide-react"
 
-const statusConfig: Record<string, {
-  label: string; variant: "default" | "secondary" | "outline" | "destructive";
-  next?: string; nextLabel?: string
-}> = {
-  OPEN: { label: "Aberta", variant: "secondary", next: "IN_PROGRESS", nextLabel: "Iniciar manutenção" },
-  IN_PROGRESS: { label: "Em andamento", variant: "default", next: "DONE", nextLabel: "Marcar como concluída" },
-  DONE: { label: "Concluída", variant: "outline" },
-  CANCELLED: { label: "Cancelada", variant: "destructive" },
-}
-
 export default async function MaintenancePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const om = await getMaintenanceOrder(id)
   if (!om) notFound()
+
+  const t = await getTranslations("maintenance")
+  const tCommon = await getTranslations("common")
+
+  const statusConfig: Record<string, {
+    label: string; variant: "default" | "secondary" | "outline" | "destructive";
+    next?: string; nextLabel?: string
+  }> = {
+    OPEN: { label: tCommon("serviceOrderStatus.OPEN"), variant: "secondary", next: "IN_PROGRESS", nextLabel: t("detail.actions.startMaintenance") },
+    IN_PROGRESS: { label: tCommon("serviceOrderStatus.IN_PROGRESS"), variant: "default", next: "DONE", nextLabel: t("detail.actions.markDone") },
+    DONE: { label: tCommon("serviceOrderStatus.DONE"), variant: "outline" },
+    CANCELLED: { label: tCommon("serviceOrderStatus.CANCELLED"), variant: "destructive" },
+  }
 
   const config = statusConfig[om.status]
 
@@ -50,28 +54,28 @@ export default async function MaintenancePage({ params }: { params: Promise<{ id
               label={config.nextLabel!}
             />
           )}
-          <DeleteButton action={deleteMaintenanceOrder.bind(null, id)} label="Excluir OM" />
+          <DeleteButton action={deleteMaintenanceOrder.bind(null, id)} label={t("detail.deleteLabel")} />
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Informações</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("detail.infoTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             {om.provider && (
-              <p><span className="text-muted-foreground">Prestador: </span>
+              <p><span className="text-muted-foreground">{t("detail.providerLabel")}</span>
                 <span className="font-medium">{om.provider.name}</span>
                 {om.provider.specialty && <span className="text-muted-foreground"> ({om.provider.specialty})</span>}
               </p>
             )}
-            <p><span className="text-muted-foreground">Criada em: </span>{formatDate(om.createdAt)}</p>
+            <p><span className="text-muted-foreground">{t("detail.createdLabel")}</span>{formatDate(om.createdAt)}</p>
             {om.scheduledAt && (
-              <p><span className="text-muted-foreground">Agendada: </span>{formatDate(om.scheduledAt)}</p>
+              <p><span className="text-muted-foreground">{t("detail.scheduledLabel")}</span>{formatDate(om.scheduledAt)}</p>
             )}
             {om.concludedAt && (
-              <p><span className="text-muted-foreground">Concluída: </span>{formatDate(om.concludedAt)}</p>
+              <p><span className="text-muted-foreground">{t("detail.concludedLabel")}</span>{formatDate(om.concludedAt)}</p>
             )}
           </CardContent>
         </Card>
@@ -79,7 +83,7 @@ export default async function MaintenancePage({ params }: { params: Promise<{ id
         {om.description && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Observações</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">{t("detail.notesTitle")}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm whitespace-pre-wrap">{om.description}</p>
@@ -91,18 +95,18 @@ export default async function MaintenancePage({ params }: { params: Promise<{ id
       <Separator />
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Itens</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">{t("detail.itemsTitle")}</CardTitle></CardHeader>
         <CardContent className="p-0">
           {om.items.length === 0 ? (
-            <p className="text-sm text-muted-foreground p-4">Nenhum item registrado.</p>
+            <p className="text-sm text-muted-foreground p-4">{t("detail.noItems")}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead className="text-right">Qtd.</TableHead>
-                  <TableHead className="text-right">Unit.</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead>{t("detail.itemColumns.description")}</TableHead>
+                  <TableHead className="text-right">{t("detail.itemColumns.quantity")}</TableHead>
+                  <TableHead className="text-right">{t("detail.itemColumns.unitPrice")}</TableHead>
+                  <TableHead className="text-right">{t("detail.itemColumns.total")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -115,7 +119,7 @@ export default async function MaintenancePage({ params }: { params: Promise<{ id
                   </TableRow>
                 ))}
                 <TableRow>
-                  <TableCell colSpan={3} className="text-right font-semibold">Total</TableCell>
+                  <TableCell colSpan={3} className="text-right font-semibold">{t("detail.itemColumns.total")}</TableCell>
                   <TableCell className="text-right font-bold text-base">
                     {formatCurrency(Number(om.totalAmount))}
                   </TableCell>

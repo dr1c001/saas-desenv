@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { safeNextPath } from "@/lib/auth"
 import { checkRateLimit, clientIp } from "@/lib/rate-limit"
 import { NextResponse } from "next/server"
+import { getTranslations } from "next-intl/server"
 
 // Convite de equipe e recuperação de senha usam links de e-mail (GoTrue
 // "generate_link"), não OAuth — o action_link que o Supabase gera pra esses
@@ -42,5 +43,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL("/login?error=" + encodeURIComponent("Link inválido ou expirado."), origin))
+  return NextResponse.redirect(new URL("/login?error=" + encodeURIComponent((await getTranslations("errors"))("invalidLink")), origin))
 }

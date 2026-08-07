@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { sendWelcomeEmail } from "@/lib/resend"
 import { Prisma } from "@/generated/prisma/client"
+import { getTranslations } from "next-intl/server"
 
 // Bônus de indicação pra quem se cadastra com um código válido — antes era
 // dias extra de trial; sem trial (o acesso agora exige assinatura paga),
@@ -60,8 +61,9 @@ export const getTenant = cache(async function getTenant() {
   // anyone join — or, after being removed, silently rejoin — any tenant as
   // OWNER just by knowing its id. (Found in security review 2026-07-19.)
   if (!dbUser) {
-    const name = user.user_metadata?.name ?? user.email?.split("@")[0] ?? "Usuário"
-    const companyName = user.user_metadata?.company_name ?? `Empresa de ${name}`
+    const te = await getTranslations("errors")
+    const name = user.user_metadata?.name ?? user.email?.split("@")[0] ?? te("defaultUserName")
+    const companyName = user.user_metadata?.company_name ?? te("defaultCompanyName", { name })
     const refCode: string | undefined = user.user_metadata?.ref_code
 
     let referralDiscountPercent = 0
@@ -78,7 +80,9 @@ export const getTenant = cache(async function getTenant() {
     const tenantId = tenant.id
     const role = "OWNER" as const
     const tenantStatus = { subscriptionStatus: tenant.subscriptionStatus, trialEndsAt: tenant.trialEndsAt }
-    sendWelcomeEmail(user.email!, name).catch(() => null)
+    // Tenant recém-criado: locale ainda é o default (pt) — o idioma da empresa
+    // só é escolhido depois, em Configurações. (i18n, item 1.)
+    sendWelcomeEmail(user.email!, name, tenant.locale).catch(() => null)
 
     try {
       await prisma.user.create({
@@ -103,7 +107,7 @@ export const getTenant = cache(async function getTenant() {
       if (!target.includes("id")) {
         await prisma.tenant.delete({ where: { id: tenantId } }).catch(() => null)
         throw new Error(
-          `Já existe um cadastro com o e-mail ${user.email}, associado a outra conta. Contate o suporte.`
+          (await getTranslations("errors"))("duplicateEmailAccount", { email: user.email ?? "" })
         )
       }
 
@@ -176,28 +180,32 @@ export async function hasActiveSubscription(tenantId: string): Promise<boolean> 
 // segurança 2026-07-21 — nenhuma Action verificava assinatura, só papel.)
 export async function requireActiveSubscription(tenantId: string) {
   if (!(await hasActiveSubscription(tenantId))) {
-    throw new Error("Assinatura inativa. Assine um plano para continuar usando o sistema.")
+    throw new Error((await getTranslations("errors"))("inactiveSubscription"))
   }
 }
 
-// Tabs available in the system (slug → display info)
+// Tabs available in the system. O rótulo NÃO vive aqui: este é um const de
+// módulo (sem request context pra resolver idioma) e os mesmos nomes já
+// existem traduzidos no namespace `nav`, usado pela sidebar — duplicar aqui
+// deixaria a tela de Permissões em português fixo mesmo com a conta em
+// inglês. navKey mapeia slug → chave de nav. (i18n, 07/08/2026.)
 export const ALL_TABS = [
-  { slug: "dashboard", label: "Dashboard" },
-  { slug: "clients", label: "Clientes" },
-  { slug: "service-orders", label: "Ordens de Serviço" },
-  { slug: "history", label: "Histórico" },
-  { slug: "maintenance", label: "Manutenção Interna" },
-  { slug: "providers", label: "Prestadores" },
-  { slug: "receipts", label: "Recibos" },
-  { slug: "schedule", label: "Agendamento" },
-  { slug: "finance", label: "Financeiro" },
-  { slug: "reports", label: "Relatórios" },
-  { slug: "team", label: "Equipe" },
-  { slug: "map", label: "Mapa GPS" },
-  { slug: "quotes", label: "Orçamentos" },
-  { slug: "billing", label: "Assinatura" },
-  { slug: "fiscal", label: "Config. Fiscal" },
-  { slug: "referral", label: "Indicação" },
+  { slug: "dashboard", navKey: "dashboard" },
+  { slug: "clients", navKey: "clients" },
+  { slug: "service-orders", navKey: "serviceOrders" },
+  { slug: "history", navKey: "history" },
+  { slug: "maintenance", navKey: "maintenance" },
+  { slug: "providers", navKey: "providers" },
+  { slug: "receipts", navKey: "receipts" },
+  { slug: "schedule", navKey: "schedule" },
+  { slug: "finance", navKey: "finance" },
+  { slug: "reports", navKey: "reports" },
+  { slug: "team", navKey: "team" },
+  { slug: "map", navKey: "map" },
+  { slug: "quotes", navKey: "quotes" },
+  { slug: "billing", navKey: "billing" },
+  { slug: "fiscal", navKey: "fiscal" },
+  { slug: "referral", navKey: "referral" },
 ] as const
 
 export type TabSlug = (typeof ALL_TABS)[number]["slug"]

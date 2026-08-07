@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
+import { getTranslations } from "next-intl/server"
 
 export async function getClientEquipments(clientId: string) {
   const { tenantId } = await getTenant()
@@ -17,7 +18,7 @@ export async function createEquipment(clientId: string, formData: FormData) {
   const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
   const client = await prisma.client.findUnique({ where: { id: clientId, tenantId } })
-  if (!client) throw new Error("Cliente não encontrado")
+  if (!client) throw new Error((await getTranslations("errors"))("clientNotFound"))
 
   const installDateRaw = formData.get("installDate") as string
   const warrantyRaw = formData.get("warrantyUntil") as string

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { getTenant } from "@/lib/auth"
+import { getTranslations } from "next-intl/server"
 
 // Exportação self-service de dados (LGPD art. 18 — portabilidade). Reúne
 // tudo que a Política de Privacidade (seção 2) declara coletar, exceto
@@ -11,7 +12,7 @@ import { getTenant } from "@/lib/auth"
 // dado que isso inclui dados financeiros e PII de toda a equipe/clientes.
 export async function exportTenantData() {
   const { tenantId, role } = await getTenant()
-  if (role !== "OWNER") throw new Error("Sem permissão.")
+  if (role !== "OWNER") throw new Error((await getTranslations("common"))("noPermission"))
 
   const [
     tenant,

@@ -1,18 +1,24 @@
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
+import type { Metadata } from "next"
+import { getTranslations } from "next-intl/server"
 
-export const metadata = {
-  title: "Política de Privacidade — ServiçoOS",
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("legal")
+  return { title: t("privacy.metaTitle") }
 }
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const t = await getTranslations("legal")
+  const tc = await getTranslations("common")
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto max-w-3xl px-4 h-16 flex items-center gap-3">
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5">
             <ArrowLeft className="size-4" />
-            Voltar
+            {tc("back")}
           </Link>
           <span className="text-lg font-bold text-primary ml-auto">ServiçoOS</span>
         </div>
@@ -20,192 +26,153 @@ export default function PrivacyPage() {
 
       <main className="mx-auto max-w-3xl px-4 py-12 space-y-8">
         <div>
-          <h1 className="text-3xl font-bold">Política de Privacidade</h1>
-          <p className="text-sm text-muted-foreground mt-2">Última atualização: 20 de julho de 2026</p>
+          <h1 className="text-3xl font-bold">{t("privacy.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-2">{t("privacy.lastUpdated")}</p>
         </div>
 
         <div className="space-y-8 text-sm leading-relaxed text-muted-foreground [&_h2]:text-foreground [&_h2]:font-semibold [&_h2]:text-lg [&_h2]:mb-3 [&_strong]:text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_p+p]:mt-3 [&_table]:w-full [&_table]:text-xs [&_th]:text-left [&_th]:font-medium [&_th]:text-foreground [&_th]:py-2 [&_td]:py-2 [&_tr]:border-b">
           <section>
+            <p>{t("privacy.intro")}</p>
+          </section>
+
+          <section>
+            <h2>{t("privacy.section1.title")}</h2>
             <p>
-              Esta Política de Privacidade descreve como o ServiçoOS coleta, usa, armazena e protege dados
-              pessoais, em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD).
+              {t.rich("privacy.section1.p1", {
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
             </p>
           </section>
 
           <section>
-            <h2>1. Quem é o controlador dos dados</h2>
-            <p>
-              O controlador dos dados pessoais tratados por este sistema é{" "}
-              <strong>ADRIEL WELLINGTON RODRIGUES</strong>, inscrito no CNPJ nº{" "}
-              <strong>53.325.011/0001-08</strong>, operador do
-              ServiçoOS.
-            </p>
-          </section>
-
-          <section>
-            <h2>2. Quais dados coletamos</h2>
-            <p><strong>Dados de cadastro do usuário e da empresa:</strong></p>
+            <h2>{t("privacy.section2.title")}</h2>
+            <p><strong>{t("privacy.section2.userDataLabel")}</strong></p>
             <ul>
-              <li>Nome, e-mail e senha (armazenada de forma criptografada, nunca em texto puro);</li>
-              <li>Telefone, CPF/CNPJ e endereço da empresa (quando informados);</li>
-              <li>Dados fiscais para emissão de nota fiscal (CNPJ, inscrição municipal, alíquota de ISS).</li>
+              <li>{t("privacy.section2.userDataItem1")}</li>
+              <li>{t("privacy.section2.userDataItem2")}</li>
+              <li>{t("privacy.section2.userDataItem3")}</li>
             </ul>
-            <p><strong>Dados inseridos pelo usuário no uso do sistema:</strong></p>
+            <p><strong>{t("privacy.section2.systemDataLabel")}</strong></p>
             <ul>
-              <li>Cadastro de clientes, prestadores e técnicos (nome, contato, endereço, documento);</li>
-              <li>Ordens de serviço, orçamentos, anexos, fotos e assinaturas digitais de clientes;</li>
-              <li>Dados financeiros (receitas, despesas, recibos);</li>
-              <li>Localização geográfica (GPS) de técnicos, coletada durante o expediente para exibição
-                no mapa de acompanhamento de ordens de serviço;</li>
-              <li>Mensagens e número de telefone utilizados na integração com WhatsApp, quando ativada.</li>
+              <li>{t("privacy.section2.systemDataItem1")}</li>
+              <li>{t("privacy.section2.systemDataItem2")}</li>
+              <li>{t("privacy.section2.systemDataItem3")}</li>
+              <li>{t("privacy.section2.systemDataItem4")}</li>
+              <li>{t("privacy.section2.systemDataItem5")}</li>
             </ul>
-            <p><strong>Dados coletados automaticamente:</strong></p>
+            <p><strong>{t("privacy.section2.autoDataLabel")}</strong></p>
             <ul>
-              <li>Cookies essenciais de sessão/autenticação (não utilizamos cookies de rastreamento
-                publicitário);</li>
-              <li>Registros técnicos de acesso (endereço IP, data e hora, páginas acessadas), para fins de
-                segurança e diagnóstico.</li>
+              <li>{t("privacy.section2.autoDataItem1")}</li>
+              <li>{t("privacy.section2.autoDataItem2")}</li>
             </ul>
           </section>
 
           <section>
-            <h2>3. Para que usamos os dados</h2>
-            <p>Utilizamos os dados coletados para as seguintes finalidades:</p>
+            <h2>{t("privacy.section3.title")}</h2>
+            <p>{t("privacy.section3.intro")}</p>
             <ul>
-              <li>Viabilizar o funcionamento do sistema e das funcionalidades contratadas (execução de
-                contrato);</li>
-              <li>Autenticar o acesso e proteger contas contra uso não autorizado;</li>
-              <li>Processar pagamentos e emitir cobranças e notas fiscais;</li>
-              <li>Enviar comunicações operacionais (confirmação de cadastro, cobrança, expiração de teste,
-                convites de equipe) e, quando aplicável, pesquisas de satisfação (NPS);</li>
-              <li>Exibir a localização de técnicos em campo para o proprietário/administrador da empresa
-                contratante, exclusivamente durante o uso do sistema;</li>
-              <li>Cumprir obrigações legais e regulatórias, incluindo fiscais e contábeis;</li>
-              <li>Prevenir fraudes e garantir a segurança da plataforma.</li>
+              <li>{t("privacy.section3.item1")}</li>
+              <li>{t("privacy.section3.item2")}</li>
+              <li>{t("privacy.section3.item3")}</li>
+              <li>{t("privacy.section3.item4")}</li>
+              <li>
+                {t("privacy.section3.item5", {
+                  owner: tc("roles.OWNER").toLowerCase(),
+                  admin: tc("roles.ADMIN").toLowerCase(),
+                })}
+              </li>
+              <li>{t("privacy.section3.item6")}</li>
+              <li>{t("privacy.section3.item7")}</li>
             </ul>
           </section>
 
           <section>
-            <h2>4. Com quem compartilhamos os dados</h2>
-            <p>
-              Não vendemos dados pessoais. Compartilhamos dados estritamente necessários com prestadores de
-              serviço (operadores) que nos ajudam a viabilizar o ServiçoOS:
-            </p>
+            <h2>{t("privacy.section4.title")}</h2>
+            <p>{t("privacy.section4.p1")}</p>
             <table>
               <thead>
-                <tr><th>Serviço</th><th>Finalidade</th></tr>
+                <tr><th>{t("privacy.section4.table.serviceHeader")}</th><th>{t("privacy.section4.table.purposeHeader")}</th></tr>
               </thead>
               <tbody>
-                <tr><td>Supabase</td><td>Autenticação de usuários e banco de dados</td></tr>
-                <tr><td>Vercel</td><td>Hospedagem da aplicação</td></tr>
-                <tr><td>Asaas</td><td>Processamento de pagamentos (boleto, cartão)</td></tr>
-                <tr><td>nfe.io</td><td>Emissão de notas fiscais de serviço eletrônicas (NFS-e)</td></tr>
-                <tr><td>Resend</td><td>Envio de e-mails transacionais</td></tr>
-                <tr><td>Z-API</td><td>Integração de mensagens via WhatsApp (quando ativada pela empresa)</td></tr>
+                <tr><td>Supabase</td><td>{t("privacy.section4.table.supabase")}</td></tr>
+                <tr><td>Vercel</td><td>{t("privacy.section4.table.vercel")}</td></tr>
+                <tr><td>Asaas</td><td>{t("privacy.section4.table.asaas")}</td></tr>
+                <tr><td>nfe.io</td><td>{t("privacy.section4.table.nfeio")}</td></tr>
+                <tr><td>Resend</td><td>{t("privacy.section4.table.resend")}</td></tr>
+                <tr><td>Z-API</td><td>{t("privacy.section4.table.zapi")}</td></tr>
               </tbody>
             </table>
-            <p>
-              Também podemos compartilhar dados quando exigido por lei, ordem judicial ou para proteger
-              direitos, segurança ou propriedade do ServiçoOS ou de terceiros.
-            </p>
+            <p>{t("privacy.section4.p2")}</p>
           </section>
 
           <section>
-            <h2>5. Transferência internacional de dados</h2>
-            <p>
-              Nossa infraestrutura principal (banco de dados e hospedagem) está localizada em data centers
-              na região de São Paulo, Brasil. Alguns operadores listados na seção 4 são empresas
-              internacionais que podem processar dados em outros países como parte de sua operação global.
-              Nesses casos, buscamos utilizar operadores com práticas de proteção de dados compatíveis com a
-              LGPD.
-            </p>
+            <h2>{t("privacy.section5.title")}</h2>
+            <p>{t("privacy.section5.p1")}</p>
           </section>
 
           <section>
-            <h2>6. Por quanto tempo guardamos os dados</h2>
-            <p>
-              Mantemos os dados enquanto sua conta estiver ativa. Dados fiscais e financeiros podem ser
-              retidos por período adicional para cumprimento de obrigações legais (em geral, 5 anos,
-              conforme legislação fiscal brasileira). Após o encerramento da conta e decorridos os prazos
-              legais de retenção, os dados são eliminados ou anonimizados.
-            </p>
+            <h2>{t("privacy.section6.title")}</h2>
+            <p>{t("privacy.section6.p1")}</p>
           </section>
 
           <section>
-            <h2>7. Seus direitos como titular de dados</h2>
-            <p>Nos termos do art. 18 da LGPD, você tem direito a:</p>
+            <h2>{t("privacy.section7.title")}</h2>
+            <p>{t("privacy.section7.intro")}</p>
             <ul>
-              <li>Confirmação da existência de tratamento e acesso aos seus dados;</li>
-              <li>Correção de dados incompletos, inexatos ou desatualizados;</li>
-              <li>Anonimização, bloqueio ou eliminação de dados desnecessários ou tratados em desconformidade
-                com a lei;</li>
-              <li>Portabilidade dos dados a outro fornecedor de serviço;</li>
-              <li>Eliminação dos dados tratados com consentimento (exceto hipóteses de retenção legal);</li>
-              <li>Informação sobre entidades com as quais os dados foram compartilhados;</li>
-              <li>Revogação do consentimento, quando aplicável;</li>
-              <li>Revisão de decisões tomadas unicamente com base em tratamento automatizado.</li>
+              <li>{t("privacy.section7.item1")}</li>
+              <li>{t("privacy.section7.item2")}</li>
+              <li>{t("privacy.section7.item3")}</li>
+              <li>{t("privacy.section7.item4")}</li>
+              <li>{t("privacy.section7.item5")}</li>
+              <li>{t("privacy.section7.item6")}</li>
+              <li>{t("privacy.section7.item7")}</li>
+              <li>{t("privacy.section7.item8")}</li>
             </ul>
           </section>
 
           <section>
-            <h2>8. Como exercer seus direitos</h2>
+            <h2>{t("privacy.section8.title")}</h2>
             <p>
-              O proprietário da conta (perfil Owner) pode baixar uma cópia de todos os dados da empresa
-              a qualquer momento, de forma self-service, em Configurações → Exportar dados. Para os demais
-              direitos (correção, eliminação, revogação de consentimento, esclarecimentos), entre em
-              contato pelo e-mail{" "}
-              <a href="mailto:olisuporte1@gmail.com" className="text-primary underline underline-offset-2">
-                olisuporte1@gmail.com
-              </a>{" "}
-              — este é também o canal do encarregado de dados (DPO) do ServiçoOS. Responderemos dentro de um
-              prazo razoável, conforme previsto na LGPD.
+              {t.rich("privacy.section8.p1", {
+                email: (chunks) => (
+                  <a href="mailto:olisuporte1@gmail.com" className="text-primary underline underline-offset-2">
+                    {chunks}
+                  </a>
+                ),
+              })}
             </p>
           </section>
 
           <section>
-            <h2>9. Segurança da informação</h2>
-            <p>
-              Adotamos medidas técnicas e administrativas para proteger os dados pessoais, incluindo senhas
-              criptografadas, conexões seguras (HTTPS/TLS), controle de acesso por permissão e isolamento de
-              dados entre empresas (tenants) distintas. Apesar dos esforços, nenhum sistema é 100% imune a
-              incidentes — em caso de incidente de segurança relevante, notificaremos os titulares e a
-              autoridade competente conforme exigido pela LGPD.
-            </p>
+            <h2>{t("privacy.section9.title")}</h2>
+            <p>{t("privacy.section9.p1")}</p>
           </section>
 
           <section>
-            <h2>10. Cookies</h2>
-            <p>
-              Utilizamos apenas cookies essenciais, necessários para manter sua sessão autenticada e
-              garantir o funcionamento do sistema. Não utilizamos cookies de rastreamento publicitário ou de
-              redes sociais.
-            </p>
+            <h2>{t("privacy.section10.title")}</h2>
+            <p>{t("privacy.section10.p1")}</p>
           </section>
 
           <section>
-            <h2>11. Dados de menores</h2>
-            <p>
-              O ServiçoOS é uma ferramenta de uso profissional/empresarial e não é direcionada a menores de
-              idade. Não coletamos intencionalmente dados de crianças ou adolescentes.
-            </p>
+            <h2>{t("privacy.section11.title")}</h2>
+            <p>{t("privacy.section11.p1")}</p>
           </section>
 
           <section>
-            <h2>12. Alterações nesta política</h2>
-            <p>
-              Podemos atualizar esta Política de Privacidade periodicamente. Alterações materiais serão
-              comunicadas por e-mail ou aviso no sistema, com atualização da data no topo desta página.
-            </p>
+            <h2>{t("privacy.section12.title")}</h2>
+            <p>{t("privacy.section12.p1")}</p>
           </section>
 
           <section>
-            <h2>13. Encarregado de dados (DPO)</h2>
+            <h2>{t("privacy.section13.title")}</h2>
             <p>
-              Para todos os assuntos relacionados à proteção de dados pessoais, o encarregado de dados pode
-              ser contatado pelo e-mail{" "}
-              <a href="mailto:olisuporte1@gmail.com" className="text-primary underline underline-offset-2">
-                olisuporte1@gmail.com
-              </a>.
+              {t.rich("privacy.section13.p1", {
+                email: (chunks) => (
+                  <a href="mailto:olisuporte1@gmail.com" className="text-primary underline underline-offset-2">
+                    {chunks}
+                  </a>
+                ),
+              })}
             </p>
           </section>
         </div>

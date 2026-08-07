@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server"
 import { getScheduledOrders } from "@/actions/schedule"
 import { Calendar } from "@/components/schedule/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,14 +16,15 @@ export default async function SchedulePage({ searchParams }: { searchParams: Sea
   const month = ms ? parseInt(ms) : now.getMonth() + 1
 
   const events = await getScheduledOrders(year, month)
+  const t = await getTranslations("schedule")
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Agendamento</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <Link href="/service-orders/new" className={buttonVariants()}>
           <Plus className="size-4 mr-2" />
-          Nova OS
+          {t("newOrderButton")}
         </Link>
       </div>
 
@@ -37,12 +39,12 @@ export default async function SchedulePage({ searchParams }: { searchParams: Sea
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                {events.length} OS agendada{events.length !== 1 ? "s" : ""} no mês
+                {t("summary.countTitle", { count: events.length })}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 p-3 pt-0">
               {events.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhuma OS agendada.</p>
+                <p className="text-sm text-muted-foreground">{t("summary.empty")}</p>
               ) : (
                 events.map(ev => (
                   <Link

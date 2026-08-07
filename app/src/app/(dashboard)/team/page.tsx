@@ -10,45 +10,49 @@ import {
 import { UserPlus, MapPin } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { TeamRowActions } from "@/components/team/team-row-actions"
+import { getTranslations } from "next-intl/server"
 
-const roleConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
-  OWNER: { label: "Proprietário", variant: "default" },
-  ADMIN: { label: "Administrador", variant: "default" },
-  TECHNICIAN: { label: "Técnico", variant: "secondary" },
+// Rótulos vêm de common.roles (i18n); aqui só a variante visual do Badge por papel.
+const roleVariant: Record<string, "default" | "secondary" | "outline"> = {
+  OWNER: "default",
+  ADMIN: "default",
+  TECHNICIAN: "secondary",
 }
 
 export default async function TeamPage() {
   const [members, { role }] = await Promise.all([getTeamMembers(), getTenant()])
   const isAdmin = role === "OWNER" || role === "ADMIN"
+  const t = await getTranslations("team")
+  const tc = await getTranslations("common")
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Equipe</h1>
-          <p className="text-sm text-muted-foreground mt-1">Gerencie os membros da sua equipe e seus acessos</p>
+          <h1 className="text-2xl font-bold">{t("list.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("list.subtitle")}</p>
         </div>
         {isAdmin && (
           <Link href="/team/invite" className={buttonVariants()}>
             <UserPlus className="size-4 mr-2" />
-            Convidar membro
+            {t("list.inviteButton")}
           </Link>
         )}
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{members.length} membro{members.length !== 1 ? "s" : ""}</CardTitle>
+          <CardTitle className="text-base">{t("list.countMembers", { count: members.length })}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>E-mail</TableHead>
-                <TableHead>Função</TableHead>
-                <TableHead>Localização</TableHead>
-                <TableHead>Desde</TableHead>
+                <TableHead>{t("list.columns.name")}</TableHead>
+                <TableHead>{t("list.columns.email")}</TableHead>
+                <TableHead>{t("list.columns.role")}</TableHead>
+                <TableHead>{t("list.columns.location")}</TableHead>
+                <TableHead>{t("list.columns.since")}</TableHead>
                 {isAdmin && <TableHead />}
               </TableRow>
             </TableHeader>
@@ -58,8 +62,8 @@ export default async function TeamPage() {
                   <TableCell className="font-medium">{m.name}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{m.email}</TableCell>
                   <TableCell>
-                    <Badge variant={roleConfig[m.role]?.variant ?? "outline"}>
-                      {roleConfig[m.role]?.label ?? m.role}
+                    <Badge variant={roleVariant[m.role] ?? "outline"}>
+                      {tc(`roles.${m.role}` as "roles.OWNER")}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
@@ -69,7 +73,7 @@ export default async function TeamPage() {
                         {formatDate(m.location.updatedAt)}
                       </span>
                     ) : (
-                      <span className="text-muted-foreground">Sem localização</span>
+                      <span className="text-muted-foreground">{t("list.noLocation")}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{formatDate(m.createdAt)}</TableCell>

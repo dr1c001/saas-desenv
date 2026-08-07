@@ -1,5 +1,6 @@
 import { getFiscalStatus, registerFiscalCompany } from "@/actions/nfse"
 import { getTenant } from "@/lib/auth"
+import { getTranslations } from "next-intl/server"
 import { redirect } from "next/navigation"
 import { buttonVariants } from "@/components/ui/button"
 import { CheckCircle2, Building2, FileText } from "lucide-react"
@@ -8,6 +9,7 @@ export default async function FiscalSettingsPage() {
   const { role } = await getTenant()
   if (role !== "OWNER") redirect("/settings")
 
+  const t = await getTranslations("settingsAdvanced.fiscal")
   const fiscal = await getFiscalStatus()
   const isConfigured = !!fiscal?.nfeioCompanyId
 
@@ -16,10 +18,10 @@ export default async function FiscalSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <FileText className="size-6" />
-          Configuração Fiscal — NFS-e
+          {t("title")}
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Configure os dados da sua empresa para emitir Notas Fiscais de Serviço Eletrônicas.
+          {t("subtitle")}
         </p>
       </div>
 
@@ -27,133 +29,139 @@ export default async function FiscalSettingsPage() {
         <div className="rounded-lg border border-green-600 bg-green-50 dark:bg-green-950 p-6 space-y-2">
           <div className="flex items-center gap-2 text-green-700 dark:text-green-300 font-semibold">
             <CheckCircle2 className="size-5" />
-            Empresa fiscal configurada
+            {t("configured.title")}
           </div>
           <p className="text-sm text-muted-foreground">
-            CNPJ: <span className="font-mono font-medium">{fiscal.fiscalCnpj}</span>
+            {t("configured.cnpjLabel")} <span className="font-mono font-medium">{fiscal.fiscalCnpj}</span>
           </p>
           <p className="text-sm text-muted-foreground">
-            Cidade: {fiscal.fiscalCityName} — {fiscal.fiscalStateCode}
+            {t("configured.city", {
+              city: fiscal.fiscalCityName ?? "",
+              state: fiscal.fiscalStateCode ?? "",
+            })}
           </p>
           <p className="text-xs text-muted-foreground mt-2">
-            ID nfe.io: <span className="font-mono">{fiscal.nfeioCompanyId}</span>
+            {t("configured.nfeioIdLabel")} <span className="font-mono">{fiscal.nfeioCompanyId}</span>
           </p>
         </div>
       ) : (
         <div className="rounded-lg border bg-card p-6 space-y-4">
           <div className="flex items-center gap-2 font-semibold">
             <Building2 className="size-5" />
-            Cadastrar empresa para emissão de NFS-e
+            {t("form.title")}
           </div>
           <p className="text-sm text-muted-foreground">
-            Preencha os dados da sua empresa. Esses dados serão usados para emitir NFS-e via nfe.io.
+            {t("form.description")}
           </p>
 
           <form action={registerFiscalCompany} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <label className="text-sm font-medium">CNPJ *</label>
+                <label className="text-sm font-medium">{t("form.cnpjLabel")}</label>
                 <input
                   name="cnpj"
                   required
-                  placeholder="00.000.000/0001-00"
+                  placeholder={t("form.cnpjPlaceholder")}
                   className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Inscrição Municipal</label>
+                <label className="text-sm font-medium">{t("form.municipalTaxNumberLabel")}</label>
                 <input
                   name="municipalTaxNumber"
-                  placeholder="Número IM"
+                  placeholder={t("form.municipalTaxNumberPlaceholder")}
                   className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">E-mail da empresa *</label>
+                <label className="text-sm font-medium">{t("form.emailLabel")}</label>
                 <input
                   name="email"
                   type="email"
                   required
-                  placeholder="contato@empresa.com"
+                  placeholder={t("form.emailPlaceholder")}
                   className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">CEP *</label>
+                <label className="text-sm font-medium">{t("form.postalCodeLabel")}</label>
                 <input
                   name="postalCode"
                   required
-                  placeholder="00000-000"
+                  placeholder={t("form.postalCodePlaceholder")}
                   className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Número *</label>
+                <label className="text-sm font-medium">{t("form.numberLabel")}</label>
                 <input
                   name="number"
                   required
-                  placeholder="123"
+                  placeholder={t("form.numberPlaceholder")}
                   className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
                 />
               </div>
               <div className="col-span-2">
-                <label className="text-sm font-medium">Logradouro *</label>
+                <label className="text-sm font-medium">{t("form.streetLabel")}</label>
                 <input
                   name="street"
                   required
-                  placeholder="Rua das Flores"
+                  placeholder={t("form.streetPlaceholder")}
                   className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Bairro *</label>
+                <label className="text-sm font-medium">{t("form.districtLabel")}</label>
                 <input
                   name="district"
                   required
-                  placeholder="Centro"
+                  placeholder={t("form.districtPlaceholder")}
                   className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Estado (UF) *</label>
+                <label className="text-sm font-medium">{t("form.stateLabel")}</label>
                 <input
                   name="state"
                   required
                   maxLength={2}
-                  placeholder="SP"
+                  placeholder={t("form.statePlaceholder")}
                   className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm uppercase"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Cidade *</label>
+                <label className="text-sm font-medium">{t("form.cityLabel")}</label>
                 <input
                   name="cityName"
                   required
-                  placeholder="São Paulo"
+                  placeholder={t("form.cityPlaceholder")}
                   className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Código IBGE da cidade *</label>
+                <label className="text-sm font-medium">{t("form.cityCodeLabel")}</label>
                 <input
                   name="cityCode"
                   required
-                  placeholder="3550308"
+                  placeholder={t("form.cityCodePlaceholder")}
                   className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Busque em{" "}
-                  <a
-                    href="https://www.ibge.gov.br/explica/codigos-dos-municipios.php"
-                    target="_blank"
-                    className="underline"
-                  >
-                    ibge.gov.br
-                  </a>
+                  {t.rich("form.cityCodeHelp", {
+                    link: (chunks) => (
+                      <a
+                        href="https://www.ibge.gov.br/explica/codigos-dos-municipios.php"
+                        target="_blank"
+                        className="underline"
+                      >
+                        {chunks}
+                      </a>
+                    ),
+                  })}
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium">Alíquota ISS (%) *</label>
+                <label className="text-sm font-medium">{t("form.issRateLabel")}</label>
                 <input
                   name="issRate"
                   type="number"
@@ -166,7 +174,7 @@ export default async function FiscalSettingsPage() {
             </div>
 
             <button type="submit" className={buttonVariants({ className: "w-full" })}>
-              Cadastrar empresa no nfe.io
+              {t("form.submit")}
             </button>
           </form>
         </div>

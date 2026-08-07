@@ -1,6 +1,7 @@
 "use client"
 
 import { useActionState } from "react"
+import { useTranslations } from "next-intl"
 import { updateTenant, type SettingsFormState } from "@/actions/settings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,6 +17,8 @@ type Tenant = {
 } | null
 
 export function TenantForm({ tenant }: { tenant: Tenant }) {
+  const t = useTranslations("settingsCore")
+  const tc = useTranslations("common")
   const [state, formAction, isPending] = useActionState<SettingsFormState, FormData>(
     updateTenant,
     {}
@@ -24,45 +27,45 @@ export function TenantForm({ tenant }: { tenant: Tenant }) {
   return (
     <form action={formAction} className="space-y-4">
       <div className="space-y-1.5">
-        <Label htmlFor="name">Nome da empresa *</Label>
+        <Label htmlFor="name">{t("company.form.nameLabel")}</Label>
         <Input id="name" name="name" defaultValue={tenant?.name ?? ""} required />
         {state.errors?.name && <p className="text-sm text-destructive">{state.errors.name[0]}</p>}
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="document">CNPJ / CPF</Label>
+        <Label htmlFor="document">{t("company.form.documentLabel")}</Label>
         <Input id="document" name="document" defaultValue={tenant?.document ?? ""} />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="phone">Telefone(s) de contato</Label>
-        <Input id="phone" name="phone" placeholder="(11) 99999-9999" defaultValue={tenant?.phone ?? ""} />
+        <Label htmlFor="phone">{t("company.form.phoneLabel")}</Label>
+        <Input id="phone" name="phone" placeholder={t("company.form.phonePlaceholder")} defaultValue={tenant?.phone ?? ""} />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="address">Endereço</Label>
-        <Input id="address" name="address" placeholder="Rua Exemplo, 123 — São Paulo, SP" defaultValue={tenant?.address ?? ""} />
+        <Label htmlFor="address">{t("company.form.addressLabel")}</Label>
+        <Input id="address" name="address" placeholder={t("company.form.addressPlaceholder")} defaultValue={tenant?.address ?? ""} />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="website">Site</Label>
-        <Input id="website" name="website" placeholder="https://suaempresa.com.br" defaultValue={tenant?.website ?? ""} />
+        <Label htmlFor="website">{t("company.form.websiteLabel")}</Label>
+        <Input id="website" name="website" placeholder={t("company.form.websitePlaceholder")} defaultValue={tenant?.website ?? ""} />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="logoUrl">URL do logotipo</Label>
+        <Label htmlFor="logoUrl">{t("company.form.logoUrlLabel")}</Label>
         <Input
           id="logoUrl"
           name="logoUrl"
           type="url"
-          placeholder="https://exemplo.com/logo.png"
+          placeholder={t("company.form.logoUrlPlaceholder")}
           defaultValue={tenant?.logoUrl ?? ""}
         />
-        <p className="text-xs text-muted-foreground">Cole a URL da imagem do logotipo da empresa (aparecerá nas OS em PDF).</p>
+        <p className="text-xs text-muted-foreground">{t("company.form.logoUrlHint")}</p>
         {tenant?.logoUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={tenant.logoUrl} alt="Logo" className="h-12 object-contain mt-1 rounded border" />
+          <img src={tenant.logoUrl} alt={t("company.form.logoAlt")} className="h-12 object-contain mt-1 rounded border" />
         )}
         {state.errors?.logoUrl && <p className="text-sm text-destructive">{state.errors.logoUrl[0]}</p>}
       </div>
       {state.message && <p className="text-sm text-green-600">{state.message}</p>}
       <Button type="submit" disabled={isPending}>
-        {isPending ? "Salvando..." : "Salvar"}
+        {isPending ? tc("saving") : tc("save")}
       </Button>
     </form>
   )

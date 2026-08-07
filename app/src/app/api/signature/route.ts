@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { getTranslations } from "next-intl/server"
+import { getTranslator } from "@/lib/i18n"
 
 export async function POST(req: NextRequest) {
   try {
     const { orderId, clientToken, signature } = await req.json()
 
+    // Dois caminhos, dois idiomas possíveis: o portal público (cliente final)
+    // não tem sessão, então o locale sai do tenant dono da OS; o uso interno
+    // (staff logado) usa o request context normal. Como a OS só é carregada
+    // depois, resolve-se o tradutor após saber de qual ramo veio. (i18n.)
     if (!signature?.startsWith("data:image/")) {
-      return NextResponse.json({ ok: false, error: "Assinatura inválida" }, { status: 400 })
+      const te = await getTranslations("errors")
+      return NextResponse.json({ ok: false, error: te("invalidSignature") }, { status: 400 })
     }
 
     // Duas origens possíveis: o portal público (/p/[token]), sem sessão —
@@ -19,8 +26,9 @@ export async function POST(req: NextRequest) {
     // mensagem de erro pro cliente. Nenhum cliente jamais conseguia assinar
     // pelo portal. (Achado verificando o sistema antes da primeira venda,
     // 2026-07-28.)
+    const include = { tenant: { select: { locale: true } } } as const
     const order = clientToken
-      ? await prisma.serviceOrder.findUnique({ where: { id: orderId, clientToken } })
+      ? await prisma.serviceOrder.findUnique({ where: { id: orderId, clientToken }, include })
       : await getTenant().then(async ({ tenantId }) => {
           // Uso interno (staff logado) é feature paga — bloqueio de página
           // não protege rota despachável direto. O ramo público (clientToken)
@@ -28,21 +36,27 @@ export async function POST(req: NextRequest) {
           // serviço por causa da assinatura do prestador seria punir o lado
           // errado. (Achado em revisão de segurança pré-lançamento, 2026-07-28.)
           await requireActiveSubscription(tenantId)
-          return prisma.serviceOrder.findUnique({ where: { id: orderId, tenantId } })
+          return prisma.serviceOrder.findUnique({ where: { id: orderId, tenantId }, include })
         })
-    if (!order) return NextResponse.json({ ok: false, error: "OS não encontrada" }, { status: 404 })
+    if (!order) {
+      const te = await getTranslations("errors")
+      return NextResponse.json({ ok: false, error: te("orderNotFound") }, { status: 404 })
+    }
+    // A partir daqui o idioma sai do tenant dono da OS — cobre o ramo público,
+    // onde não há sessão pro request context resolver nada. (i18n.)
+    const t = getTranslator(order.tenant.locale, "errors")
     // Nada impedia assinar uma OS cancelada — a assinatura confirma execução
     // de um serviço que oficialmente não aconteceu. (Achado verificando o
     // sistema antes da primeira venda, 2026-08-03.)
     if (order.status === "CANCELLED") {
-      return NextResponse.json({ ok: false, error: "OS cancelada não pode ser assinada" }, { status: 400 })
+      return NextResponse.json({ ok: false, error: t("cancelledOrderCannotSign") }, { status: 400 })
     }
     // Mesmo motivo do bloqueio de edição em completeServiceOrder/
     // updateServiceOrder: uma OS já faturada tem NFS-e/recibo vinculados —
     // trocar a assinatura depois quebraria essa consistência. (Achado em
     // auditoria pré-venda, 2026-08-05.)
     if (order.status === "INVOICED" && order.clientSignatureUrl) {
-      return NextResponse.json({ ok: false, error: "OS já faturada — assinatura não pode ser alterada" }, { status: 400 })
+      return NextResponse.json({ ok: false, error: t("invoicedSignatureLocked") }, { status: 400 })
     }
 
     await prisma.serviceOrder.update({

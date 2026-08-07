@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import { buttonVariants } from "@/components/ui/button"
 import { FileText, ExternalLink, Loader2 } from "lucide-react"
 
@@ -13,6 +14,7 @@ type Props = {
 }
 
 export function NfseButton({ orderId, nfseId, nfseStatus, nfseUrl, nfseNumber }: Props) {
+  const t = useTranslations("serviceOrdersComponents")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [emitted, setEmitted] = useState(false)
@@ -22,7 +24,7 @@ export function NfseButton({ orderId, nfseId, nfseStatus, nfseUrl, nfseNumber }:
       <div className="flex items-center gap-2">
         <span className="text-xs text-green-600 font-medium flex items-center gap-1">
           <FileText className="size-3.5" />
-          NFS-e {nfseNumber ? `#${nfseNumber}` : ""} — {nfseStatus ?? "emitida"}
+          NFS-e {nfseNumber ? `#${nfseNumber}` : ""} — {nfseStatus ?? t("nfseButton.statusEmitted")}
         </span>
         {nfseUrl && (
           <a
@@ -31,7 +33,7 @@ export function NfseButton({ orderId, nfseId, nfseStatus, nfseUrl, nfseNumber }:
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             <ExternalLink className="size-3.5 mr-1" />
-            Ver NFS-e
+            {t("nfseButton.viewLink")}
           </a>
         )}
       </div>
@@ -39,7 +41,7 @@ export function NfseButton({ orderId, nfseId, nfseStatus, nfseUrl, nfseNumber }:
   }
 
   async function handleEmit() {
-    if (!confirm("Emitir NFS-e para esta OS?")) return
+    if (!confirm(t("nfseButton.confirmEmit"))) return
     setLoading(true)
     setError(null)
     try {
@@ -70,7 +72,7 @@ export function NfseButton({ orderId, nfseId, nfseStatus, nfseUrl, nfseNumber }:
         ) : (
           <FileText className="size-4 mr-2" />
         )}
-        Emitir NFS-e
+        {t("nfseButton.emitButton")}
       </button>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

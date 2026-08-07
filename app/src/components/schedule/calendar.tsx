@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useTranslations } from "next-intl"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -30,13 +31,12 @@ type Props = {
   initialMonth: number
 }
 
-const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
-const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-]
-
 export function Calendar({ events, initialYear, initialMonth }: Props) {
+  const t = useTranslations("schedule")
+  const tc = useTranslations("common")
+  const weekdays = t.raw("calendar.weekdays") as string[]
+  const months = t.raw("calendar.months") as string[]
+
   const [year, setYear] = useState(initialYear)
   const [month, setMonth] = useState(initialMonth) // 1-based
 
@@ -72,13 +72,13 @@ export function Calendar({ events, initialYear, initialMonth }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={prev}><ChevronLeft className="size-4" /></Button>
-        <span className="font-semibold text-base">{MONTHS[month - 1]} {year}</span>
+        <span className="font-semibold text-base">{months[month - 1]} {year}</span>
         <Button variant="ghost" onClick={next}><ChevronRight className="size-4" /></Button>
       </div>
 
       {/* Weekday labels */}
       <div className="grid grid-cols-7 text-center text-xs font-medium text-muted-foreground">
-        {WEEKDAYS.map(d => <div key={d} className="py-1">{d}</div>)}
+        {weekdays.map(d => <div key={d} className="py-1">{d}</div>)}
       </div>
 
       {/* Days grid */}
@@ -112,14 +112,19 @@ export function Calendar({ events, initialYear, initialMonth }: Props) {
                           "block truncate rounded border px-1 py-0.5 text-xs leading-tight hover:opacity-80 transition-opacity",
                           statusColor[ev.status] ?? "bg-gray-100 text-gray-800"
                         )}
-                        title={`OS #${ev.number} — ${ev.title}\n${ev.client.name}`}
+                        title={t("calendar.eventTooltip", {
+                          // string: ICU formataria número puro com separador de milhar (1.234)
+                          number: String(ev.number),
+                          title: ev.title,
+                          client: ev.client.name,
+                        })}
                       >
                         #{ev.number} {ev.title}
                       </Link>
                     ))}
                     {dayEvents.length > 2 && (
                       <span className="text-xs text-muted-foreground pl-1">
-                        +{dayEvents.length - 2} mais
+                        {t("calendar.moreEvents", { count: dayEvents.length - 2 })}
                       </span>
                     )}
                   </div>
@@ -134,7 +139,7 @@ export function Calendar({ events, initialYear, initialMonth }: Props) {
       <div className="flex flex-wrap gap-3 pt-1">
         {Object.entries(statusColor).map(([status, cls]) => (
           <span key={status} className={cn("rounded border px-2 py-0.5 text-xs", cls)}>
-            {{ OPEN: "Aberta", IN_PROGRESS: "Em andamento", DONE: "Concluída", INVOICED: "Faturada" }[status]}
+            {tc(`serviceOrderStatus.${status}` as "serviceOrderStatus.OPEN")}
           </span>
         ))}
       </div>

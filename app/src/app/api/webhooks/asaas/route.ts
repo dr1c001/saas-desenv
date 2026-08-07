@@ -34,6 +34,10 @@ export async function POST(req: NextRequest) {
             id: true,
             name: true,
             referredByCode: true,
+            // locale: o e-mail de confirmação sai no idioma da empresa — webhook
+            // roda fora de qualquer request de navegador, então não há contexto
+            // pra resolver isso sozinho. (i18n, item 1.)
+            locale: true,
             users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } },
           },
         },
@@ -130,7 +134,7 @@ export async function POST(req: NextRequest) {
 
       const owner = sub.tenant.users[0]
       if (owner?.email) {
-        sendPaymentConfirmedEmail(owner.email, owner.name ?? "Cliente", sub.plan.name).catch(() => null)
+        sendPaymentConfirmedEmail(owner.email, owner.name ?? "Cliente", sub.plan.name, sub.tenant.locale).catch(() => null)
       }
     }
 
