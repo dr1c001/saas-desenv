@@ -1,6 +1,6 @@
 # Plano de Engenharia — ServiçoOS
 
-> Última atualização: 05/08/2026
+> Última atualização: 07/08/2026
 > Este documento é a referência técnica viva do projeto. Deve ser atualizado sempre que uma decisão de arquitetura importante for tomada.
 
 ---
@@ -356,18 +356,98 @@ correspondentes. Plano Gratuito: decisão foi remover a ideia (na época, o
 trial de 15 dias cobria esse papel; o trial em si foi removido depois, em
 21/07/2026 — ver seção 1.1).
 
+Modo claro/escuro (05/08/2026) e suporte a PT/EN (07/08/2026) foram
+concluídos — ver seção 12.
+
 | # | Item | Por quê |
 |---|---|---|
-| 1 | Suporte a idioma PT/EN | Pedido explícito do usuário, 05/08/2026 — projeto grande, todo texto do sistema (UI, e-mails, PDFs) está em PT-BR fixo, sem infra de i18n |
-| 2 | Ativar WhatsApp (Z-API) | Pendência mais antiga, diferencial de venda citado na própria landing page |
-| 3 | Reconciliar drift de migrations | Pré-requisito real pra confiar 100% em `migrate deploy`/CI futuro (ver seção 9, itens 10 e 13) |
-| 4 | Expandir cobertura de testes | Infra pronta (seção 9, item 13) — faltam testes para `service-orders.ts`, `nfse.ts`, `billing.ts` |
-| 5 | Ícones PWA + imagem `og:image` | Precisa de asset de design real (192x192, 512x512, 1200x630) |
-| 6 | Decidir sobre bônus de indicação sem rate-limit | Risco baixo hoje, mas fica registrado pra decisão consciente (ver seção 7.2) |
+| 1 | Ativar WhatsApp (Z-API) | Pendência mais antiga, diferencial de venda citado na própria landing page |
+| 2 | Reconciliar drift de migrations | Pré-requisito real pra confiar 100% em `migrate deploy`/CI futuro (ver seção 9, itens 10 e 13) |
+| 3 | Expandir cobertura de testes | Infra pronta (seção 9, item 13) — faltam testes para `service-orders.ts`, `nfse.ts`, `billing.ts` |
+| 4 | Ícones PWA + imagem `og:image` | Precisa de asset de design real (192x192, 512x512, 1200x630) |
+| 5 | Decidir sobre bônus de indicação sem rate-limit | Risco baixo hoje, mas fica registrado pra decisão consciente (ver seção 7.2) |
+| 6 | Traduzir os textos de marketing com revisão humana | O EN de hoje foi traduzido por IA e não passou por revisão de um falante nativo — aceitável pra funcionar, arriscado pra copy de vendas |
 
 ---
 
-## 12. Como este documento deve ser mantido
+## 12. Internacionalização (PT/EN) e tema claro/escuro
+
+**Modo claro/escuro (05/08/2026).** O tema claro já existia inteiro no CSS
+(shadcn/ui gera os dois desde o início do projeto), só nunca tinha sido
+ativado — `<html>` ficava travado em `className="dark"`. Faltava só o
+mecanismo de troca: script inline no `<head>` decide antes da hidratação
+(localStorage, com fallback pro `prefers-color-scheme` do sistema) pra não
+piscar a cor errada, e um toggle no rodapé da sidebar.
+
+**PT/EN (07/08/2026).** next-intl, 29 namespaces, ~1090 chaves com paridade
+exata entre `pt` e `en`. 116 arquivos migrados: landing, auth, as 16 abas do
+dashboard, portal público do cliente, e-mails, PDFs, mensagens de WhatsApp,
+push notifications e mensagens de erro/validação.
+
+**Como o idioma é resolvido.** `Tenant.locale` é a fonte de verdade: toda a
+equipe e tudo que é gerado pra aquela empresa (e-mail, PDF, WhatsApp) sai no
+mesmo idioma, mesmo disparado fora de um navegador. `src/i18n/request.ts`
+centraliza isso — com sessão, lê o tenant; sem sessão (páginas públicas), cai
+pro cookie `locale`. Contextos que rodam fora do request do Next.js (e-mails
+via cron/webhook, PDFs via `renderToBuffer`, WhatsApp, portal público)
+recebem o locale explícito via `getTranslator(locale, ns)` em `lib/i18n.ts`,
+porque `getTranslations()` não tem de onde resolver ali.
+
+**Mensagens de validação do zod.** Schemas vivem no escopo do módulo, sem
+request context, então guardam *códigos* (`"nameRequired"`) em vez de frases.
+`lib/validation.ts` traduz logo depois do `safeParse`, no idioma de quem
+chamou. Sem isso o formulário exibiria o código cru — pior que o português
+fixo que havia antes.
+
+### 12.1 Dois modos de falha que o typecheck não pega
+
+A migração rodou com ~22 agentes em paralelo, e os dois problemas mais
+sérios passaram limpos por `tsc`, lint e build:
+
+1. **Escritas concorrentes no mesmo `messages/*.json` se sobrescreveram.**
+   Os namespaces `team`, `schedule` e `billingReferral` sumiram inteiros:
+   os agentes migraram os `.tsx` e gravaram as traduções, mas um escritor
+   posterior salvou por cima (lost update clássico). As telas de Equipe,
+   Agenda, Assinatura e Indicação ficaram apontando pra texto inexistente —
+   e **o typecheck passou limpo**, porque next-intl não valida chave contra
+   arquivo em tempo de compilação. Recuperados do journal do workflow, sem
+   reprocessar agentes.
+
+2. **~100 textos ficaram em português fixo** depois da migração
+   "concluída" — entre eles a **página `/expired` inteira** (a tela que todo
+   cliente sem assinatura vê), os rótulos das abas em Permissões e as
+   mensagens de WhatsApp enviadas aos clientes finais.
+
+**Lição:** num trabalho de i18n, "compila e o build passa" não é evidência
+de nada. Duas verificações independentes fecham isso, e valem pra qualquer
+mudança futura em tradução — rodar as duas antes de considerar pronto:
+
+- casar **cada chave usada no código** contra os dois idiomas (hoje: 1148
+  chaves em 102 arquivos, 0 não resolvidas);
+- varrer **texto acentuado fora de comentários**, pra achar o que nunca
+  chegou a virar chave.
+
+Um terceiro cuidado, mais barato: comparar a contagem de folhas de `pt.json`
+e `en.json` — divergência ali denuncia tradução faltando num dos lados.
+
+### 12.2 Gotchas específicos
+
+- **`str.replace` do Python substitui todas as ocorrências**, não a primeira.
+  Ao aplicar edições em lote em Server Actions, isso inseriu a mesma
+  declaração de tradutor duas vezes na mesma função. Usar `count=1` quando a
+  substituição carrega uma declaração junto.
+- **Detectar comentário com regex de `//` é frágil** — a primeira versão do
+  verificador deixava comentários passarem e inflava a contagem de "texto
+  pendente" de 20 pra 204, escondendo os achados reais no meio do ruído.
+  Checar prefixo da linha (`//`, `*`, `/*`) é mais confiável.
+- **Componente criado ≠ componente ligado.** O `PublicLanguageToggle` existia
+  e funcionava, mas não estava referenciado em lugar nenhum: trocar de idioma
+  deslogado só era possível editando o cookie na mão. Só apareceu no teste
+  em produção, clicando na tela — nenhuma verificação estática pegaria isso.
+
+---
+
+## 13. Como este documento deve ser mantido
 
 Atualizar este arquivo sempre que:
 - Uma nova integração externa for adicionada
