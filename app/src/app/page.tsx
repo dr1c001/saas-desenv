@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
+import { PublicLanguageToggle } from "@/components/layout/public-language-toggle"
 import {
   ClipboardList, MapPin, DollarSign, BarChart2, CheckCircle2,
   FileText, Users, Zap, Shield, Star, ArrowRight, CreditCard,
@@ -63,6 +64,7 @@ export default async function LandingPage() {
             <Link href="#como-funciona" className="text-sm text-muted-foreground hover:text-foreground hidden sm:block">{t("nav.howItWorks")}</Link>
             <Link href="#planos" className="text-sm text-muted-foreground hover:text-foreground hidden sm:block">{t("nav.plans")}</Link>
             <Link href="#faq" className="text-sm text-muted-foreground hover:text-foreground hidden sm:block">{t("nav.faq")}</Link>
+            <PublicLanguageToggle />
             <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">{t("nav.login")}</Link>
             <Link
               href="/register"

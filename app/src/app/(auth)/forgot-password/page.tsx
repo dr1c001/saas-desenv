@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { requestPasswordReset } from "@/actions/auth"
+import { PublicLanguageToggle } from "@/components/layout/public-language-toggle"
 
 export default function ForgotPasswordPage() {
   const t = useTranslations()
@@ -39,7 +40,8 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/40">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-muted/40">
+      <PublicLanguageToggle className="self-center" />
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">{t("auth.forgotPassword.title")}</CardTitle>

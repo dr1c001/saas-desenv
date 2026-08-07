@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PublicLanguageToggle } from "@/components/layout/public-language-toggle"
 
 function RegisterForm() {
   const router = useRouter()
@@ -165,7 +166,8 @@ function RegisterForm() {
 export default function RegisterPage() {
   const t = useTranslations()
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/40">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-muted/40">
+      <PublicLanguageToggle className="self-center" />
       <Suspense fallback={
         <Card className="w-full max-w-sm">
           <CardHeader>
