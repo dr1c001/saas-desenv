@@ -44,7 +44,6 @@ import { useRouter } from "next/navigation"
 import type { TabSlug } from "@/lib/auth"
 import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
-import { LanguageToggle } from "@/components/layout/language-toggle"
 
 const NAV_ITEMS: { titleKey: string; href: string; icon: React.ElementType; slug: TabSlug }[] = [
   { titleKey: "dashboard", href: "/dashboard", icon: LayoutDashboard, slug: "dashboard" },
@@ -155,8 +154,11 @@ export function AppSidebar({ allowedTabs, role }: Props) {
 
       <SidebarFooter>
         <SidebarMenu>
+          {/* Tema é preferência do dispositivo (só de quem está usando), então
+              fica aqui. Idioma é decisão da empresa inteira e vive em
+              Configurações, com confirmação — um clique acidental aqui já
+              deixou a conta de uma cliente em inglês. (Ver seção 7.2.1.) */}
           <ThemeToggle />
-          <LanguageToggle canChange={role === "OWNER" || role === "ADMIN"} />
           {(role === "OWNER" || role === "ADMIN") && (
             <SidebarMenuItem>
               <SidebarMenuButton render={<Link href="/settings/permissions" />}>

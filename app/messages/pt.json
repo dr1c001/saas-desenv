@@ -253,8 +253,7 @@
     "resultsCount": "Resultados ({count})",
     "menu": "Menu",
     "lightMode": "Modo claro",
-    "darkMode": "Modo escuro",
-    "language": "Idioma"
+    "darkMode": "Modo escuro"
   },
   "history": {
     "list": {
@@ -1165,6 +1164,17 @@
       "tenant": "Dados da empresa atualizados.",
       "profile": "Perfil atualizado.",
       "whatsapp": "Configurações de WhatsApp salvas."
+    },
+    "language": {
+      "title": "Idioma do sistema",
+      "description": "Define o idioma para toda a empresa — inclusive os e-mails, PDFs e mensagens enviados aos seus clientes.",
+      "current": "Idioma atual: {language}",
+      "switchTo": "Mudar para {language}",
+      "confirmTitle": "Mudar o idioma de toda a empresa?",
+      "confirmBody": "Isso vale para todos os usuários da sua equipe, e também para os e-mails, PDFs e mensagens de WhatsApp enviados aos seus clientes. Você pode voltar a qualquer momento.",
+      "confirm": "Sim, mudar para {language}",
+      "cancel": "Cancelar",
+      "changing": "Mudando..."
     }
   },
   "settingsAdvanced": {

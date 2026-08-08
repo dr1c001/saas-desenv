@@ -253,8 +253,7 @@
     "resultsCount": "Results ({count})",
     "menu": "Menu",
     "lightMode": "Light mode",
-    "darkMode": "Dark mode",
-    "language": "Language"
+    "darkMode": "Dark mode"
   },
   "history": {
     "list": {
@@ -1165,6 +1164,17 @@
       "tenant": "Company details updated.",
       "profile": "Profile updated.",
       "whatsapp": "WhatsApp settings saved."
+    },
+    "language": {
+      "title": "System language",
+      "description": "Sets the language for the whole company — including the emails, PDFs and messages sent to your clients.",
+      "current": "Current language: {language}",
+      "switchTo": "Switch to {language}",
+      "confirmTitle": "Change the language for the whole company?",
+      "confirmBody": "This applies to everyone on your team, and to the emails, PDFs and WhatsApp messages sent to your clients. You can switch back at any time.",
+      "confirm": "Yes, switch to {language}",
+      "cancel": "Cancel",
+      "changing": "Switching..."
     }
   },
   "settingsAdvanced": {

@@ -4,6 +4,7 @@ import { TenantForm } from "@/components/settings/tenant-form"
 import { ProfileForm } from "@/components/settings/profile-form"
 import { WhatsAppForm } from "@/components/settings/whatsapp-form"
 import { ExportDataButton } from "@/components/settings/export-data-button"
+import { LanguageSetting } from "@/components/settings/language-setting"
 import { Separator } from "@/components/ui/separator"
 
 export default async function SettingsPage() {
@@ -22,6 +23,19 @@ export default async function SettingsPage() {
               <p className="text-sm text-muted-foreground">{t("company.description")}</p>
             </div>
             <TenantForm tenant={tenant} />
+          </section>
+
+          <Separator />
+
+          {/* Idioma é decisão de empresa (vale pra equipe toda e pro que sai
+              pros clientes), então vive aqui junto das outras — e não mais
+              como um botão de um clique na sidebar. (Ver seção 7.2.1.) */}
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">{t("language.title")}</h2>
+              <p className="text-sm text-muted-foreground">{t("language.description")}</p>
+            </div>
+            <LanguageSetting />
           </section>
 
           <Separator />
