@@ -45,6 +45,12 @@ const dashboardItems: { statusKey: "IN_PROGRESS" | "DONE" | "SCHEDULED"; color: 
 export default async function LandingPage() {
   const t = await getTranslations("landing")
   const tc = await getTranslations("common")
+  // Lista de recursos por plano vem do namespace compartilhado — a mesma que
+  // a tela de assinatura usa. Antes cada tela tinha a própria cópia e elas
+  // divergiram: aqui o Enterprise dizia "Tudo do Pro", lá não dizia, e quem
+  // abria a tela de pagamento via o plano de R$ 397 parecendo ter MENOS que o
+  // de R$ 197. (Notado pelo usuário em 10/08/2026.)
+  const tf = await getTranslations("planFeatures")
 
   const dashboardStatLabels = t.raw("dashboardPreview.stats") as string[]
   const dashboardItemLabels = t.raw("dashboardPreview.items") as string[]
@@ -247,7 +253,7 @@ export default async function LandingPage() {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {plans.map((plan) => {
-              const planFeatures = t.raw(`pricing.plans.${plan.key}.features`) as string[]
+              const planFeatures = tf.raw(plan.key) as string[]
               return (
                 <div key={plan.key} className={`relative rounded-xl border bg-card p-8 flex flex-col gap-6 ${plan.color}`}>
                   {plan.popular && (

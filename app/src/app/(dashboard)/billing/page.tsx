@@ -18,11 +18,19 @@ const STATUS_COLOR: Record<string, string> = {
 // Slugs que têm lista de features traduzida em messages/*.json — plano novo
 // no banco sem entrada lá cai na lista vazia, igual ao fallback anterior
 // (PLAN_FEATURES[plan.slug] ?? []).
+//
+// A lista em si mora no namespace compartilhado `planFeatures`, o mesmo que a
+// landing usa. Antes cada tela tinha a própria cópia, e elas divergiram: o
+// Enterprise aqui não dizia "Tudo do Pro", então nesta tela — justamente onde
+// a pessoa decide pagar — o plano de R$ 397 aparecia sem Mapa GPS, Checklist,
+// Assinatura digital nem Relatórios avançados, parecendo pior que o de R$ 197.
+// (Notado pelo usuário em 10/08/2026.)
 const PLAN_FEATURE_SLUGS = ["starter", "pro", "enterprise"]
 
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ success?: string; error?: string }> }) {
   const { success, error } = await searchParams
   const t = await getTranslations("billingReferral.billing")
+  const tf = await getTranslations("planFeatures")
   const [billing, plans] = await Promise.all([getBillingStatus(), getPlans()])
 
   const statusKey = billing?.subscriptionStatus ?? "TRIAL"
@@ -116,7 +124,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           {plans.map((plan) => {
             const isCurrentPlan = billing?.plan?.id === plan.id
             const features = PLAN_FEATURE_SLUGS.includes(plan.slug)
-              ? (t.raw(`plans.features.${plan.slug}`) as string[])
+              ? (tf.raw(plan.slug) as string[])
               : []
             const isPro = plan.slug === "pro"
 

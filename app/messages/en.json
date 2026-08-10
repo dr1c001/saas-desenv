@@ -49,6 +49,33 @@
       "OVERDUE": "Overdue"
     }
   },
+  "planFeatures": {
+    "starter": [
+      "Up to 3 users",
+      "50 jobs per month",
+      "Quotes and PDF",
+      "Automatic receipts",
+      "Basic reports",
+      "Email support"
+    ],
+    "pro": [
+      "Everything in Starter",
+      "Up to 10 users",
+      "Unlimited jobs",
+      "Real-time GPS map",
+      "Checklist + Digital signature",
+      "E-invoice issuance (NFS-e)",
+      "Advanced reports",
+      "Priority support"
+    ],
+    "enterprise": [
+      "Everything in Pro",
+      "Unlimited users",
+      "Unlimited jobs",
+      "Dedicated onboarding",
+      "24h support via WhatsApp"
+    ]
+  },
   "legal": {
     "terms": {
       "metaTitle": "Terms of Use — ServiçoOS",
@@ -842,36 +869,9 @@
       "subscribe": "Subscribe",
       "disclaimer": "All prices in BRL. Billed via boleto or credit card.",
       "plans": {
-        "starter": {
-          "features": [
-            "Up to 3 users",
-            "50 service orders/month",
-            "Quotes and PDF",
-            "Automatic receipts",
-            "Basic reports",
-            "Email support"
-          ]
-        },
-        "pro": {
-          "features": [
-            "Up to 10 users",
-            "Unlimited service orders",
-            "Real-time GPS map",
-            "Checklist + digital signature",
-            "E-invoice issuance (NFS-e)",
-            "Advanced reports",
-            "Priority support"
-          ]
-        },
-        "enterprise": {
-          "features": [
-            "Unlimited users",
-            "Unlimited service orders",
-            "Everything in Pro",
-            "Dedicated onboarding",
-            "24h support via WhatsApp"
-          ]
-        }
+        "starter": {},
+        "pro": {},
+        "enterprise": {}
       }
     },
     "faq": {
@@ -1352,30 +1352,7 @@
         "referralDiscount": "{percent}% referral discount applied",
         "currentPlan": "Current plan",
         "subscribeMonthly": "Subscribe — Monthly",
-        "subscribeYearly": "Subscribe — Yearly (save 2 months)",
-        "features": {
-          "starter": [
-            "Up to 3 users",
-            "50 service orders/month",
-            "Basic reports",
-            "Email support"
-          ],
-          "pro": [
-            "Up to 10 users",
-            "Unlimited service orders",
-            "GPS map",
-            "Checklist + digital signature",
-            "E-invoice issuance (NFS-e)",
-            "Advanced reports",
-            "Priority support"
-          ],
-          "enterprise": [
-            "Unlimited users",
-            "Unlimited service orders",
-            "E-invoice issuance (NFS-e)",
-            "24h support"
-          ]
-        }
+        "subscribeYearly": "Subscribe — Yearly (save 2 months)"
       }
     },
     "receipts": {

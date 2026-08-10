@@ -49,6 +49,33 @@
       "OVERDUE": "Vencido"
     }
   },
+  "planFeatures": {
+    "starter": [
+      "Até 3 usuários",
+      "50 OS por mês",
+      "Orçamentos e PDF",
+      "Recibos automáticos",
+      "Relatórios básicos",
+      "Suporte por e-mail"
+    ],
+    "pro": [
+      "Tudo do Starter",
+      "Até 10 usuários",
+      "OS ilimitadas",
+      "Mapa GPS em tempo real",
+      "Checklist + Assinatura digital",
+      "Emissão de NFS-e",
+      "Relatórios avançados",
+      "Suporte prioritário"
+    ],
+    "enterprise": [
+      "Tudo do Pro",
+      "Usuários ilimitados",
+      "OS ilimitadas",
+      "Onboarding dedicado",
+      "Suporte 24h via WhatsApp"
+    ]
+  },
   "legal": {
     "terms": {
       "metaTitle": "Termos de Uso — ServiçoOS",
@@ -842,36 +869,9 @@
       "subscribe": "Assinar",
       "disclaimer": "Todos os preços em BRL. Cobranças via boleto ou cartão de crédito.",
       "plans": {
-        "starter": {
-          "features": [
-            "Até 3 usuários",
-            "50 OS por mês",
-            "Orçamentos e PDF",
-            "Recibos automáticos",
-            "Relatórios básicos",
-            "Suporte por e-mail"
-          ]
-        },
-        "pro": {
-          "features": [
-            "Até 10 usuários",
-            "OS ilimitadas",
-            "Mapa GPS em tempo real",
-            "Checklist + Assinatura digital",
-            "Emissão de NFS-e",
-            "Relatórios avançados",
-            "Suporte prioritário"
-          ]
-        },
-        "enterprise": {
-          "features": [
-            "Usuários ilimitados",
-            "OS ilimitadas",
-            "Tudo do Pro",
-            "Onboarding dedicado",
-            "Suporte 24h via WhatsApp"
-          ]
-        }
+        "starter": {},
+        "pro": {},
+        "enterprise": {}
       }
     },
     "faq": {
@@ -1352,30 +1352,7 @@
         "referralDiscount": "{percent}% de desconto de indicação aplicado",
         "currentPlan": "Plano atual",
         "subscribeMonthly": "Assinar — Mensal",
-        "subscribeYearly": "Assinar — Anual (economize 2 meses)",
-        "features": {
-          "starter": [
-            "Até 3 usuários",
-            "50 OS por mês",
-            "Relatórios básicos",
-            "Suporte por e-mail"
-          ],
-          "pro": [
-            "Até 10 usuários",
-            "OS ilimitadas",
-            "Mapa GPS",
-            "Checklist + Assinatura digital",
-            "Emissão de NFS-e",
-            "Relatórios avançados",
-            "Suporte prioritário"
-          ],
-          "enterprise": [
-            "Usuários ilimitados",
-            "OS ilimitadas",
-            "Emissão de NFS-e",
-            "Suporte 24h"
-          ]
-        }
+        "subscribeYearly": "Assinar — Anual (economize 2 meses)"
       }
     },
     "receipts": {
