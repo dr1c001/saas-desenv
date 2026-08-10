@@ -530,6 +530,92 @@ servidor morto: página já visitada abriu do cache com conteúdo íntegro; URL
 nunca visitada caiu na tela `/offline` com o texto explicativo. As duas
 metades do `navegacao()` exercidas de ponta a ponta.
 
+### 7.2.7 Planos não entregavam o que a tela vendia — 10/08/2026
+
+Pedido do usuário: "certifique que cada plano será liberado o que estamos
+prometendo na assinatura". A auditoria encontrou o pior resultado possível.
+
+**Não existia nenhuma verificação de plano no sistema.** `plan.slug` e
+`maxUsers` não apareciam em lugar nenhum do código fora da própria tela de
+preços. `hasActiveSubscription()` verificava apenas se `subscriptionStatus`
+era `ACTIVE` — nunca **qual** plano. Na prática, **quem pagava R$ 97 recebia
+exatamente o mesmo que quem pagava R$ 397.**
+
+| Promessa da tela | Estava verificado? |
+|---|---|
+| Até 3 / 10 / ∞ usuários | ✗ dava pra convidar sem limite em qualquer plano |
+| 50 OS por mês (Starter) | ✗ nada contava |
+| Mapa GPS (Pro+) | ✗ o comentário no código dizia "feature paga (Pro+)" desde julho, mas a trava nunca existiu |
+| Checklist + Assinatura (Pro+) | ✗ |
+| Emissão de NFS-e (Pro+) | ✗ |
+| Relatórios básicos × avançados | ✗ não havia distinção nenhuma |
+| API de integração (Enterprise) | ✗ **o recurso não existe no produto** |
+
+**O que foi construído:** `lib/plan.ts` como fonte única, com os limites em
+código e chaveados por `Plan.slug`. Os limites não vieram de `Plan.features` do
+banco de propósito — aquele campo é texto de vitrine ("Até 3 usuários"), serve
+pra mostrar na tela, não pra decidir permissão.
+
+Travas aplicadas em: convite de equipe, criação de OS, Mapa GPS (página + as
+duas rotas de API), NFS-e (2 Server Actions + página fiscal), assinatura
+digital (rota, nos dois ramos), checklist e relatórios. A aba some do menu via
+`getAllowedTabs`, mas **cada página e rota se defende sozinha** — menu
+escondido nunca foi proteção, a URL continua digitável.
+
+**Decisões que exigiram julgamento:**
+
+- **Relatórios básicos × avançados** não estava definido em lugar nenhum.
+  Linha adotada: básico responde "como foi o meu mês" (resumo de receita,
+  despesa, resultado e OS por status); avançado responde "como foi o período X
+  e quem são meus melhores clientes" (período personalizado, ranking de
+  clientes, detalhamento de receitas e despesas). O período é forçado no
+  servidor, não escondido na tela — a Action é despachável direto com
+  qualquer `from`/`to`.
+
+- **Cliente existente perdendo recurso.** A primeira cliente pagante estava no
+  Starter e já havia coletado 2 assinaturas digitais — recurso que a tela vende
+  como Pro. Ligar a trava tiraria da mão de quem já paga e já usa. Decisão do
+  dono do produto: manter pra ela. Daí o campo `Tenant.extraFeatures`, que soma
+  recursos ao que o plano dá. Clientes novos seguem a regra.
+
+- **Slug desconhecido cai no permissivo.** Troca deliberada: um plano novo mal
+  cadastrado libera recurso a mais; o inverso — travar quem está pagando por
+  causa de um slug que o código não conhece — é muito pior. Tenant sem plano
+  nenhum também cai aí, e não é brecha: sem assinatura ACTIVE o layout do
+  dashboard já manda pra `/expired` antes de qualquer coisa.
+
+- **Checklist: só a criação é barrada.** Marcar ou apagar item existente
+  continua livre, senão quem trocasse de plano ficaria com um checklist preso
+  na tela, sem como limpar.
+
+- **Assinatura digital vale para os dois ramos da rota**, inclusive o portal
+  público. Isso é diferente do bloqueio por assinatura vencida que já existia
+  ali: lá, o cliente final não pode ser punido por um pagamento atrasado da
+  empresa no meio de um serviço; aqui, a empresa nunca comprou o recurso, então
+  ele não deveria nem ter sido oferecido ao cliente dela.
+
+- **"API de integração" saiu da vitrine.** Vendida no Enterprise por R$ 397 e
+  inexistente — sem rota pública, sem chave de API, nada. Não dá pra "travar" o
+  que não existe. Removida da tela por decisão do dono do produto; construir
+  fica como projeto à parte (chaves por empresa, autenticação, endpoints,
+  controle de uso, documentação).
+
+**Também corrigido:** `Plan.features` no banco estava fora de sincronia com a
+vitrine — o Pro não listava "Checklist + Assinatura digital" nem "Emissão de
+NFS-e", e o Enterprise ainda listava a API. Sincronizado com o i18n.
+
+**Verificação:** 14 testes novos em `lib/__tests__/plan.test.ts`, cobrindo os
+três planos, o efeito do `extraFeatures`, o isolamento do contador de usuários
+entre tenants e — o caso que quebraria mais silenciosamente — OS de meses
+anteriores **não** consumirem a cota do mês corrente (contar tudo desde sempre
+transformaria "50 por mês" em "50 pra vida inteira"). Conferido também contra
+os dados reais de produção, tenant por tenant.
+
+**Lição:** um comentário dizendo "feature paga (plano Pro+)" ficou três semanas
+no código sem nenhuma trava embaixo dele. Intenção escrita em comentário não é
+regra aplicada — e regra de cobrança que não existe não gera erro, não aparece
+no Sentry e não aparece em teste nenhum. Só aparece na margem.
+
 ### 7.3 Auditoria completa pré-venda — 05/08/2026
 
 Pedido explícito de revisar o código inteiro (não só o diff), todas as abas,

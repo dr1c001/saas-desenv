@@ -55,6 +55,13 @@ model Tenant {
   referralCode       String?            @unique
   referredByCode     String?
   referralDiscountPercent Int           @default(0)
+  // Recursos liberados ALÉM do que o plano dá. Existe por um motivo concreto:
+  // quando as travas de plano foram ligadas (10/08/2026), a primeira cliente
+  // pagante já usava assinatura digital no Starter — recurso que a tela vende
+  // como Pro. Tirar da mão de quem já paga e já usa custa mais que a receita
+  // do upgrade, então ela foi mantida por aqui. Clientes novos seguem a regra.
+  // Ver lib/plan.ts.
+  extraFeatures      String[]           @default([])
   locale             Locale             @default(pt)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt

@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { getTranslations } from "next-intl/server"
@@ -5,12 +6,13 @@ import { getTenant } from "@/lib/auth"
 import { getReportData } from "@/actions/reports"
 import { formatCurrency, formatDate, formatOsNumber } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { buttonVariants } from "@/components/ui/button"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { TrendingUp, TrendingDown, DollarSign } from "lucide-react"
+import { TrendingUp, TrendingDown, DollarSign, Lock } from "lucide-react"
 import { PeriodPicker } from "@/components/reports/period-picker"
 
 type SearchParams = Promise<{ from?: string; to?: string }>
@@ -20,6 +22,21 @@ function defaultDates() {
   const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0]
   const to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0]
   return { from, to }
+}
+
+// Bloco no lugar da seção que o plano não inclui. Dizer "seu plano não tem
+// isto, e é aqui que se resolve" é bem diferente de uma tabela vazia, que o
+// usuário lê como "não tenho dados".
+function UpgradeAviso({ texto, botao }: { texto: string; botao: string }) {
+  return (
+    <div className="flex flex-col items-start gap-2 p-4">
+      <p className="text-sm text-muted-foreground">{texto}</p>
+      <Link href="/billing" className={buttonVariants({ variant: "outline", size: "sm" })}>
+        <Lock className="size-3.5 mr-1.5" />
+        {botao}
+      </Link>
+    </div>
+  )
 }
 
 // Ordem fixa de exibição no bloco "OS por Status" — os rótulos vêm de
@@ -43,9 +60,16 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <h1 className="text-2xl font-bold">{t("reports.title")}</h1>
-        <Suspense>
-          <PeriodPicker defaultFrom={from} defaultTo={to} />
-        </Suspense>
+        {/* Período personalizado faz parte dos "relatórios avançados"
+            (Pro+). No básico o servidor força o mês corrente — esconder o
+            seletor aqui evita oferecer um controle que não teria efeito. */}
+        {data.avancado ? (
+          <Suspense>
+            <PeriodPicker defaultFrom={from} defaultTo={to} />
+          </Suspense>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t("reports.currentMonthOnly")}</p>
+        )}
       </div>
 
       {/* DRE */}
@@ -59,7 +83,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-green-600">{formatCurrency(data.totalRevenue)}</p>
-              <p className="text-xs text-muted-foreground">{t("reports.dre.revenueCount", { count: data.revenues.length })}</p>
+              <p className="text-xs text-muted-foreground">{t("reports.dre.revenueCount", { count: data.revenueCount })}</p>
             </CardContent>
           </Card>
           <Card>
@@ -69,7 +93,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-red-600">{formatCurrency(data.totalExpense)}</p>
-              <p className="text-xs text-muted-foreground">{t("reports.dre.expenseCount", { count: data.expenses.length })}</p>
+              <p className="text-xs text-muted-foreground">{t("reports.dre.expenseCount", { count: data.expenseCount })}</p>
             </CardContent>
           </Card>
           <Card className={data.result >= 0 ? "border-green-200" : "border-red-200"}>
@@ -126,7 +150,12 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
           <h2 className="text-lg font-semibold">{t("reports.topClients.title")}</h2>
           <Card>
             <CardContent className="p-0">
-              {data.topClients.length === 0 ? (
+              {/* Ranking de clientes é dos "relatórios avançados". Sem isto, a
+                  tabela viria vazia e pareceria "você não tem clientes" — bem
+                  diferente de "seu plano não inclui isto". */}
+              {!data.avancado ? (
+                <UpgradeAviso texto={t("reports.advancedOnly")} botao={t("reports.upgradeButton")} />
+              ) : data.topClients.length === 0 ? (
                 <p className="text-sm text-muted-foreground p-4">{t("reports.topClients.empty")}</p>
               ) : (
                 <Table>
@@ -160,7 +189,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
         <h2 className="text-lg font-semibold">{t("reports.revenueDetail.title")}</h2>
         <Card>
           <CardContent className="p-0">
-            {data.revenues.length === 0 ? (
+            {!data.avancado ? (
+              <UpgradeAviso texto={t("reports.advancedOnly")} botao={t("reports.upgradeButton")} />
+            ) : data.revenues.length === 0 ? (
               <p className="text-sm text-muted-foreground p-4">{t("reports.revenueDetail.empty")}</p>
             ) : (
               <Table>
@@ -205,7 +236,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
         <h2 className="text-lg font-semibold">{t("reports.expenseDetail.title")}</h2>
         <Card>
           <CardContent className="p-0">
-            {data.expenses.length === 0 ? (
+            {!data.avancado ? (
+              <UpgradeAviso texto={t("reports.advancedOnly")} botao={t("reports.upgradeButton")} />
+            ) : data.expenses.length === 0 ? (
               <p className="text-sm text-muted-foreground p-4">{t("reports.expenseDetail.empty")}</p>
             ) : (
               <Table>

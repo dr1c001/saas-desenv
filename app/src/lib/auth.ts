@@ -1,6 +1,7 @@
 import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
+import { getLimites, type Recurso } from "@/lib/plan"
 import { redirect } from "next/navigation"
 import { sendWelcomeEmail } from "@/lib/resend"
 import { Prisma } from "@/generated/prisma/client"
@@ -213,9 +214,23 @@ export type TabSlug = (typeof ALL_TABS)[number]["slug"]
 // Tabs technician gets by default (admin can change this per-tenant)
 export const DEFAULT_TECHNICIAN_TABS: TabSlug[] = ["dashboard", "service-orders", "schedule"]
 
+// Abas que só existem se o plano incluir o recurso correspondente. Filtrar
+// aqui esconde a aba do menu em um lugar só; a página e a rota de API de cada
+// uma continuam se defendendo por conta própria (menu escondido não é
+// proteção — a URL continua digitável).
+const ABAS_POR_RECURSO: { slug: TabSlug; recurso: Recurso }[] = [
+  { slug: "map", recurso: "gpsMap" },
+  { slug: "fiscal", recurso: "nfse" },
+]
+
 export async function getAllowedTabs(tenantId: string, role: string): Promise<TabSlug[]> {
+  const { recursos } = await getLimites(tenantId)
+  const bloqueadas = new Set(
+    ABAS_POR_RECURSO.filter((a) => !recursos.includes(a.recurso)).map((a) => a.slug)
+  )
+
   if (role === "OWNER" || role === "ADMIN") {
-    return ALL_TABS.map((t) => t.slug)
+    return ALL_TABS.map((t) => t.slug).filter((s) => !bloqueadas.has(s))
   }
 
   // TECHNICIAN: check TabPermission table; fall back to defaults
@@ -224,6 +239,6 @@ export async function getAllowedTabs(tenantId: string, role: string): Promise<Ta
     select: { tab: true },
   })
 
-  if (perms.length === 0) return DEFAULT_TECHNICIAN_TABS
-  return perms.map((p) => p.tab as TabSlug)
+  const base = perms.length === 0 ? DEFAULT_TECHNICIAN_TABS : perms.map((p) => p.tab as TabSlug)
+  return base.filter((s) => !bloqueadas.has(s))
 }

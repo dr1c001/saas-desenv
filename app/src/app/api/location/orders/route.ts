@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { temRecurso } from "@/lib/plan"
 
 export async function GET() {
   const { tenantId, role } = await getTenant()
@@ -14,6 +15,13 @@ export async function GET() {
   // Actions: bloqueio de página não protege rota despachável direto.
   // (Achado em revisão de segurança pré-lançamento, 2026-07-28.)
   await requireActiveSubscription(tenantId)
+  // "Mapa GPS" é vendido a partir do plano Pro — e até 10/08/2026 nada no
+  // código verificava isso: o comentário acima dizia "feature paga", mas
+  // requireActiveSubscription só olha se a assinatura está ACTIVE, nunca qual
+  // plano é. Quem pagava R$ 97 tinha o mapa igual a quem pagava R$ 397.
+  if (!(await temRecurso(tenantId, "gpsMap"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
   const orders = await prisma.serviceOrder.findMany({
     where: {

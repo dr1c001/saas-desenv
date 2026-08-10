@@ -5,6 +5,7 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { checkRateLimit, clientIp } from "@/lib/rate-limit"
+import { requireVagaDeUsuario } from "@/lib/plan"
 import { sendTeamInviteEmail } from "@/lib/resend"
 import { getTranslator } from "@/lib/i18n"
 import { getTranslations } from "next-intl/server"
@@ -40,6 +41,16 @@ export async function inviteTeamMember(
   const tt = await getTranslations("team")
   if (requesterRole !== "OWNER" && requesterRole !== "ADMIN") {
     return { message: (await getTranslations("common"))("noPermission") }
+  }
+
+  // "Até 3 usuários" (Starter) e "Até 10" (Pro) eram promessa de vitrine que
+  // ninguém verificava — dava pra convidar equipe sem limite em qualquer
+  // plano. Erro vira mensagem no formulário em vez de exceção: quem esbarra
+  // no limite precisa saber o que fazer, não ver uma tela de erro.
+  try {
+    await requireVagaDeUsuario(tenantId)
+  } catch (e) {
+    return { message: (e as Error).message }
   }
 
   const parsed = inviteSchema.safeParse(Object.fromEntries(formData.entries()))

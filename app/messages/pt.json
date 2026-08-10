@@ -1099,7 +1099,10 @@
           "paidAt": "Pago em",
           "amount": "Valor"
         }
-      }
+      },
+      "advancedOnly": "Esta análise faz parte dos relatórios avançados, incluídos a partir do plano Pro.",
+      "upgradeButton": "Ver planos",
+      "currentMonthOnly": "Mês atual — período personalizado é do plano Pro"
     }
   },
   "settingsCore": {
@@ -1371,7 +1374,6 @@
             "Usuários ilimitados",
             "OS ilimitadas",
             "Emissão de NFS-e",
-            "API de integração",
             "Suporte 24h"
           ]
         }
@@ -1728,6 +1730,17 @@
     }
   },
   "errors": {
+    "planFeature": {
+      "gpsMap": "O Mapa GPS faz parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
+      "nfse": "A emissão de NFS-e faz parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
+      "signature": "A assinatura digital do cliente faz parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
+      "checklist": "O checklist de execução faz parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
+      "advancedReports": "Os relatórios avançados fazem parte do plano Pro. Faça upgrade em Configurações → Plano para liberar."
+    },
+    "planLimit": {
+      "users": "Seu plano permite até {max} usuários e esse limite já foi atingido. Faça upgrade em Configurações → Plano para adicionar mais.",
+      "serviceOrders": "Seu plano permite {max} OS por mês e esse limite já foi atingido. A cota renova no dia 1º, ou faça upgrade em Configurações → Plano."
+    },
     "clientNotFound": "Cliente não encontrado.",
     "technicianNotFound": "Técnico não encontrado.",
     "providerNotFound": "Prestador não encontrado.",

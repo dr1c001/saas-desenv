@@ -2,12 +2,17 @@
 
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { requireRecurso } from "@/lib/plan"
 import { revalidatePath } from "next/cache"
 import { getTranslations } from "next-intl/server"
 
 export async function addChecklistItem(orderId: string, description: string) {
   const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
+  // "Checklist" é vendido a partir do plano Pro. Só a CRIAÇÃO é barrada:
+  // marcar ou apagar item já existente continua livre, senão quem trocasse
+  // de plano ficaria com um checklist preso na tela, sem como limpar.
+  await requireRecurso(tenantId, "checklist")
   const order = await prisma.serviceOrder.findUnique({ where: { id: orderId, tenantId } })
   if (!order) throw new Error((await getTranslations("errors"))("orderNotFound"))
 

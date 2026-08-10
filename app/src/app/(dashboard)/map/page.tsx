@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { getTenant } from "@/lib/auth"
+import { temRecurso } from "@/lib/plan"
 import { redirect } from "next/navigation"
 import { getTranslations } from "next-intl/server"
 import { TechnicianMap } from "@/components/map/technician-map"
@@ -14,6 +15,10 @@ const STATUS_COLOR: Record<string, string> = {
 export default async function MapPage() {
   const { tenantId, role } = await getTenant()
   if (role !== "OWNER" && role !== "ADMIN") redirect("/dashboard")
+  // "Mapa GPS" começa no plano Pro. A aba já some do menu (getAllowedTabs),
+  // mas a URL continua digitável — e as duas rotas de API que alimentam o
+  // mapa também checam por conta própria.
+  if (!(await temRecurso(tenantId, "gpsMap"))) redirect("/billing")
 
   const t = await getTranslations("mapAdmin")
   const tCommon = await getTranslations("common")

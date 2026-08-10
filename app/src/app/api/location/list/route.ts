@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { temRecurso } from "@/lib/plan"
 
 export async function GET() {
   const { tenantId, role } = await getTenant()
@@ -14,6 +15,12 @@ export async function GET() {
   // Actions: bloqueio de página não protege rota despachável direto.
   // (Achado em revisão de segurança pré-lançamento, 2026-07-28.)
   await requireActiveSubscription(tenantId)
+  // Este comentário dizia "plano Pro+" desde julho, mas a verificação abaixo
+  // não existia: requireActiveSubscription só olha se a assinatura está
+  // ACTIVE, nunca QUAL plano. A intenção estava escrita, a trava não.
+  if (!(await temRecurso(tenantId, "gpsMap"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
   const locations = await prisma.userLocation.findMany({
     where: { user: { tenantId } },

@@ -1,13 +1,18 @@
 import { getFiscalStatus, registerFiscalCompany } from "@/actions/nfse"
 import { getTenant } from "@/lib/auth"
+import { temRecurso } from "@/lib/plan"
 import { getTranslations } from "next-intl/server"
 import { redirect } from "next/navigation"
 import { buttonVariants } from "@/components/ui/button"
 import { CheckCircle2, Building2, FileText } from "lucide-react"
 
 export default async function FiscalSettingsPage() {
-  const { role } = await getTenant()
+  const { tenantId, role } = await getTenant()
   if (role !== "OWNER") redirect("/settings")
+  // "Emissão de NFS-e" começa no plano Pro. A aba já some do menu
+  // (getAllowedTabs), mas a URL continua digitável — e as duas Server Actions
+  // de nfse.ts também checam por conta própria.
+  if (!(await temRecurso(tenantId, "nfse"))) redirect("/billing")
 
   const t = await getTranslations("settingsAdvanced.fiscal")
   const fiscal = await getFiscalStatus()

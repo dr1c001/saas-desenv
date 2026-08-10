@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { sendPushToUser } from "@/lib/push"
 import { retryOnUniqueConflict } from "@/lib/retry"
+import { requireCotaDeOs } from "@/lib/plan"
 import { getTranslations } from "next-intl/server"
 import { translateFieldErrors } from "@/lib/validation"
 
@@ -42,6 +43,14 @@ export async function createServiceOrder(
 ): Promise<OrderFormState> {
   const { tenantId, userId } = await getTenant()
   await requireActiveSubscription(tenantId)
+
+  // "50 OS por mês" do Starter não era verificado em lugar nenhum. Checa antes
+  // de validar o formulário pra não deixar a pessoa preencher tudo à toa.
+  try {
+    await requireCotaDeOs(tenantId)
+  } catch (e) {
+    return { message: (e as Error).message }
+  }
 
   const raw = Object.fromEntries(formData.entries())
   const parsed = orderSchema.safeParse(raw)

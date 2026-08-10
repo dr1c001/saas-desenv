@@ -2,7 +2,8 @@
 
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
-import { brtMidnightUTC } from "@/lib/utils"
+import { brtMidnightUTC, todayInBRT } from "@/lib/utils"
+import { temRecurso } from "@/lib/plan"
 import { getTranslations } from "next-intl/server"
 
 export async function getReportData(from: string, to: string) {
@@ -13,6 +14,24 @@ export async function getReportData(from: string, to: string) {
   if (role !== "OWNER" && role !== "ADMIN") throw new Error((await getTranslations("common"))("noPermission"))
   await requireActiveSubscription(tenantId)
 
+  // "Relatórios básicos" (Starter) x "avançados" (Pro+). A linha fica assim:
+  // básico responde "como foi o meu mês" — resumo de receita/despesa/resultado
+  // e OS por status. Avançado responde "como foi o período X e quem são meus
+  // melhores clientes" — período personalizado, ranking de clientes e
+  // detalhamento de receitas.
+  //
+  // O período é forçado aqui no servidor, não escondido na tela: a Action tem
+  // ID próprio e é despachável direto com qualquer from/to.
+  const avancado = await temRecurso(tenantId, "advancedReports")
+
+  let [fromY, fromM, fromD] = from.split("-").map(Number)
+  let [toY, toM, toD] = to.split("-").map(Number)
+  if (!avancado) {
+    const { year, month } = todayInBRT()
+    ;[fromY, fromM, fromD] = [year, month + 1, 1]
+    // Dia 0 do mês seguinte = último dia do mês corrente.
+    ;[toY, toM, toD] = [year, month + 1, new Date(Date.UTC(year, month + 1, 0)).getUTCDate()]
+  }
   // from/to vêm do <input type="date"> como "AAAA-MM-DD" — new Date(from)
   // parseava isso como meia-noite UTC, que é 21h do dia anterior em horário
   // de Brasília (UTC-3): o relatório de "01/08" incluía 3h da noite de
@@ -20,8 +39,6 @@ export async function getReportData(from: string, to: string) {
   // brtMidnightUTC em lib/utils.ts), fim exclusive (início do dia seguinte)
   // em vez de 23:59:59 pra não truncar o último segundo do dia.
   // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
-  const [fromY, fromM, fromD] = from.split("-").map(Number)
-  const [toY, toM, toD] = to.split("-").map(Number)
   const start = brtMidnightUTC(fromY, fromM - 1, fromD)
   const end = brtMidnightUTC(toY, toM - 1, toD + 1)
 
@@ -78,12 +95,25 @@ export async function getReportData(from: string, to: string) {
     .slice(0, 10)
 
   return {
-    revenues,
-    expenses,
+    avancado,
+    // Período efetivamente usado — no plano básico pode não ser o que foi
+    // pedido, e a tela precisa mostrar o que de fato está em cima da mesa.
+    periodo: {
+      from: start.toISOString().slice(0, 10),
+      to: new Date(end.getTime() - 86400000).toISOString().slice(0, 10),
+    },
+    // Totais e CONTAGENS fazem parte do básico — são o "como foi meu mês".
     totalRevenue,
     totalExpense,
     result,
+    revenueCount: revenues.length,
+    expenseCount: expenses.length,
     osByStatus,
-    topClients: ranked,
+    // Já o DETALHAMENTO linha a linha e o ranking de clientes são o avançado.
+    // Vão vazios de verdade no Starter, não apenas escondidos no HTML: a
+    // Action é despachável direto, e esconder na tela não esconderia o dado.
+    revenues: avancado ? revenues : [],
+    expenses: avancado ? expenses : [],
+    topClients: avancado ? ranked : [],
   }
 }

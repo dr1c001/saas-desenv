@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { temRecurso } from "@/lib/plan"
 import { getTranslations } from "next-intl/server"
 import { getTranslator } from "@/lib/i18n"
 
@@ -45,6 +46,15 @@ export async function POST(req: NextRequest) {
     // A partir daqui o idioma sai do tenant dono da OS — cobre o ramo público,
     // onde não há sessão pro request context resolver nada. (i18n.)
     const t = getTranslator(order.tenant.locale, "errors")
+
+    // "Assinatura digital" é vendida no plano Pro. Vale para os DOIS ramos, e
+    // isso é diferente do bloqueio por assinatura vencida logo acima: lá, o
+    // cliente final não pode ser punido por um pagamento atrasado da empresa
+    // no meio de um serviço; aqui, a empresa nunca comprou o recurso, então
+    // ele não deveria nem ter sido oferecido ao cliente dela.
+    if (!(await temRecurso(order.tenantId, "signature"))) {
+      return NextResponse.json({ ok: false, error: t("planFeature.signature") }, { status: 403 })
+    }
     // Nada impedia assinar uma OS cancelada — a assinatura confirma execução
     // de um serviço que oficialmente não aconteceu. (Achado verificando o
     // sistema antes da primeira venda, 2026-08-03.)

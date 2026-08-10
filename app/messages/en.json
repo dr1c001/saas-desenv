@@ -1099,7 +1099,10 @@
           "paidAt": "Paid on",
           "amount": "Amount"
         }
-      }
+      },
+      "advancedOnly": "This analysis is part of the advanced reports, included from the Pro plan up.",
+      "upgradeButton": "See plans",
+      "currentMonthOnly": "Current month — custom periods are a Pro plan feature"
     }
   },
   "settingsCore": {
@@ -1371,7 +1374,6 @@
             "Unlimited users",
             "Unlimited service orders",
             "E-invoice issuance (NFS-e)",
-            "Integration API",
             "24h support"
           ]
         }
@@ -1728,6 +1730,17 @@
     }
   },
   "errors": {
+    "planFeature": {
+      "gpsMap": "GPS Map is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
+      "nfse": "Invoice (NFS-e) issuing is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
+      "signature": "Customer digital signature is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
+      "checklist": "The execution checklist is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
+      "advancedReports": "Advanced reports are part of the Pro plan. Upgrade in Settings → Plan to unlock them."
+    },
+    "planLimit": {
+      "users": "Your plan allows up to {max} users and that limit has been reached. Upgrade in Settings → Plan to add more.",
+      "serviceOrders": "Your plan allows {max} jobs per month and that limit has been reached. The quota resets on the 1st, or upgrade in Settings → Plan."
+    },
     "clientNotFound": "Client not found.",
     "technicianNotFound": "Technician not found.",
     "providerNotFound": "Provider not found.",

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { requireRecurso } from "@/lib/plan"
 import { nfeio } from "@/lib/nfeio"
 import { revalidatePath } from "next/cache"
 import { getTranslations } from "next-intl/server"
@@ -13,6 +14,8 @@ export async function registerFiscalCompany(formData: FormData) {
   // config fiscal usado em toda nota futura. (Achado em revisão de segurança 2026-07-19.)
   if (role !== "OWNER") throw new Error((await getTranslations("common"))("noPermission"))
   await requireActiveSubscription(tenantId)
+  // Cadastrar a empresa no emissor fiscal já é parte do recurso de NFS-e.
+  await requireRecurso(tenantId, "nfse")
 
   // A partir de 01/08/2026 a Receita Federal passa a emitir CNPJ alfanumérico
   // (letras nas 12 primeiras posições, ex: "12ABC345000A92") — \D removia
@@ -74,6 +77,8 @@ export async function emitNfse(orderId: string) {
   // (Achado em revisão de segurança 2026-07-19.)
   if (role !== "OWNER" && role !== "ADMIN") throw new Error((await getTranslations("common"))("noPermission"))
   await requireActiveSubscription(tenantId)
+  // "Emissão de NFS-e" é vendida a partir do plano Pro.
+  await requireRecurso(tenantId, "nfse")
 
   const [order, tenant] = await Promise.all([
     prisma.serviceOrder.findUnique({
