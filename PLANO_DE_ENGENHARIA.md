@@ -734,6 +734,61 @@ importantes: cookie sem sessão de dono não impersona; cookie com sessão de
 outro usuário não impersona; e sem cookie a sessão nem chega a ser consultada
 (prova de que não há custo no caminho normal).
 
+### 7.2.10 Retrato mensal, relatório PDF e o buraco na reconciliação — 10/08/2026
+
+**Bloqueio automático de inadimplente: já existia.** O usuário pediu como
+novidade; a verificação mostrou o ciclo inteiro funcionando —
+`PAYMENT_OVERDUE` põe o tenant em `PAST_DUE`, `hasActiveSubscription` só
+libera dentro da carência, o redirect do layout **não olha papel** (bloqueia
+técnico junto), e o webhook de pagamento devolve pra `ACTIVE`. Só a carência
+mudou: 3 → 5 dias.
+
+**Mas havia um buraco na rede de segurança.** A reconciliação diária, criada
+depois do incidente de 07/08, cobria apenas `PENDING`. Um cliente
+**inadimplente** que paga e cujo webhook se perde ficava bloqueado
+indefinidamente — o mesmo defeito, só que na renovação, e agora com a equipe
+inteira parada em vez de um cadastro novo travado.
+
+A extensão para `PAST_DUE` exigiu um cuidado que o caso `PENDING` não tem:
+
+| Estado | O que serve como prova de pagamento |
+|---|---|
+| `PENDING` | Qualquer pagamento liquidado — nunca pagou nada antes |
+| `PAST_DUE` | Só pagamento **não processado** e com vencimento a partir do ciclo vencido |
+
+Sem essa distinção, a rede de segurança reativaria de graça quem parou de
+pagar: os pagamentos dos ciclos antigos continuam `RECEIVED` para sempre na
+Asaas, e um `find(p => p.status === "RECEIVED")` acharia um deles todo dia.
+
+**Retrato mensal (`MonthlySnapshot`).** Os gráficos do painel nasceram
+deduzindo o passado das datas de assinatura. Isso apaga inadimplência: uma
+empresa que ficou dois meses sem pagar e voltou aparecia como pagante o tempo
+todo, porque só existem as datas das pontas. Agora o cron grava o retrato do
+mês corrente todos os dias (upsert pela chave `AAAA-MM`), então meses passados
+congelam com o último valor real que tiveram e o mês atual é calculado ao vivo
+no painel — sem job de virada de mês, que seria mais uma coisa para falhar
+calada.
+
+**Decisão: não fabricar histórico.** Seria fácil semear os 12 meses anteriores
+com a reconstrução antiga, e o gráfico ficaria bonito hoje. Mas esses números
+entrariam na tabela indistinguíveis dos reais — exatamente a mentira silenciosa
+que motivou a mudança. Só entram meses de fato fotografados; o gráfico começa
+curto e cresce.
+
+**Relatório em PDF** (`/api/pdf/admin-report`): resumo, evolução mensal, tabela
+de empresas e últimas ações do painel, respeitando o filtro da busca. Checa
+super admin por conta própria — junta dados de **todas** as empresas num
+arquivo feito para ser encaminhado; se vazar, vaza tudo de uma vez. `no-store`
+no cache e rodapé dizendo que é documento interno.
+
+**Busca** por nome e CNPJ, via GET: o termo fica na URL, então dá para
+recarregar e mandar o link já filtrado para alguém da equipe.
+
+**Verificação:** 5 testes gerando o PDF de verdade (inclusive lista vazia,
+empresa sem plano e 120 empresas com quebra de página), e em produção o
+endpoint responde 403 sem sessão — confirmado que o corpo devolvido **não** é
+um PDF, não bastando olhar o código de status.
+
 ### 7.3 Auditoria completa pré-venda — 05/08/2026
 
 Pedido explícito de revisar o código inteiro (não só o diff), todas as abas,
