@@ -2,6 +2,7 @@ import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { getLimites, type Recurso } from "@/lib/plan"
+import { tenantImpersonado } from "@/lib/admin"
 import { redirect } from "next/navigation"
 import { sendWelcomeEmail } from "@/lib/resend"
 import { Prisma } from "@/generated/prisma/client"
@@ -41,6 +42,44 @@ export async function getSession() {
 // venda, 2026-08-03.)
 export const getTenant = cache(async function getTenant() {
   const user = await getSession()
+
+  // ── Suporte: o dono da plataforma vendo o sistema como uma empresa cliente ──
+  // tenantImpersonado() só devolve algo se DUAS coisas forem verdade: existe o
+  // cookie, e a sessão real — verificada junto ao Supabase, não lida do cookie
+  // — é a do dono da plataforma. O cookie sozinho não concede absolutamente
+  // nada; forjá-lo em outra conta não faz efeito nenhum.
+  //
+  // Sem o cookie a função retorna antes de qualquer verificação, então o
+  // caminho normal de todas as outras requisições não paga nada por isto.
+  //
+  // Devolve o papel e o id do DONO daquela empresa: é o que faz o suporte
+  // enxergar exatamente o que o cliente enxerga, incluindo bloqueio por
+  // assinatura vencida. Toda entrada e saída fica no AdminAuditLog.
+  const alvoImpersonado = await tenantImpersonado()
+  if (alvoImpersonado) {
+    const anfitriao =
+      (await prisma.user.findFirst({
+        where: { tenantId: alvoImpersonado, role: "OWNER" },
+        select: { id: true, tenantId: true, role: true, tenant: { select: { subscriptionStatus: true, trialEndsAt: true, locale: true } } },
+      })) ??
+      // Empresa sem OWNER é anomalia, mas não pode impedir o suporte de olhar.
+      (await prisma.user.findFirst({
+        where: { tenantId: alvoImpersonado },
+        select: { id: true, tenantId: true, role: true, tenant: { select: { subscriptionStatus: true, trialEndsAt: true, locale: true } } },
+      }))
+
+    // Sem nenhum usuário, não há o que ver — segue para a conta real em vez de
+    // deixar o admin numa tela quebrada.
+    if (anfitriao) {
+      return {
+        userId: anfitriao.id,
+        tenantId: anfitriao.tenantId,
+        role: anfitriao.role,
+        tenantStatus: anfitriao.tenant,
+        locale: anfitriao.tenant.locale,
+      }
+    }
+  }
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },

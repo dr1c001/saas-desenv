@@ -20,6 +20,7 @@ import {
   UserCog,
   MapPin,
   Shield,
+  ShieldAlert,
   FileText,
   CreditCard,
   Search,
@@ -73,9 +74,11 @@ type Props = {
   allowedTabs: TabSlug[]
   role: string
   userId: string
+  /** Dono da plataforma (não do tenant). Só ele vê o link do painel. */
+  isSuperAdmin?: boolean
 }
 
-export function AppSidebar({ allowedTabs, role }: Props) {
+export function AppSidebar({ allowedTabs, role, isSuperAdmin }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const t = useTranslations()
@@ -169,6 +172,17 @@ export function AppSidebar({ allowedTabs, role }: Props) {
               Configurações, com confirmação — um clique acidental aqui já
               deixou a conta de uma cliente em inglês. (Ver seção 7.2.1.) */}
           <ThemeToggle />
+          {/* O painel do dono da plataforma existia desde sempre, mas sem link
+              nenhum em lugar nenhum — só se chegava digitando /admin na barra
+              de endereço. (Notado pelo usuário em 10/08/2026.) */}
+          {isSuperAdmin && (
+            <SidebarMenuItem>
+              <SidebarMenuButton render={<Link href="/admin" />}>
+                <ShieldAlert className="size-4" />
+                <span>{t("nav.platformAdmin")}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           {(role === "OWNER" || role === "ADMIN") && (
             <SidebarMenuItem>
               <SidebarMenuButton render={<Link href="/settings/permissions" />}>

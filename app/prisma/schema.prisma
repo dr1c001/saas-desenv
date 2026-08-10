@@ -534,6 +534,25 @@ model PushSubscription {
   @@unique([userId, endpoint])
 }
 
+// ─── Auditoria do painel do dono da plataforma ───────────────────────────────
+//
+// Toda ação do /admin sobre uma empresa cliente é gravada aqui: liberar acesso,
+// cancelar, trocar plano e — principalmente — entrar na conta do cliente. Isso
+// existe por dois motivos: se algo der errado numa conta de cliente, dá pra
+// saber se foi ele ou foi o suporte; e porque acesso a dado de terceiro sem
+// registro é problema de LGPD, não só de organização.
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  adminEmail String
+  action     String
+  tenantId   String
+  detail     String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([tenantId, createdAt])
+}
+
 // ─── Rate limiting (login/cadastro/recuperação de senha) ─────────────────────
 
 model AuthRateLimit {

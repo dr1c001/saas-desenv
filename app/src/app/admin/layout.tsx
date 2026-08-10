@@ -1,14 +1,12 @@
-import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { getTranslations } from "next-intl/server"
-
-const SUPER_ADMIN_EMAIL = "adrielwellington02@gmail.com"
+import { isSuperAdmin } from "@/lib/admin"
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user || user.email !== SUPER_ADMIN_EMAIL) redirect("/dashboard")
+  // A regra de quem é o dono da plataforma saiu daqui pra lib/admin.ts, porque
+  // este layout não protegia as Server Actions do painel — cada uma delas
+  // agora chama requireSuperAdmin() por conta própria.
+  if (!(await isSuperAdmin())) redirect("/dashboard")
 
   const t = await getTranslations("mapAdmin")
 

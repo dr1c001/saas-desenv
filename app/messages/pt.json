@@ -282,7 +282,8 @@
     "resultsCount": "Resultados ({count})",
     "menu": "Menu",
     "lightMode": "Modo claro",
-    "darkMode": "Modo escuro"
+    "darkMode": "Modo escuro",
+    "platformAdmin": "Painel da plataforma"
   },
   "history": {
     "list": {
@@ -1455,7 +1456,10 @@
         "active": "Ativos",
         "noSubscription": "Sem assinatura",
         "pastDue": "Inadimplentes",
-        "mrr": "MRR"
+        "mrr": "MRR",
+        "pending": "Aguardando pagamento",
+        "users": "Usuários cadastrados",
+        "payingUsers": "Usuários pagantes"
       },
       "subscriptionStatus": {
         "TRIAL": "Sem assinatura",
@@ -1477,7 +1481,55 @@
           "orders": "OS",
           "clients": "Clientes",
           "renews": "Renova",
-          "signedUpAt": "Cadastro"
+          "signedUpAt": "Cadastro",
+          "actions": "Ações"
+        },
+        "noDocument": "sem CNPJ"
+      },
+      "pendingWarning": "{count, plural, one {# empresa assinou e está aguardando confirmação de pagamento} other {# empresas assinaram e estão aguardando confirmação de pagamento}}. Se o pagamento já caiu na Asaas, use “Liberar acesso” — foi exatamente esse o caso de 07/08.",
+      "charts": {
+        "growthTitle": "Crescimento — novas empresas e total pagante",
+        "mrrTitle": "Receita recorrente mensal (MRR)",
+        "usersTitle": "Usuários cadastrados",
+        "newCompanies": "Novas empresas",
+        "payingCompanies": "Pagando",
+        "mrr": "MRR",
+        "newUsers": "Novos no mês",
+        "totalUsers": "Total acumulado"
+      },
+      "actions": {
+        "back": "Voltar",
+        "release": "Liberar",
+        "releaseTitle": "Liberar acesso",
+        "releaseDescription": "A empresa {company} passa a ter acesso completo imediatamente. Use quando o pagamento já foi confirmado na Asaas mas o sistema não liberou sozinho.",
+        "releaseConfirm": "Liberar acesso",
+        "cancel": "Cancelar",
+        "cancelTitle": "Cancelar acesso",
+        "cancelDescription": "A empresa {company} perde o acesso ao sistema no próximo carregamento de tela. Isto NÃO cancela a cobrança na Asaas — faça isso separadamente, senão ela continua sendo cobrada sem poder usar.",
+        "cancelConfirm": "Cancelar acesso",
+        "changePlan": "Plano",
+        "changePlanTitle": "Trocar plano",
+        "changePlanDescription": "Escolha o novo plano de {company}. Os limites e recursos mudam na hora.",
+        "changePlanConfirm": "Trocar plano",
+        "impersonate": "Entrar",
+        "impersonateTitle": "Entrar na conta do cliente",
+        "impersonateDescription": "Você vai ver o sistema exatamente como {company} vê, com acesso aos dados dela. Uma faixa vermelha fica visível o tempo todo, o acesso expira em 1 hora e tudo fica registrado no log de auditoria.",
+        "impersonateConfirm": "Entrar na conta"
+      },
+      "impersonation": {
+        "banner": "Você está vendo o sistema como {company}. Tudo o que fizer aqui vale na conta dela.",
+        "exit": "Sair desta conta"
+      },
+      "audit": {
+        "title": "Últimas ações no painel",
+        "empty": "Nenhuma ação registrada ainda.",
+        "action": {
+          "liberar_acesso": "Liberou acesso",
+          "cancelar": "Cancelou acesso",
+          "reativar": "Reativou",
+          "trocar_plano": "Trocou o plano",
+          "entrar_na_conta": "Entrou na conta",
+          "sair_da_conta": "Saiu da conta"
         }
       }
     }

@@ -282,7 +282,8 @@
     "resultsCount": "Results ({count})",
     "menu": "Menu",
     "lightMode": "Light mode",
-    "darkMode": "Dark mode"
+    "darkMode": "Dark mode",
+    "platformAdmin": "Platform admin"
   },
   "history": {
     "list": {
@@ -1455,7 +1456,10 @@
         "active": "Active",
         "noSubscription": "No subscription",
         "pastDue": "Past due",
-        "mrr": "MRR"
+        "mrr": "MRR",
+        "pending": "Awaiting payment",
+        "users": "Registered users",
+        "payingUsers": "Paying users"
       },
       "subscriptionStatus": {
         "TRIAL": "No subscription",
@@ -1477,7 +1481,55 @@
           "orders": "Orders",
           "clients": "Clients",
           "renews": "Renews",
-          "signedUpAt": "Signed up"
+          "signedUpAt": "Signed up",
+          "actions": "Actions"
+        },
+        "noDocument": "no tax ID"
+      },
+      "pendingWarning": "{count, plural, one {# company subscribed and is awaiting payment confirmation} other {# companies subscribed and are awaiting payment confirmation}}. If the payment already cleared in Asaas, use “Release access”.",
+      "charts": {
+        "growthTitle": "Growth — new companies and paying total",
+        "mrrTitle": "Monthly recurring revenue (MRR)",
+        "usersTitle": "Registered users",
+        "newCompanies": "New companies",
+        "payingCompanies": "Paying",
+        "mrr": "MRR",
+        "newUsers": "New this month",
+        "totalUsers": "Running total"
+      },
+      "actions": {
+        "back": "Back",
+        "release": "Release",
+        "releaseTitle": "Release access",
+        "releaseDescription": "{company} gets full access immediately. Use this when payment already cleared in Asaas but the system did not unlock on its own.",
+        "releaseConfirm": "Release access",
+        "cancel": "Cancel",
+        "cancelTitle": "Cancel access",
+        "cancelDescription": "{company} loses access on the next page load. This does NOT cancel billing in Asaas — do that separately, or they keep being charged without access.",
+        "cancelConfirm": "Cancel access",
+        "changePlan": "Plan",
+        "changePlanTitle": "Change plan",
+        "changePlanDescription": "Pick the new plan for {company}. Limits and features change immediately.",
+        "changePlanConfirm": "Change plan",
+        "impersonate": "Enter",
+        "impersonateTitle": "Enter the customer's account",
+        "impersonateDescription": "You will see the system exactly as {company} sees it, with access to their data. A red banner stays visible the whole time, access expires in 1 hour, and everything is recorded in the audit log.",
+        "impersonateConfirm": "Enter account"
+      },
+      "impersonation": {
+        "banner": "You are viewing the system as {company}. Anything you do here applies to their account.",
+        "exit": "Exit this account"
+      },
+      "audit": {
+        "title": "Recent admin actions",
+        "empty": "No actions recorded yet.",
+        "action": {
+          "liberar_acesso": "Released access",
+          "cancelar": "Cancelled access",
+          "reativar": "Reactivated",
+          "trocar_plano": "Changed plan",
+          "entrar_na_conta": "Entered account",
+          "sair_da_conta": "Exited account"
         }
       }
     }

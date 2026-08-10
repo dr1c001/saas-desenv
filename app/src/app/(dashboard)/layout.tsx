@@ -6,7 +6,9 @@ import { PushSubscriber } from "@/components/layout/push-subscriber"
 import { LocationTracker } from "@/components/layout/location-tracker"
 import { ServiceWorkerRegistrar } from "@/components/layout/service-worker"
 import { OfflineBanner } from "@/components/layout/offline-banner"
+import { ImpersonationBanner } from "@/components/layout/impersonation-banner"
 import { getTenant, getAllowedTabs, hasActiveSubscription } from "@/lib/auth"
+import { isSuperAdmin } from "@/lib/admin"
 import { redirect } from "next/navigation"
 import { headers } from "next/headers"
 
@@ -30,14 +32,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   const allowedTabs = await getAllowedTabs(tenantId, role)
+  const souDono = await isSuperAdmin()
 
   return (
     <SidebarProvider>
-      <AppSidebar allowedTabs={allowedTabs} role={role} userId={userId} />
+      <AppSidebar allowedTabs={allowedTabs} role={role} userId={userId} isSuperAdmin={souDono} />
       <main className="flex-1 flex flex-col min-h-screen">
         <header className="h-14 border-b flex items-center px-4 gap-2">
           <SidebarTrigger />
         </header>
+        {/* Antes de tudo: se o dono da plataforma estiver vendo como um
+            cliente, ele precisa saber disso o tempo todo. */}
+        <ImpersonationBanner />
         <OfflineBanner />
         <Suspense>
           <OverdueAlerts tenantId={tenantId} />

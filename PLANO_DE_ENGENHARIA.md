@@ -669,6 +669,71 @@ especificamente para o pagamento das 22h da virada.
 é trabalho repetido que ninguém contou. Antes de aumentar instância, vale
 medir quantas vezes a mesma linha é lida na mesma requisição.
 
+### 7.2.9 Painel do dono da plataforma — 10/08/2026
+
+O `/admin` existia desde o início, mas com quatro problemas — e o usuário só
+perguntou onde administrava o negócio porque **não havia link nenhum para ele
+em lugar algum do sistema**; só se chegava digitando a URL.
+
+| Problema | Correção |
+|---|---|
+| Nenhum link na interface | Item no rodapé da barra lateral, visível só pro dono |
+| Somente leitura — nenhum botão | 4 ações, cada uma com confirmação |
+| `PENDING` invisível nos cartões | Cartão próprio + aviso destacado |
+| MRR errado no plano anual | `priceYearly / 12` |
+
+**O MRR tinha um ternário morto:**
+
+```ts
+sub?.billingCycle === "YEARLY" ? price : price   // os dois lados iguais
+```
+
+Não aparecia porque a única assinante é mensal. No primeiro assinante anual, o
+painel contaria R$ 97 em vez de R$ 80,83 — MRR inflado em 20%, justo o número
+que orienta decisão de negócio.
+
+**Segurança.** A regra de quem é o dono saiu do `app/admin/layout.tsx` para
+`lib/admin.ts`, e **toda Server Action do painel chama `requireSuperAdmin()`
+por conta própria** — layout não protege Action despachável, lição que já
+custou caro aqui (7.1, 7.2). A verificação usa `getUser()`, que valida o token
+junto ao Supabase, e não `getSession()`, que só lê cookie: para o resto do
+sistema o cookie basta; para a conta que pode entrar na conta dos outros, não.
+
+**Entrar na conta do cliente (impersonation)** é a funcionalidade mais
+perigosa do produto. Desenho:
+
+- Cookie `admin_ver_como`, `httpOnly`, expira em 1 hora.
+- **O cookie sozinho não concede nada.** `tenantImpersonado()` só devolve algo
+  se a sessão real — verificada no Supabase — for a do dono. Forjar o cookie
+  em outra conta não tem efeito nenhum.
+- **Custo zero no caminho normal:** sem o cookie, a função retorna antes de
+  qualquer verificação. Sem isso, seria uma ida de rede ao Supabase por
+  carregamento de tela — regressão de capacidade disfarçada de segurança,
+  logo depois da 7.2.8 ter reduzido consultas.
+- Faixa vermelha permanente no topo, saída em um clique.
+- Devolve o papel e o id do OWNER daquela empresa, então o suporte enxerga
+  exatamente o que o cliente enxerga, inclusive bloqueio por assinatura
+  vencida.
+- Tudo registrado em `AdminAuditLog` — entrada, saída e cada ação. Acesso a
+  dado de terceiro sem registro é problema de LGPD, não só de organização.
+
+**Uma limitação assumida:** durante a impersonação, uma escrita fica atribuída
+ao OWNER da empresa, não ao admin. Impedir isso exigiria bloquear toda mutação
+(muito mais invasivo) ou criar um usuário fantasma no tenant do cliente (pior:
+polui a equipe dele). O log de auditoria é o que amarra a ação ao suporte.
+
+**Gráficos** (12 meses): novas empresas × total pagante, MRR e usuários
+cadastrados. O histórico de pagantes é **reconstruído** das datas de
+`Subscription` (criação e cancelamento) porque não existe histórico de
+mudanças de status guardado — o mês corrente é exato, o passado é
+aproximação. Se isso vier a importar, o caminho é uma tabela de snapshot
+mensal.
+
+**Verificação:** 9 testes em `lib/__tests__/admin.test.ts`, sendo os três mais
+importantes: cookie sem sessão de dono não impersona; cookie com sessão de
+outro usuário não impersona; e sem cookie a sessão nem chega a ser consultada
+(prova de que não há custo no caminho normal).
+
 ### 7.3 Auditoria completa pré-venda — 05/08/2026
 
 Pedido explícito de revisar o código inteiro (não só o diff), todas as abas,
