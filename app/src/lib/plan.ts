@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { prisma } from "./prisma"
 import { getTranslations } from "next-intl/server"
 
@@ -42,7 +43,12 @@ const POR_PLANO: Record<string, Limites> = {
 // dashboard já manda pra /expired antes de qualquer coisa.
 const PERMISSIVO: Limites = { maxUsuarios: null, maxOsMes: null, recursos: TODOS }
 
-export async function getLimites(tenantId: string): Promise<Limites> {
+// cache() do React: memoriza por requisição. Toda checagem de recurso
+// (temRecurso/requireRecurso) e o getAllowedTabs do menu passam por aqui, e
+// todos leem a MESMA linha de Tenant — sem isto, uma tela com três checagens
+// fazia três idas ao banco pela mesma resposta. Seguro pelo mesmo motivo do
+// hasActiveSubscription: nada troca o plano e relê no mesmo request.
+export const getLimites = cache(async function getLimites(tenantId: string): Promise<Limites> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
     select: { extraFeatures: true, plan: { select: { slug: true } } },
@@ -58,7 +64,7 @@ export async function getLimites(tenantId: string): Promise<Limites> {
   if (extras.length === 0) return base
 
   return { ...base, recursos: [...new Set([...base.recursos, ...extras])] }
-}
+})
 
 export async function temRecurso(tenantId: string, recurso: Recurso): Promise<boolean> {
   return (await getLimites(tenantId)).recursos.includes(recurso)

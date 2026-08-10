@@ -616,6 +616,59 @@ no código sem nenhuma trava embaixo dele. Intenção escrita em comentário nã
 regra aplicada — e regra de cobrança que não existe não gera erro, não aparece
 no Sentry e não aparece em teste nenhum. Só aparece na margem.
 
+### 7.2.8 Etapa 1 de capacidade: consulta repetida — 10/08/2026
+
+Continuação da 7.2.5 (índices). Medido antes de mexer: **um carregamento do
+dashboard disparava ~25 consultas ao banco.**
+
+| Origem | Antes | Depois |
+|---|---|---|
+| `getTenant()` | 1 | 1 |
+| `hasActiveSubscription()` | 2 | 1 |
+| `getLimites()` | 1 | 1 |
+| Alertas de vencidos | 2 | 2 |
+| Cards do dashboard | 7 | 7 |
+| Gráfico de 6 meses | 12 | **2** |
+| **Total** | **~25** | **~14** |
+
+**Duas causas, duas correções:**
+
+**1. Só o `getTenant()` estava embrulhado em `cache()` do React.** O
+`hasActiveSubscription()` e o `getLimites()` não estavam — e ambos leem a
+mesma linha de `Tenant`. Como `requireActiveSubscription()` aparece de 4 a 6
+vezes por arquivo de actions, a mesma informação era buscada várias vezes na
+mesma requisição.
+
+Antes de cachear, foi verificado que nada altera assinatura/plano e relê no
+mesmo request: `subscribeToPlan` escreve `PENDING` e redireciona sem reler, e
+o webhook da Asaas nunca chama essas funções. Essa checagem não é preciosismo
+— servir estado de assinatura velho foi exatamente o que deixou uma cliente
+sem acesso em 07/08/2026 (seção 7.2.1).
+
+**2. O gráfico fazia 2 consultas por mês, num laço de 6.** Virou 2 consultas
+agrupadas no banco, com `date_trunc` + `GROUP BY`.
+
+O detalhe que quase passou: `paidAt` é `timestamp without time zone` guardando
+UTC. Agrupar direto em UTC jogaria um pagamento das 22h de 31/07 (BRT) para
+agosto — sem erro, sem exceção, só o dinheiro no mês errado. A conversão
+correta é `AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo'`.
+
+Segundo detalhe: a chave do mês volta como **texto** (`'AAAA-MM'`), não como
+data. Se voltasse como data, o driver interpretaria o timestamp sem fuso usando
+o fuso do processo Node — UTC na Vercel, BRT na máquina local. Resultado
+diferente conforme onde roda.
+
+**Verificação:** as duas implementações foram rodadas lado a lado contra o
+banco de produção, tenant por tenant — zero divergência, incluindo os tenants
+com R$ 4.339 e R$ 2.580 no período. As quatro fronteiras de mês foram testadas
+diretamente no Postgres (01:00, 02:59, 03:00 UTC e fim de mês). Ficaram 5
+testes de regressão em `actions/__tests__/dashboard.test.ts`, sendo um
+especificamente para o pagamento das 22h da virada.
+
+**Lição:** o gargalo de capacidade mais barato quase nunca é infraestrutura —
+é trabalho repetido que ninguém contou. Antes de aumentar instância, vale
+medir quantas vezes a mesma linha é lida na mesma requisição.
+
 ### 7.3 Auditoria completa pré-venda — 05/08/2026
 
 Pedido explícito de revisar o código inteiro (não só o diff), todas as abas,

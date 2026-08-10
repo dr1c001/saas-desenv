@@ -151,7 +151,18 @@ export const getTenant = cache(async function getTenant() {
 // Server Action (requireActiveSubscription) — nunca duplicar essa conta.
 const PAST_DUE_GRACE_DAYS = 3
 
-export async function hasActiveSubscription(tenantId: string): Promise<boolean> {
+// cache() do React: memoriza por requisição. Sem isto, esta função ia ao banco
+// buscar a MESMA linha de Tenant uma vez no layout e mais uma vez a cada
+// requireActiveSubscription() — e há de 4 a 6 deles por arquivo de actions. No
+// dashboard davam 3 idas ao banco pela mesma informação.
+//
+// É seguro porque nada altera a assinatura e relê no mesmo request:
+// subscribeToPlan escreve PENDING e redireciona sem reler, e o webhook da
+// Asaas não chama esta função. (Conferido antes de cachear — servir estado de
+// assinatura velho foi o que deixou uma cliente sem acesso em 07/08/2026.)
+export const hasActiveSubscription = cache(async function hasActiveSubscription(
+  tenantId: string
+): Promise<boolean> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
     select: { subscriptionStatus: true },
@@ -173,7 +184,7 @@ export async function hasActiveSubscription(tenantId: string): Promise<boolean> 
   const graceEnd = new Date(latestSub.currentPeriodEnd)
   graceEnd.setDate(graceEnd.getDate() + PAST_DUE_GRACE_DAYS)
   return new Date() < graceEnd
-}
+})
 
 // Toda Server Action que usa dado/recurso do produto precisa chamar isso —
 // bloqueio de página (layout) não protege a Action em si, que é um endpoint
