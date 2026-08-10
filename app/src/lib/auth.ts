@@ -188,7 +188,8 @@ export const getTenant = cache(async function getTenant() {
 // (cartão expirado, saldo momentâneo) que uma nova tentativa resolveria.
 // Compartilhado entre o gating de página ((dashboard)/layout.tsx) e o de
 // Server Action (requireActiveSubscription) — nunca duplicar essa conta.
-const PAST_DUE_GRACE_DAYS = 3
+// 3 → 5 dias por decisão do dono do produto (10/08/2026).
+const PAST_DUE_GRACE_DAYS = 5
 
 // cache() do React: memoriza por requisição. Sem isto, esta função ia ao banco
 // buscar a MESMA linha de Tenant uma vez no layout e mais uma vez a cada

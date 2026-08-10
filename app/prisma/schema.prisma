@@ -534,6 +534,33 @@ model PushSubscription {
   @@unique([userId, endpoint])
 }
 
+// ─── Retrato mensal do negócio ───────────────────────────────────────────────
+//
+// Os gráficos do /admin nasceram reconstruindo o passado a partir das datas de
+// criação e cancelamento das assinaturas. Funciona, mas mente em silêncio: se
+// uma empresa ficou 2 meses inadimplente e voltou, a reconstrução mostra ela
+// como pagante o tempo todo, porque só existem as datas das pontas.
+//
+// Aqui o número de cada mês é gravado como ele era NAQUELE mês. O cron diário
+// atualiza o retrato do mês corrente (upsert por `month`), então meses passados
+// congelam com o último valor real que tiveram e o mês atual está sempre fresco.
+model MonthlySnapshot {
+  id                 String   @id @default(cuid())
+  /** 'AAAA-MM' no horário de Brasília. */
+  month              String   @unique
+  companies          Int
+  activeCompanies    Int
+  pendingCompanies   Int
+  pastDueCompanies   Int
+  cancelledCompanies Int
+  users              Int
+  payingUsers        Int
+  mrr                Decimal  @db.Decimal(12, 2)
+  capturedAt         DateTime @updatedAt
+
+  @@index([month])
+}
+
 // ─── Auditoria do painel do dono da plataforma ───────────────────────────────
 //
 // Toda ação do /admin sobre uma empresa cliente é gravada aqui: liberar acesso,

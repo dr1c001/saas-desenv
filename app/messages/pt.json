@@ -1484,18 +1484,21 @@
           "signedUpAt": "Cadastro",
           "actions": "Ações"
         },
-        "noDocument": "sem CNPJ"
+        "noDocument": "sem CNPJ",
+        "searchPlaceholder": "Buscar empresa ou CNPJ",
+        "searchButton": "Buscar",
+        "searchResults": "{count, plural, one {# empresa encontrada} other {# empresas encontradas}} para “{term}”",
+        "pdfButton": "Relatório PDF"
       },
       "pendingWarning": "{count, plural, one {# empresa assinou e está aguardando confirmação de pagamento} other {# empresas assinaram e estão aguardando confirmação de pagamento}}. Se o pagamento já caiu na Asaas, use “Liberar acesso” — foi exatamente esse o caso de 07/08.",
       "charts": {
         "growthTitle": "Crescimento — novas empresas e total pagante",
         "mrrTitle": "Receita recorrente mensal (MRR)",
         "usersTitle": "Usuários cadastrados",
-        "newCompanies": "Novas empresas",
         "payingCompanies": "Pagando",
         "mrr": "MRR",
-        "newUsers": "Novos no mês",
-        "totalUsers": "Total acumulado"
+        "companies": "Empresas",
+        "users": "Usuários"
       },
       "actions": {
         "back": "Voltar",

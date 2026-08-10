@@ -6,6 +6,7 @@ import {
 } from "@/lib/resend"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 import { geocodeAddress } from "@/lib/geocode"
+import { gravarRetratoDoMes } from "@/lib/snapshot"
 
 // O padrão da Vercel (10-15s) não cabe reconciliação da Asaas + e-mails +
 // backfill de geocodificação no mesmo processo.
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date()
-  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, errors: 0 }
+  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, retrato: "", errors: 0 }
 
   // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
   // Em 07/08/2026 uma cliente pagou e ficou sem acesso por ~1 dia: os webhooks
@@ -43,9 +44,16 @@ export async function GET(req: NextRequest) {
   // Isto reconcilia direto na fonte da verdade (a Asaas) uma vez por dia, e é
   // idempotente: usa exatamente o mesmo caminho do webhook.
   try {
+    // PAST_DUE entrou junto com o PENDING: o cliente inadimplente que paga é
+    // reliberado pelo webhook, mas se ESSE webhook se perder ele fica bloqueado
+    // sem nada perceber — mesmo defeito de 07/08, só que na renovação em vez da
+    // primeira compra, e agora com a equipe inteira parada.
     const stuck = await prisma.subscription.findMany({
-      where: { status: "PENDING", asaasId: { not: null } },
-      select: { id: true, asaasId: true, tenantId: true, planId: true, currentPeriodEnd: true },
+      where: { status: { in: ["PENDING", "PAST_DUE"] }, asaasId: { not: null } },
+      select: {
+        id: true, asaasId: true, tenantId: true, planId: true, status: true,
+        billingCycle: true, currentPeriodEnd: true, lastProcessedPaymentId: true,
+      },
     })
     results.stuckPending = stuck.length
     for (const sub of stuck) {
@@ -53,18 +61,45 @@ export async function GET(req: NextRequest) {
         headers: { access_token: asaasKey() },
       })
       if (!r.ok) { results.errors++; continue }
-      const { data } = (await r.json()) as { data?: { id: string; status: string }[] }
-      const paid = (data ?? []).find((p) => p.status === "RECEIVED" || p.status === "CONFIRMED")
+      const { data } = (await r.json()) as { data?: { id: string; status: string; dueDate?: string }[] }
+      const quitados = (data ?? []).filter((p) => p.status === "RECEIVED" || p.status === "CONFIRMED")
+
+      // A regra muda conforme o estado, e isso importa muito:
+      //
+      // PENDING nunca pagou nada — qualquer pagamento liquidado serve.
+      //
+      // PAST_DUE já pagou ciclos ANTERIORES. Aceitar "qualquer pagamento
+      // liquidado" aqui reativaria de graça quem parou de pagar, porque os
+      // pagamentos antigos continuam RECEIVED pra sempre na Asaas. Só vale um
+      // pagamento ainda não processado E com vencimento a partir do ciclo que
+      // venceu (1 dia de folga pra arredondamento de fuso).
+      const paid =
+        sub.status === "PENDING"
+          ? quitados[0]
+          : quitados.find(
+              (p) =>
+                p.id !== sub.lastProcessedPaymentId &&
+                p.dueDate &&
+                new Date(p.dueDate).getTime() >= sub.currentPeriodEnd.getTime() - 86_400_000
+            )
       if (!paid) continue
 
+      // Renovação estende o período; primeira confirmação não — mesmo cálculo
+      // do webhook (ver api/webhooks/asaas/route.ts), que não pode divergir
+      // deste sob pena de dar ou tirar um ciclo de acesso de graça.
+      const periodEnd = new Date(sub.currentPeriodEnd)
+      if (sub.status === "PAST_DUE") {
+        periodEnd.setMonth(periodEnd.getMonth() + (sub.billingCycle === "YEARLY" ? 12 : 1))
+      }
+
       console.error(
-        `[reconciliacao] assinatura ${sub.asaasId} paga na Asaas (${paid.id}) mas PENDING aqui — ` +
-          `webhook provavelmente nao chegou. Ativando tenant ${sub.tenantId}.`
+        `[reconciliacao] assinatura ${sub.asaasId} paga na Asaas (${paid.id}) mas ${sub.status} aqui — ` +
+          `webhook provavelmente nao chegou. Reativando tenant ${sub.tenantId}.`
       )
       await prisma.$transaction([
         prisma.subscription.update({
           where: { id: sub.id },
-          data: { status: "ACTIVE", lastProcessedPaymentId: paid.id },
+          data: { status: "ACTIVE", lastProcessedPaymentId: paid.id, currentPeriodEnd: periodEnd },
         }),
         prisma.tenant.update({
           where: { id: sub.tenantId },
@@ -176,6 +211,17 @@ export async function GET(req: NextRequest) {
         results.geocoded++
       }
     } catch { results.errors++ }
+  }
+
+  // ── Retrato mensal do negócio ────────────────────────────────────────────
+  // Sempre a mesma linha do mês corrente: meses passados congelam com o último
+  // valor real que tiveram, e o mês atual fica fresco. Sem job de virada de
+  // mês — que seria mais uma coisa pra falhar calada.
+  try {
+    results.retrato = await gravarRetratoDoMes()
+  } catch (err) {
+    console.error("[retrato mensal] falhou:", err)
+    results.errors++
   }
 
   return NextResponse.json({ ok: true, ...results })

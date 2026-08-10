@@ -16,15 +16,15 @@ import {
 
 export type PontoCrescimento = {
   mes: string
-  novasEmpresas: number
+  empresas: number
   pagantes: number
   mrr: number
 }
 
 export type PontoUsuarios = {
   mes: string
-  novos: number
-  acumulado: number
+  usuarios: number
+  pagantes: number
 }
 
 const brl = (v: number) =>
@@ -34,16 +34,16 @@ export function GraficoCrescimento({ dados }: { dados: PontoCrescimento[] }) {
   const t = useTranslations("mapAdmin.admin.charts")
   return (
     <ResponsiveContainer width="100%" height={260}>
-      {/* Barra = quantas entraram no mês; linha = quantas estão pagando no
-          acumulado. As duas juntas contam a história que uma sozinha não conta:
-          entrar muita gente e a linha não subir significa cancelamento. */}
+      {/* Barra = total de empresas cadastradas; linha = quantas pagam. A
+          distância entre as duas é a taxa de conversão, e ela crescer quer
+          dizer que gente entra mas não assina. */}
       <ComposedChart data={dados} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
         <XAxis dataKey="mes" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
         <YAxis allowDecimals={false} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={32} />
         <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} />
         <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Bar dataKey="novasEmpresas" name={t("newCompanies")} fill="hsl(217 91% 60%)" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="empresas" name={t("companies")} fill="hsl(217 91% 60%)" radius={[4, 4, 0, 0]} />
         <Line
           type="monotone"
           dataKey="pagantes"
@@ -82,11 +82,11 @@ export function GraficoUsuarios({ dados }: { dados: PontoUsuarios[] }) {
         <YAxis allowDecimals={false} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={32} />
         <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} />
         <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Bar dataKey="novos" name={t("newUsers")} fill="hsl(217 91% 60%)" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="usuarios" name={t("users")} fill="hsl(217 91% 60%)" radius={[4, 4, 0, 0]} />
         <Line
           type="monotone"
-          dataKey="acumulado"
-          name={t("totalUsers")}
+          dataKey="pagantes"
+          name={t("payingUsers")}
           stroke="hsl(262 83% 58%)"
           strokeWidth={2}
           dot={{ r: 3 }}

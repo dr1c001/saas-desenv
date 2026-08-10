@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/utils"
 import { requireSuperAdmin } from "@/lib/admin"
+import { calcularRetratoAtual, chaveMesBRT, valorMensal } from "@/lib/snapshot"
 import { TenantActions } from "@/components/admin/tenant-actions"
 import {
   GraficoCrescimento,
@@ -12,7 +13,8 @@ import {
   type PontoCrescimento,
   type PontoUsuarios,
 } from "@/components/admin/admin-charts"
-import { Users, Building2, TrendingUp, AlertCircle, CheckCircle2, Clock, CreditCard, UserCheck } from "lucide-react"
+import { Users, Building2, TrendingUp, AlertCircle, CheckCircle2, Clock, CreditCard, UserCheck, Search, FileDown } from "lucide-react"
+import { buttonVariants } from "@/components/ui/button"
 
 type SubscriptionStatusKey = "TRIAL" | "PENDING" | "ACTIVE" | "PAST_DUE" | "CANCELLED"
 
@@ -24,37 +26,36 @@ const STATUS_VARIANT: Record<SubscriptionStatusKey, "default" | "secondary" | "d
   CANCELLED: "outline",
 }
 
-/** Chave 'AAAA-MM' de uma data, no fuso de Brasília (mesma convenção do
- *  gráfico do dashboard — ver actions/dashboard.ts). */
-function chaveMes(d: Date) {
-  const brt = new Date(d.getTime() - 3 * 3600_000)
-  return `${brt.getUTCFullYear()}-${String(brt.getUTCMonth() + 1).padStart(2, "0")}`
+/** 'AAAA-MM' → "ago/26". */
+function rotuloDoMes(chave: string) {
+  const [ano, mes] = chave.split("-").map(Number)
+  return new Date(Date.UTC(ano, mes - 1, 1)).toLocaleDateString("pt-BR", {
+    month: "short",
+    year: "2-digit",
+    timeZone: "UTC",
+  })
 }
 
-/** Últimos 12 meses, do mais antigo pro mais recente. */
-function ultimosMeses(n = 12) {
-  const agora = new Date()
-  const meses: { chave: string; rotulo: string; fim: Date }[] = []
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth() - i, 1))
-    meses.push({
-      chave: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
-      rotulo: d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit", timeZone: "UTC" }),
-      // Início do mês seguinte: usado pra saber quem já era cliente até ali.
-      fim: new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)),
-    })
-  }
-  return meses
-}
+type SearchParams = Promise<{ q?: string }>
 
-export default async function AdminPage() {
+export default async function AdminPage({ searchParams }: { searchParams: SearchParams }) {
   // A checagem do layout não protege esta página se alguém a alcançar por
   // outro caminho — e custa uma linha repetir.
   await requireSuperAdmin()
   const t = await getTranslations("mapAdmin")
+  const { q } = await searchParams
+  const busca = q?.trim()
 
-  const [tenants, planos, usuarios, assinaturas, ultimasAcoes] = await Promise.all([
+  const [tenants, planos, retratos, retratoAtual, ultimasAcoes] = await Promise.all([
     prisma.tenant.findMany({
+      where: busca
+        ? {
+            OR: [
+              { name: { contains: busca, mode: "insensitive" } },
+              { document: { contains: busca, mode: "insensitive" } },
+            ],
+          }
+        : undefined,
       include: {
         plan: { select: { id: true, name: true, priceMonthly: true, priceYearly: true } },
         users: { select: { id: true, role: true } },
@@ -68,102 +69,60 @@ export default async function AdminPage() {
       orderBy: { createdAt: "desc" },
     }),
     prisma.plan.findMany({ where: { active: true }, orderBy: { priceMonthly: "asc" }, select: { id: true, name: true } }),
-    prisma.user.findMany({ select: { createdAt: true, tenantId: true } }),
-    prisma.subscription.findMany({
-      select: {
-        createdAt: true,
-        cancelledAt: true,
-        status: true,
-        billingCycle: true,
-        tenantId: true,
-        plan: { select: { priceMonthly: true, priceYearly: true } },
-      },
-    }),
+    // Histórico vem da tabela de retrato, não de reconstrução. Só aparecem os
+    // meses que de fato foram fotografados — nada de inventar passado.
+    prisma.monthlySnapshot.findMany({ orderBy: { month: "asc" }, take: 12 }),
+    // O mês corrente é calculado ao vivo, pra estar certo mesmo antes de o
+    // cron do dia rodar.
+    calcularRetratoAtual(),
     prisma.adminAuditLog.findMany({ orderBy: { createdAt: "desc" }, take: 15 }),
   ])
 
-  /** Quanto uma assinatura vale POR MÊS. O plano anual custa priceYearly pelo
-   *  ano inteiro, então dividir por 12 é o que dá o valor mensal — antes o
-   *  código tinha um ternário que devolvia priceMonthly nos dois casos, o que
-   *  inflava o MRR em 20% assim que alguém assinasse o anual. */
-  const mensalDe = (
-    ciclo: string | null | undefined,
-    plano: { priceMonthly: unknown; priceYearly: unknown } | null
-  ) => {
-    if (!plano) return 0
-    return ciclo === "YEARLY" ? Number(plano.priceYearly) / 12 : Number(plano.priceMonthly)
-  }
-
-  const porStatus = (s: SubscriptionStatusKey) =>
-    tenants.filter((tenant) => tenant.subscriptionStatus === s).length
-
-  const idsPagantes = new Set(
-    tenants.filter((tenant) => tenant.subscriptionStatus === "ACTIVE").map((tenant) => tenant.id)
-  )
-
-  const stats = {
-    total: tenants.length,
-    active: porStatus("ACTIVE"),
-    pending: porStatus("PENDING"),
-    trial: porStatus("TRIAL"),
-    pastDue: porStatus("PAST_DUE"),
-    mrr: tenants
-      .filter((tenant) => tenant.subscriptionStatus === "ACTIVE")
-      .reduce((soma, tenant) => soma + mensalDe(tenant.subscriptions[0]?.billingCycle, tenant.plan), 0),
-    usuarios: usuarios.length,
-    usuariosPagantes: usuarios.filter((u) => idsPagantes.has(u.tenantId)).length,
-  }
+  // Os cartões mostram o retrato do negócio INTEIRO, não a lista filtrada pela
+  // busca — senão pesquisar uma empresa mudaria o MRR na tela.
+  const stats = retratoAtual
 
   // ── Séries dos gráficos ──────────────────────────────────────────────────
-  const meses = ultimosMeses(12)
+  // Só meses que foram de fato fotografados, mais o mês corrente ao vivo. Nada
+  // de reconstruir passado: até 10/08/2026 os gráficos deduziam o histórico das
+  // datas de assinatura, o que apagava períodos de inadimplência (uma empresa
+  // que ficou 2 meses sem pagar e voltou aparecia como pagante o tempo todo).
+  // Com poucos meses gravados o gráfico é curto — e isso é honesto.
+  const mesAtual = chaveMesBRT(new Date())
+  const serie = [
+    ...retratos.filter((r) => r.month !== mesAtual),
+    { month: mesAtual, ...retratoAtual },
+  ]
 
-  const novasPorMes = new Map<string, number>()
-  for (const tenant of tenants) {
-    const k = chaveMes(tenant.createdAt)
-    novasPorMes.set(k, (novasPorMes.get(k) ?? 0) + 1)
-  }
+  const crescimento: PontoCrescimento[] = serie.map((r) => ({
+    mes: rotuloDoMes(r.month),
+    empresas: r.companies,
+    pagantes: r.activeCompanies,
+    mrr: Number(r.mrr),
+  }))
 
-  const novosUsuariosPorMes = new Map<string, number>()
-  for (const u of usuarios) {
-    const k = chaveMes(u.createdAt)
-    novosUsuariosPorMes.set(k, (novosUsuariosPorMes.get(k) ?? 0) + 1)
-  }
-
-  // Quem estava pagando em cada mês: assinatura criada até o fim daquele mês e
-  // ainda não cancelada naquele momento. É reconstrução a partir das datas —
-  // não há histórico de status guardado, então o passado é aproximação; o mês
-  // corrente é exato.
-  const crescimento: PontoCrescimento[] = meses.map(({ chave, rotulo, fim }) => {
-    const vigentes = assinaturas.filter(
-      (s) => s.createdAt < fim && s.status !== "PENDING" && (!s.cancelledAt || s.cancelledAt >= fim)
-    )
-    return {
-      mes: rotulo,
-      novasEmpresas: novasPorMes.get(chave) ?? 0,
-      pagantes: new Set(vigentes.map((s) => s.tenantId)).size,
-      mrr: vigentes.reduce((soma, s) => soma + mensalDe(s.billingCycle, s.plan), 0),
-    }
-  })
-
-  const serieUsuarios: PontoUsuarios[] = meses.map(({ chave, rotulo, fim }) => ({
-    mes: rotulo,
-    novos: novosUsuariosPorMes.get(chave) ?? 0,
-    // Contar quem já existia até o fim do mês, em vez de ir somando numa
-    // variável de fora do map: além de manter a função pura (o compilador do
-    // React recusa reatribuição depois do render), corrige o número — somando
-    // só os 12 meses da série, quem entrou antes disso ficava de fora do total.
-    acumulado: usuarios.filter((u) => u.createdAt < fim).length,
+  const serieUsuarios: PontoUsuarios[] = serie.map((r) => ({
+    mes: rotuloDoMes(r.month),
+    usuarios: r.users,
+    pagantes: r.payingUsers,
   }))
 
   const cartoes = [
-    { key: "companies", icon: Building2, valor: String(stats.total), cor: "" },
-    { key: "active", icon: CheckCircle2, valor: String(stats.active), cor: "text-green-600", borda: "border-green-200 dark:border-green-800" },
-    { key: "pending", icon: CreditCard, valor: String(stats.pending), cor: "text-orange-600", borda: "border-orange-200 dark:border-orange-800" },
-    { key: "noSubscription", icon: Clock, valor: String(stats.trial), cor: "text-yellow-600", borda: "border-yellow-200 dark:border-yellow-800" },
-    { key: "pastDue", icon: AlertCircle, valor: String(stats.pastDue), cor: "text-red-600", borda: "border-red-200 dark:border-red-800" },
+    { key: "companies", icon: Building2, valor: String(stats.companies), cor: "" },
+    { key: "active", icon: CheckCircle2, valor: String(stats.activeCompanies), cor: "text-green-600", borda: "border-green-200 dark:border-green-800" },
+    { key: "pending", icon: CreditCard, valor: String(stats.pendingCompanies), cor: "text-orange-600", borda: "border-orange-200 dark:border-orange-800" },
+    // "Sem assinatura" (TRIAL) sai por subtração em vez de virar mais uma
+    // coluna no retrato: os cinco status são exaustivos, então o resto é
+    // exatamente ele — e uma coluna a menos é uma coluna a menos pra
+    // dessincronizar.
+    { key: "noSubscription", icon: Clock, cor: "text-yellow-600", borda: "border-yellow-200 dark:border-yellow-800",
+      valor: String(
+        stats.companies - stats.activeCompanies - stats.pendingCompanies - stats.pastDueCompanies - stats.cancelledCompanies
+      ) },
+    { key: "pastDue", icon: AlertCircle, valor: String(stats.pastDueCompanies), cor: "text-red-600", borda: "border-red-200 dark:border-red-800" },
     { key: "mrr", icon: TrendingUp, valor: formatCurrency(stats.mrr), cor: "text-purple-600", borda: "border-purple-200 dark:border-purple-800" },
-    { key: "users", icon: Users, valor: String(stats.usuarios), cor: "" },
-    { key: "payingUsers", icon: UserCheck, valor: String(stats.usuariosPagantes), cor: "text-green-600" },
+    { key: "users", icon: Users, valor: String(stats.users), cor: "" },
+    { key: "payingUsers", icon: UserCheck, valor: String(stats.payingUsers), cor: "text-green-600" },
   ] as const
 
   return (
@@ -187,9 +146,9 @@ export default async function AdminPage() {
 
       {/* Alerta: PENDING é quem pagou e pode estar sem acesso. Foi exatamente
           o caso de 07/08/2026, e o painel antigo não mostrava esse estado. */}
-      {stats.pending > 0 && (
+      {stats.pendingCompanies > 0 && (
         <div className="rounded-lg border border-orange-400/50 bg-orange-50 dark:bg-orange-950/40 px-4 py-3 text-sm text-orange-900 dark:text-orange-100">
-          {t("admin.pendingWarning", { count: stats.pending })}
+          {t("admin.pendingWarning", { count: stats.pendingCompanies })}
         </div>
       )}
 
@@ -211,11 +170,39 @@ export default async function AdminPage() {
 
       {/* Tabela de tenants */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Users className="size-4" />
-            {t("admin.table.title", { count: tenants.length })}
+            {busca
+              ? t("admin.table.searchResults", { count: tenants.length, term: busca })
+              : t("admin.table.title", { count: tenants.length })}
           </CardTitle>
+          {/* Busca por GET: o termo fica na URL, então dá pra recarregar,
+              favoritar e mandar o link pra alguém da equipe já filtrado. */}
+          <form method="GET" className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                type="search"
+                name="q"
+                defaultValue={busca ?? ""}
+                placeholder={t("admin.table.searchPlaceholder")}
+                className="w-56 rounded-md border bg-background px-8 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+            <button type="submit" className={buttonVariants({ variant: "outline", size: "sm" })}>
+              {t("admin.table.searchButton")}
+            </button>
+            <a
+              href={`/api/pdf/admin-report${busca ? `?q=${encodeURIComponent(busca)}` : ""}`}
+              target="_blank"
+              rel="noopener"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              <FileDown className="size-3.5 mr-1.5" />
+              {t("admin.table.pdfButton")}
+            </a>
+          </form>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -258,7 +245,7 @@ export default async function AdminPage() {
                           <div>
                             <p className="font-medium">{tenant.plan.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {formatCurrency(mensalDe(sub?.billingCycle, tenant.plan))}{t("admin.table.perMonth")}
+                              {formatCurrency(valorMensal(sub?.billingCycle, tenant.plan))}{t("admin.table.perMonth")}
                             </p>
                           </div>
                         ) : (

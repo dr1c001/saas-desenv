@@ -1484,18 +1484,21 @@
           "signedUpAt": "Signed up",
           "actions": "Actions"
         },
-        "noDocument": "no tax ID"
+        "noDocument": "no tax ID",
+        "searchPlaceholder": "Search company or tax ID",
+        "searchButton": "Search",
+        "searchResults": "{count, plural, one {# company found} other {# companies found}} for “{term}”",
+        "pdfButton": "PDF report"
       },
       "pendingWarning": "{count, plural, one {# company subscribed and is awaiting payment confirmation} other {# companies subscribed and are awaiting payment confirmation}}. If the payment already cleared in Asaas, use “Release access”.",
       "charts": {
         "growthTitle": "Growth — new companies and paying total",
         "mrrTitle": "Monthly recurring revenue (MRR)",
         "usersTitle": "Registered users",
-        "newCompanies": "New companies",
         "payingCompanies": "Paying",
         "mrr": "MRR",
-        "newUsers": "New this month",
-        "totalUsers": "Running total"
+        "companies": "Companies",
+        "users": "Users"
       },
       "actions": {
         "back": "Back",
