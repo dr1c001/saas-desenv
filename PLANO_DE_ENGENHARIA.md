@@ -408,6 +408,70 @@ que descartou. "Nenhuma OS no mapa" e "nenhuma OS no mapa que eu consiga
 posicionar" parecem iguais na tela e são problemas completamente diferentes —
 o usuário concluiu, com razão, que o mapa estava quebrado.
 
+### 7.2.5 PWA morto e banco sem índice nenhum — 10/08/2026
+
+Achados respondendo a duas perguntas do usuário ("o que falta pra aguentar 30
+mil simultâneos?" e "dá pra virar aplicativo?"). Nenhum dos dois era sintoma
+relatado — os dois estavam quebrados em silêncio.
+
+**1. O middleware engolia todo arquivo estático.**
+
+O `matcher` do proxy excluía nominalmente só `_next/static`, `_next/image`,
+`favicon.ico` e `api/auth`. Tudo o mais em `public/` caía no redirect pra
+`/login`. Quatro arquivos de uma vez, todos com efeito invisível:
+
+| Arquivo | Consequência |
+|---|---|
+| `/sw.js` | `serviceWorker.register()` recebia o HTML do login em vez de JS. **As notificações push nunca funcionaram em produção** — a funcionalidade constava como pronta desde o início. |
+| `/manifest.json` | Sem manifest, o navegador não oferece "instalar app". |
+| `/robots.txt` | O Google nunca leu. |
+| `/sitemap.xml` | Idem — os dois foram criados na tarefa de SEO e nunca chegaram a ser acessíveis. |
+
+Somando: os ícones `icon-192.png` e `icon-512.png`, referenciados no manifest,
+**nunca existiram** — `public/` só tinha os SVGs padrão do Next.
+
+Corrigido excluindo qualquer caminho com extensão de arquivo
+(`.*\..*`), em vez de manter uma lista nominal que já provou não escalar.
+Isso não afrouxa segurança: o proxy só faz redirect de conveniência; a
+proteção real é o `getTenant()` de cada página e Server Action. Ícones gerados
+com `sharp` a partir do glifo de chave inglesa do lucide — o mesmo que já
+identifica OS na interface —, mais `src/app/apple-icon.png` pela convenção do
+App Router.
+
+**Conclusão sobre "virar aplicativo":** já é um PWA; faltava só ele funcionar.
+Com isso instala na tela inicial de Android e iPhone. O que ainda **não** tem é
+modo offline — o service worker só trata push, não guarda nada em cache. Para
+técnico em campo sem sinal, esse é o próximo passo que importa. Loja de
+aplicativos exigiria empacotar com Capacitor (2–4 semanas, sem reescrever
+tela).
+
+**2. O schema não tinha um único `@@index`.**
+
+Só chaves primárias e 13 `@unique`. Duas consequências:
+
+- Toda consulta do produto é `WHERE tenantId = ? [+ status] ORDER BY createdAt
+  DESC`. `Client`, `Revenue` e `Expense` não tinham nem cobertura parcial —
+  varriam a tabela inteira de todos os tenants. (`ServiceOrder` e `Quote`
+  tinham o prefixo salvo por acidente, via o `@@unique([tenantId, number])`.)
+- **O Postgres não indexa chave estrangeira automaticamente** (ao contrário do
+  MySQL). Todo JOIN e todo `onDelete: Cascade` varria a tabela filha inteira.
+
+Adicionados 28 índices, escolhidos consulta a consulta a partir do código real
+em `actions/` e `app/`, não por precaução. Migration puramente aditiva (28
+`CREATE INDEX`, nenhum `DROP`/`ALTER`).
+
+Verificação: com 12 registros o planejador prefere varredura mesmo tendo
+índice, então rodei `EXPLAIN` com `enable_seqscan = off` — as 14 consultas
+quentes do sistema são atendidas por índice. Entre índices que compartilham as
+colunas iniciais o planejador escolhe arbitrariamente nesse volume; com dados
+de verdade ele passa a escolher pela coluna final.
+
+**Lição:** os dois problemas eram do mesmo tipo — **coisa que não dá erro**.
+Push que nunca registra não aparece no Sentry; consulta sem índice em tabela de
+12 linhas não aparece em lugar nenhum. Só apareceram porque alguém perguntou
+"isso funciona?" em vez de esperar quebrar. Vale repetir a pergunta de tempos
+em tempos sobre funcionalidade que ninguém usa ainda.
+
 ### 7.3 Auditoria completa pré-venda — 05/08/2026
 
 Pedido explícito de revisar o código inteiro (não só o diff), todas as abas,
