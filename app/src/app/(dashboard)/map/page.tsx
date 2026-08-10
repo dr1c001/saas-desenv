@@ -3,7 +3,8 @@ import { getTenant } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { getTranslations } from "next-intl/server"
 import { TechnicianMap } from "@/components/map/technician-map"
-import { MapPin, RefreshCw, Wrench } from "lucide-react"
+import { MapPin, RefreshCw, Wrench, AlertTriangle } from "lucide-react"
+import Link from "next/link"
 
 const STATUS_COLOR: Record<string, string> = {
   OPEN: "bg-orange-500",
@@ -17,7 +18,7 @@ export default async function MapPage() {
   const t = await getTranslations("mapAdmin")
   const tCommon = await getTranslations("common")
 
-  const [locationRows, orderRows] = await Promise.all([
+  const [locationRows, orderRows, semCoordenada] = await Promise.all([
     prisma.userLocation.findMany({
       where: { user: { tenantId } },
       select: {
@@ -46,6 +47,29 @@ export default async function MapPage() {
           },
         },
       },
+    }),
+    // O mapa filtra por coordenada, então OS de cliente sem endereço
+    // geocodificado simplesmente NÃO apareciam — sem contador, sem aviso, sem
+    // nada. O dono via "nenhuma OS no mapa" e concluía que o mapa estava
+    // quebrado. Agora elas vêm pra cá e viram um aviso com o nome do cliente,
+    // que é o que ele precisa pra ir corrigir o endereço.
+    // (Relatado pelo usuário em 10/08/2026.)
+    prisma.serviceOrder.findMany({
+      where: {
+        tenantId,
+        status: { in: ["OPEN", "IN_PROGRESS"] },
+        OR: [
+          { client: { address: { is: null } } },
+          { client: { address: { latitude: null } } },
+          { client: { address: { longitude: null } } },
+        ],
+      },
+      select: {
+        id: true,
+        number: true,
+        client: { select: { id: true, name: true } },
+      },
+      orderBy: { number: "asc" },
     }),
   ])
 
@@ -103,6 +127,27 @@ export default async function MapPage() {
           {tCommon("serviceOrderStatus.IN_PROGRESS")} ({orders.filter((o) => o.status === "IN_PROGRESS").length})
         </div>
       </div>
+
+      {semCoordenada.length > 0 && (
+        <div className="rounded-lg border border-amber-400/40 bg-amber-50 dark:bg-amber-950/40 p-3 text-sm text-amber-900 dark:text-amber-100">
+          <div className="flex items-center gap-2 font-medium">
+            <AlertTriangle className="size-4" />
+            {t("map.missingCoords.title", { count: semCoordenada.length })}
+          </div>
+          <p className="mt-1 text-xs opacity-90">{t("map.missingCoords.description")}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {semCoordenada.map((o) => (
+              <Link
+                key={o.id}
+                href={`/clients/${o.client.id}/edit`}
+                className="rounded border border-amber-400/50 bg-background/60 px-2 py-1 text-xs hover:bg-background"
+              >
+                {t("map.orderNumber", { number: String(o.number) })} — {o.client.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Technician cards */}
       {technicians.length > 0 && (

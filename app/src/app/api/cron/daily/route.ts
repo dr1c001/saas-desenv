@@ -5,6 +5,11 @@ import {
   sendNpsEmail,
 } from "@/lib/resend"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
+import { geocodeAddress } from "@/lib/geocode"
+
+// O padrão da Vercel (10-15s) não cabe reconciliação da Asaas + e-mails +
+// backfill de geocodificação no mesmo processo.
+export const maxDuration = 60
 
 // Mesma decodificação base64 usada em lib/asaas.ts (ver o porquê lá) — aqui a
 // chave é lida direto pra não importar o módulo inteiro só por uma consulta.
@@ -24,7 +29,7 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date()
-  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, errors: 0 }
+  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, errors: 0 }
 
   // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
   // Em 07/08/2026 uma cliente pagou e ficou sem acesso por ~1 dia: os webhooks
@@ -145,6 +150,31 @@ export async function GET(req: NextRequest) {
       await sendNpsEmail(os.client.email, os.client.name, os.clientToken, os.tenant.locale)
       await prisma.serviceOrder.update({ where: { id: os.id }, data: { npsSentAt: new Date() } })
       results.nps++
+    } catch { results.errors++ }
+  }
+
+  // ── Backfill de coordenadas: endereço salvo, mas sem lat/long ────────────────
+  // geocodeAddress() só roda ao criar/editar o cliente e falha em silêncio.
+  // Todo endereço que caiu numa dessas falhas ficou sem coordenada pra sempre,
+  // e o efeito visível é a OS não aparecer no mapa — sem erro, sem aviso.
+  // (Diagnosticado em 10/08/2026: das 5 primeiras contas em produção, 4
+  // estavam nesse estado.) Roda por último e com orçamento de tempo curto:
+  // se estourar, o que importa acima já foi gravado, e amanhã continua de onde
+  // parou. Lote pequeno também respeita o limite de 1 req/s do Nominatim.
+  const inicioBackfill = Date.now()
+  const semCoordenada = await prisma.address.findMany({
+    where: { latitude: null, OR: [{ city: { not: null } }, { street: { not: null } }] },
+    select: { id: true, street: true, number: true, city: true, state: true },
+    take: 10,
+  })
+  for (const addr of semCoordenada) {
+    if (Date.now() - inicioBackfill > 25_000) break
+    try {
+      const coords = await geocodeAddress(addr)
+      if (coords) {
+        await prisma.address.update({ where: { id: addr.id }, data: coords })
+        results.geocoded++
+      }
     } catch { results.errors++ }
   }
 

@@ -348,6 +348,66 @@ nada se a página de destino não a lê. Vale conferir o par (quem manda, quem
 exibe) sempre que um fluxo de erro atravessa páginas — e preferir código a
 texto livre, senão o parâmetro vira vetor de golpe (foi o achado 1 da 7.2.2).
 
+### 7.2.4 OS sumindo do mapa e trabalho sumindo do dashboard — 10/08/2026
+
+Dois relatos do usuário no mesmo dia, com a mesma raiz: **o sistema descartava
+dado em silêncio em vez de mostrar o que sabia.**
+
+**1. "As OS abertas e em andamento não aparecem no mapa."**
+
+O mapa filtra por `client.address.latitude != null`. A geocodificação
+(`lib/geocode.ts`, Nominatim/OpenStreetMap) rodava **uma tentativa só**, com o
+endereço completo, e falha em silêncio (`catch {}` + `return null`). Qualquer
+abreviação ou erro de digitação na rua derrubava a tentativa inteira — e o
+cliente ficava sem coordenada **para sempre**, porque só criar/editar o cliente
+dispara nova geocodificação.
+
+Medido em produção: **4 dos 5 endereços cadastrados** estavam nesse estado.
+Testado direto na API: `av abel fraancisco pereira, Piracicaba` → `[]`;
+`avenida abel francisco pereira, Piracicaba` → acha na hora. Ou seja: a
+abreviação "av" e um "fraancisco" bastavam.
+
+Três correções:
+- **Cascata** em `geocodeAddress()`: rua+número → rua → só cidade/estado, com
+  abreviações brasileiras expandidas (`av`→`avenida`, `r`→`rua`, etc.). Pino
+  aproximado no bairro certo é muito melhor que pino nenhum.
+- **Backfill** no cron diário (lote de 10, orçamento de 25s, respeitando o
+  limite de 1 req/s do Nominatim) — conserta o passivo sem ninguém mexer.
+  Exigiu `maxDuration = 60` na rota.
+- **Aviso na tela**: OS abertas cujo cliente não tem coordenada agora aparecem
+  num bloco "N OS fora do mapa", com link direto pra editar o endereço. Antes
+  elas não apareciam em lugar nenhum — nem no mapa, nem no contador.
+
+Os 4 endereços foram corrigidos em produção na mesma sessão (5/5 com
+coordenada). Um deles caiu no nível cidade por causa do "fraancisco".
+
+**2. "OS concluídas também têm que aparecer no valor do dashboard, porque não
+são todas as OSs [que] precisam ser faturadas."**
+
+`Revenue` só nasce na transição pra `INVOICED` (`updateOrderStatus` e
+`completeServiceOrder` com `invoiceImmediately`). Quem conclui o serviço,
+recebe na hora e não emite nota deixa a OS em `DONE` — e o card "Faturado no
+mês", que somava só `Revenue.status = PAID`, ignorava esse trabalho por
+completo.
+
+O card passou a somar `PAID` + total das OS `DONE` concluídas no mês, filtradas
+por `revenues: { none: {} }` pra não contar duas vezes uma receita lançada à
+mão (quando a OS é faturada ela sai deste filtro e entra pelo agregado de
+receitas). Como um número só esconderia a origem do valor, o rodapé do card
+mostra a composição sempre que houver OS concluída sem faturar. Em produção:
+R$ 4.339,00 pagas + R$ 350,00 concluídas = R$ 4.689,00 (antes: R$ 4.339,00).
+
+Aproveitando o mesmo arquivo: o card usava `new Date(ano, mês, 1)`
+(meia-noite **UTC** do servidor da Vercel) enquanto o gráfico logo abaixo já
+usava `brtMidnightUTC` — o mês do card começava às 21h do último dia do mês
+anterior. Unificado. Removida também uma `count()` de OS `DONE` calculada a
+cada carregamento e nunca renderizada.
+
+**Lição:** filtro de exibição que descarta linha incompleta precisa contar o
+que descartou. "Nenhuma OS no mapa" e "nenhuma OS no mapa que eu consiga
+posicionar" parecem iguais na tela e são problemas completamente diferentes —
+o usuário concluiu, com razão, que o mapa estava quebrado.
+
 ### 7.3 Auditoria completa pré-venda — 05/08/2026
 
 Pedido explícito de revisar o código inteiro (não só o diff), todas as abas,

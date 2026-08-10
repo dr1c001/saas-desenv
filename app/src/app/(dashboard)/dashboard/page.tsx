@@ -1,23 +1,28 @@
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { DollarSign, ClipboardList, Users, TrendingUp, AlertTriangle, Wrench } from "lucide-react"
+import { DollarSign, ClipboardList, Users, AlertTriangle, Wrench } from "lucide-react"
 import { getTenant } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { formatCurrency, formatDate, formatOsNumber } from "@/lib/utils"
+import { formatCurrency, formatDate, formatOsNumber, todayInBRT, brtMidnightUTC } from "@/lib/utils"
 import { getMonthlyRevenueChart } from "@/actions/dashboard"
 import { RevenueChart } from "@/components/dashboard/revenue-chart"
 import { getTranslations } from "next-intl/server"
 
 async function getDashboardData(tenantId: string) {
   const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  // Limite do mês em horário de Brasília, não no UTC do servidor da Vercel:
+  // com `new Date(ano, mês, 1)` o mês começava às 21h do último dia do mês
+  // anterior pro usuário brasileiro, e pagamentos daquela faixa apareciam no
+  // mês errado. O gráfico já usava brtMidnightUTC; o card não.
+  const { year, month } = todayInBRT()
+  const startOfMonth = brtMidnightUTC(year, month, 1)
 
   const [
     monthlyRevenue,
+    concludedNotInvoiced,
     openOrders,
     inProgressOrders,
-    doneOrders,
     activeClients,
     overdueRevenues,
     recentOrders,
@@ -26,11 +31,25 @@ async function getDashboardData(tenantId: string) {
       where: { tenantId, status: "PAID", paidAt: { gte: startOfMonth } },
       _sum: { amount: true },
     }),
+    // Nem toda OS vira nota: muita empresa conclui o serviço, recebe na hora e
+    // nunca fatura. Como Revenue só é criada na transição pra INVOICED, essas
+    // OS ficavam valendo R$ 0 no dashboard — o dono via o mês inteiro de
+    // trabalho sumir do card. (Relatado pelo usuário em 10/08/2026.)
+    //
+    // `revenues: { none: {} }` evita contar duas vezes caso exista uma receita
+    // lançada à mão pra essa OS; quando ela é faturada, sai deste filtro
+    // (status vira INVOICED) e entra pelo agregado de receitas acima.
+    prisma.serviceOrder.aggregate({
+      where: {
+        tenantId,
+        status: "DONE",
+        concludedAt: { gte: startOfMonth },
+        revenues: { none: {} },
+      },
+      _sum: { totalAmount: true },
+    }),
     prisma.serviceOrder.count({ where: { tenantId, status: "OPEN" } }),
     prisma.serviceOrder.count({ where: { tenantId, status: "IN_PROGRESS" } }),
-    prisma.serviceOrder.count({
-      where: { tenantId, status: "DONE", concludedAt: { gte: startOfMonth } },
-    }),
     prisma.client.count({ where: { tenantId, status: "ACTIVE" } }),
     prisma.revenue.count({
       where: { tenantId, status: "PENDING", dueDate: { lt: now } },
@@ -44,10 +63,10 @@ async function getDashboardData(tenantId: string) {
   ])
 
   return {
-    monthlyRevenue: Number(monthlyRevenue._sum.amount ?? 0),
+    paidRevenue: Number(monthlyRevenue._sum.amount ?? 0),
+    concludedNotInvoiced: Number(concludedNotInvoiced._sum.totalAmount ?? 0),
     openOrders,
     inProgressOrders,
-    doneOrders,
     activeClients,
     overdueRevenues,
     recentOrders,
@@ -80,9 +99,18 @@ export default async function DashboardPage() {
   const stats = [
     {
       title: t("stats.monthlyRevenue.title"),
-      value: formatCurrency(data.monthlyRevenue),
+      value: formatCurrency(data.paidRevenue + data.concludedNotInvoiced),
       icon: DollarSign,
-      description: t("stats.monthlyRevenue.description"),
+      // Com as duas parcelas somadas num número só, o dono não teria como
+      // saber de onde veio o valor. Quando há OS concluída sem faturar, o
+      // rodapé mostra a composição em vez do texto genérico.
+      description:
+        data.concludedNotInvoiced > 0
+          ? t("stats.monthlyRevenue.breakdown", {
+              paid: formatCurrency(data.paidRevenue),
+              concluded: formatCurrency(data.concludedNotInvoiced),
+            })
+          : t("stats.monthlyRevenue.description"),
       href: "/finance",
       alert: false,
     },

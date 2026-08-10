@@ -279,7 +279,8 @@
     "stats": {
       "monthlyRevenue": {
         "title": "Revenue This Month",
-        "description": "Revenue paid this month"
+        "description": "Revenue paid this month",
+        "breakdown": "{paid} in paid revenue + {concluded} in completed jobs"
       },
       "openOrders": {
         "title": "Open Service Orders",
@@ -1447,6 +1448,10 @@
       "legend": {
         "technicians": "Technicians",
         "openOrders": "Open orders"
+      },
+      "missingCoords": {
+        "title": "{count, plural, one {# job off the map} other {# jobs off the map}}",
+        "description": "We couldn't locate these clients' addresses. Click to review and save the address — the map fixes itself after that."
       },
       "empty": {
         "title": "No map data yet",

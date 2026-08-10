@@ -278,8 +278,9 @@
     "title": "Dashboard",
     "stats": {
       "monthlyRevenue": {
-        "title": "Faturado no mês",
-        "description": "Receitas pagas este mês"
+        "title": "Faturamento do mês",
+        "description": "Receitas pagas este mês",
+        "breakdown": "{paid} em receitas pagas + {concluded} em OS concluídas"
       },
       "openOrders": {
         "title": "OS em Aberto",
@@ -1451,6 +1452,10 @@
       "empty": {
         "title": "Nenhum dado no mapa ainda",
         "description": "Técnicos precisam ativar localização e clientes precisam ter endereço cadastrado."
+      },
+      "missingCoords": {
+        "title": "{count, plural, one {# OS fora do mapa} other {# OS fora do mapa}}",
+        "description": "Não conseguimos localizar o endereço destes clientes. Clique para conferir e salvar o endereço — o mapa se corrige sozinho depois disso."
       },
       "pin": {
         "orderLabel": "OS"
