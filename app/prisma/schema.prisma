@@ -9,6 +9,29 @@ datasource db {
 
 // ─── Tenant (empresa que contrata o SaaS) ────────────────────────────────────
 
+// ─── Sobre os índices (@@index) ───────────────────────────────────────────────
+//
+// Até 10/08/2026 o schema não tinha NENHUM @@index — só chaves primárias e 13
+// @unique. Com 12 OS em produção isso é invisível; o problema é que cresce
+// junto com o banco e fica mais caro de corrigir a cada dia.
+//
+// Dois fatos motivam a lista abaixo:
+//
+//  1. Toda consulta do produto é multi-tenant: `WHERE tenantId = ?` seguido,
+//     quase sempre, de `[+ status] ORDER BY createdAt DESC`. Sem índice
+//     composto, o Postgres varre a tabela inteira de TODOS os tenants e
+//     descarta o que não é do tenant atual. Client, Revenue e Expense não
+//     tinham nem cobertura parcial. Índice em (tenantId, createdAt) resolve
+//     filtro e ordenação de uma vez.
+//
+//  2. O Postgres NÃO cria índice em chave estrangeira automaticamente (ao
+//     contrário do MySQL). Sem isso, todo JOIN varre a tabela, e todo DELETE
+//     em cascata (apagar um cliente, uma OS) varre cada tabela filha.
+//
+// Escolhi por consulta real do código, não por precaução: cada índice abaixo
+// corresponde a um `where`/`orderBy` que existe hoje em actions/ ou app/.
+// Índice não é de graça — pesa em cada INSERT/UPDATE e ocupa disco.
+
 model Tenant {
   id                 String             @id @default(cuid())
   name               String
@@ -98,6 +121,12 @@ model Subscription {
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   plan   Plan   @relation(fields: [planId], references: [id])
+
+  // requireActiveSubscription() consulta por tenantId em PRATICAMENTE TODA
+  // requisição do sistema — é a consulta mais quente que existe aqui.
+  @@index([tenantId])
+  // Webhook da Asaas chega identificando a assinatura pelo id deles.
+  @@index([asaasId])
 }
 
 enum BillingCycle {
@@ -122,6 +151,9 @@ model User {
   location          UserLocation?
   pushSubscriptions PushSubscription[]
   userAddress       UserAddress?
+
+  // Aba Equipe lista por tenant; seleção de técnico filtra por papel.
+  @@index([tenantId, role])
 }
 
 model UserAddress {
@@ -162,6 +194,10 @@ model Client {
   tenant        Tenant         @relation(fields: [tenantId], references: [id])
   serviceOrders ServiceOrder[]
   equipments    Equipment[]
+
+  // getClients(): where tenantId [+ status] order by createdAt desc
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
 }
 
 enum ClientStatus {
@@ -222,6 +258,16 @@ model ServiceOrder {
   checklist   ChecklistItem[]
 
   @@unique([tenantId, number])
+  // Listagem de OS e "OS ativas" do dashboard.
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+  // Dashboard soma OS concluídas no mês; cron de NPS varre por concludedAt.
+  @@index([tenantId, concludedAt])
+  // Agenda: where tenantId + scheduledAt entre X e Y.
+  @@index([tenantId, scheduledAt])
+  // FKs: histórico do cliente, OS por técnico, e o cascade ao apagar cliente.
+  @@index([clientId])
+  @@index([technicianId])
 }
 
 model ChecklistItem {
@@ -233,6 +279,8 @@ model ChecklistItem {
   createdAt   DateTime @default(now())
 
   order ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
 }
 
 enum ServiceStatus {
@@ -252,6 +300,8 @@ model ServiceItem {
   orderId     String
 
   order ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
 }
 
 model Attachment {
@@ -262,6 +312,8 @@ model Attachment {
   createdAt DateTime @default(now())
 
   order ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
 }
 
 // ─── Financeiro ───────────────────────────────────────────────────────────────
@@ -279,6 +331,14 @@ model Revenue {
 
   tenant Tenant        @relation(fields: [tenantId], references: [id])
   order  ServiceOrder? @relation(fields: [orderId], references: [id])
+
+  // Card do dashboard + gráfico de 6 meses = 7 agregações por carregamento,
+  // todas com a forma (tenantId, status PAID, paidAt entre X e Y).
+  @@index([tenantId, status, paidAt])
+  // Contador de vencidas e listagem do Financeiro, por dueDate.
+  @@index([tenantId, status, dueDate])
+  // Anti-join do dashboard (`revenues: { none: {} }`) e receita da OS.
+  @@index([orderId])
 }
 
 model Expense {
@@ -294,6 +354,10 @@ model Expense {
   createdAt   DateTime        @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  // Mesma forma da Revenue: gráfico do dashboard e listagem do Financeiro.
+  @@index([tenantId, status, paidAt])
+  @@index([tenantId, status, dueDate])
 }
 
 enum PaymentStatus {
@@ -325,6 +389,9 @@ model Provider {
 
   tenant            Tenant             @relation(fields: [tenantId], references: [id])
   maintenanceOrders MaintenanceOrder[]
+
+  // getProviders(): where tenantId order by name asc
+  @@index([tenantId, name])
 }
 
 // ─── Ordem de Manutenção Interna ──────────────────────────────────────────────
@@ -348,6 +415,10 @@ model MaintenanceOrder {
   items    MaintenanceItem[]
 
   @@unique([tenantId, number])
+  // getMaintenanceOrders(): where tenantId [+ status] order by createdAt desc
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+  @@index([providerId])
 }
 
 model MaintenanceItem {
@@ -359,6 +430,8 @@ model MaintenanceItem {
   orderId     String
 
   order MaintenanceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
 }
 
 enum MaintenanceStatus {
@@ -390,6 +463,9 @@ model Quote {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, number])
+  // getQuotes(): where tenantId [+ status] order by createdAt desc
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
 }
 
 // ─── Equipamentos do Cliente ──────────────────────────────────────────────────
@@ -410,6 +486,10 @@ model Equipment {
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  // Equipamentos na ficha do cliente + cascade ao apagar o cliente.
+  @@index([clientId])
 }
 
 enum QuoteStatus {
