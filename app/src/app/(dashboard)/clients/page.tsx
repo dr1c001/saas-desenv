@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
-import { Plus, User } from "lucide-react"
+import { Plus, User, Eye, Pencil } from "lucide-react"
 import { getClients } from "@/actions/clients"
 import { SearchBar } from "@/components/shared/search-bar"
 import { StatusFilter } from "@/components/shared/status-filter"
@@ -79,6 +79,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Sear
                   <TableHead>{t("list.columns.phone")}</TableHead>
                   <TableHead>{t("list.columns.serviceOrders")}</TableHead>
                   <TableHead>{t("list.columns.status")}</TableHead>
+                  <TableHead className="text-right">{tc("actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -97,6 +98,27 @@ export default async function ClientsPage({ searchParams }: { searchParams: Sear
                       <Badge variant={STATUS_VARIANT[c.status]}>
                         {tc(`clientStatus.${c.status}` as "clientStatus.ACTIVE")}
                       </Badge>
+                    </TableCell>
+                    {/* Antes só o nome era clicável, sem nenhuma indicação — quem
+                        cadastrou um dado errado não tinha como saber que dava pra
+                        corrigir. (Pedido do usuário em 10/08/2026.) */}
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/clients/${c.id}`}
+                          className={buttonVariants({ variant: "ghost", size: "sm" })}
+                        >
+                          <Eye className="size-3.5 mr-1.5" />
+                          {tc("view")}
+                        </Link>
+                        <Link
+                          href={`/clients/${c.id}/edit`}
+                          className={buttonVariants({ variant: "outline", size: "sm" })}
+                        >
+                          <Pencil className="size-3.5 mr-1.5" />
+                          {tc("edit")}
+                        </Link>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

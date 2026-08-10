@@ -4,6 +4,8 @@ import { AppSidebar } from "@/components/layout/app-sidebar"
 import { OverdueAlerts } from "@/components/layout/overdue-alerts"
 import { PushSubscriber } from "@/components/layout/push-subscriber"
 import { LocationTracker } from "@/components/layout/location-tracker"
+import { ServiceWorkerRegistrar } from "@/components/layout/service-worker"
+import { OfflineBanner } from "@/components/layout/offline-banner"
 import { getTenant, getAllowedTabs, hasActiveSubscription } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { headers } from "next/headers"
@@ -36,12 +38,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <header className="h-14 border-b flex items-center px-4 gap-2">
           <SidebarTrigger />
         </header>
+        <OfflineBanner />
         <Suspense>
           <OverdueAlerts tenantId={tenantId} />
         </Suspense>
         <div className="flex-1 p-6">{children}</div>
       </main>
-      {/* Client-side services (push + GPS) */}
+      {/* Client-side services (service worker + push + GPS) */}
+      <ServiceWorkerRegistrar />
       <PushSubscriber />
       <LocationTracker />
     </SidebarProvider>

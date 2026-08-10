@@ -5,6 +5,8 @@
     "cancel": "Cancelar",
     "delete": "Excluir",
     "edit": "Editar",
+    "view": "Ver",
+    "actions": "Ações",
     "create": "Criar",
     "search": "Buscar",
     "back": "Voltar",
@@ -1664,6 +1666,19 @@
       "requestReceived": "Recebemos uma solicitação para redefinir a senha da sua conta no ServiçoOS.",
       "cta": "Criar nova senha",
       "ignoreNotice": "Se você não solicitou essa alteração, pode ignorar este e-mail com segurança — sua senha atual continua válida. Este link expira em breve por segurança."
+    }
+  },
+  "offline": {
+    "title": "Sem conexão",
+    "description": "Esta tela ainda não foi aberta neste aparelho, então não há uma cópia salva pra mostrar.",
+    "hints": {
+      "visited": "As telas que você já abriu com sinal continuam funcionando.",
+      "writes": "Criar ou concluir OS precisa de conexão.",
+      "retry": "Assim que o sinal voltar, é só recarregar."
+    },
+    "banner": {
+      "title": "Sem conexão.",
+      "description": "Você está vendo dados salvos no aparelho, que podem estar desatualizados. Alterações não serão salvas até o sinal voltar."
     }
   },
   "expired": {

@@ -5,6 +5,8 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
+    "view": "View",
+    "actions": "Actions",
     "create": "Create",
     "search": "Search",
     "back": "Back",
@@ -1664,6 +1666,19 @@
       "requestReceived": "We received a request to reset the password for your ServiçoOS account.",
       "cta": "Create new password",
       "ignoreNotice": "If you didn't request this change, you can safely ignore this email — your current password remains valid. This link expires shortly for security reasons."
+    }
+  },
+  "offline": {
+    "title": "No connection",
+    "description": "This screen hasn't been opened on this device yet, so there's no saved copy to show.",
+    "hints": {
+      "visited": "Screens you already opened while online still work.",
+      "writes": "Creating or completing jobs requires a connection.",
+      "retry": "Once you're back online, just reload."
+    },
+    "banner": {
+      "title": "No connection.",
+      "description": "You're seeing data saved on this device, which may be out of date. Changes won't be saved until you're back online."
     }
   },
   "expired": {

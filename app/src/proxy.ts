@@ -41,6 +41,11 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/") ||
     request.nextUrl.pathname === "/terms" ||
     request.nextUrl.pathname === "/privacy" ||
+    // /offline é o destino de último recurso do service worker. Precisa ser
+    // pública: se respondesse com redirect pro /login, o service worker
+    // guardaria ESSE redirect no lugar da página, e o técnico sem sinal cairia
+    // numa tela de login que não tem como funcionar offline.
+    request.nextUrl.pathname === "/offline" ||
     // /reset-password must work whether or not a (recovery) session already exists —
     // it should never bounce to /login nor to /dashboard.
     request.nextUrl.pathname.startsWith("/reset-password")

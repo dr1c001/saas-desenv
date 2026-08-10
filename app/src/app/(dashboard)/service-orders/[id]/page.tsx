@@ -51,13 +51,18 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
               label={config.nextLabel!}
             />
           )}
-          <Link
-            href={`/service-orders/${id}/edit`}
-            className={buttonVariants({ variant: "outline" })}
-          >
-            <Pencil className="size-4 mr-2" />
-            {tCommon("edit")}
-          </Link>
+          {/* updateServiceOrder recusa OS faturada (NFS-e emitida, assinatura
+              coletada). O botão aparecia mesmo assim, e só dava erro depois de
+              preencher o formulário inteiro. */}
+          {os.status !== "INVOICED" && (
+            <Link
+              href={`/service-orders/${id}/edit`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              <Pencil className="size-4 mr-2" />
+              {tCommon("edit")}
+            </Link>
+          )}
           <Link
             href={`/api/pdf/service-order/${id}`}
             target="_blank"

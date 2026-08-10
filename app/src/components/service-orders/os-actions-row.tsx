@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useTransition } from "react"
 import { useTranslations } from "next-intl"
 import { Button, buttonVariants } from "@/components/ui/button"
-import { FileDown, Play } from "lucide-react"
+import { FileDown, Play, Pencil } from "lucide-react"
 import { ConcluirDialog } from "./conclude-dialog"
 import { updateOrderStatus } from "@/actions/service-orders"
 
@@ -20,6 +20,7 @@ type Props = {
 
 export function OsActionsRow({ id, title, status, conclusionNote, items }: Props) {
   const t = useTranslations("serviceOrdersComponents")
+  const tCommon = useTranslations("common")
   const [isPending, startTransition] = useTransition()
 
   function handleStart() {
@@ -47,6 +48,20 @@ export function OsActionsRow({ id, title, status, conclusionNote, items }: Props
         initialConclusionNote={conclusionNote}
         initialItems={items}
       />
+      {/* Editar direto da lista: antes era preciso abrir a OS pra achar o
+          botão. Some quando a OS está faturada porque updateServiceOrder
+          recusa INVOICED (NFS-e emitida, assinatura coletada) — mostrar o
+          botão ali seria convidar o usuário a preencher o formulário inteiro
+          pra levar erro no fim. (Pedido do usuário em 10/08/2026.) */}
+      {status !== "INVOICED" && (
+        <Link
+          href={`/service-orders/${id}/edit`}
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+        >
+          <Pencil className="size-3.5 mr-1" />
+          {tCommon("edit")}
+        </Link>
+      )}
       <Link
         href={`/api/pdf/service-order/${id}`}
         target="_blank"

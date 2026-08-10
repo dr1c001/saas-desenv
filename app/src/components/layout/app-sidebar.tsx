@@ -92,6 +92,16 @@ export function AppSidebar({ allowedTabs, role }: Props) {
   async function handleSignOut() {
     const supabase = createClient()
     await supabase.auth.signOut()
+    // O modo offline guarda HTML já renderizado com dados da empresa
+    // (clientes, OS, valores). Num celular compartilhado entre técnicos, sair
+    // da conta tem que levar isso junto — senão o próximo a usar abre o app
+    // sem sinal e vê a carteira de quem saiu. Falha aqui não pode travar o
+    // logout em si.
+    try {
+      const caches_ = await caches.keys()
+      await Promise.all(caches_.filter((n) => n.startsWith("servicoos-")).map((n) => caches.delete(n)))
+      navigator.serviceWorker?.controller?.postMessage({ tipo: "LIMPAR_CACHE" })
+    } catch {}
     router.push("/login")
     router.refresh()
   }

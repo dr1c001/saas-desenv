@@ -6,7 +6,11 @@ export function PushSubscriber() {
   useEffect(() => {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return
 
-    navigator.serviceWorker.register("/sw.js").then(async (reg) => {
+    // Quem registra o service worker agora é o ServiceWorkerRegistrar — aqui
+    // só aproveitamos o registro pronto. Antes este componente registrava, e
+    // como ele desiste sem PushManager (iPhone fora da tela inicial), o modo
+    // offline ficava refém da disponibilidade de notificação.
+    navigator.serviceWorker.ready.then(async (reg) => {
       // Ask permission only if not already granted
       if (Notification.permission === "default") {
         await Notification.requestPermission()

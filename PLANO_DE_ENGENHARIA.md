@@ -472,6 +472,64 @@ Push que nunca registra não aparece no Sentry; consulta sem índice em tabela d
 "isso funciona?" em vez de esperar quebrar. Vale repetir a pergunta de tempos
 em tempos sobre funcionalidade que ninguém usa ainda.
 
+### 7.2.6 Modo offline para campo — 10/08/2026
+
+Pedido do usuário logo depois de o PWA voltar a funcionar (7.2.5): sem sinal, o
+app era inútil — o técnico num subsolo ou em zona rural via a tela de "sem
+internet" do navegador e pronto.
+
+**O que foi feito** (`public/sw.js`, versão `v2`):
+
+- **Precache do essencial** na instalação: `/offline`, ícones e manifest. Um a
+  um, com `catch` por item — `addAll()` aborta a instalação inteira do service
+  worker se um único arquivo falhar.
+- **Navegação: rede primeiro, cache depois.** Online o comportamento é
+  idêntico ao de hoje; sem rede, entrega a última cópia daquela página.
+- **Estáticos do Next: cache primeiro.** Têm hash no nome, são imutáveis.
+- **Tela `/offline`** como último recurso, quando não há nem rede nem cópia.
+  Fica fora do grupo `(dashboard)` — aquele layout consulta banco, que é
+  exatamente o que não funciona aqui — e entrou na lista de rotas públicas do
+  proxy, senão o service worker guardaria um redirect pro `/login` no lugar
+  dela.
+- **Aviso visual** no topo do dashboard quando `navigator.onLine` é falso: dado
+  velho passando por dado atual é pior que erro visível.
+- **Limpeza no logout.** O cache guarda HTML renderizado com dados da empresa;
+  num celular compartilhado entre técnicos, sair da conta precisa levar isso
+  junto.
+
+**Decisões de recusa, que importam tanto quanto o que entrou:**
+
+- **Nada de POST no service worker.** Server Actions são POST; uma escrita
+  respondida pelo cache seria pior que um erro de rede honesto.
+- **Payload de navegação do App Router (`?_rsc=`) fica de fora.** A mesma URL
+  devolve conteúdo diferente conforme os cabeçalhos de roteamento do Next —
+  guardar por URL serviria a resposta errada. Consequência assumida: offline,
+  clicar num link do menu falha; recarregar entrega a versão guardada.
+- **Só guarda resposta 200 e não-redirecionada.** Um 307 pro `/login` guardado
+  no lugar de uma página quebra a navegação seguinte de um jeito difícil de
+  diagnosticar (o navegador recusa resposta redirecionada em navegação).
+- **`/api/`, telas de autenticação e `/admin` nunca entram no cache.**
+
+**O que NÃO está incluído: gravar offline.** Criar ou concluir OS ainda exige
+conexão. Fila de escrita com sincronização posterior é um projeto à parte —
+envolve interceptar Server Actions (POST), persistir a intenção, e resolver
+conflito de edição quando duas pessoas mexem na mesma OS. O aviso de tela e a
+página `/offline` dizem isso ao técnico com todas as letras, em vez de deixar
+ele achar que salvou.
+
+**Correção achada no caminho:** o registro do service worker morava dentro do
+`PushSubscriber`, atrás de `if (!("PushManager" in window)) return`. No iPhone
+o `PushManager` só existe depois que o app é instalado na tela inicial — ou
+seja, no Safari comum o service worker nunca era registrado. O registro virou
+componente próprio (`ServiceWorkerRegistrar`): offline não deveria depender de
+notificação estar disponível.
+
+**Verificação:** servidor de desenvolvimento derrubado de verdade (`fetch` a
+uma URL nova falhando, confirmado antes de concluir qualquer coisa). Com o
+servidor morto: página já visitada abriu do cache com conteúdo íntegro; URL
+nunca visitada caiu na tela `/offline` com o texto explicativo. As duas
+metades do `navegacao()` exercidas de ponta a ponta.
+
 ### 7.3 Auditoria completa pré-venda — 05/08/2026
 
 Pedido explícito de revisar o código inteiro (não só o diff), todas as abas,
