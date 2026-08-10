@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -14,10 +14,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PublicLanguageToggle } from "@/components/layout/public-language-toggle"
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const t = useTranslations()
+  const searchParams = useSearchParams()
   const [serverError, setServerError] = useState<string | null>(null)
+
+  // /api/auth/confirm manda pra cá com ?error=... quando o link de convite ou
+  // de recuperação já foi usado (os links do Supabase são de uso único). Essa
+  // mensagem NUNCA era lida: o convidado via só a tela de login limpa, sem
+  // explicação, com "Cadastrar empresa" em destaque — e acabava criando uma
+  // empresa nova em vez de entrar na do empregador.
+  // (Relatado por cliente em 08/08/2026.)
+  const linkNotice = searchParams.get("error")
 
   // Schema construído dentro do componente pois as mensagens de validação
   // do zod vêm do next-intl (precisam de acesso ao `t`).
@@ -59,14 +68,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-muted/40">
-      <PublicLanguageToggle className="self-center" />
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">{t("auth.login.title")}</CardTitle>
-          <CardDescription>{t("auth.login.subtitle")}</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <Card className="w-full max-w-sm">
+      <CardHeader>
+        <CardTitle className="text-2xl">{t("auth.login.title")}</CardTitle>
+        <CardDescription>{t("auth.login.subtitle")}</CardDescription>
+      </CardHeader>
+      <CardContent>
+          {linkNotice && (
+            <div className="mb-4 rounded-lg border border-amber-400/40 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+              {linkNotice}
+            </div>
+          )}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">{t("auth.login.emailLabel")}</Label>
@@ -97,8 +109,20 @@ export default function LoginPage() {
               ),
             })}
           </p>
-        </CardContent>
-      </Card>
+      </CardContent>
+    </Card>
+  )
+}
+
+// useSearchParams exige Suspense no App Router — mesmo padrão já usado na
+// página de cadastro.
+export default function LoginPage() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-muted/40">
+      <PublicLanguageToggle className="self-center" />
+      <Suspense>
+        <LoginForm />
+      </Suspense>
     </div>
   )
 }

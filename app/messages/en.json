@@ -1738,7 +1738,9 @@
     "defaultUserName": "User",
     "inactiveSubscription": "Inactive subscription. Subscribe to a plan to keep using the system.",
     "defaultCompanyName": "{name}'s Company",
-    "tooManyAttempts": "Too many attempts. Please wait a few minutes and try again."
+    "tooManyAttempts": "Too many attempts. Please wait a few minutes and try again.",
+    "inviteLinkUsed": "This invite has already been used or has expired. If you already set your password, just sign in below. If you haven't, use \"Forgot my password\" with the email that received the invite — do not create a new company.",
+    "recoveryLinkUsed": "This recovery link has already been used or has expired. Request a new one under \"Forgot my password\"."
   },
   "validation": {
     "nameRequired": "Name is required",

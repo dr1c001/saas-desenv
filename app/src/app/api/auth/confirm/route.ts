@@ -43,5 +43,15 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL("/login?error=" + encodeURIComponent((await getTranslations("errors"))("invalidLink")), origin))
+  // Links do Supabase são de USO ÚNICO. Quem já aceitou o convite e abre o
+  // e-mail de novo cai aqui — e antes recebia só "Link inválido ou expirado"
+  // na tela de login, onde o botão mais visível é "Cadastrar empresa". O
+  // resultado prático foi um integrante de equipe achando que precisava criar
+  // uma empresa nova em vez de entrar na do empregador. A mensagem agora diz
+  // exatamente o que fazer, e desaconselha explicitamente criar outra empresa.
+  // (Relatado por cliente em 08/08/2026.)
+  const te = await getTranslations("errors")
+  const message =
+    type === "invite" ? te("inviteLinkUsed") : type === "recovery" ? te("recoveryLinkUsed") : te("invalidLink")
+  return NextResponse.redirect(new URL("/login?error=" + encodeURIComponent(message), origin))
 }
