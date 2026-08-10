@@ -61,5 +61,20 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/auth).*)"],
+  // A lista antes era nominal (só favicon.ico), e todo arquivo estático novo
+  // que alguém colocasse em public/ caía no redirect pra /login. Aconteceu com
+  // quatro de uma vez, todos em silêncio:
+  //   - /sw.js       -> o navegador recebia o HTML do login em vez de JS, o
+  //                     registro do service worker falhava e as notificações
+  //                     push NUNCA funcionaram em produção;
+  //   - /manifest.json -> sem manifest, não dá pra instalar como app;
+  //   - /robots.txt e /sitemap.xml -> o Google nunca conseguiu ler nenhum dos
+  //                     dois desde que foram criados.
+  // (Achado respondendo "dá pra virar aplicativo?", 10/08/2026.)
+  //
+  // Agora exclui qualquer caminho com extensão de arquivo, então o próximo
+  // asset já nasce funcionando. Isso não afrouxa nada: o proxy só faz o
+  // redirect de conveniência — quem protege de verdade é o getTenant() de
+  // cada página e Server Action (ver seção 7 do plano de engenharia).
+  matcher: ["/((?!_next/static|_next/image|api/auth|.*\\..*).*)"],
 }
