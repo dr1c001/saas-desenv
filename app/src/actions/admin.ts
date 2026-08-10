@@ -172,6 +172,8 @@ export async function adicionarAdmin(
   const email = String(formData.get("email") ?? "").trim().toLowerCase()
   const name = String(formData.get("name") ?? "").trim()
   const role = String(formData.get("role") ?? "") as PlatformRole
+  const phone = String(formData.get("phone") ?? "").trim() || null
+  const document = String(formData.get("document") ?? "").trim() || null
 
   if (!email.includes("@")) return { message: "Informe um e-mail válido." }
   if (name.length < 2) return { message: "Informe o nome da pessoa." }
@@ -183,9 +185,9 @@ export async function adicionarAdmin(
   // Reativa em vez de duplicar: e-mail é único, e quem saiu e voltou deve
   // manter o mesmo registro pra que o histórico de auditoria continue ligado.
   if (jaExiste) {
-    await prisma.platformAdmin.update({ where: { email }, data: { name, role, active: true, invitedBy: dono.email } })
+    await prisma.platformAdmin.update({ where: { email }, data: { name, role, phone, document, active: true, invitedBy: dono.email } })
   } else {
-    await prisma.platformAdmin.create({ data: { email, name, role, invitedBy: dono.email } })
+    await prisma.platformAdmin.create({ data: { email, name, role, phone, document, invitedBy: dono.email } })
   }
 
   // A pessoa precisa de uma conta no Supabase pra conseguir entrar. Se já
@@ -229,6 +231,30 @@ export async function desativarAdmin(id: string) {
     "desativar_admin",
     ALVO_PLATAFORMA,
     `${alvo.name} ${alvo.active ? "desativado" : "reativado"}`
+  )
+  revalidatePath("/admin")
+}
+
+/**
+ * Apaga o cadastro de vez — para quem não trabalha mais aqui.
+ *
+ * Diferente de desativar: desativar corta o acesso e mantém o registro pra
+ * eventual retorno; remover tira a pessoa da lista. O histórico do que ela fez
+ * NÃO se perde — o AdminAuditLog guarda o e-mail como texto, não como
+ * referência, justamente pra sobreviver a isto.
+ */
+export async function removerAdmin(id: string) {
+  const dono = await requireSuperAdmin("gerenciarEquipe")
+
+  const alvo = await prisma.platformAdmin.findUnique({ where: { id }, select: { email: true, name: true, role: true } })
+  if (!alvo) throw new Error("Pessoa não encontrada.")
+
+  await prisma.platformAdmin.delete({ where: { id } })
+  await registrarAcaoAdmin(
+    dono.email,
+    "remover_admin",
+    ALVO_PLATAFORMA,
+    `${alvo.name} <${alvo.email}> (${alvo.role}) removido da equipe`
   )
   revalidatePath("/admin")
 }

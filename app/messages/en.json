@@ -119,7 +119,14 @@
       "section8": {
         "title": "8. Your data and your clients' data",
         "p1": "All content you enter into the system — client records, service orders, financial data, quotes, documents, and attachments — belongs to you or your company. ServiçoOS acts solely as a processor of this data, storing and processing it to enable the system to function, as detailed in our <privacyLink>Privacy Policy</privacyLink>.",
-        "p2": "You are responsible for ensuring that you have an appropriate legal basis and consent to enter third-party data (your clients, technicians, and suppliers) into the system."
+        "p2": "You are responsible for ensuring that you have an appropriate legal basis and consent to enter third-party data (your clients, technicians, and suppliers) into the system.",
+        "p3": "<strong>Our team's access to your account.</strong> To provide technical support, investigate failures or fix issues you report, authorized members of our team may access your account and view the data it contains. Such access is limited to those purposes and follows these rules:",
+        "i1": "Granted only to authorized staff, by specific role, and revoked immediately upon termination;",
+        "i2": "Every access is recorded in an audit log identifying who accessed it, which company, and the date and time;",
+        "i3": "The support session expires automatically after 1 hour;",
+        "i4": "Our staff are bound by a contractual confidentiality obligation;",
+        "i5": "We do not use your account data for any purpose beyond the requested support or service maintenance.",
+        "p4": "You may request, at any time, the history of support accesses performed on your account, through the contact email listed at the end of these Terms."
       },
       "section9": {
         "title": "9. Acceptable use",
@@ -1118,11 +1125,19 @@
         "addressLabel": "Address",
         "addressPlaceholder": "123 Example St — São Paulo, SP",
         "websiteLabel": "Website",
-        "websitePlaceholder": "https://yourcompany.com",
-        "logoUrlLabel": "Logo URL",
-        "logoUrlPlaceholder": "https://example.com/logo.png",
-        "logoUrlHint": "Paste the URL of your company logo image (it will appear on service order PDFs).",
-        "logoAlt": "Logo"
+        "websitePlaceholder": "https://yourcompany.com"
+      },
+      "logo": {
+        "title": "Company logo",
+        "hint": "Shows on quote, job and receipt PDFs. PNG, JPG or WEBP, up to 2 MB.",
+        "alt": "Company logo",
+        "remove": "Remove",
+        "save": "Save logo",
+        "chooseFile": "Pick a file.",
+        "tooLarge": "That image is over 2 MB. Pick a smaller one.",
+        "wrongType": "Use PNG, JPG or WEBP.",
+        "failed": "Couldn't process that image. Try another one.",
+        "saved": "Logo saved."
       }
     },
     "profile": {
@@ -1354,6 +1369,9 @@
         "currentPlan": "Current plan",
         "subscribeMonthly": "Subscribe — Monthly",
         "subscribeYearly": "Subscribe — Yearly (save 2 months)"
+      },
+      "contract": {
+        "download": "Download agreement and data terms (LGPD)"
       }
     },
     "receipts": {
@@ -1535,7 +1553,8 @@
           "sair_da_conta": "Exited account",
           "adicionar_admin": "Added to team",
           "alterar_papel_admin": "Changed area",
-          "desativar_admin": "Deactivated/reactivated"
+          "desativar_admin": "Deactivated/reactivated",
+          "remover_admin": "Removed from team"
         }
       }
     }
@@ -1672,7 +1691,9 @@
       "heading": "✅ Payment confirmed!",
       "planActive": "Hi, {name}! Your <strong>{planName}</strong> plan is now active.",
       "thanks": "Thank you for subscribing to ServiçoOS!",
-      "cta": "Go to the system"
+      "cta": "Go to the system",
+      "contractAttached": "We've attached the <strong>service agreement and data processing terms (LGPD)</strong> for your subscription.",
+      "contractHint": "Keep this file. You can download it again at any time from the Billing screen inside the system."
     },
     "onboardingDay3": {
       "subject": "Your company isn't using ServiçoOS yet",

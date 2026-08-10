@@ -91,9 +91,28 @@ export const adminLogado = cache(async function adminLogado(): Promise<AdminLoga
 
   const membro = await prisma.platformAdmin.findUnique({
     where: { email },
-    select: { email: true, name: true, role: true, active: true },
+    select: { email: true, name: true, role: true, active: true, acceptedAt: true },
   })
   if (!membro?.active) return null
+
+  // Registra que a pessoa de fato entrou. acceptedAt prova que o convite foi
+  // aceito (em vez de o cadastro ficar pendurado sem ninguém), e lastSeenAt
+  // mostra quem anda usando o painel — útil na hora de revisar quem ainda
+  // precisa de acesso. Melhor esforço: falhar aqui não pode barrar o login.
+  // try/catch além do .catch(): o .catch() só pega promessa rejeitada, e um
+  // erro SÍNCRONO aqui derrubaria o login inteiro — justamente o oposto de
+  // "melhor esforço". (Descoberto por um teste que quebrou, 10/08/2026.)
+  try {
+    void prisma.platformAdmin
+      .update({
+        where: { email },
+        data: { lastSeenAt: new Date(), ...(membro.acceptedAt ? {} : { acceptedAt: new Date() }) },
+      })
+      .catch(() => null)
+  } catch {
+    // registrar acesso é conveniência; entrar no painel não pode depender disso
+  }
+
   return { email: membro.email, name: membro.name, role: membro.role }
 })
 
@@ -132,6 +151,7 @@ export type AcaoAdmin =
   | "adicionar_admin"
   | "alterar_papel_admin"
   | "desativar_admin"
+  | "remover_admin"
 
 export async function registrarAcaoAdmin(
   adminEmail: string,

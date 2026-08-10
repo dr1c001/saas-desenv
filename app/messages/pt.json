@@ -119,7 +119,14 @@
       "section8": {
         "title": "8. Seus dados e os dados dos seus clientes",
         "p1": "Todo conteúdo que você insere no sistema — cadastros de clientes, ordens de serviço, dados financeiros, orçamentos, documentos e anexos — pertence a você ou à sua empresa. O ServiçoOS atua apenas como operador desses dados, armazenando-os e processando-os para permitir o funcionamento do sistema, conforme detalhado na <privacyLink>Política de Privacidade</privacyLink>.",
-        "p2": "Você é responsável por garantir que possui base legal e consentimento adequados para inserir dados de terceiros (seus clientes, técnicos e fornecedores) no sistema."
+        "p2": "Você é responsável por garantir que possui base legal e consentimento adequados para inserir dados de terceiros (seus clientes, técnicos e fornecedores) no sistema.",
+        "p3": "<strong>Acesso da nossa equipe à sua conta.</strong> Para prestar suporte técnico, investigar falhas ou corrigir problemas que você relate, membros autorizados da nossa equipe podem acessar sua conta e visualizar os dados nela contidos. Esse acesso é restrito às finalidades acima e obedece às seguintes regras:",
+        "i1": "Só é concedido a colaboradores autorizados, mediante função específica, e é revogado imediatamente no desligamento;",
+        "i2": "Todo acesso é registrado em log de auditoria com identificação de quem acessou, qual empresa e data e hora;",
+        "i3": "A sessão de suporte expira automaticamente em 1 hora;",
+        "i4": "Nossos colaboradores estão vinculados a obrigação contratual de confidencialidade;",
+        "i5": "Não utilizamos os dados da sua conta para qualquer finalidade além do suporte solicitado ou da manutenção do serviço.",
+        "p4": "Você pode solicitar, a qualquer momento, o histórico de acessos de suporte realizados na sua conta, pelo e-mail de contato indicado ao final destes Termos."
       },
       "section9": {
         "title": "9. Uso aceitável",
@@ -1118,11 +1125,19 @@
         "addressLabel": "Endereço",
         "addressPlaceholder": "Rua Exemplo, 123 — São Paulo, SP",
         "websiteLabel": "Site",
-        "websitePlaceholder": "https://suaempresa.com.br",
-        "logoUrlLabel": "URL do logotipo",
-        "logoUrlPlaceholder": "https://exemplo.com/logo.png",
-        "logoUrlHint": "Cole a URL da imagem do logotipo da empresa (aparecerá nas OS em PDF).",
-        "logoAlt": "Logo"
+        "websitePlaceholder": "https://suaempresa.com.br"
+      },
+      "logo": {
+        "title": "Logo da empresa",
+        "hint": "Aparece nos PDFs de orçamento, OS e recibo. PNG, JPG ou WEBP, até 2 MB.",
+        "alt": "Logo da empresa",
+        "remove": "Remover",
+        "save": "Salvar logo",
+        "chooseFile": "Escolha um arquivo.",
+        "tooLarge": "A imagem passa de 2 MB. Escolha uma menor.",
+        "wrongType": "Use PNG, JPG ou WEBP.",
+        "failed": "Não consegui processar essa imagem. Tente outra.",
+        "saved": "Logo salvo."
       }
     },
     "profile": {
@@ -1354,6 +1369,9 @@
         "currentPlan": "Plano atual",
         "subscribeMonthly": "Assinar — Mensal",
         "subscribeYearly": "Assinar — Anual (economize 2 meses)"
+      },
+      "contract": {
+        "download": "Baixar contrato e termo de dados (LGPD)"
       }
     },
     "receipts": {
@@ -1535,7 +1553,8 @@
           "sair_da_conta": "Saiu da conta",
           "adicionar_admin": "Adicionou à equipe",
           "alterar_papel_admin": "Mudou a área",
-          "desativar_admin": "Desativou/reativou"
+          "desativar_admin": "Desativou/reativou",
+          "remover_admin": "Removeu da equipe"
         }
       }
     }
@@ -1672,7 +1691,9 @@
       "heading": "✅ Pagamento confirmado!",
       "planActive": "Olá, {name}! Seu plano <strong>{planName}</strong> está ativo.",
       "thanks": "Obrigado por assinar o ServiçoOS!",
-      "cta": "Acessar o sistema"
+      "cta": "Acessar o sistema",
+      "contractAttached": "Anexamos o <strong>contrato de prestação de serviço e o termo de tratamento de dados (LGPD)</strong> referente à sua assinatura.",
+      "contractHint": "Guarde este arquivo. Você pode baixá-lo de novo a qualquer momento na tela de Assinatura, dentro do sistema."
     },
     "onboardingDay3": {
       "subject": "Sua empresa ainda não está usando o ServiçoOS",

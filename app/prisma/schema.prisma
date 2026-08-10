@@ -555,10 +555,16 @@ model PlatformAdmin {
   email      String       @unique
   name       String
   role       PlatformRole
-  /** Desativar em vez de apagar: o AdminAuditLog guarda o e-mail de quem fez
-   *  cada ação, e apagar a linha deixaria o histórico órfão. */
+  phone      String?
+  document   String?
+  /** Desativar corta o acesso mas mantém o cadastro (dá pra reativar). Remover
+   *  apaga a linha — o AdminAuditLog guarda o e-mail como texto, então o
+   *  histórico do que a pessoa fez continua legível mesmo depois. */
   active     Boolean      @default(true)
   invitedBy  String?
+  /** Primeiro acesso ao painel: prova de que a pessoa recebeu o convite e
+   *  entrou de fato, em vez de o registro ficar pendurado sem ninguém. */
+  acceptedAt DateTime?
   lastSeenAt DateTime?
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt

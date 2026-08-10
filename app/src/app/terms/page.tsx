@@ -109,6 +109,23 @@ export default async function TermsPage() {
               })}
             </p>
             <p>{t("terms.section8.p2")}</p>
+            {/* Transparência sobre o acesso de suporte. Existe porque o painel
+                do dono permite entrar na conta do cliente pra dar suporte —
+                fazer isso sem avisar em contrato é problema de LGPD, não só de
+                cortesia. (Adicionado em 10/08/2026.) */}
+            <p>
+              {t.rich("terms.section8.p3", {
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
+            </p>
+            <ul>
+              <li>{t("terms.section8.i1")}</li>
+              <li>{t("terms.section8.i2")}</li>
+              <li>{t("terms.section8.i3")}</li>
+              <li>{t("terms.section8.i4")}</li>
+              <li>{t("terms.section8.i5")}</li>
+            </ul>
+            <p>{t("terms.section8.p4")}</p>
           </section>
 
           <section>

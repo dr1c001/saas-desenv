@@ -1,7 +1,7 @@
 "use client"
 
 import { useActionState, useState, useTransition } from "react"
-import { UserPlus, Power, Loader2 } from "lucide-react"
+import { UserPlus, Power, Trash2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,6 +9,7 @@ import {
   adicionarAdmin,
   alterarPapelAdmin,
   desativarAdmin,
+  removerAdmin,
   type AdminFormState,
 } from "@/actions/admin"
 
@@ -20,6 +21,10 @@ export type MembroEquipe = {
   name: string
   role: Papel
   active: boolean
+  phone: string | null
+  document: string | null
+  acceptedAt: Date | null
+  lastSeenAt: Date | null
   createdAt: Date
 }
 
@@ -58,7 +63,7 @@ export function AdminTeam({ membros }: { membros: MembroEquipe[] }) {
       </CardHeader>
       <CardContent className="space-y-5">
         <form action={formAction} className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-3">
             <input
               name="name" required placeholder="Nome"
               className="rounded-md border bg-background px-3 py-2 text-sm"
@@ -66,6 +71,14 @@ export function AdminTeam({ membros }: { membros: MembroEquipe[] }) {
             <input
               name="email" type="email" required placeholder="e-mail"
               className="rounded-md border bg-background px-3 py-2 text-sm sm:col-span-2"
+            />
+            <input
+              name="phone" placeholder="Telefone (opcional)"
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+            />
+            <input
+              name="document" placeholder="CPF (opcional)"
+              className="rounded-md border bg-background px-3 py-2 text-sm"
             />
             <select
               name="role" value={area}
@@ -103,7 +116,13 @@ export function AdminTeam({ membros }: { membros: MembroEquipe[] }) {
                     <span className="font-normal text-muted-foreground">{m.email}</span>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    desde {new Date(m.createdAt).toLocaleDateString("pt-BR")}
+                    {/* Convite pendente é diferente de pessoa inativa: um
+                        significa "ainda não entrou", o outro "não entra mais". */}
+                    {m.acceptedAt
+                      ? `entrou em ${new Date(m.acceptedAt).toLocaleDateString("pt-BR")}`
+                      : "convite pendente"}
+                    {m.lastSeenAt && ` · último acesso ${new Date(m.lastSeenAt).toLocaleDateString("pt-BR")}`}
+                    {m.phone && ` · ${m.phone}`}
                     {!m.active && " · desativado"}
                   </p>
                 </div>
@@ -129,6 +148,20 @@ export function AdminTeam({ membros }: { membros: MembroEquipe[] }) {
                     <Power className="size-3.5 mr-1" />
                     {m.active ? "Desativar" : "Reativar"}
                   </Button>
+                  {/* Remover é pra quem não trabalha mais aqui. O histórico do
+                      que a pessoa fez continua no registro de auditoria. */}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={pendente}
+                    onClick={() => {
+                      if (confirm(`Remover ${m.name} da equipe? O acesso é cortado na hora.`)) {
+                        startTransition(() => removerAdmin(m.id))
+                      }
+                    }}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
                 </div>
               </div>
             ))}
@@ -136,9 +169,12 @@ export function AdminTeam({ membros }: { membros: MembroEquipe[] }) {
         )}
 
         <p className="text-xs text-muted-foreground border-t pt-3">
-          Toda ação da equipe fica registrada com nome, data e hora. Desativar
-          alguém corta o acesso no próximo carregamento de tela — o histórico
-          dele continua no registro de auditoria.
+          Toda ação da equipe fica registrada com nome, data e hora.
+          <strong> Desativar</strong> corta o acesso e mantém o cadastro, para
+          quem pode voltar. <strong>Remover</strong> apaga o cadastro, para quem
+          não trabalha mais aqui — nos dois casos o acesso cai no próximo
+          carregamento de tela, e o histórico do que a pessoa fez permanece no
+          registro de auditoria.
         </p>
       </CardContent>
     </Card>

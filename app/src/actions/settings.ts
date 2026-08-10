@@ -49,12 +49,6 @@ function isSafeLogoUrl(url: string): boolean {
 const tenantSchema = z.object({
   name: z.string().min(2, "nameRequired"),
   document: z.string().optional(),
-  logoUrl: z
-    .string()
-    .url("invalidUrl")
-    .optional()
-    .or(z.literal(""))
-    .refine((url) => !url || isSafeLogoUrl(url), "unsafeLogoUrl"),
   phone: z.string().optional(),
   website: z.string().optional(),
   address: z.string().optional(),
@@ -92,7 +86,6 @@ export async function updateTenant(
     data: {
       name: parsed.data.name,
       document: parsed.data.document || null,
-      logoUrl: parsed.data.logoUrl || null,
       phone: parsed.data.phone || null,
       website: parsed.data.website || null,
       address: parsed.data.address || null,
@@ -180,4 +173,67 @@ export async function getSettings() {
     isAdmin,
     isOwner: role === "OWNER",
   }
+}
+
+// ─── Logo da empresa ─────────────────────────────────────────────────────────
+//
+// Antes o logo era um campo de URL: a empresa precisava hospedar a imagem em
+// algum lugar e colar o endereço. Fora de ser trabalhoso, isso fazia o servidor
+// BUSCAR aquela URL toda vez que gerava um PDF — o que exigia todo um bloqueio
+// de IP privado pra evitar SSRF (ver isSafeLogoUrl acima) e ainda deixava o PDF
+// à mercê de a URL sair do ar.
+//
+// Agora o arquivo é enviado direto, convertido pra PNG e guardado embutido
+// (data URI) na mesma coluna. O PDF não busca nada na rede, e converter no
+// servidor neutraliza qualquer payload escondido no arquivo original.
+// URLs antigas continuam funcionando pra quem já tem.
+
+const TAMANHO_MAXIMO = 2 * 1024 * 1024
+const TIPOS_ACEITOS = ["image/png", "image/jpeg", "image/webp"]
+
+export type LogoFormState = { message?: string; success?: boolean }
+
+export async function enviarLogo(_prev: LogoFormState, formData: FormData): Promise<LogoFormState> {
+  const { tenantId, role } = await getTenant()
+  const tc = await getTranslations("common")
+  if (role !== "OWNER" && role !== "ADMIN") return { message: tc("noPermission") }
+  await requireActiveSubscription(tenantId)
+
+  const t = await getTranslations("settingsCore.company.logo")
+  const arquivo = formData.get("logo")
+  if (!(arquivo instanceof File) || arquivo.size === 0) return { message: t("chooseFile") }
+  if (arquivo.size > TAMANHO_MAXIMO) return { message: t("tooLarge") }
+  // SVG fica de fora de propósito: pode carregar script, e renderizar SVG não
+  // confiável no servidor já rendeu CVE. PNG/JPG/WEBP cobrem o caso real.
+  if (!TIPOS_ACEITOS.includes(arquivo.type)) return { message: t("wrongType") }
+
+  try {
+    const { default: sharp } = await import("sharp")
+    const png = await sharp(Buffer.from(await arquivo.arrayBuffer()))
+      // "inside" preserva a proporção; withoutEnlargement evita esticar um
+      // logo pequeno e deixá-lo borrado no PDF.
+      .resize({ width: 400, height: 160, fit: "inside", withoutEnlargement: true })
+      .png({ compressionLevel: 9 })
+      .toBuffer()
+
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { logoUrl: `data:image/png;base64,${png.toString("base64")}` },
+    })
+  } catch (err) {
+    console.error("[logo] falha ao processar imagem:", err)
+    return { message: t("failed") }
+  }
+
+  revalidatePath("/settings")
+  return { success: true, message: t("saved") }
+}
+
+export async function removerLogo(): Promise<void> {
+  const { tenantId, role } = await getTenant()
+  if (role !== "OWNER" && role !== "ADMIN") return
+  await requireActiveSubscription(tenantId)
+
+  await prisma.tenant.update({ where: { id: tenantId }, data: { logoUrl: null } })
+  revalidatePath("/settings")
 }

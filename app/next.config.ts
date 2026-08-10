@@ -5,7 +5,11 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    // O padrão é 1 MB e o upload de logo aceita até 2 MB — sem isto, o arquivo
+    // é recusado pelo framework antes de chegar na validação, com erro genérico.
+    serverActions: { bodySizeLimit: "4mb" },
+  },
 };
 
 export default withSentryConfig(withNextIntl(nextConfig), {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { sendPaymentConfirmedEmail } from "@/lib/resend"
+import { gerarContrato } from "@/lib/contrato"
 
 // Espelha REFERRAL_DISCOUNT_PERCENT/NEW_SIGNUP_DISCOUNT_PERCENT em
 // lib/auth.ts e api/referral/join/route.ts — bônus de quem indicou, creditado
@@ -137,7 +138,24 @@ export async function POST(req: NextRequest) {
 
       const owner = sub.tenant.users[0]
       if (owner?.email) {
-        sendPaymentConfirmedEmail(owner.email, owner.name ?? "Cliente", sub.plan.name, sub.tenant.locale).catch(() => null)
+        // Gera o contrato e anexa. Melhor esforço, e depois da resposta: o
+        // webhook precisa responder rápido pra Asaas, e falhar em gerar PDF
+        // nunca pode impedir a ativação do cliente que acabou de pagar.
+        gerarContrato(sub.tenantId)
+          .catch((err) => {
+            console.error("[contrato] falha ao gerar:", err)
+            return null
+          })
+          .then((contrato) =>
+            sendPaymentConfirmedEmail(
+              owner.email,
+              owner.name ?? "Cliente",
+              sub.plan.name,
+              sub.tenant.locale,
+              contrato ? { nomeArquivo: contrato.nomeArquivo, buffer: contrato.buffer } : undefined
+            )
+          )
+          .catch(() => null)
       }
     }
 

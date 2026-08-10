@@ -115,6 +115,19 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
       {/* Planos */}
       <div>
+        {/* O contrato vai anexado ao e-mail de confirmação de pagamento, mas
+            e-mail se perde — aqui o cliente baixa de novo quando precisar. */}
+        {billing?.plan && (
+          <a
+            href="/api/pdf/contrato"
+            target="_blank"
+            rel="noopener"
+            className="inline-flex items-center gap-1.5 text-sm text-primary underline underline-offset-4 mb-4"
+          >
+            {t("contract.download")}
+          </a>
+        )}
+
         <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
           <Zap className="size-5 text-yellow-500" />
           {t("plans.sectionTitle")}

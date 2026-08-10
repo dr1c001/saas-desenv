@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server"
 import { getSettings } from "@/actions/settings"
 import { TenantForm } from "@/components/settings/tenant-form"
+import { LogoSetting } from "@/components/settings/logo-setting"
 import { ProfileForm } from "@/components/settings/profile-form"
 import { WhatsAppForm } from "@/components/settings/whatsapp-form"
 import { ExportDataButton } from "@/components/settings/export-data-button"
@@ -23,6 +24,7 @@ export default async function SettingsPage() {
               <p className="text-sm text-muted-foreground">{t("company.description")}</p>
             </div>
             <TenantForm tenant={tenant} />
+            <LogoSetting logoAtual={tenant?.logoUrl ?? null} />
           </section>
 
           <Separator />

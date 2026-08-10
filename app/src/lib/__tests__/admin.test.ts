@@ -10,7 +10,10 @@ const FUNDADOR = "dono@servicoos.com.br"
 let emailDaSessao: string | null = null
 let cookieImpersonacao: string | undefined
 let vezesQueConsultouASessao = 0
-let registroNaEquipe: { email: string; name: string; role: PlatformRole; active: boolean } | null = null
+let registroNaEquipe:
+  | { email: string; name: string; role: PlatformRole; active: boolean; acceptedAt?: Date | null }
+  | null = null
+let atualizacoes: unknown[] = []
 
 beforeEach(() => {
   vi.resetModules()
@@ -18,6 +21,7 @@ beforeEach(() => {
   cookieImpersonacao = undefined
   vezesQueConsultouASessao = 0
   registroNaEquipe = null
+  atualizacoes = []
   process.env.SUPER_ADMIN_EMAIL = FUNDADOR
 
   vi.doMock("@/lib/supabase/server", () => ({
@@ -37,7 +41,13 @@ beforeEach(() => {
   }))
   vi.doMock("@/lib/prisma", () => ({
     prisma: {
-      platformAdmin: { findUnique: async () => registroNaEquipe },
+      platformAdmin: {
+        findUnique: async () => registroNaEquipe,
+        update: async (args: unknown) => {
+          atualizacoes.push(args)
+          return registroNaEquipe
+        },
+      },
       adminAuditLog: { create: vi.fn().mockResolvedValue({}) },
     },
   }))
@@ -95,6 +105,46 @@ describe("admin — quem entra no painel", () => {
     emailDaSessao = null
     const { isSuperAdmin } = await import("@/lib/admin")
     expect(await isSuperAdmin()).toBe(false)
+  })
+})
+
+describe("admin — registro de acesso", () => {
+  it("marca último acesso, e o primeiro acesso vira data de aceite", async () => {
+    naEquipe("TI")
+    const { adminLogado } = await import("@/lib/admin")
+    await adminLogado()
+    expect(atualizacoes).toHaveLength(1)
+    const dados = (atualizacoes[0] as { data: Record<string, unknown> }).data
+    expect(dados.lastSeenAt).toBeInstanceOf(Date)
+    expect(dados.acceptedAt).toBeInstanceOf(Date)
+  })
+
+  it("quem já aceitou não tem a data de aceite reescrita", async () => {
+    naEquipe("TI")
+    registroNaEquipe!.acceptedAt = new Date("2026-01-01")
+    const { adminLogado } = await import("@/lib/admin")
+    await adminLogado()
+    const dados = (atualizacoes[0] as { data: Record<string, unknown> }).data
+    expect(dados.acceptedAt).toBeUndefined()
+  })
+
+  it("falha ao registrar acesso NÃO impede o login", async () => {
+    // O registro é conveniência. Se o banco recusar o update — ou o método nem
+    // existir, como aconteceu num refactor — a pessoa ainda tem que entrar.
+    naEquipe("FINANCEIRO")
+    vi.doMock("@/lib/prisma", () => ({
+      prisma: {
+        platformAdmin: {
+          findUnique: async () => registroNaEquipe,
+          update: () => {
+            throw new Error("banco fora do ar")
+          },
+        },
+        adminAuditLog: { create: vi.fn() },
+      },
+    }))
+    const { adminLogado } = await import("@/lib/admin")
+    expect((await adminLogado())?.role).toBe("FINANCEIRO")
   })
 })
 

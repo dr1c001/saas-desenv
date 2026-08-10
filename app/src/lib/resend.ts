@@ -98,7 +98,16 @@ export async function sendTeamInviteEmail(to: string, name: string, companyName:
   })
 }
 
-export async function sendPaymentConfirmedEmail(to: string, name: string, planName: string, locale: "pt" | "en") {
+export async function sendPaymentConfirmedEmail(
+  to: string,
+  name: string,
+  planName: string,
+  locale: "pt" | "en",
+  /** Contrato + termo de LGPD. Vai anexado à confirmação de pagamento porque é
+   *  o único e-mail que o cliente com certeza abre — mandar em separado seria
+   *  mandar pro arquivo morto. */
+  contrato?: { nomeArquivo: string; buffer: Buffer }
+) {
   const t = getTranslator(locale, "emails")
   return send({
     from: FROM,
@@ -116,7 +125,18 @@ export async function sendPaymentConfirmedEmail(to: string, name: string, planNa
            style="display:inline-block;margin:24px 0;padding:12px 28px;background:#16a34a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
           ${t("paymentConfirmed.cta")} →
         </a>
+        ${contrato ? `
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
+        <p style="color:#374151;line-height:1.6;font-size:14px">
+          ${t.markup("paymentConfirmed.contractAttached", STRONG)}
+        </p>
+        <p style="color:#6b7280;font-size:13px;line-height:1.6">
+          ${t("paymentConfirmed.contractHint")}
+        </p>` : ""}
       </div>`,
+    ...(contrato
+      ? { attachments: [{ filename: contrato.nomeArquivo, content: contrato.buffer }] }
+      : {}),
   })
 }
 
