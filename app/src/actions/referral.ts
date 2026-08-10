@@ -5,7 +5,12 @@ import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { nanoid } from "nanoid"
 
 export async function getReferralInfo() {
-  const { tenantId } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  // Indicação é assunto comercial da empresa (código próprio + saldo de
+  // desconto na fatura) e esta função também ESCREVE, gerando o código na
+  // primeira leitura. Técnico não tem o que fazer aqui — mesma régua já
+  // aplicada a /billing e /finance. (Auditoria rodada 4, 08/08/2026.)
+  if (role !== "OWNER" && role !== "ADMIN") throw new Error("Sem permissão.")
   await requireActiveSubscription(tenantId)
 
   let tenant = await prisma.tenant.findUnique({

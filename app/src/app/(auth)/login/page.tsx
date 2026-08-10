@@ -20,13 +20,24 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const [serverError, setServerError] = useState<string | null>(null)
 
-  // /api/auth/confirm manda pra cá com ?error=... quando o link de convite ou
-  // de recuperação já foi usado (os links do Supabase são de uso único). Essa
-  // mensagem NUNCA era lida: o convidado via só a tela de login limpa, sem
-  // explicação, com "Cadastrar empresa" em destaque — e acabava criando uma
-  // empresa nova em vez de entrar na do empregador.
+  // /api/auth/confirm manda pra cá com ?notice=<código> quando o link de
+  // convite ou de recuperação já foi usado (os links do Supabase são de uso
+  // único). Antes essa informação NUNCA era exibida: o convidado via só a tela
+  // de login limpa, sem explicação, com "Cadastrar empresa" em destaque — e
+  // acabava criando uma empresa nova em vez de entrar na do empregador.
   // (Relatado por cliente em 08/08/2026.)
-  const linkNotice = searchParams.get("error")
+  //
+  // Só CÓDIGO conhecido vira mensagem. Aceitar texto livre da URL deixaria
+  // qualquer um montar um link que exibe o que quiser dentro do aviso oficial
+  // do sistema — vetor de golpe. (Auditoria rodada 4, 08/08/2026.)
+  const NOTICES = {
+    invite_used: "errors.inviteLinkUsed",
+    recovery_used: "errors.recoveryLinkUsed",
+    invalid_link: "errors.invalidLink",
+  } as const
+  const noticeCode = searchParams.get("notice")
+  const noticeKey = noticeCode && noticeCode in NOTICES ? NOTICES[noticeCode as keyof typeof NOTICES] : null
+  const linkNotice = noticeKey ? t(noticeKey as "errors.invalidLink") : null
 
   // Schema construído dentro do componente pois as mensagens de validação
   // do zod vêm do next-intl (precisam de acesso ao `t`).

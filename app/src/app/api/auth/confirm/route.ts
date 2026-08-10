@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server"
 import { safeNextPath } from "@/lib/auth"
 import { checkRateLimit, clientIp } from "@/lib/rate-limit"
 import { NextResponse } from "next/server"
-import { getTranslations } from "next-intl/server"
 
 // Convite de equipe e recuperação de senha usam links de e-mail (GoTrue
 // "generate_link"), não OAuth — o action_link que o Supabase gera pra esses
@@ -50,8 +49,12 @@ export async function GET(request: Request) {
   // uma empresa nova em vez de entrar na do empregador. A mensagem agora diz
   // exatamente o que fazer, e desaconselha explicitamente criar outra empresa.
   // (Relatado por cliente em 08/08/2026.)
-  const te = await getTranslations("errors")
-  const message =
-    type === "invite" ? te("inviteLinkUsed") : type === "recovery" ? te("recoveryLinkUsed") : te("invalidLink")
-  return NextResponse.redirect(new URL("/login?error=" + encodeURIComponent(message), origin))
+  //
+  // Passa um CÓDIGO, nunca o texto: com o texto na URL, qualquer um montaria
+  // /login?notice=<mensagem convincente> e a tela exibiria aquilo dentro do
+  // aviso oficial — prato cheio pra golpe ("sua conta foi bloqueada, ligue
+  // para..."). A tela só reconhece os códigos abaixo e ignora o resto.
+  // (Auditoria rodada 4, 08/08/2026.)
+  const notice = type === "invite" ? "invite_used" : type === "recovery" ? "recovery_used" : "invalid_link"
+  return NextResponse.redirect(new URL(`/login?notice=${notice}`, origin))
 }

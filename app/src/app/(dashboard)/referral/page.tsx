@@ -14,12 +14,25 @@ const STEP_ICONS = ["🔗", "✅", "🎁"]
 
 export default function ReferralPage() {
   const t = useTranslations("billingReferral.referral")
+  const tc = useTranslations("common")
   const [copied, setCopied] = useState(false)
   const [info, setInfo] = useState<{ code: string; referralCount: number; converted: number; discountPercent: number } | null>(null)
+  const [denied, setDenied] = useState(false)
 
   useEffect(() => {
-    getReferralInfo().then(setInfo)
+    // getReferralInfo passou a exigir OWNER/ADMIN (auditoria rodada 4). Sem
+    // este catch, um técnico com a aba liberada via Permissões veria só um
+    // campo de link vazio, sem nenhuma explicação.
+    getReferralInfo().then(setInfo).catch(() => setDenied(true))
   }, [])
+
+  if (denied) {
+    return (
+      <div className="max-w-2xl">
+        <p className="text-sm text-muted-foreground">{tc("noPermission")}</p>
+      </div>
+    )
+  }
 
   const referralUrl = info
     ? `${process.env.NEXT_PUBLIC_APP_URL ?? "https://servicoos.com.br"}/register?ref=${info.code}`
