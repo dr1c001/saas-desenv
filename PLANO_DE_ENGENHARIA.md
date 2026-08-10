@@ -1,6 +1,6 @@
 # Plano de Engenharia — ServiçoOS
 
-> Última atualização: 07/08/2026
+> Última atualização: 08/08/2026
 > Este documento é a referência técnica viva do projeto. Deve ser atualizado sempre que uma decisão de arquitetura importante for tomada.
 
 ---
@@ -277,6 +277,76 @@ requisições concorrentes sem falha, em ambas as versões). **Antes de suspeita
 do código, confirmar o sintoma por um caminho que não dependa de renderização**
 — `fetch()` do HTML e conferência de status/tamanho já teria descartado a
 hipótese em um passo.
+
+### 7.2.2 Capacidade medida e auditoria rodada 4 — 08/08/2026
+
+**Capacidade (medida, não estimada).** Rajadas de requisições simultâneas em
+produção, na landing (pública) e no `/dashboard` (autenticado, com sessão
+real):
+
+| Simultâneas | p50 | p95 | Falhas |
+|---|---|---|---|
+| 5 | 1378ms | 1729ms | 0 |
+| 20 | 519ms | 1685ms | 0 |
+| 40 | 477ms | 2328ms | 0 |
+| 80 | 911ms | 2646ms | 0 |
+| 120 | 1329ms | 1805ms | 0 |
+
+Zero falhas até 120 requisições simultâneas. **Requisição simultânea ≠
+usuário**: alguém usando o sistema dispara uma requisição a cada 10-30s, então
+120 simultâneas correspondem a algo na casa de centenas de pessoas usando ao
+mesmo tempo. O teto conhecido não é a aplicação: é `max_connections = 60` no
+Postgres do Supabase (13 em uso em repouso). Como a conexão vai pelo pooler em
+modo transação (porta 6543), que multiplexa, e cada instância da Vercel abre
+só 1 conexão (`lib/prisma.ts`, `max: 1`), esse limite não foi alcançado nos
+testes. **Ressalva honesta:** o teste saiu de um único cliente/IP; carga real
+distribuída sobe mais instâncias na Vercel — provavelmente melhor, mas não
+medido.
+
+**Auditoria rodada 4.** Varredura sistemática das 47 Server Actions,
+classificando cada uma por: é mutação? checa papel? checa assinatura? Dois
+achados reais:
+
+| Achado | Correção |
+|---|---|
+| O aviso de "link já usado" (adicionado horas antes, ver 7.2.3) viajava como **texto** na URL e era renderizado dentro da caixa de aviso oficial do login — qualquer um montaria `/login?error=<mensagem convincente>` e aplicaria um golpe com a cara do sistema | Passa um **código** (`invite_used`/`recovery_used`/`invalid_link`); a tela só reconhece esses três e ignora o resto |
+| `getReferralInfo` sem checagem de papel — TECHNICIAN via o código de indicação e o saldo de desconto da empresa, e a função ainda **escreve** (gera o código na primeira leitura) | Exige OWNER/ADMIN, mesma régua de `/billing` e `/finance`; a página trata a recusa em vez de mostrar campo vazio |
+
+Os demais casos sem checagem de papel foram confirmados como **intencionais e
+documentados**: técnico precisa criar cliente, marcar checklist e concluir OS
+em campo; `updateProfile` só altera o próprio usuário (`where: { id: userId }`).
+
+**Nota sobre "blindar pra ninguém hackear":** não existe. O que dá pra fazer é
+reduzir superfície e impacto — e é o que estas 4 rodadas fizeram. O ponto
+frágil que permanece não é código: são credenciais (as chaves de serviço no
+`.env`/Vercel) e o fato de `/admin` ser liberado por e-mail hardcoded.
+
+### 7.2.3 Convidado caindo em "cadastrar nova empresa" — 08/08/2026
+
+**Sintoma:** integrante de equipe convidado relatou receber "o link para
+cadastrar uma nova empresa".
+
+**O convite em si estava certo** — link, domínio e criação do `User` no tenant
+correto, tudo verificado nos dados (o convidado inclusive aceitou e entrou com
+sucesso: `invited_at` 01:13, `last_sign_in_at` 01:44, metadata com o
+`tenantId` e papel certos).
+
+**A falha é no segundo clique.** Links do Supabase são de **uso único**. Ao
+reabrir o e-mail, `/api/auth/confirm` falha e redireciona pra
+`/login?error=...` — só que **a tela de login nunca leu esse parâmetro**. O
+convidado via uma tela de login limpa, sem explicação nenhuma, tendo
+"Cadastrar empresa" como link mais visível. Daí criar empresa nova em vez de
+entrar na do empregador.
+
+Corrigido nos dois lados: a tela passou a exibir o aviso (`useSearchParams` +
+Suspense) e a mensagem virou específica por tipo de link — a de convite manda
+entrar ou usar "Esqueci minha senha" com o e-mail convidado, e desaconselha
+explicitamente criar outra empresa.
+
+**Lição:** redirecionar com uma mensagem de erro na query string não serve de
+nada se a página de destino não a lê. Vale conferir o par (quem manda, quem
+exibe) sempre que um fluxo de erro atravessa páginas — e preferir código a
+texto livre, senão o parâmetro vira vetor de golpe (foi o achado 1 da 7.2.2).
 
 ### 7.3 Auditoria completa pré-venda — 05/08/2026
 
