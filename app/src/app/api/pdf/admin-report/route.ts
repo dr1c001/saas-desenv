@@ -15,6 +15,9 @@ const ROTULO_ACAO: Record<string, string> = {
   trocar_plano: "Trocou o plano",
   entrar_na_conta: "Entrou na conta",
   sair_da_conta: "Saiu da conta",
+  adicionar_admin: "Adicionou à equipe",
+  alterar_papel_admin: "Mudou a área",
+  desativar_admin: "Desativou/reativou",
 }
 
 function rotuloDoMes(chave: string) {
@@ -32,7 +35,7 @@ export async function GET(request: NextRequest) {
   // própria aqui, sem depender de layout nenhum.
   let admin: string
   try {
-    admin = await requireSuperAdmin()
+    admin = (await requireSuperAdmin("gerarRelatorio")).email
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }

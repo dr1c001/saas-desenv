@@ -23,12 +23,17 @@ type Props = {
   status: string
   planId: string | null
   planos: Plano[]
+  /** Permissões da área de quem está olhando. Esconder o botão é só cortesia:
+   *  cada Server Action confere por conta própria, porque tem ID próprio e é
+   *  despachável sem passar por esta tela. */
+  permissoes: string[]
 }
 
 // Toda ação daqui mexe no acesso ou na cobrança de uma empresa real. Nenhuma
 // dispara em um clique só: sempre confirma dizendo o nome da empresa e o que
 // vai acontecer. Erro aqui é caro e visível pro cliente.
-export function TenantActions({ tenantId, tenantName, status, planId, planos }: Props) {
+export function TenantActions({ tenantId, tenantName, status, planId, planos, permissoes }: Props) {
+  const pode = (p: string) => permissoes.includes(p)
   const t = useTranslations("mapAdmin.admin.actions")
   const [pendente, startTransition] = useTransition()
   const [aberto, setAberto] = useState<null | "liberar" | "cancelar" | "plano" | "entrar">(null)
@@ -43,7 +48,7 @@ export function TenantActions({ tenantId, tenantName, status, planId, planos }: 
 
   return (
     <div className="flex items-center justify-end gap-1.5">
-      {status !== "ACTIVE" && (
+      {status !== "ACTIVE" && pode("liberarAcesso") && (
         <Confirmacao
           aberto={aberto === "liberar"}
           onOpenChange={(o) => setAberto(o ? "liberar" : null)}
@@ -57,7 +62,7 @@ export function TenantActions({ tenantId, tenantName, status, planId, planos }: 
         />
       )}
 
-      {status === "ACTIVE" && (
+      {status === "ACTIVE" && pode("cancelarAcesso") && (
         <Confirmacao
           aberto={aberto === "cancelar"}
           onOpenChange={(o) => setAberto(o ? "cancelar" : null)}
@@ -72,6 +77,7 @@ export function TenantActions({ tenantId, tenantName, status, planId, planos }: 
       )}
 
       {/* Trocar plano */}
+      {pode("trocarPlano") && (
       <Dialog open={aberto === "plano"} onOpenChange={(o) => setAberto(o ? "plano" : null)}>
         <DialogTrigger render={<Button size="sm" variant="ghost" className="gap-1" />}>
           <ArrowLeftRight className="size-3.5" />
@@ -107,7 +113,9 @@ export function TenantActions({ tenantId, tenantName, status, planId, planos }: 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      )}
 
+      {pode("entrarNaConta") && (
       <Confirmacao
         aberto={aberto === "entrar"}
         onOpenChange={(o) => setAberto(o ? "entrar" : null)}
@@ -119,6 +127,7 @@ export function TenantActions({ tenantId, tenantName, status, planId, planos }: 
         pendente={pendente}
         onConfirmar={() => executar(() => entrarNaConta(tenantId))}
       />
+      )}
     </div>
   )
 }

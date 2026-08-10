@@ -2,7 +2,7 @@ import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { getLimites, type Recurso } from "@/lib/plan"
-import { tenantImpersonado } from "@/lib/admin"
+import { tenantImpersonado, isSuperAdmin } from "@/lib/admin"
 import { PAST_DUE_GRACE_DAYS } from "@/lib/past-due"
 import { redirect } from "next/navigation"
 import { sendWelcomeEmail } from "@/lib/resend"
@@ -102,6 +102,17 @@ export const getTenant = cache(async function getTenant() {
   // anyone join — or, after being removed, silently rejoin — any tenant as
   // OWNER just by knowing its id. (Found in security review 2026-07-19.)
   if (!dbUser) {
+    // Funcionário da plataforma (financeiro, comercial, logística, TI) não
+    // pertence a empresa nenhuma. Sem esta guarda, o primeiro acesso dele ao
+    // /dashboard cairia aqui e criaria uma EMPRESA FANTASMA no nome dele — que
+    // apareceria na lista de clientes do painel, contaria nos gráficos de
+    // crescimento e entraria no relatório em PDF.
+    //
+    // Fica só nesta branch, a única que cria tenant: quem já tem User row
+    // (dono ou técnico de empresa cliente) nem chega aqui, então o caminho
+    // normal segue sem custo nenhum.
+    if (await isSuperAdmin()) redirect("/admin")
+
     const te = await getTranslations("errors")
     const name = user.user_metadata?.name ?? user.email?.split("@")[0] ?? te("defaultUserName")
     const companyName = user.user_metadata?.company_name ?? te("defaultCompanyName", { name })

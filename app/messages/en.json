@@ -1532,7 +1532,10 @@
           "reativar": "Reactivated",
           "trocar_plano": "Changed plan",
           "entrar_na_conta": "Entered account",
-          "sair_da_conta": "Exited account"
+          "sair_da_conta": "Exited account",
+          "adicionar_admin": "Added to team",
+          "alterar_papel_admin": "Changed area",
+          "desativar_admin": "Deactivated/reactivated"
         }
       }
     }

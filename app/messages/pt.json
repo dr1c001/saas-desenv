@@ -1532,7 +1532,10 @@
           "reativar": "Reativou",
           "trocar_plano": "Trocou o plano",
           "entrar_na_conta": "Entrou na conta",
-          "sair_da_conta": "Saiu da conta"
+          "sair_da_conta": "Saiu da conta",
+          "adicionar_admin": "Adicionou à equipe",
+          "alterar_papel_admin": "Mudou a área",
+          "desativar_admin": "Desativou/reativou"
         }
       }
     }

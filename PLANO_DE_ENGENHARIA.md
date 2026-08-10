@@ -832,6 +832,59 @@ conteúdo. O cron de produção **não** foi disparado para testar: ele também
 manda NPS e onboarding, e chamaria e-mail real para cliente real. A consulta
 foi simulada em leitura — hoje ela devolve zero inadimplentes.
 
+### 7.2.12 Equipe de administração da plataforma — 10/08/2026
+
+Até aqui o painel aceitava **um único e-mail**, fixo em código: não havia como
+adicionar ninguém sem substituir o dono. Agora a equipe é dado, com área.
+
+**Matriz de permissões** (mora inteira em `lib/admin.ts`, legível de cima a
+baixo):
+
+| | Dono | Financeiro | Comercial | Logística | TI |
+|---|---|---|---|---|---|
+| Ver painel e empresas | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Ver faturamento e MRR | ✓ | ✓ | ✓ | — | — |
+| Relatório em PDF | ✓ | ✓ | ✓ | — | — |
+| Liberar acesso | ✓ | ✓ | — | — | ✓ |
+| Cancelar acesso | ✓ | ✓ | — | — | — |
+| Trocar plano | ✓ | ✓ | ✓ | — | — |
+| Entrar na conta do cliente | ✓ | — | — | ✓ | ✓ |
+| Administrar a equipe | ✓ | — | — | — | — |
+
+O raciocínio de cada recusa importa mais que o de cada permissão:
+**financeiro e comercial não entram na conta de cliente** porque não precisam
+dos dados dele pra fazer o trabalho, e acesso a mais é exposição a mais
+perante a LGPD; **logística e TI não veem faturamento** pelo mesmo motivo
+invertido; **TI libera acesso** porque destravar cliente preso por falha
+técnica (o caso do webhook em 07/08) é trabalho de TI, não de financeiro.
+
+**Decisões que evitam armadilha:**
+
+- **O fundador é DONO no código, não na tabela.** Se ele se remover por
+  engano, ou a tabela ficar vazia, o painel não pode trancar sem ninguém
+  dentro. É a chave reserva.
+- **DONO não é atribuível pela tela.** Só as quatro áreas aparecem no
+  formulário — conceder "dono" por formulário seria conceder o poder de
+  remover o próprio dono.
+- **Desativar, nunca apagar.** O `AdminAuditLog` guarda o e-mail de quem fez
+  cada ação; apagar a linha deixaria o histórico órfão.
+- **Convite não cria empresa fantasma.** Sem cuidado, o primeiro acesso de um
+  funcionário ao `/dashboard` cairia na branch de `getTenant()` que cria
+  tenant, e ele viraria uma "empresa cliente" na lista, nos gráficos de
+  crescimento e no relatório em PDF. Uma guarda nessa branch — e só nela,
+  onde não custa nada no caminho normal — manda o funcionário pro `/admin`.
+- **Esconder botão é cortesia, não proteção.** Toda Server Action chama
+  `requireSuperAdmin(permissao)` por conta própria, porque tem ID próprio e é
+  despachável sem passar por tela nenhuma.
+- **A tela explica o que cada área libera** antes de convidar, não depois.
+
+**Verificação:** 19 testes em `lib/__tests__/admin.test.ts`. A matriz inteira
+é testada célula a célula contra uma tabela-espelho — se alguém mudar quem
+pode o quê sem querer, quebra. Os mais importantes são os de recusa: membro
+desativado não entra nem com cookie válido; o financeiro, mesmo estando na
+equipe e com cookie legítimo, não entra na conta de cliente; e comercial
+disparando `cancelarAcesso` direto (sem passar pela tela) é barrado.
+
 ### 7.3 Auditoria completa pré-venda — 05/08/2026
 
 Pedido explícito de revisar o código inteiro (não só o diff), todas as abas,

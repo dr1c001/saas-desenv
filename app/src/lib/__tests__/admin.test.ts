@@ -1,21 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import type { PlatformRole } from "@/generated/prisma/client"
 
-// Este é o código mais perigoso do sistema: decide quem pode entrar na conta
-// das empresas clientes. O teste que mais importa aqui é o de baixo — provar
-// que o cookie de impersonação, sozinho, não concede absolutamente nada.
+// Este é o código mais perigoso do sistema: decide quem, da equipe de
+// administração, pode mexer na cobrança e entrar na conta das empresas
+// clientes. Os testes que mais importam são os de recusa.
 
-const ADMIN = "dono@servicoos.com.br"
+const FUNDADOR = "dono@servicoos.com.br"
 
 let emailDaSessao: string | null = null
-let cookieImpersonacao: string | undefined = undefined
+let cookieImpersonacao: string | undefined
 let vezesQueConsultouASessao = 0
+let registroNaEquipe: { email: string; name: string; role: PlatformRole; active: boolean } | null = null
 
 beforeEach(() => {
   vi.resetModules()
   emailDaSessao = null
   cookieImpersonacao = undefined
   vezesQueConsultouASessao = 0
-  process.env.SUPER_ADMIN_EMAIL = ADMIN
+  registroNaEquipe = null
+  process.env.SUPER_ADMIN_EMAIL = FUNDADOR
 
   vi.doMock("@/lib/supabase/server", () => ({
     createClient: async () => ({
@@ -28,9 +31,16 @@ beforeEach(() => {
     }),
   }))
   vi.doMock("next/headers", () => ({
-    cookies: async () => ({ get: (nome: string) => (nome === "admin_ver_como" && cookieImpersonacao ? { value: cookieImpersonacao } : undefined) }),
+    cookies: async () => ({
+      get: (n: string) => (n === "admin_ver_como" && cookieImpersonacao ? { value: cookieImpersonacao } : undefined),
+    }),
   }))
-  vi.doMock("@/lib/prisma", () => ({ prisma: { adminAuditLog: { create: vi.fn().mockResolvedValue({}) } } }))
+  vi.doMock("@/lib/prisma", () => ({
+    prisma: {
+      platformAdmin: { findUnique: async () => registroNaEquipe },
+      adminAuditLog: { create: vi.fn().mockResolvedValue({}) },
+    },
+  }))
 })
 
 afterEach(() => {
@@ -39,37 +49,48 @@ afterEach(() => {
   vi.doUnmock("@/lib/prisma")
 })
 
-describe("admin — quem é o dono da plataforma", () => {
-  it("reconhece o dono", async () => {
-    emailDaSessao = ADMIN
-    const { superAdminEmail, isSuperAdmin } = await import("@/lib/admin")
-    expect(await superAdminEmail()).toBe(ADMIN)
-    expect(await isSuperAdmin()).toBe(true)
+function naEquipe(role: PlatformRole, active = true) {
+  emailDaSessao = "funcionario@servicoos.com.br"
+  registroNaEquipe = { email: emailDaSessao, name: "Funcionário", role, active }
+}
+
+describe("admin — quem entra no painel", () => {
+  it("o fundador é sempre DONO, mesmo sem linha na tabela", async () => {
+    // Chave reserva: se ele se remover por engano, o painel não pode ficar
+    // trancado sem ninguém dentro.
+    emailDaSessao = FUNDADOR
+    registroNaEquipe = null
+    const { adminLogado } = await import("@/lib/admin")
+    expect((await adminLogado())?.role).toBe("DONO")
   })
 
-  it("ignora diferença de maiúsculas e espaços no e-mail", async () => {
-    emailDaSessao = `  ${ADMIN.toUpperCase()}  `
-    const { isSuperAdmin } = await import("@/lib/admin")
-    expect(await isSuperAdmin()).toBe(true)
+  it("reconhece membro ativo da equipe com o papel dele", async () => {
+    naEquipe("FINANCEIRO")
+    const { adminLogado } = await import("@/lib/admin")
+    expect((await adminLogado())?.role).toBe("FINANCEIRO")
   })
 
-  it("recusa qualquer outro usuário logado", async () => {
-    emailDaSessao = "tecnico@empresa-cliente.com.br"
-    const { isSuperAdmin, requireSuperAdmin } = await import("@/lib/admin")
+  it("recusa membro DESATIVADO", async () => {
+    // Demitir alguém é desativar o registro; o acesso tem que cair na hora.
+    naEquipe("TI", false)
+    const { adminLogado, isSuperAdmin } = await import("@/lib/admin")
+    expect(await adminLogado()).toBeNull()
     expect(await isSuperAdmin()).toBe(false)
-    await expect(requireSuperAdmin()).rejects.toThrow()
+  })
+
+  it("recusa quem não está na equipe", async () => {
+    emailDaSessao = "dono@empresa-cliente.com.br"
+    registroNaEquipe = null
+    const { isSuperAdmin } = await import("@/lib/admin")
+    expect(await isSuperAdmin()).toBe(false)
   })
 
   it("recusa quem não está logado", async () => {
-    emailDaSessao = null
     const { isSuperAdmin } = await import("@/lib/admin")
     expect(await isSuperAdmin()).toBe(false)
   })
 
   it("sessão sem e-mail não vira admin nem com SUPER_ADMIN_EMAIL vazio", async () => {
-    // Cenário real: alguém apaga a variável na Vercel por engano. Sem a guarda
-    // de "só compara depois de confirmar que há e-mail", undefined === undefined
-    // liberaria o painel inteiro.
     process.env.SUPER_ADMIN_EMAIL = ""
     emailDaSessao = null
     const { isSuperAdmin } = await import("@/lib/admin")
@@ -77,42 +98,122 @@ describe("admin — quem é o dono da plataforma", () => {
   })
 })
 
+describe("admin — matriz de permissões", () => {
+  // A tabela abaixo é a especificação. Se alguém mudar a matriz sem querer,
+  // aqui quebra.
+  const ESPERADO: Record<PlatformRole, Record<string, boolean>> = {
+    DONO:       { verFinanceiro: true,  liberarAcesso: true,  cancelarAcesso: true,  trocarPlano: true,  entrarNaConta: true,  gerenciarEquipe: true },
+    FINANCEIRO: { verFinanceiro: true,  liberarAcesso: true,  cancelarAcesso: true,  trocarPlano: true,  entrarNaConta: false, gerenciarEquipe: false },
+    COMERCIAL:  { verFinanceiro: true,  liberarAcesso: false, cancelarAcesso: false, trocarPlano: true,  entrarNaConta: false, gerenciarEquipe: false },
+    LOGISTICO:  { verFinanceiro: false, liberarAcesso: false, cancelarAcesso: false, trocarPlano: false, entrarNaConta: true,  gerenciarEquipe: false },
+    TI:         { verFinanceiro: false, liberarAcesso: true,  cancelarAcesso: false, trocarPlano: false, entrarNaConta: true,  gerenciarEquipe: false },
+  }
+
+  it("cada área pode exatamente o que foi combinado", async () => {
+    const { papelPode } = await import("@/lib/admin")
+    for (const [role, permissoes] of Object.entries(ESPERADO)) {
+      for (const [permissao, esperado] of Object.entries(permissoes)) {
+        expect(
+          papelPode(role as PlatformRole, permissao as never),
+          `${role} → ${permissao}`
+        ).toBe(esperado)
+      }
+    }
+  })
+
+  it("todo mundo da equipe vê o painel", async () => {
+    const { papelPode } = await import("@/lib/admin")
+    for (const role of Object.keys(ESPERADO) as PlatformRole[]) {
+      expect(papelPode(role, "verPainel")).toBe(true)
+    }
+  })
+
+  it("só o DONO administra a própria equipe", async () => {
+    const { papelPode } = await import("@/lib/admin")
+    const podem = (Object.keys(ESPERADO) as PlatformRole[]).filter((r) => papelPode(r, "gerenciarEquipe"))
+    expect(podem).toEqual(["DONO"])
+  })
+
+  it("financeiro e comercial NÃO entram na conta do cliente", async () => {
+    // Eles não precisam dos dados do cliente pra fazer o trabalho, e todo
+    // acesso a mais é exposição a mais — inclusive perante a LGPD.
+    const { papelPode } = await import("@/lib/admin")
+    expect(papelPode("FINANCEIRO", "entrarNaConta")).toBe(false)
+    expect(papelPode("COMERCIAL", "entrarNaConta")).toBe(false)
+  })
+
+  it("logística e TI NÃO veem o financeiro", async () => {
+    const { papelPode } = await import("@/lib/admin")
+    expect(papelPode("LOGISTICO", "verFinanceiro")).toBe(false)
+    expect(papelPode("TI", "verFinanceiro")).toBe(false)
+  })
+})
+
+describe("admin — requireSuperAdmin", () => {
+  it("deixa passar quem tem a permissão", async () => {
+    naEquipe("FINANCEIRO")
+    const { requireSuperAdmin } = await import("@/lib/admin")
+    await expect(requireSuperAdmin("liberarAcesso")).resolves.toMatchObject({ role: "FINANCEIRO" })
+  })
+
+  it("barra quem está na equipe mas não tem a permissão", async () => {
+    // O comercial vê o painel inteiro, mas disparar a ação de cancelar direto
+    // (Server Action é despachável sem passar por tela nenhuma) tem que falhar.
+    naEquipe("COMERCIAL")
+    const { requireSuperAdmin } = await import("@/lib/admin")
+    await expect(requireSuperAdmin("cancelarAcesso")).rejects.toThrow(/permissão/i)
+    await expect(requireSuperAdmin("entrarNaConta")).rejects.toThrow(/permissão/i)
+    await expect(requireSuperAdmin("gerenciarEquipe")).rejects.toThrow(/permissão/i)
+  })
+
+  it("barra quem nem está na equipe", async () => {
+    emailDaSessao = "qualquer@um.com"
+    const { requireSuperAdmin } = await import("@/lib/admin")
+    await expect(requireSuperAdmin()).rejects.toThrow(/restrito/i)
+  })
+})
+
 describe("admin — entrar na conta do cliente", () => {
   it("SEM cookie não impersona, e nem chega a consultar a sessão", async () => {
-    emailDaSessao = ADMIN
-    cookieImpersonacao = undefined
+    emailDaSessao = FUNDADOR
     const { tenantImpersonado } = await import("@/lib/admin")
-
     expect(await tenantImpersonado()).toBeNull()
-    // O caminho normal de TODAS as requisições do sistema passa por aqui. Se
-    // consultasse a sessão à toa, seria uma ida de rede ao Supabase por
-    // carregamento de tela — regressão de capacidade disfarçada de segurança.
+    // O caminho normal de TODAS as requisições passa por aqui. Consultar a
+    // sessão à toa seria uma ida de rede ao Supabase por carregamento de tela.
     expect(vezesQueConsultouASessao).toBe(0)
   })
 
-  it("COM cookie mas sem ser o dono, NÃO impersona", async () => {
-    // O teste que justifica o desenho inteiro: forjar o cookie numa conta
-    // qualquer não dá acesso a nada. Quem decide é a sessão verificada.
+  it("COM cookie mas sem ser da equipe, NÃO impersona", async () => {
+    // Forjar o cookie numa conta qualquer não dá acesso a nada.
     emailDaSessao = "tecnico@empresa-cliente.com.br"
     cookieImpersonacao = "tenant-de-outra-empresa"
     const { tenantImpersonado } = await import("@/lib/admin")
-
     expect(await tenantImpersonado()).toBeNull()
   })
 
-  it("COM cookie e deslogado, NÃO impersona", async () => {
-    emailDaSessao = null
-    cookieImpersonacao = "tenant-de-outra-empresa"
-    const { tenantImpersonado } = await import("@/lib/admin")
-
-    expect(await tenantImpersonado()).toBeNull()
-  })
-
-  it("COM cookie e sendo o dono, impersona a empresa do cookie", async () => {
-    emailDaSessao = ADMIN
+  it("COM cookie e sendo do FINANCEIRO, NÃO impersona", async () => {
+    // Está na equipe, o cookie é válido — e mesmo assim não entra, porque a
+    // área dele não tem essa permissão.
+    naEquipe("FINANCEIRO")
     cookieImpersonacao = "tenant-abc"
     const { tenantImpersonado } = await import("@/lib/admin")
+    expect(await tenantImpersonado()).toBeNull()
+  })
 
-    expect(await tenantImpersonado()).toBe("tenant-abc")
+  it("COM cookie e sendo do SUPORTE (logística ou TI), impersona", async () => {
+    for (const role of ["LOGISTICO", "TI"] as PlatformRole[]) {
+      vi.resetModules()
+      naEquipe(role)
+      cookieImpersonacao = "tenant-abc"
+      const { tenantImpersonado } = await import("@/lib/admin")
+      expect(await tenantImpersonado(), role).toBe("tenant-abc")
+    }
+  })
+
+  it("membro desativado não impersona nem com cookie válido", async () => {
+    naEquipe("TI", false)
+    cookieImpersonacao = "tenant-abc"
+    const { tenantImpersonado } = await import("@/lib/admin")
+    expect(await tenantImpersonado()).toBeNull()
   })
 })

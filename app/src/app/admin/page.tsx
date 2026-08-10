@@ -3,7 +3,8 @@ import { getTranslations } from "next-intl/server"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/utils"
-import { requireSuperAdmin } from "@/lib/admin"
+import { requireSuperAdmin, permissoesDe, papelPode } from "@/lib/admin"
+import { AdminTeam, NOME_AREA, type MembroEquipe } from "@/components/admin/admin-team"
 import { calcularRetratoAtual, chaveMesBRT, valorMensal } from "@/lib/snapshot"
 import { TenantActions } from "@/components/admin/tenant-actions"
 import {
@@ -41,7 +42,7 @@ type SearchParams = Promise<{ q?: string }>
 export default async function AdminPage({ searchParams }: { searchParams: SearchParams }) {
   // A checagem do layout não protege esta página se alguém a alcançar por
   // outro caminho — e custa uma linha repetir.
-  await requireSuperAdmin()
+  const admin = await requireSuperAdmin()
   const t = await getTranslations("mapAdmin")
   const { q } = await searchParams
   const busca = q?.trim()
@@ -77,6 +78,13 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
     calcularRetratoAtual(),
     prisma.adminAuditLog.findMany({ orderBy: { createdAt: "desc" }, take: 15 }),
   ])
+
+  const permissoes = permissoesDe(admin.role)
+  const veFinanceiro = papelPode(admin.role, "verFinanceiro")
+  // A equipe só é carregada pra quem administra a equipe.
+  const equipe: MembroEquipe[] = papelPode(admin.role, "gerenciarEquipe")
+    ? ((await prisma.platformAdmin.findMany({ orderBy: [{ active: "desc" }, { name: "asc" }] })) as MembroEquipe[])
+    : []
 
   // Os cartões mostram o retrato do negócio INTEIRO, não a lista filtrada pela
   // busca — senão pesquisar uma empresa mudaria o MRR na tela.
@@ -125,11 +133,21 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
     { key: "payingUsers", icon: UserCheck, valor: String(stats.payingUsers), cor: "text-green-600" },
   ] as const
 
+  // Logística e TI não veem faturamento: o cartão de MRR e os gráficos de
+  // dinheiro simplesmente não existem pra eles. Não é só esconder na tela —
+  // o relatório em PDF também exige a permissão, na própria rota.
+  const cartoesVisiveis = cartoes.filter((c) => veFinanceiro || c.key !== "mrr")
+
   return (
     <div className="space-y-6 max-w-7xl">
+      {/* Quem sou eu e o que posso */}
+      <p className="text-xs text-muted-foreground">
+        {admin.name} · {NOME_AREA[admin.role]}
+      </p>
+
       {/* Cartões */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-8">
-        {cartoes.map((c) => (
+        {cartoesVisiveis.map((c) => (
           <Card key={c.key} className={"borda" in c ? (c.borda as string) : undefined}>
             <CardHeader className="pb-2">
               <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
@@ -158,10 +176,12 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
           <CardHeader><CardTitle className="text-base">{t("admin.charts.growthTitle")}</CardTitle></CardHeader>
           <CardContent><GraficoCrescimento dados={crescimento} /></CardContent>
         </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-base">{t("admin.charts.mrrTitle")}</CardTitle></CardHeader>
-          <CardContent><GraficoMrr dados={crescimento} /></CardContent>
-        </Card>
+        {veFinanceiro && (
+          <Card>
+            <CardHeader><CardTitle className="text-base">{t("admin.charts.mrrTitle")}</CardTitle></CardHeader>
+            <CardContent><GraficoMrr dados={crescimento} /></CardContent>
+          </Card>
+        )}
         <Card>
           <CardHeader><CardTitle className="text-base">{t("admin.charts.usersTitle")}</CardTitle></CardHeader>
           <CardContent><GraficoUsuarios dados={serieUsuarios} /></CardContent>
@@ -193,6 +213,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
             <button type="submit" className={buttonVariants({ variant: "outline", size: "sm" })}>
               {t("admin.table.searchButton")}
             </button>
+            {papelPode(admin.role, "gerarRelatorio") && (
             <a
               href={`/api/pdf/admin-report${busca ? `?q=${encodeURIComponent(busca)}` : ""}`}
               target="_blank"
@@ -202,6 +223,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
               <FileDown className="size-3.5 mr-1.5" />
               {t("admin.table.pdfButton")}
             </a>
+            )}
           </form>
         </CardHeader>
         <CardContent className="p-0">
@@ -265,6 +287,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
                           status={tenant.subscriptionStatus}
                           planId={tenant.planId}
                           planos={planos}
+                          permissoes={permissoes}
                         />
                       </td>
                     </tr>
@@ -279,6 +302,10 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
           </div>
         </CardContent>
       </Card>
+
+      {equipe.length > 0 || papelPode(admin.role, "gerenciarEquipe") ? (
+        <AdminTeam membros={equipe} />
+      ) : null}
 
       {/* Auditoria */}
       <Card>

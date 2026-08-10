@@ -541,6 +541,39 @@ model PushSubscription {
   @@unique([userId, endpoint])
 }
 
+// ─── Equipe de administração da plataforma ───────────────────────────────────
+//
+// Até 10/08/2026 o painel aceitava UM e-mail, fixo em código: não havia como
+// adicionar ninguém sem substituir o dono. Aqui a equipe vira dado, com papel
+// por área — e a matriz de quem pode o quê mora em lib/admin.ts.
+//
+// Isto NÃO se confunde com a equipe DA empresa cliente (model User, com
+// OWNER/ADMIN/TECHNICIAN). Estes são funcionários da plataforma, e nenhum
+// deles pertence a um Tenant.
+model PlatformAdmin {
+  id         String       @id @default(cuid())
+  email      String       @unique
+  name       String
+  role       PlatformRole
+  /** Desativar em vez de apagar: o AdminAuditLog guarda o e-mail de quem fez
+   *  cada ação, e apagar a linha deixaria o histórico órfão. */
+  active     Boolean      @default(true)
+  invitedBy  String?
+  lastSeenAt DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([email, active])
+}
+
+enum PlatformRole {
+  DONO
+  FINANCEIRO
+  COMERCIAL
+  LOGISTICO
+  TI
+}
+
 // ─── Retrato mensal do negócio ───────────────────────────────────────────────
 //
 // Os gráficos do /admin nasceram reconstruindo o passado a partir das datas de
