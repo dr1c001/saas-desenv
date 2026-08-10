@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { getLimites, type Recurso } from "@/lib/plan"
 import { tenantImpersonado } from "@/lib/admin"
+import { PAST_DUE_GRACE_DAYS } from "@/lib/past-due"
 import { redirect } from "next/navigation"
 import { sendWelcomeEmail } from "@/lib/resend"
 import { Prisma } from "@/generated/prisma/client"
@@ -183,13 +184,8 @@ export const getTenant = cache(async function getTenant() {
   }
 })
 
-// Dias de carência após o fim do período pago antes de bloquear de vez um
-// tenant PAST_DUE — evita perder cliente por uma falha pontual de cobrança
-// (cartão expirado, saldo momentâneo) que uma nova tentativa resolveria.
-// Compartilhado entre o gating de página ((dashboard)/layout.tsx) e o de
-// Server Action (requireActiveSubscription) — nunca duplicar essa conta.
-// 3 → 5 dias por decisão do dono do produto (10/08/2026).
-const PAST_DUE_GRACE_DAYS = 5
+// A carência mora em lib/past-due.ts, junto com a regra dos avisos por e-mail
+// que dependem dela — um número só, num lugar só.
 
 // cache() do React: memoriza por requisição. Sem isto, esta função ia ao banco
 // buscar a MESMA linha de Tenant uma vez no layout e mais uma vez a cada

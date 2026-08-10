@@ -1683,6 +1683,17 @@
       "cta": "Ver planos e assinar",
       "support": "Precisa de ajuda? Responda este e-mail que te ajudamos."
     },
+    "pastDueWarning": {
+      "subject": "Pagamento pendente — {days, plural, one {resta # dia} other {restam # dias}} de acesso",
+      "subjectUrgent": "Atenção: seu acesso ao ServiçoOS é bloqueado em {days, plural, one {# dia} other {# dias}}",
+      "heading": "Olá, {name}",
+      "intro": "A cobrança da assinatura de <strong>{company}</strong> não foi confirmada. Pode ter sido cartão vencido, limite ou saldo — acontece com frequência e costuma se resolver em um minuto.",
+      "deadline": "Você tem <strong>{days, plural, one {mais # dia} other {mais # dias}}</strong> de acesso normal. Depois disso o sistema é bloqueado para <strong>toda a sua equipe</strong>, inclusive os técnicos em campo.",
+      "whatHappens": "Nada é apagado: suas ordens de serviço, clientes e histórico continuam guardados. Assim que o pagamento cair, o acesso volta sozinho para todo mundo.",
+      "cta": "Regularizar pagamento",
+      "alreadyPaid": "Já pagou? Pode ignorar este aviso — a confirmação pode levar algumas horas para chegar. Se depois de um dia o acesso ainda estiver bloqueado, responda este e-mail que resolvemos.",
+      "support": "Qualquer dúvida, é só responder este e-mail."
+    },
     "nps": {
       "subject": "Como foi sua experiência com o ServiçoOS?",
       "heading": "Olá, {name}! 🙏",

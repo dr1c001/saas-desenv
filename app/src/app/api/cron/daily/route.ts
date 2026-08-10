@@ -3,7 +3,9 @@ import { prisma } from "@/lib/prisma"
 import {
   sendOnboardingDay3Email,
   sendNpsEmail,
+  sendPastDueWarningEmail,
 } from "@/lib/resend"
+import { decidirAviso, diasDeAtraso, AVISOS_ATRASO } from "@/lib/past-due"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 import { geocodeAddress } from "@/lib/geocode"
 import { gravarRetratoDoMes } from "@/lib/snapshot"
@@ -30,7 +32,7 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date()
-  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, retrato: "", errors: 0 }
+  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, retrato: "", errors: 0 }
 
   // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
   // Em 07/08/2026 uma cliente pagou e ficou sem acesso por ~1 dia: os webhooks
@@ -99,7 +101,7 @@ export async function GET(req: NextRequest) {
       await prisma.$transaction([
         prisma.subscription.update({
           where: { id: sub.id },
-          data: { status: "ACTIVE", lastProcessedPaymentId: paid.id, currentPeriodEnd: periodEnd },
+          data: { status: "ACTIVE", lastProcessedPaymentId: paid.id, currentPeriodEnd: periodEnd, pastDueWarningsSent: 0 },
         }),
         prisma.tenant.update({
           where: { id: sub.tenantId },
@@ -211,6 +213,68 @@ export async function GET(req: NextRequest) {
         results.geocoded++
       }
     } catch { results.errors++ }
+  }
+
+  // ── Aviso de cobrança em atraso, ANTES do corte ──────────────────────────
+  // Até 10/08/2026 o cliente inadimplente era bloqueado sem aviso nenhum: a
+  // primeira notícia do problema era a equipe inteira parada na tela de acesso
+  // expirado. Quem perde acesso sem aviso trata como defeito do sistema, não
+  // como cobrança pendente — e cancela.
+  //
+  // Avisos no 1º e no 3º dia de atraso; o corte é no 5º (PAST_DUE_GRACE_DAYS).
+  try {
+    const atrasadas = await prisma.subscription.findMany({
+      where: { status: "PAST_DUE", pastDueWarningsSent: { lt: AVISOS_ATRASO.length } },
+      select: {
+        id: true,
+        currentPeriodEnd: true,
+        pastDueWarningsSent: true,
+        tenant: {
+          select: {
+            name: true,
+            locale: true,
+            users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } },
+          },
+        },
+      },
+    })
+
+    for (const sub of atrasadas) {
+      // Regra em lib/past-due.ts, testada lá — aqui só o efeito colateral.
+      const { enviar, total, diasRestantes } = decidirAviso(
+        diasDeAtraso(sub.currentPeriodEnd, now),
+        sub.pastDueWarningsSent
+      )
+      if (!enviar) continue
+
+      const dono = sub.tenant.users[0]
+
+      // Marca ANTES de enviar: se o envio falhar, o cliente perde um aviso —
+      // ruim, mas recuperável no marco seguinte. Marcar depois e falhar no
+      // meio faria o mesmo e-mail sair todo dia até o corte, o que é pior.
+      await prisma.subscription.update({
+        where: { id: sub.id },
+        data: { pastDueWarningsSent: total },
+      })
+
+      if (!dono?.email) continue
+      try {
+        await sendPastDueWarningEmail(
+          dono.email,
+          dono.name,
+          sub.tenant.name,
+          diasRestantes,
+          sub.tenant.locale
+        )
+        results.avisosAtraso++
+      } catch (err) {
+        console.error(`[aviso de atraso] falhou para ${dono.email}:`, err)
+        results.errors++
+      }
+    }
+  } catch (err) {
+    console.error("[aviso de atraso] falhou:", err)
+    results.errors++
   }
 
   // ── Retrato mensal do negócio ────────────────────────────────────────────

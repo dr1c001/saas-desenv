@@ -789,6 +789,49 @@ empresa sem plano e 120 empresas com quebra de página), e em produção o
 endpoint responde 403 sem sessão — confirmado que o corpo devolvido **não** é
 um PDF, não bastando olhar o código de status.
 
+### 7.2.11 Aviso antes do corte por inadimplência — 10/08/2026
+
+Até aqui o cliente inadimplente era bloqueado **sem aviso nenhum**: a primeira
+notícia do problema era a equipe inteira parada na tela de acesso expirado.
+Quem perde acesso sem aviso trata como defeito do sistema, não como cobrança
+pendente — e cancela.
+
+Agora saem dois e-mails: **1º e 3º dia de atraso**, com o corte no 5º.
+
+**A regra virou módulo puro** (`lib/past-due.ts`), com `PAST_DUE_GRACE_DAYS`
+morando lá dentro. Antes o número de dias vivia em `lib/auth.ts` e o e-mail
+teria que recalcular "faltam X dias" por conta própria — dois lugares, e um dia
+o aviso diria "faltam 2 dias" com o bloqueio chegando no dia seguinte.
+
+**Contador, não data.** `Subscription.pastDueWarningsSent` guarda quantos
+avisos já saíram no ciclo vencido. A alternativa óbvia — comparar se hoje é
+exatamente o dia 1 ou o dia 3 — tem um defeito que este projeto já pagou: se o
+cron não rodar naquele dia exato, o marco some para sempre (foi o que
+aconteceu com o cron de NPS, seção 9). Com contador, o cron que falha nos dias
+1 e 2 manda **um** e-mail no dia 3 — o mais urgente — e segue.
+
+**Marca antes de enviar.** Se o envio falhar, o cliente perde aquele aviso;
+recuperável no marco seguinte. Marcar depois e falhar no meio faria o mesmo
+e-mail sair todo dia até o corte, o que é pior.
+
+**Zera nos três caminhos que reativam:** webhook da Asaas, reconciliação do
+cron e liberação manual no painel. Sem isso, um cliente que atrasou uma vez
+nunca mais receberia aviso nos atrasos seguintes.
+
+**Conteúdo do e-mail**, além do prazo: diz que **nada é apagado**, que o
+bloqueio pega **toda a equipe** (inclusive técnicos em campo), que o acesso
+**volta sozinho** quando o pagamento cair, e trata o caso de quem já pagou e
+está esperando a confirmação. O tom muda no segundo aviso — assunto e cor
+diferentes.
+
+**Verificação:** 19 testes novos. 11 na regra (incluindo cron fora do ar por
+uma semana, e uma checagem de que nenhum marco de aviso é ≥ à carência — um
+e-mail que chega depois do corte é pior que não avisar) e 8 montando o e-mail
+de verdade com o Resend trocado por espião, conferindo plural, idioma e
+conteúdo. O cron de produção **não** foi disparado para testar: ele também
+manda NPS e onboarding, e chamaria e-mail real para cliente real. A consulta
+foi simulada em leitura — hoje ela devolve zero inadimplentes.
+
 ### 7.3 Auditoria completa pré-venda — 05/08/2026
 
 Pedido explícito de revisar o código inteiro (não só o diff), todas as abas,

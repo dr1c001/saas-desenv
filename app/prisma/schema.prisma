@@ -123,6 +123,13 @@ model Subscription {
   currentPeriodEnd   DateTime
   cancelledAt    DateTime?
   lastProcessedPaymentId String?
+  // Quantos avisos de atraso já saíram NESTE ciclo vencido (0, 1 ou 2). Um
+  // contador em vez de "data do último aviso" porque o cron roda uma vez por
+  // dia e pode falhar num dia: com o contador ele se recupera enviando o aviso
+  // mais urgente que ainda não foi, em vez de pular o marco perdido pra sempre
+  // — exatamente o defeito que o cron de NPS já teve (seção 9). Zera quando o
+  // pagamento entra.
+  pastDueWarningsSent Int            @default(0)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 

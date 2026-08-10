@@ -1683,6 +1683,17 @@
       "cta": "View plans and subscribe",
       "support": "Need help? Just reply to this email and we'll help you out."
     },
+    "pastDueWarning": {
+      "subject": "Payment pending — {days, plural, one {# day} other {# days}} of access left",
+      "subjectUrgent": "Heads up: your ServiçoOS access will be blocked in {days, plural, one {# day} other {# days}}",
+      "heading": "Hi {name}",
+      "intro": "We couldn't confirm the subscription payment for <strong>{company}</strong>. It's usually an expired card, a limit, or insufficient funds — common, and normally a one-minute fix.",
+      "deadline": "You have <strong>{days, plural, one {# more day} other {# more days}}</strong> of normal access. After that the system is blocked for <strong>your whole team</strong>, field technicians included.",
+      "whatHappens": "Nothing is deleted: your jobs, clients and history stay right where they are. As soon as the payment clears, access comes back automatically for everyone.",
+      "cta": "Update payment",
+      "alreadyPaid": "Already paid? You can ignore this — confirmation can take a few hours. If access is still blocked after a day, just reply to this email and we'll sort it out.",
+      "support": "Any questions, just reply to this email."
+    },
     "nps": {
       "subject": "How was your experience with ServiçoOS?",
       "heading": "Hi, {name}! 🙏",

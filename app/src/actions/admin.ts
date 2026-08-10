@@ -41,7 +41,14 @@ export async function liberarAcesso(tenantId: string) {
     orderBy: { createdAt: "desc" },
     select: { id: true },
   })
-  if (ultima) await prisma.subscription.update({ where: { id: ultima.id }, data: { status: "ACTIVE" } })
+  if (ultima) {
+    await prisma.subscription.update({
+      where: { id: ultima.id },
+      // Zera os avisos de atraso pelo mesmo motivo do webhook: liberado à mão
+      // hoje, se voltar a atrasar amanhã os avisos recomeçam do primeiro.
+      data: { status: "ACTIVE", pastDueWarningsSent: 0 },
+    })
+  }
 
   await registrarAcaoAdmin(admin, "liberar_acesso", tenantId, `${antes.name}: ${antes.subscriptionStatus} → ACTIVE`)
   revalidatePath("/admin")

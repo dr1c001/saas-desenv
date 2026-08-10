@@ -94,7 +94,10 @@ export async function POST(req: NextRequest) {
       await prisma.$transaction([
         prisma.subscription.update({
           where: { id: sub.id },
-          data: { status: "ACTIVE", currentPeriodEnd: periodEnd },
+          // Zera os avisos de atraso: se este cliente ficar inadimplente de
+          // novo daqui a alguns meses, o ciclo de avisos precisa recomeçar do
+          // primeiro, não continuar de onde parou.
+          data: { status: "ACTIVE", currentPeriodEnd: periodEnd, pastDueWarningsSent: 0 },
         }),
         prisma.tenant.update({
           where: { id: sub.tenantId },
