@@ -1184,6 +1184,50 @@ nenhum marcador invadiu área proibida.
 
 ---
 
+### 7.2.17 Ambiente de teste, com travas — 11/08/2026
+
+Até hoje não havia **nenhum passo** entre "o código mudou" e "o cliente está
+usando": todo deploy ia direto para o domínio onde a assinante trabalha.
+
+**A parte difícil não é a infraestrutura, é a contenção.** O risco de um
+ambiente de teste não é ele ser ruim — é ele ser *bom demais*. O banco de teste
+é uma cópia, e uma cópia tem os e-mails e telefones **reais** dos clientes
+finais. Testar o aviso de inadimplência dispararia cobrança para gente que não
+deve nada. Um staging que faz isso é pior que nenhum staging.
+
+Quem decide o ambiente é a própria Vercel (`VERCEL_ENV`), não uma variável que
+alguém pode esquecer de trocar. **Lista de permissão, não de bloqueio:** só o
+que for comprovadamente produção toca o mundo real; valor desconhecido,
+ambiente novo ou variável faltando ficam contidos.
+
+| Integração | Fora de produção | Por quê |
+|---|---|---|
+| E-mail | Desviado para o dono, com `[TESTE]` no assunto. Sem endereço seguro, **aborta** | Banco de cópia tem e-mail real do cliente final |
+| Nota fiscal | **Bloqueada** | Não existe modo de teste; nota emitida é documento fiscal com número e cancelamento tem prazo |
+| Cobrança | Sempre sandbox | Chave de produção vazada para o teste cobraria cartão de verdade |
+| WhatsApp | Não dispara, registra no log | Devolve sucesso para o fluxo seguir testável |
+| Cron diário | Não roda | Manda e-mail de cobrança e reconcilia Asaas |
+| Google | Não indexa | Cópia indexada compete com o site real |
+
+Mais faixa amarela fixa no topo fora de produção — o jeito mais caro de errar é
+achar que se está no teste quando se está em produção.
+
+**A trava provou o valor antes do deploy:** derrubou `past-due-email.test.ts`,
+que inspeciona o e-mail que o **cliente** recebe e portanto precisa declarar
+ambiente de produção. Corrigido no teste, não na trava.
+
+Fluxo novo: `npm run deploy:teste` → conferir → `npm run deploy:prod`. E
+`npm run db:ensaio` mostra o SQL exato que rodaria em produção, sem subir nada.
+
+236 → 253 testes. Falta só o banco de teste no Supabase, que exige login no
+painel — passo a passo em [AMBIENTE_DE_TESTE.md](AMBIENTE_DE_TESTE.md). Até lá
+o preview não tem credencial nenhuma, então não alcança dado real.
+
+**Verificado em produção após o deploy:** sem faixa, `robots.txt` continua
+liberando a landing, seção de segmentos intacta.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`
