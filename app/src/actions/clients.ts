@@ -16,6 +16,8 @@ import {
   soDigitos,
   type Ocorrencia,
 } from "@/lib/importar-clientes"
+import { getCustomFields } from "@/actions/custom-fields"
+import { lerValoresDoFormulario, nomeDoInput } from "@/lib/custom-fields"
 
 const clientSchema = z.object({
   name: z.string().min(2, "nameRequired"),
@@ -38,6 +40,38 @@ export type ClientFormState = {
   message?: string
 }
 
+// Lê os campos que a própria empresa criou. Fica aqui, compartilhado entre
+// criar e editar, porque divergir entre os dois significaria campo obrigatório
+// cobrado no cadastro e ignorado na edição — ou o contrário.
+async function lerCamposPersonalizados(
+  formData: FormData
+): Promise<{ valores: Record<string, string>; erro?: ClientFormState }> {
+  const definicoes = await getCustomFields("CLIENT")
+  if (definicoes.length === 0) return { valores: {} }
+
+  const { valores, erros } = lerValoresDoFormulario(definicoes, (nome) => {
+    const v = formData.get(nome)
+    return typeof v === "string" ? v : null
+  })
+
+  if (erros.length > 0) {
+    const t = await getTranslations("customFields.errors")
+    return {
+      valores,
+      erro: {
+        // Chaveado pelo nome do input, igual aos campos nativos, pra que a
+        // tela possa apontar o campo exato quando for exibir por campo.
+        errors: Object.fromEntries(
+          erros.map((e) => [nomeDoInput(e.fieldId), [t(e.motivo as "obrigatorio", { campo: e.label })]])
+        ),
+        message: t(erros[0].motivo as "obrigatorio", { campo: erros[0].label }),
+      },
+    }
+  }
+
+  return { valores }
+}
+
 export async function createClient(
   _prev: ClientFormState,
   formData: FormData
@@ -54,6 +88,9 @@ export async function createClient(
 
   const { name, document, email, phone, whatsapp, status, ...address } = parsed.data
 
+  const personalizados = await lerCamposPersonalizados(formData)
+  if (personalizados.erro) return personalizados.erro
+
   const coords = await geocodeAddress(address)
 
   await prisma.client.create({
@@ -64,6 +101,7 @@ export async function createClient(
       phone: phone || null,
       whatsapp: whatsapp || null,
       status,
+      customValues: personalizados.valores,
       tenantId,
       address: {
         create: {
@@ -108,6 +146,9 @@ export async function updateClient(
 
   const { name, document, email, phone, whatsapp, status, ...address } = parsed.data
 
+  const personalizados = await lerCamposPersonalizados(formData)
+  if (personalizados.erro) return personalizados.erro
+
   const coords = await geocodeAddress(address)
 
   await prisma.client.update({
@@ -119,6 +160,7 @@ export async function updateClient(
       phone: phone || null,
       whatsapp: whatsapp || null,
       status,
+      customValues: personalizados.valores,
       address: {
         upsert: {
           create: {

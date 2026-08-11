@@ -3,6 +3,8 @@ import Link from "next/link"
 import { getClient } from "@/actions/clients"
 import { deleteClient } from "@/actions/clients"
 import { getClientEquipments } from "@/actions/equipment"
+import { getCustomFields } from "@/actions/custom-fields"
+import { paraExibicao } from "@/lib/custom-fields"
 import { buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,6 +27,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   if (!client) notFound()
   const t = await getTranslations("clients")
   const tc = await getTranslations("common")
+  const tcf = await getTranslations("customFields")
+
+  const personalizados = paraExibicao(await getCustomFields("CLIENT"), client.customValues)
 
   const addr = client.address
   const addressLine = addr
@@ -79,6 +84,31 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           </CardContent>
         </Card>
       </div>
+
+      {/* Campos criados pela própria empresa. paraExibicao() percorre as
+          DEFINIÇÕES, então campo apagado depois de preenchido some daqui
+          sozinho, sem deixar dado órfão na ficha. */}
+      {personalizados.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {tcf("formSectionTitle")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            {personalizados.map((campo) => (
+              <div key={campo.label}>
+                <p className="text-muted-foreground text-xs">{campo.label}</p>
+                <p>
+                  {campo.type === "CHECKBOX"
+                    ? tcf(campo.valor === "true" ? "yes" : "no")
+                    : campo.valor}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {client.serviceOrders.length > 0 && (
         <div className="grid gap-4 md:grid-cols-3">

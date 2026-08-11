@@ -33,38 +33,38 @@ datasource db {
 // Índice não é de graça — pesa em cada INSERT/UPDATE e ocupa disco.
 
 model Tenant {
-  id                 String             @id @default(cuid())
-  name               String
-  document           String?
-  logoUrl            String?
-  phone              String?
-  website            String?
-  address            String?
-  subscriptionStatus SubscriptionStatus @default(TRIAL)
-  trialEndsAt        DateTime?
-  planId             String?
-  asaasCustomerId    String?
-  nfeioCompanyId     String?
-  fiscalCnpj         String?
-  fiscalMunicipalCode String?
-  fiscalCityName     String?
-  fiscalStateCode    String?
-  fiscalIssRate      Float?
-  zapiInstance       String?
-  zapiToken          String?
-  referralCode       String?            @unique
-  referredByCode     String?
-  referralDiscountPercent Int           @default(0)
+  id                      String             @id @default(cuid())
+  name                    String
+  document                String?
+  logoUrl                 String?
+  phone                   String?
+  website                 String?
+  address                 String?
+  subscriptionStatus      SubscriptionStatus @default(TRIAL)
+  trialEndsAt             DateTime?
+  planId                  String?
+  asaasCustomerId         String?
+  nfeioCompanyId          String?
+  fiscalCnpj              String?
+  fiscalMunicipalCode     String?
+  fiscalCityName          String?
+  fiscalStateCode         String?
+  fiscalIssRate           Float?
+  zapiInstance            String?
+  zapiToken               String?
+  referralCode            String?            @unique
+  referredByCode          String?
+  referralDiscountPercent Int                @default(0)
   // Recursos liberados ALÉM do que o plano dá. Existe por um motivo concreto:
   // quando as travas de plano foram ligadas (10/08/2026), a primeira cliente
   // pagante já usava assinatura digital no Starter — recurso que a tela vende
   // como Pro. Tirar da mão de quem já paga e já usa custa mais que a receita
   // do upgrade, então ela foi mantida por aqui. Clientes novos seguem a regra.
   // Ver lib/plan.ts.
-  extraFeatures      String[]           @default([])
-  locale             Locale             @default(pt)
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  extraFeatures           String[]           @default([])
+  locale                  Locale             @default(pt)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
 
   users             User[]
   clients           Client[]
@@ -78,6 +78,7 @@ model Tenant {
   quotes            Quote[]
   plan              Plan?              @relation(fields: [planId], references: [id])
   subscriptions     Subscription[]
+  customFields      CustomField[]
 }
 
 // Idioma da empresa — governa dashboard, e-mails e PDFs gerados pro tenant
@@ -98,30 +99,30 @@ enum SubscriptionStatus {
 }
 
 model Plan {
-  id            String   @id @default(cuid())
-  name          String
-  slug          String   @unique
-  priceMonthly  Decimal  @db.Decimal(10, 2)
-  priceYearly   Decimal  @db.Decimal(10, 2)
-  maxUsers      Int?
-  features      String[]
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  priceMonthly Decimal  @db.Decimal(10, 2)
+  priceYearly  Decimal  @db.Decimal(10, 2)
+  maxUsers     Int?
+  features     String[]
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
 
   tenants       Tenant[]
   subscriptions Subscription[]
 }
 
 model Subscription {
-  id             String             @id @default(cuid())
-  tenantId       String
-  planId         String
-  asaasId        String?
-  status         SubscriptionStatus @default(TRIAL)
-  billingCycle   BillingCycle       @default(MONTHLY)
-  currentPeriodStart DateTime
-  currentPeriodEnd   DateTime
-  cancelledAt    DateTime?
+  id                     String             @id @default(cuid())
+  tenantId               String
+  planId                 String
+  asaasId                String?
+  status                 SubscriptionStatus @default(TRIAL)
+  billingCycle           BillingCycle       @default(MONTHLY)
+  currentPeriodStart     DateTime
+  currentPeriodEnd       DateTime
+  cancelledAt            DateTime?
   lastProcessedPaymentId String?
   // Quantos avisos de atraso já saíram NESTE ciclo vencido (0, 1 ou 2). Um
   // contador em vez de "data do último aviso" porque o cron roda uma vez por
@@ -129,9 +130,9 @@ model Subscription {
   // mais urgente que ainda não foi, em vez de pular o marco perdido pra sempre
   // — exatamente o defeito que o cron de NPS já teve (seção 9). Zera quando o
   // pagamento entra.
-  pastDueWarningsSent Int            @default(0)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  pastDueWarningsSent    Int                @default(0)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   plan   Plan   @relation(fields: [planId], references: [id])
@@ -193,16 +194,18 @@ enum UserRole {
 // ─── Clientes ─────────────────────────────────────────────────────────────────
 
 model Client {
-  id        String       @id @default(cuid())
-  name      String
-  document  String?
-  email     String?
-  phone     String?
-  whatsapp  String?
-  status    ClientStatus @default(ACTIVE)
-  tenantId  String
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id           String       @id @default(cuid())
+  name         String
+  document     String?
+  email        String?
+  phone        String?
+  whatsapp     String?
+  status       ClientStatus @default(ACTIVE)
+  // Valores dos CustomField de entity=CLIENT: { [customFieldId]: valor }
+  customValues Json?        @db.JsonB
+  tenantId     String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   address       Address?
   tenant        Tenant         @relation(fields: [tenantId], references: [id])
@@ -239,33 +242,35 @@ model Address {
 // ─── Ordem de Serviço ─────────────────────────────────────────────────────────
 
 model ServiceOrder {
-  id             String        @id @default(cuid())
-  number         Int
-  title          String
-  description    String?
-  conclusionNote String?
-  status         ServiceStatus @default(OPEN)
-  totalAmount    Decimal       @default(0) @db.Decimal(12, 2)
-  clientId       String
-  tenantId       String
-  technicianId   String?
-  scheduledAt    DateTime?
-  concludedAt    DateTime?
-  nfseId         String?
-  nfseNumber     String?
-  nfseStatus     String?
-  nfseUrl        String?
+  id                 String        @id @default(cuid())
+  number             Int
+  title              String
+  description        String?
+  conclusionNote     String?
+  status             ServiceStatus @default(OPEN)
+  totalAmount        Decimal       @default(0) @db.Decimal(12, 2)
+  clientId           String
+  tenantId           String
+  technicianId       String?
+  scheduledAt        DateTime?
+  concludedAt        DateTime?
+  nfseId             String?
+  nfseNumber         String?
+  nfseStatus         String?
+  nfseUrl            String?
   clientSignatureUrl String?
-  clientToken    String?       @unique @default(uuid())
-  npsScore       Int?
-  npsFeedback    String?
-  npsSentAt      DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  clientToken        String?       @unique @default(uuid())
+  // Valores dos CustomField de entity=SERVICE_ORDER: { [customFieldId]: valor }
+  customValues       Json?         @db.JsonB
+  npsScore           Int?
+  npsFeedback        String?
+  npsSentAt          DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
-  client      Client           @relation(fields: [clientId], references: [id])
-  tenant      Tenant           @relation(fields: [tenantId], references: [id])
-  technician  User?            @relation(fields: [technicianId], references: [id])
+  client      Client          @relation(fields: [clientId], references: [id])
+  tenant      Tenant          @relation(fields: [tenantId], references: [id])
+  technician  User?           @relation(fields: [technicianId], references: [id])
   items       ServiceItem[]
   attachments Attachment[]
   revenues    Revenue[]
@@ -557,13 +562,17 @@ model PlatformAdmin {
   role       PlatformRole
   phone      String?
   document   String?
-  /** Desativar corta o acesso mas mantém o cadastro (dá pra reativar). Remover
-   *  apaga a linha — o AdminAuditLog guarda o e-mail como texto, então o
-   *  histórico do que a pessoa fez continua legível mesmo depois. */
+  /**
+   * Desativar corta o acesso mas mantém o cadastro (dá pra reativar). Remover
+   * apaga a linha — o AdminAuditLog guarda o e-mail como texto, então o
+   * histórico do que a pessoa fez continua legível mesmo depois.
+   */
   active     Boolean      @default(true)
   invitedBy  String?
-  /** Primeiro acesso ao painel: prova de que a pessoa recebeu o convite e
-   *  entrou de fato, em vez de o registro ficar pendurado sem ninguém. */
+  /**
+   * Primeiro acesso ao painel: prova de que a pessoa recebeu o convite e
+   * entrou de fato, em vez de o registro ficar pendurado sem ninguém.
+   */
   acceptedAt DateTime?
   lastSeenAt DateTime?
   createdAt  DateTime     @default(now())
@@ -592,7 +601,9 @@ enum PlatformRole {
 // congelam com o último valor real que tiveram e o mês atual está sempre fresco.
 model MonthlySnapshot {
   id                 String   @id @default(cuid())
-  /** 'AAAA-MM' no horário de Brasília. */
+  /**
+   * 'AAAA-MM' no horário de Brasília.
+   */
   month              String   @unique
   companies          Int
   activeCompanies    Int
@@ -645,4 +656,57 @@ model UserLocation {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Campos personalizados ────────────────────────────────────────────────────
+//
+// O ServiçoOS atende qualquer prestador de serviço, e cada ramo guarda coisas
+// diferentes: um pet shop precisa de "raça/porte", uma empresa de limpeza de
+// "metragem", uma de TI de "número de série". Sem isto, todo mundo é forçado no
+// mesmo formulário e cada segmento novo esbarra numa parede.
+//
+// As DEFINIÇÕES ficam aqui, por tenant. Os VALORES ficam num Json no próprio
+// registro (Client.customValues / ServiceOrder.customValues) em vez de numa
+// tabela de valores com chave estrangeira polimórfica. Motivos:
+//
+//  - Apagar um campo não deixa valor órfão: a leitura só renderiza os campos
+//    que ainda existem, e a chave que sobra no Json é ignorada.
+//  - A exportação de dados (LGPD) leva os valores junto sem precisar lembrar
+//    de incluir mais uma relação — o que é exatamente o tipo de coisa que se
+//    esquece e vira dado faltando no pedido de titular.
+//
+// A contrapartida assumida: não dá pra filtrar/ordenar por campo personalizado
+// com índice, como daria numa coluna. Quando isso for pedido, o caminho é um
+// índice GIN no Json, não remodelar.
+
+enum CustomFieldEntity {
+  CLIENT
+  SERVICE_ORDER
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  SELECT
+  CHECKBOX
+}
+
+model CustomField {
+  id        String            @id @default(cuid())
+  tenantId  String
+  entity    CustomFieldEntity
+  label     String
+  type      CustomFieldType   @default(TEXT)
+  // Só usado quando type = SELECT.
+  options   String[]          @default([])
+  required  Boolean           @default(false)
+  position  Int               @default(0)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // getCustomFields(): where tenantId + entity order by position
+  @@index([tenantId, entity, position])
 }

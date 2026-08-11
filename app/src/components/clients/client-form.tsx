@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import Link from "next/link"
 import { buttonVariants } from "@/components/ui/button"
+import { CustomFieldInputs } from "@/components/shared/custom-field-inputs"
+import type { DefinicaoCampo } from "@/lib/custom-fields"
 
 type Client = {
   id: string
@@ -19,6 +21,7 @@ type Client = {
   email: string | null
   phone: string | null
   status: string
+  customValues?: unknown
   address?: {
     street: string | null
     number: string | null
@@ -30,9 +33,9 @@ type Client = {
   } | null
 }
 
-type Props = { client?: Client }
+type Props = { client?: Client; camposPersonalizados?: DefinicaoCampo[] }
 
-export function ClientForm({ client }: Props) {
+export function ClientForm({ client, camposPersonalizados = [] }: Props) {
   const t = useTranslations("clients")
   const tc = useTranslations("common")
 
@@ -136,6 +139,8 @@ export function ClientForm({ client }: Props) {
           </div>
         </CardContent>
       </Card>
+
+      <CustomFieldInputs campos={camposPersonalizados} valores={client?.customValues} />
 
       <Separator />
 

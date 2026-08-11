@@ -290,7 +290,8 @@
     "menu": "Menu",
     "lightMode": "Light mode",
     "darkMode": "Dark mode",
-    "platformAdmin": "Platform admin"
+    "platformAdmin": "Platform admin",
+    "customFields": "Custom fields"
   },
   "history": {
     "list": {
@@ -1939,6 +1940,56 @@
     },
     "newOrder": {
       "title": "New Service Order"
+    }
+  },
+  "customFields": {
+    "title": "Custom fields",
+    "subtitle": "Every trade tracks different things. Create the fields your company needs and they show up in the forms.",
+    "formSectionTitle": "Additional information",
+    "selectPlaceholder": "Select...",
+    "emptyState": "No fields created yet. Use the form below.",
+    "addTitle": "Create field",
+    "addButton": "Create field",
+    "added": "Field created",
+    "remove": "Remove field",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "confirmRemove": "Remove the field “{campo}”? It disappears from everyone's forms. Values already filled in stay stored — recreate the field and they come back.",
+    "limitReached": "You have reached the limit of {max} fields. Remove one before creating another.",
+    "fieldLabel": "Field name",
+    "fieldLabelPlaceholder": "e.g. Square footage, Breed, Serial number",
+    "fieldType": "Type",
+    "fieldOptions": "Options",
+    "fieldOptionsPlaceholder": "Small\nMedium\nLarge",
+    "fieldOptionsHint": "One option per line.",
+    "fieldRequired": "Required",
+    "yes": "Yes",
+    "no": "No",
+    "entities": {
+      "CLIENT": "Client record fields",
+      "SERVICE_ORDER": "Service order fields"
+    },
+    "types": {
+      "TEXT": "Text",
+      "NUMBER": "Number",
+      "DATE": "Date",
+      "SELECT": "Option list",
+      "CHECKBOX": "Yes / No"
+    },
+    "errors": {
+      "semPermissao": "You do not have permission to change these fields. Ask a company administrator.",
+      "entidadeInvalida": "Invalid record type.",
+      "labelCurto": "The field name needs at least 2 characters.",
+      "labelLongo": "The field name can have at most 40 characters.",
+      "tipoInvalido": "Invalid field type.",
+      "semOpcoes": "An option list needs at least one option.",
+      "limiteAtingido": "You have reached the field limit for this record type.",
+      "naoEncontrado": "Field not found.",
+      "obrigatorio": "Please fill in “{campo}”.",
+      "muitoLongo": "The field “{campo}” is over the maximum length.",
+      "numeroInvalido": "The field “{campo}” must be a number.",
+      "dataInvalida": "The field “{campo}” must be a valid date.",
+      "opcaoInvalida": "The option chosen in “{campo}” no longer exists."
     }
   }
 }

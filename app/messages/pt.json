@@ -290,7 +290,8 @@
     "menu": "Menu",
     "lightMode": "Modo claro",
     "darkMode": "Modo escuro",
-    "platformAdmin": "Painel da plataforma"
+    "platformAdmin": "Painel da plataforma",
+    "customFields": "Campos personalizados"
   },
   "history": {
     "list": {
@@ -1939,6 +1940,56 @@
     },
     "newOrder": {
       "title": "Nova Ordem de Serviço"
+    }
+  },
+  "customFields": {
+    "title": "Campos personalizados",
+    "subtitle": "Cada ramo guarda coisas diferentes. Crie aqui os campos que a sua empresa precisa e eles aparecem no cadastro.",
+    "formSectionTitle": "Informações adicionais",
+    "selectPlaceholder": "Selecione...",
+    "emptyState": "Nenhum campo criado ainda. Use o formulário abaixo.",
+    "addTitle": "Criar campo",
+    "addButton": "Criar campo",
+    "added": "Campo criado",
+    "remove": "Remover campo",
+    "moveUp": "Mover para cima",
+    "moveDown": "Mover para baixo",
+    "confirmRemove": "Remover o campo “{campo}”? Ele some do cadastro de todo mundo. Os valores já preenchidos ficam guardados — se você criar o campo de novo, eles reaparecem.",
+    "limitReached": "Você chegou ao limite de {max} campos. Remova algum antes de criar outro.",
+    "fieldLabel": "Nome do campo",
+    "fieldLabelPlaceholder": "Ex: Metragem, Raça, Número de série",
+    "fieldType": "Tipo",
+    "fieldOptions": "Opções",
+    "fieldOptionsPlaceholder": "Pequeno\nMédio\nGrande",
+    "fieldOptionsHint": "Uma opção por linha.",
+    "fieldRequired": "Preenchimento obrigatório",
+    "yes": "Sim",
+    "no": "Não",
+    "entities": {
+      "CLIENT": "Campos do cadastro de cliente",
+      "SERVICE_ORDER": "Campos da ordem de serviço"
+    },
+    "types": {
+      "TEXT": "Texto",
+      "NUMBER": "Número",
+      "DATE": "Data",
+      "SELECT": "Lista de opções",
+      "CHECKBOX": "Sim / Não"
+    },
+    "errors": {
+      "semPermissao": "Você não tem permissão para alterar os campos. Peça a um administrador da empresa.",
+      "entidadeInvalida": "Cadastro inválido.",
+      "labelCurto": "O nome do campo precisa ter pelo menos 2 letras.",
+      "labelLongo": "O nome do campo pode ter no máximo 40 letras.",
+      "tipoInvalido": "Tipo de campo inválido.",
+      "semOpcoes": "Uma lista de opções precisa de pelo menos uma opção.",
+      "limiteAtingido": "Você chegou ao limite de campos para este cadastro.",
+      "naoEncontrado": "Campo não encontrado.",
+      "obrigatorio": "Preencha o campo “{campo}”.",
+      "muitoLongo": "O campo “{campo}” passou do tamanho máximo.",
+      "numeroInvalido": "O campo “{campo}” precisa ser um número.",
+      "dataInvalida": "O campo “{campo}” precisa ser uma data válida.",
+      "opcaoInvalida": "A opção escolhida em “{campo}” não existe mais."
     }
   }
 }
