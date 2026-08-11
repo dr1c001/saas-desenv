@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
 import { PublicLanguageToggle } from "@/components/layout/public-language-toggle"
+import { normalizarWhatsappBR } from "@/lib/utils"
 import {
   ClipboardList, MapPin, DollarSign, BarChart2, CheckCircle2,
   FileText, Users, Zap, Shield, ArrowRight, CreditCard,
@@ -59,8 +60,9 @@ export default async function LandingPage() {
 
   // Número só sai do ambiente: antes estava fixo como 5511999999999 (exemplo),
   // então o botão flutuante levava o visitante a um número inexistente. Sem a
-  // variável configurada é melhor não mostrar o botão do que mostrar quebrado.
-  const suporteWhatsapp = process.env.SUPPORT_WHATSAPP?.replace(/\D/g, "")
+  // variável configurada — ou com número que não faz sentido — é melhor não
+  // mostrar o botão do que mostrar quebrado.
+  const suporteWhatsapp = normalizarWhatsappBR(process.env.SUPPORT_WHATSAPP)
 
   return (
     <div className="min-h-screen bg-background text-foreground">
