@@ -1007,6 +1007,75 @@ confirmados funcionando.
 
 ---
 
+### 7.2.14 Posicionamento horizontal e importação de planilha — 11/08/2026
+
+**O gatilho.** O dono corrigiu uma premissa que eu vinha repetindo: o ServiçoOS
+não é para desentupidoras e assistências técnicas, é para **qualquer** empresa
+prestadora de serviço, pequena ou média. A premissa errada tinha vazado para o
+produto.
+
+**Landing.** Os três depoimentos eram de refrigeração, assistência técnica e
+elétrica — todos do mesmo nicho. Quem tem empresa de limpeza, jardinagem, TI,
+consultoria ou eventos chegava ali e se auto-excluía. Trocados por uma seção de
+12 segmentos atendidos.
+
+No caminho, dois problemas de veracidade no mesmo bloco: os depoimentos eram
+**inventados** (nomes fabricados, 5 estrelas cada) sob o título "Empresas reais,
+resultados reais", e o topo dizia "mais de 50 empresas". Substituídos por
+afirmações verificáveis (sem fidelidade, sem taxa de instalação, exportação dos
+dados) — tudo que já existe no contrato e em Configurações. Vocabulário de
+"técnicos" para "equipe em campo" onde era público-alvo, mantido onde é o nome
+do cargo no sistema.
+
+Corrigido também o botão flutuante do WhatsApp, fixo em `5511999999999` (número
+de exemplo): agora vem de `SUPPORT_WHATSAPP` e, sem a variável, não renderiza.
+**Pendência operacional:** definir essa env var na Vercel — o plano Enterprise
+promete "Suporte 24h via WhatsApp" e hoje o botão está ausente.
+
+**Importação de planilha (CSV e .xlsx), sem dependência nova.**
+
+Por que não usar biblioteca: o `xlsx` (SheetJS) do npm parou em 2022 e carrega
+CVEs; o `exceljs` traz 90 pacotes, incluindo o `archiver` — que *escreve* zip,
+sendo que aqui só se lê. Um `.xlsx` é um zip com dois XMLs e o Node já tem
+`zlib`, então `lib/planilha.ts` lê os dois formatos direto.
+
+Três armadilhas que um parser genérico erra:
+
+| Armadilha | Consequência se ignorada |
+|---|---|
+| Excel-BR salva CSV com `;` e em Windows-1252 | Planilha inteira vira uma coluna só, com acentos quebrados |
+| No `.xlsx` a célula vazia é **omitida** do XML | Telefone sobe pra coluna do e-mail; todos os dados deslocados |
+| Texto com formatação parcial vira vários `<t>` no mesmo `<si>` | Nome do cliente truncado |
+
+Validado contra arquivo de ferramenta real (openpyxl) e contra `.xlsx` feito
+pelo Excel de verdade: 830 células, 47 com acento, sem perda.
+
+Decisões de produto: nome inválido é **erro** (pula a linha), e-mail inválido é
+**aviso** (importa sem o e-mail) — perder o cliente inteiro por um erro de
+digitação é pior. Duplicidade por documento (só dígitos) ou e-mail, nunca por
+nome: "João Silva" repetido é legítimo.
+
+**Gravação:** escrita aninhada, não `createMany` + `createMany`.
+`createManyAndReturn` não garante que a ordem devolvida bate com a de entrada, e
+casar endereço com cliente por posição erraria em silêncio — cada um com o
+endereço do vizinho. Há teste com três cidades distintas cobrindo isso.
+
+**Limite conhecido — geocodificação.** A importação não geocodifica: o Nominatim
+(OpenStreetMap, gratuito) aceita 1 requisição por segundo, então centenas de
+endereços não cabem no tempo da função. O backfill do cron diário pega quem está
+sem coordenada, mas processa ~10 por dia — importar 800 clientes significa meses
+até o mapa encher. A tela avisa que o preenchimento é gradual. **A correção real
+é trocar de provedor de geocodificação** (LocationIQ, Mapbox, Google) — decisão
+com custo, do dono. Este é o gargalo que a importação expôs, não criou.
+
+`normalizar()` usa `\p{Diacritic}` em vez de uma classe com os caracteres
+combinantes literais: como literal, eles ficam invisíveis no arquivo e qualquer
+editor ou merge pode comer sem ninguém notar.
+
+94 → 153 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`
