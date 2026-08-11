@@ -1122,6 +1122,68 @@ senão os testes batem num banco sem a tabela nova.
 
 ---
 
+### 7.2.16 Vocabulário adaptável — 11/08/2026
+
+Par do item anterior: campos personalizados adaptam os **dados**, este adapta as
+**palavras**. Uma empresa de limpeza faz "visitas", uma de TI atende "chamados",
+uma consultoria toca "projetos" — nenhuma fala "ordem de serviço". A empresa
+configura dois termos (o que se abre para cada trabalho, e quem executa) em
+Configurações → Vocabulário.
+
+**Duas armadilhas que a medição revelou antes de escrever código.**
+
+*1. Substituição cega destruiria os documentos jurídicos.* Dos 76 textos que
+pareciam citar "OS", boa parte era o **artigo** "os" — "os dados", "os Termos".
+Trocar por texto corromperia a política de privacidade. Por isso a marcação é
+explícita (`[[...]]`), colocada à mão só onde é a entidade; 17 textos da landing
+e dos documentos legais ficaram deliberadamente fora, com teste garantindo que
+continuem fora.
+
+*2. Português cobra concordância.* "a ordem de serviço" mas "o chamado";
+"concluída" mas "concluído". Sem tratar isso, a tela diria "a chamado".
+
+**Erro meu que o teste pegou:** eu tratava artigo e desinência de adjetivo como
+a mesma coisa. São iguais no feminino ("a"), mas no masculino o adjetivo termina
+em "o" (*cadastrado*) e o determinante irregular termina em **nada** (*nenhum*).
+`Nenhum[[osFim]]` produzia "Nenhumo". Hoje há marcador próprio para cada papel,
+e as frases com determinante irregular foram reescritas em construção neutra
+("Sem …", "Ainda não há …").
+
+| Marcador | Vale para | Exemplo |
+|---|---|---|
+| `[[os]]` / `[[Os]]` | singular, minúsculo / capitalizado | ordem de serviço |
+| `[[osP]]` / `[[OsP]]` | plural | ordens de serviço |
+| `[[osC]]` | forma curta, como a empresa escreveu | OS |
+| `[[osArt]]` / `[[osArtP]]` | artigo | a / as |
+| `[[osFim]]` / `[[osFimP]]` | desinência de adjetivo regular | concluíd**a** |
+
+**Por que `[[...]]` e não `{...}`:** `{...}` é sintaxe do ICU — o next-intl
+exigiria passar os valores em **toda** chamada de tradução, em ~59 pontos do
+código. Aqui a troca acontece uma vez, ao carregar as mensagens, com cache por
+idioma + vocabulário. O vocabulário vem na **mesma consulta** que já buscava o
+idioma do tenant: zero query a mais em qualquer página.
+
+"Voltar ao padrão" grava NULL, não o objeto de hoje — assim uma melhoria futura
+no texto padrão alcança quem restaurou, em vez de congelar.
+
+203 → 236 testes. Dois deles só falham em produção se faltarem: todo marcador
+usado existe na tabela (erro de digitação apareceria cru na tela do cliente) e
+nenhum marcador invadiu área proibida.
+
+**Gotchas novos:**
+
+- `Prisma.DbNull`, não `null`, para gravar NULL em coluna Json — em Json, `null`
+  é ambíguo (pode ser "o valor JSON null") e o Prisma exige desambiguar.
+- **Nunca use `JSON.stringify(...).includes("[[")` para procurar marcador não
+  substituído:** `[[` aparece sozinho sempre que uma lista tem outra lista
+  dentro. Isso gerou falso positivo no teste e de novo na verificação da página
+  publicada, onde o `[[` era do payload interno do Next (`__next_f.push`). A
+  checagem certa percorre texto por texto.
+- `vercel env pull` devolve valor **vazio** para toda variável criptografada,
+  inclusive `DATABASE_URL`. Não serve para conferir se uma variável foi gravada.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`
