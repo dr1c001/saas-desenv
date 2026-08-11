@@ -8,6 +8,14 @@ import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { geocodeAddress } from "@/lib/geocode"
 import { getTranslations } from "next-intl/server"
 import { translateFieldErrors } from "@/lib/validation"
+import { lerPlanilha, PlanilhaInvalida } from "@/lib/planilha"
+import {
+  analisarPlanilha,
+  chavesDeDuplicidade,
+  ImportacaoInvalida,
+  soDigitos,
+  type Ocorrencia,
+} from "@/lib/importar-clientes"
 
 const clientSchema = z.object({
   name: z.string().min(2, "nameRequired"),
@@ -189,4 +197,145 @@ export async function getClient(id: string) {
       },
     },
   })
+}
+
+// ─── Importação por planilha ─────────────────────────────────────────────────
+//
+// Motivo de existir: o cliente que assina já tem a carteira dele numa planilha.
+// Sem importar, ele teria que digitar centenas de cadastros à mão pra começar a
+// usar — e não digita: abandona no primeiro dia. Era o buraco mais caro do
+// produto, porque acontecia antes de ele ver qualquer valor.
+//
+// O trabalho pesado (ler o arquivo, mapear colunas, validar, achar duplicado)
+// mora em lib/planilha.ts e lib/importar-clientes.ts, que são puros e testados.
+// Aqui fica só o que precisa de sessão e banco.
+
+const TAMANHO_LOTE = 200
+
+export type ResultadoImportacao = {
+  ok: boolean
+  motivo?: string
+  importados?: number
+  jaExistiam?: number
+  duplicadosNoArquivo?: number
+  totalLinhas?: number
+  erros?: Ocorrencia[]
+  avisos?: Ocorrencia[]
+}
+
+export async function importClients(
+  _prev: ResultadoImportacao,
+  formData: FormData
+): Promise<ResultadoImportacao> {
+  const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
+
+  // createClient roda sem checagem de cargo de propósito (técnico cadastra
+  // cliente em campo). Importar em massa é outra coisa: mexe na carteira
+  // inteira de uma vez e é irreversível pela tela, então exige OWNER/ADMIN.
+  //
+  // `motivo` é sempre CHAVE de tradução, nunca texto pronto: a tela resolve
+  // com t(`reasons.${motivo}`). Devolver a mensagem já traduzida aqui faria a
+  // tela procurar uma chave chamada "Sem permissão" e quebrar.
+  if (role !== "OWNER" && role !== "ADMIN") return { ok: false, motivo: "semPermissao" }
+
+  const arquivo = formData.get("arquivo")
+  if (!(arquivo instanceof File) || arquivo.size === 0) {
+    return { ok: false, motivo: "arquivoVazio" }
+  }
+
+  let analise
+  try {
+    const linhas = lerPlanilha(Buffer.from(await arquivo.arrayBuffer()), arquivo.name)
+    analise = analisarPlanilha(linhas)
+  } catch (e) {
+    // Os dois erros carregam `motivo`, que é chave de tradução — a tela decide
+    // o idioma e o texto. Qualquer outra exceção sobe pro Sentry.
+    if (e instanceof PlanilhaInvalida || e instanceof ImportacaoInvalida) {
+      return { ok: false, motivo: e.motivo }
+    }
+    throw e
+  }
+
+  // Duplicados contra o que já está no banco. Documento é comparado só por
+  // dígitos porque o cadastro guarda formatado ("123.456.789-09") e a planilha
+  // costuma vir sem pontuação — comparar cru deixaria passar o mesmo cliente.
+  const existentes = await prisma.client.findMany({
+    where: { tenantId },
+    select: { document: true, email: true },
+  })
+  const jaNoBanco = new Set<string>()
+  for (const c of existentes) {
+    const doc = c.document ? soDigitos(c.document) : ""
+    if (doc.length >= 11) jaNoBanco.add(`doc:${doc}`)
+    if (c.email) jaNoBanco.add(`email:${c.email.toLowerCase()}`)
+  }
+
+  const novos = analise.clientes.filter(
+    (c) => !chavesDeDuplicidade(c).some((k) => jaNoBanco.has(k))
+  )
+  const jaExistiam = analise.clientes.length - novos.length
+
+  // Escrita aninhada em vez de createMany + createMany: createManyAndReturn não
+  // garante que a ordem devolvida bate com a de entrada, e casar endereço com
+  // cliente por posição erraria em silêncio — cada cliente com o endereço do
+  // vizinho. O Prisma faz a ligação certa aqui.
+  //
+  // Sem geocodificar: o Nominatim aceita 1 requisição por segundo, então
+  // centenas de endereços não cabem no tempo da função. O backfill do cron
+  // diário pega quem está sem coordenada.
+  let importados = 0
+  for (let i = 0; i < novos.length; i += TAMANHO_LOTE) {
+    const lote = novos.slice(i, i + TAMANHO_LOTE)
+    await prisma.$transaction(
+      lote.map((c) =>
+        prisma.client.create({
+          data: {
+            name: c.name,
+            document: c.document,
+            email: c.email,
+            phone: c.phone,
+            whatsapp: c.whatsapp,
+            status: c.status,
+            tenantId,
+            // Endereço só quando há algo pra guardar: linha vazia viraria um
+            // registro em branco que o backfill de coordenadas ficaria varrendo
+            // todo dia sem nunca ter o que geocodificar.
+            ...(c.street || c.city || c.zipCode || c.district
+              ? {
+                  address: {
+                    create: {
+                      street: c.street,
+                      number: c.number,
+                      complement: c.complement,
+                      district: c.district,
+                      city: c.city,
+                      state: c.state,
+                      zipCode: c.zipCode,
+                    },
+                  },
+                }
+              : {}),
+          },
+          select: { id: true },
+        })
+      )
+    )
+    // Contado por lote já gravado: se a função for interrompida no meio, os
+    // lotes anteriores estão commitados e reimportar o mesmo arquivo os
+    // reconhece como já existentes em vez de duplicar.
+    importados += lote.length
+  }
+
+  revalidatePath("/clients")
+
+  return {
+    ok: true,
+    importados,
+    jaExistiam,
+    duplicadosNoArquivo: analise.duplicadosNoArquivo,
+    totalLinhas: analise.totalLinhas,
+    erros: analise.erros,
+    avisos: analise.avisos,
+  }
 }

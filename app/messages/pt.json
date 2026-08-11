@@ -427,7 +427,8 @@
         "phone": "Telefone",
         "serviceOrders": "OS",
         "status": "Status"
-      }
+      },
+      "importButton": "Importar planilha"
     },
     "new": {
       "title": "Novo cliente"
@@ -496,6 +497,80 @@
       "warrantyUntilLabel": "Garantia até",
       "notesLabel": "Observações",
       "saveButton": "Salvar equipamento"
+    },
+    "import": {
+      "back": "Voltar para clientes",
+      "title": "Importar clientes de planilha",
+      "subtitle": "Traga sua carteira de clientes de uma vez, sem digitar um por um.",
+      "howTo": {
+        "title": "Como funciona",
+        "step1": "Baixe o modelo abaixo e preencha com seus clientes — ou use a sua própria planilha, desde que a primeira linha tenha os títulos das colunas.",
+        "step2": "Salve o arquivo em CSV ou Excel (.xlsx). Só a primeira aba é lida.",
+        "step3": "Envie o arquivo aqui. Você vê o resultado linha a linha antes de sair da tela."
+      },
+      "downloadTemplate": "Baixar modelo",
+      "recognizedColumns": "Reconhecemos os títulos mais comuns automaticamente: Nome, Razão Social, CPF, CNPJ, E-mail, Telefone, Fone, Celular, WhatsApp, CEP, Endereço, Rua, Número, Complemento, Bairro, Cidade, Município, Estado, UF e Situação. Maiúsculas, acentos e pontuação não importam. Só o nome é obrigatório.",
+      "fileLabel": "Arquivo da planilha",
+      "fileHint": "CSV ou Excel (.xlsx), até 2.000 linhas por arquivo. Planilha maior? Divida em partes — reenviar é seguro, quem já foi cadastrado não entra duas vezes.",
+      "submit": "Importar clientes",
+      "submitting": "Importando...",
+      "templateColumns": {
+        "name": "Nome",
+        "document": "CPF/CNPJ",
+        "email": "E-mail",
+        "phone": "Telefone",
+        "whatsapp": "WhatsApp",
+        "zipCode": "CEP",
+        "street": "Rua",
+        "number": "Número",
+        "complement": "Complemento",
+        "district": "Bairro",
+        "city": "Cidade",
+        "state": "UF"
+      },
+      "templateExample": {
+        "name": "José da Silva",
+        "document": "123.456.789-09",
+        "email": "jose@exemplo.com.br",
+        "phone": "(19) 3333-4444",
+        "whatsapp": "(19) 98765-4321",
+        "zipCode": "13400-000",
+        "street": "Rua das Flores",
+        "number": "100",
+        "complement": "Sala 2",
+        "district": "Centro",
+        "city": "Piracicaba",
+        "state": "SP"
+      },
+      "reasons": {
+        "arquivoVazio": "O arquivo está vazio. Escolha uma planilha com pelo menos uma linha de cliente.",
+        "formatoNaoSuportado": "Formato não reconhecido. Salve a planilha como CSV ou Excel (.xlsx) e envie de novo.",
+        "arquivoCorrompido": "Não foi possível ler o arquivo. Abra a planilha, salve novamente como .xlsx ou CSV e tente outra vez.",
+        "xlsProtegidoOuAntigo": "Este é um Excel antigo (.xls) ou protegido por senha. Abra no Excel e use Salvar como → Pasta de Trabalho do Excel (.xlsx).",
+        "semAbas": "A planilha não tem nenhuma aba com dados.",
+        "semCabecalho": "A planilha está vazia.",
+        "semColunaNome": "Não encontramos a coluna de nome. A primeira linha precisa ter os títulos das colunas — uma delas com Nome, Cliente ou Razão Social. Baixe o modelo para ver o formato.",
+        "semLinhas": "A planilha só tem o cabeçalho, sem nenhum cliente.",
+        "excedeLimite": "A planilha passa de 2.000 linhas. Divida em arquivos menores e importe um de cada vez.",
+        "semPermissao": "Você não tem permissão para importar clientes. Peça a um administrador da empresa."
+      },
+      "occurrences": {
+        "nomeInvalido": "sem nome — linha não importada.",
+        "emailIgnorado": "e-mail inválido, cliente importado sem ele:",
+        "statusDesconhecido": "situação não reconhecida, cadastrado como Ativo:",
+        "duplicadoNoArquivo": "repetido dentro da própria planilha, importado uma vez só:"
+      },
+      "result": {
+        "imported": "{count, plural, =0 {Nenhum cliente novo importado} one {# cliente importado} other {# clientes importados}}",
+        "summary": "{total, plural, one {# linha lida} other {# linhas lidas}} · {existed, plural, one {# já estava cadastrado} other {# já estavam cadastrados}} · {duplicated, plural, one {# repetido na planilha} other {# repetidos na planilha}}",
+        "mapNote": "Os endereços aparecem no mapa aos poucos: a busca de coordenadas roda uma vez por dia, em lotes.",
+        "errorsTitle": "Linhas não importadas",
+        "warningsTitle": "Avisos",
+        "line": "Linha {n}:",
+        "andMore": "...e mais {count}.",
+        "backToList": "Ver clientes",
+        "importAnother": "Importar outra planilha"
+      }
     }
   },
   "providers": {

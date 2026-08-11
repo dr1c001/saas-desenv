@@ -427,7 +427,8 @@
         "phone": "Phone",
         "serviceOrders": "Orders",
         "status": "Status"
-      }
+      },
+      "importButton": "Import spreadsheet"
     },
     "new": {
       "title": "New client"
@@ -496,6 +497,80 @@
       "warrantyUntilLabel": "Warranty until",
       "notesLabel": "Notes",
       "saveButton": "Save equipment"
+    },
+    "import": {
+      "back": "Back to clients",
+      "title": "Import clients from a spreadsheet",
+      "subtitle": "Bring your whole client list in at once, instead of typing them one by one.",
+      "howTo": {
+        "title": "How it works",
+        "step1": "Download the template below and fill it in — or use your own spreadsheet, as long as the first row holds the column titles.",
+        "step2": "Save the file as CSV or Excel (.xlsx). Only the first sheet is read.",
+        "step3": "Upload it here. You get a row-by-row result before you leave the page."
+      },
+      "downloadTemplate": "Download template",
+      "recognizedColumns": "We match the most common titles automatically: Name, Company, Tax ID, Email, Phone, Mobile, WhatsApp, Zip code, Address, Street, Number, Complement, District, City, State and Status. Case, accents and punctuation do not matter. Only the name is required.",
+      "fileLabel": "Spreadsheet file",
+      "fileHint": "CSV or Excel (.xlsx), up to 2,000 rows per file. Bigger list? Split it — re-uploading is safe, anyone already registered will not be added twice.",
+      "submit": "Import clients",
+      "submitting": "Importing...",
+      "templateColumns": {
+        "name": "Name",
+        "document": "Tax ID",
+        "email": "Email",
+        "phone": "Phone",
+        "whatsapp": "WhatsApp",
+        "zipCode": "Zip code",
+        "street": "Street",
+        "number": "Number",
+        "complement": "Complement",
+        "district": "District",
+        "city": "City",
+        "state": "State"
+      },
+      "templateExample": {
+        "name": "Jane Miller",
+        "document": "123.456.789-09",
+        "email": "jane@example.com",
+        "phone": "(19) 3333-4444",
+        "whatsapp": "(19) 98765-4321",
+        "zipCode": "13400-000",
+        "street": "Flower Street",
+        "number": "100",
+        "complement": "Suite 2",
+        "district": "Downtown",
+        "city": "Piracicaba",
+        "state": "SP"
+      },
+      "reasons": {
+        "arquivoVazio": "The file is empty. Pick a spreadsheet with at least one client row.",
+        "formatoNaoSuportado": "Format not recognized. Save the spreadsheet as CSV or Excel (.xlsx) and try again.",
+        "arquivoCorrompido": "We could not read this file. Open the spreadsheet, save it again as .xlsx or CSV, and retry.",
+        "xlsProtegidoOuAntigo": "This is an old Excel file (.xls) or one protected by a password. Open it in Excel and use Save As → Excel Workbook (.xlsx).",
+        "semAbas": "The spreadsheet has no sheet with data.",
+        "semCabecalho": "The spreadsheet is empty.",
+        "semColunaNome": "We could not find the name column. The first row must hold column titles, one of them Name, Client or Company. Download the template to see the format.",
+        "semLinhas": "The spreadsheet only has the header row, with no clients.",
+        "excedeLimite": "The spreadsheet is over 2,000 rows. Split it into smaller files and import one at a time.",
+        "semPermissao": "You do not have permission to import clients. Ask a company administrator."
+      },
+      "occurrences": {
+        "nomeInvalido": "no name — row not imported.",
+        "emailIgnorado": "invalid email, client imported without it:",
+        "statusDesconhecido": "status not recognized, saved as Active:",
+        "duplicadoNoArquivo": "repeated within the spreadsheet, imported once:"
+      },
+      "result": {
+        "imported": "{count, plural, =0 {No new clients imported} one {# client imported} other {# clients imported}}",
+        "summary": "{total, plural, one {# row read} other {# rows read}} · {existed, plural, one {# already registered} other {# already registered}} · {duplicated, plural, one {# repeated in the file} other {# repeated in the file}}",
+        "mapNote": "Addresses show up on the map gradually: the coordinate lookup runs once a day, in batches.",
+        "errorsTitle": "Rows not imported",
+        "warningsTitle": "Warnings",
+        "line": "Row {n}:",
+        "andMore": "...and {count} more.",
+        "backToList": "View clients",
+        "importAnother": "Import another spreadsheet"
+      }
     }
   },
   "providers": {

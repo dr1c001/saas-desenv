@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
-import { Plus, User, Eye, Pencil } from "lucide-react"
+import { Plus, User, Eye, Pencil, Upload } from "lucide-react"
 import { getClients } from "@/actions/clients"
+import { getTenant } from "@/lib/auth"
 import { SearchBar } from "@/components/shared/search-bar"
 import { StatusFilter } from "@/components/shared/status-filter"
 import { getTranslations } from "next-intl/server"
@@ -23,8 +24,10 @@ type SearchParams = Promise<{ q?: string; status?: string }>
 export default async function ClientsPage({ searchParams }: { searchParams: SearchParams }) {
   const { q, status } = await searchParams
   const clients = await getClients({ q, status })
+  const { role } = await getTenant()
   const t = await getTranslations("clients")
   const tc = await getTranslations("common")
+  const podeImportar = role === "OWNER" || role === "ADMIN"
 
   const statusOptions = [
     { value: "ACTIVE", label: tc("clientStatus.ACTIVE") },
@@ -36,10 +39,18 @@ export default async function ClientsPage({ searchParams }: { searchParams: Sear
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("list.title")}</h1>
-        <Link href="/clients/new" className={buttonVariants()}>
-          <Plus className="size-4 mr-2" />
-          {t("list.newButton")}
-        </Link>
+        <div className="flex gap-2">
+          {podeImportar && (
+            <Link href="/clients/import" className={buttonVariants({ variant: "outline" })}>
+              <Upload className="size-4 mr-2" />
+              {t("list.importButton")}
+            </Link>
+          )}
+          <Link href="/clients/new" className={buttonVariants()}>
+            <Plus className="size-4 mr-2" />
+            {t("list.newButton")}
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
