@@ -744,16 +744,16 @@
       "badge": "Set up in minutes · Cancel anytime",
       "titleLine1": "Stop managing service orders",
       "titleLine2": "over WhatsApp and spreadsheets",
-      "subtitle": "The complete system for service businesses — manage service orders, quotes, finances, track technicians on the map, and issue e-invoices. All in one place, on your phone or computer.",
+      "subtitle": "The complete system for service businesses — quotes, service orders, your field team on the map, finances and e-invoices. All in one place, on your phone or computer.",
       "ctaPrimary": "Create account and subscribe",
       "ctaSecondary": "I already have an account",
-      "socialProof": "Over <strong>50 companies</strong> already manage their services with ServiçoOS"
+      "socialProof": "<strong>No lock-in, no setup fee</strong> — your data is yours and you can export it anytime"
     },
     "dashboardPreview": {
       "stats": [
         "Open Orders",
         "Monthly Revenue",
-        "Active Technicians",
+        "Team in the field",
         "Clients"
       ],
       "items": [
@@ -799,7 +799,7 @@
         },
         {
           "title": "Start using it",
-          "desc": "Add technicians and clients, open your first service order, and send the PDF automatically."
+          "desc": "Add your team and your clients, open your first service order, and send the PDF automatically."
         }
       ],
       "cta": "Create account now"
@@ -814,7 +814,7 @@
         },
         {
           "title": "Real-Time GPS Map",
-          "desc": "Track where your technicians and active service orders are on the map. Automatic updates every 30 seconds."
+          "desc": "Track where your field team and active service orders are on the map. Automatic updates every 30 seconds."
         },
         {
           "title": "Complete Finances",
@@ -826,15 +826,15 @@
         },
         {
           "title": "Execution Checklist",
-          "desc": "Define steps for each service type. Technicians check off progress right from their phone."
+          "desc": "Define steps for each service type. Whoever is on site checks off progress right from their phone."
         },
         {
           "title": "Smart Reports",
-          "desc": "Dashboards with revenue, service orders by period, technician performance, and much more."
+          "desc": "Dashboards with revenue, service orders by period, team performance, and much more."
         },
         {
           "title": "Team Management",
-          "desc": "Control permissions by role, see each technician's location, and manage the schedule."
+          "desc": "Control permissions by role, see each field member's location, and manage the schedule."
         },
         {
           "title": "E-Invoice Issuance",
@@ -850,23 +850,24 @@
         }
       ]
     },
-    "testimonials": {
-      "title": "What our customers say",
-      "subtitle": "Real companies, real results.",
+    "segments": {
+      "title": "Built for any service business",
+      "subtitle": "If your company schedules, performs and charges for a service, ServiçoOS fits.",
       "items": [
-        {
-          "role": "Refrigeration company, SP",
-          "text": "I cut 3 hours of administrative work a day. The system is very easy to use and my team loved it."
-        },
-        {
-          "role": "Technical assistance, RJ",
-          "text": "My clients love getting the service order PDF with the digital signature. It looks so much more professional."
-        },
-        {
-          "role": "Electrical and installations, MG",
-          "text": "The GPS map changed my life. I know where every technician is in real time, without having to call them."
-        }
-      ]
+        "Cleaning and janitorial",
+        "Building maintenance",
+        "Repair and technical support",
+        "Electrical and plumbing",
+        "HVAC and refrigeration",
+        "Landscaping and gardening",
+        "Pest control",
+        "IT and helpdesk",
+        "Installation and assembly",
+        "Security and monitoring",
+        "Consulting and professional services",
+        "Events and rentals"
+      ],
+      "footnote": "Don't see your industry? You define your own services, quote line items and execution checklists — the system isn't tied to one trade."
     },
     "pricing": {
       "title": "Simple, transparent plans",
@@ -913,7 +914,7 @@
     },
     "finalCta": {
       "title": "Ready to get your business organized?",
-      "line1": "Join dozens of companies already using ServiçoOS.",
+      "line1": "From the first quote to the invoice, all in one system.",
       "line2": "Set up in minutes and get started today.",
       "button": "Create account",
       "badges": {

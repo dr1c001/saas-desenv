@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server"
 import { PublicLanguageToggle } from "@/components/layout/public-language-toggle"
 import {
   ClipboardList, MapPin, DollarSign, BarChart2, CheckCircle2,
-  FileText, Users, Zap, Shield, Star, ArrowRight, CreditCard,
+  FileText, Users, Zap, Shield, ArrowRight, CreditCard,
   X, MessageCircle, ChevronDown, Wrench, Receipt,
 } from "lucide-react"
 
@@ -18,9 +18,6 @@ const plans = [
   { key: "pro", name: "Pro", price: 197, yearlyPrice: 1970, color: "border-primary ring-2 ring-primary", popular: true },
   { key: "enterprise", name: "Enterprise", price: 397, yearlyPrice: 3970, color: "border-border" },
 ]
-
-// Nomes são próprios (não traduzidos), alinhados 1:1 com landing.testimonials.items
-const testimonialNames = ["Carlos S.", "Ana P.", "Marcos R."]
 
 // Emojis alinhados 1:1 com landing.painPoints.items
 const painPointEmojis = ["📱", "📋", "🗂️", "🧾"]
@@ -57,8 +54,13 @@ export default async function LandingPage() {
   const painPointItems = t.raw("painPoints.items") as { before: string; after: string }[]
   const howItWorksSteps = t.raw("howItWorks.steps") as { title: string; desc: string }[]
   const featureItems = t.raw("features.items") as { title: string; desc: string }[]
-  const testimonialItems = t.raw("testimonials.items") as { role: string; text: string }[]
+  const segmentItems = t.raw("segments.items") as string[]
   const faqItems = t.raw("faq.items") as { q: string; a: string }[]
+
+  // Número só sai do ambiente: antes estava fixo como 5511999999999 (exemplo),
+  // então o botão flutuante levava o visitante a um número inexistente. Sem a
+  // variável configurada é melhor não mostrar o botão do que mostrar quebrado.
+  const suporteWhatsapp = process.env.SUPPORT_WHATSAPP?.replace(/\D/g, "")
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -222,26 +224,29 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-20 mx-auto max-w-6xl px-4">
-        <h2 className="text-3xl font-bold text-center mb-2">{t("testimonials.title")}</h2>
-        <p className="text-center text-muted-foreground mb-12">{t("testimonials.subtitle")}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          {testimonialItems.map((item, i) => (
-            <div key={i} className="rounded-xl border bg-card p-6 space-y-4">
-              <div className="flex gap-1">
-                {Array.from({ length: 5 }).map((_, j) => (
-                  <Star key={j} className="size-4 fill-yellow-400 text-yellow-400" />
-                ))}
-              </div>
-              <p className="text-sm text-muted-foreground">&ldquo;{item.text}&rdquo;</p>
-              <div>
-                <p className="font-semibold text-sm">{testimonialNames[i]}</p>
-                <p className="text-xs text-muted-foreground">{item.role}</p>
-              </div>
-            </div>
+      {/* Segmentos atendidos — substituiu a seção de depoimentos, que trazia três
+          citações inventadas ("Carlos S.", 5 estrelas) sob o título "Empresas
+          reais, resultados reais", todas do mesmo nicho técnico. Além do
+          problema de veracidade, isso respondia errado à pergunta que o
+          visitante faz aqui — "isso serve pra mim?" — e afastava limpeza,
+          jardinagem, TI, eventos e todo o resto do público-alvo real. */}
+      <section className="py-20 mx-auto max-w-5xl px-4">
+        <h2 className="text-3xl font-bold text-center mb-2">{t("segments.title")}</h2>
+        <p className="text-center text-muted-foreground mb-12">{t("segments.subtitle")}</p>
+        <div className="flex flex-wrap justify-center gap-3">
+          {segmentItems.map((segmento, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm"
+            >
+              <CheckCircle2 className="size-4 text-green-500 shrink-0" />
+              {segmento}
+            </span>
           ))}
         </div>
+        <p className="text-center text-sm text-muted-foreground mt-10 max-w-2xl mx-auto">
+          {t("segments.footnote")}
+        </p>
       </section>
 
       {/* Pricing */}
@@ -349,15 +354,17 @@ export default async function LandingPage() {
       </footer>
 
       {/* WhatsApp floating button */}
-      <a
-        href={`https://wa.me/5511999999999?text=${encodeURIComponent(t("whatsapp.message"))}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-50 size-14 rounded-full bg-green-500 text-white flex items-center justify-center shadow-lg hover:bg-green-600 transition-colors"
-        aria-label={t("whatsapp.ariaLabel")}
-      >
-        <MessageCircle className="size-6" />
-      </a>
+      {suporteWhatsapp && (
+        <a
+          href={`https://wa.me/${suporteWhatsapp}?text=${encodeURIComponent(t("whatsapp.message"))}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-6 right-6 z-50 size-14 rounded-full bg-green-500 text-white flex items-center justify-center shadow-lg hover:bg-green-600 transition-colors"
+          aria-label={t("whatsapp.ariaLabel")}
+        >
+          <MessageCircle className="size-6" />
+        </a>
+      )}
     </div>
   )
 }

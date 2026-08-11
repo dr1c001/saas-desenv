@@ -744,16 +744,16 @@
       "badge": "Configure em minutos · Cancele quando quiser",
       "titleLine1": "Chega de controlar OS",
       "titleLine2": "pelo WhatsApp e planilha",
-      "subtitle": "Sistema completo para empresas de serviço — gerencie OS, orçamentos, financeiro, técnicos no mapa e emita NFS-e. Tudo em um só lugar, no celular ou computador.",
+      "subtitle": "Sistema completo para empresas de serviço — orçamentos, ordens de serviço, equipe em campo no mapa, financeiro e NFS-e. Tudo em um só lugar, no celular ou no computador.",
       "ctaPrimary": "Criar conta e assinar",
       "ctaSecondary": "Já tenho conta",
-      "socialProof": "Mais de <strong>50 empresas</strong> já gerenciam seus serviços com o ServiçoOS"
+      "socialProof": "<strong>Sem fidelidade e sem taxa de instalação</strong> — seus dados são seus e você exporta quando quiser"
     },
     "dashboardPreview": {
       "stats": [
         "OS Abertas",
         "Faturamento/mês",
-        "Técnicos ativos",
+        "Equipe em campo",
         "Clientes"
       ],
       "items": [
@@ -799,7 +799,7 @@
         },
         {
           "title": "Comece a usar",
-          "desc": "Adicione técnicos e clientes, abra sua primeira OS e envie o PDF automaticamente."
+          "desc": "Adicione sua equipe e seus clientes, abra a primeira OS e envie o PDF automaticamente."
         }
       ],
       "cta": "Criar conta agora"
@@ -814,7 +814,7 @@
         },
         {
           "title": "Mapa GPS em Tempo Real",
-          "desc": "Acompanhe onde estão seus técnicos e suas OS ativas no mapa. Atualizações automáticas a cada 30 segundos."
+          "desc": "Acompanhe onde está sua equipe em campo e suas OS ativas no mapa. Atualizações automáticas a cada 30 segundos."
         },
         {
           "title": "Financeiro Completo",
@@ -826,15 +826,15 @@
         },
         {
           "title": "Checklist de Execução",
-          "desc": "Defina etapas para cada tipo de serviço. O técnico marca o progresso diretamente pelo celular."
+          "desc": "Defina etapas para cada tipo de serviço. Quem está em campo marca o progresso direto pelo celular."
         },
         {
           "title": "Relatórios Inteligentes",
-          "desc": "Painéis com receita, OS por período, desempenho de técnicos e muito mais."
+          "desc": "Painéis com receita, OS por período, desempenho da equipe e muito mais."
         },
         {
           "title": "Gestão de Equipe",
-          "desc": "Controle permissões por cargo, veja a localização de cada técnico e gerencie a agenda."
+          "desc": "Controle permissões por cargo, veja a localização de cada profissional em campo e gerencie a agenda."
         },
         {
           "title": "Emissão de NFS-e",
@@ -850,23 +850,24 @@
         }
       ]
     },
-    "testimonials": {
-      "title": "O que dizem nossos clientes",
-      "subtitle": "Empresas reais, resultados reais.",
+    "segments": {
+      "title": "Feito para qualquer empresa de serviço",
+      "subtitle": "Se a sua empresa agenda, executa e cobra por um serviço, o ServiçoOS atende.",
       "items": [
-        {
-          "role": "Empresa de refrigeração, SP",
-          "text": "Reduzi 3 horas por dia de trabalho administrativo. O sistema é muito fácil de usar e minha equipe adorou."
-        },
-        {
-          "role": "Assistência técnica, RJ",
-          "text": "Meus clientes adoram receber o PDF da OS com a assinatura digital. Parece muito mais profissional."
-        },
-        {
-          "role": "Elétrica e instalações, MG",
-          "text": "O mapa GPS mudou minha vida. Sei onde cada técnico está em tempo real, sem precisar ligar para eles."
-        }
-      ]
+        "Limpeza e conservação",
+        "Manutenção predial",
+        "Assistência técnica",
+        "Elétrica e hidráulica",
+        "Refrigeração e climatização",
+        "Jardinagem e paisagismo",
+        "Dedetização e controle de pragas",
+        "TI e suporte",
+        "Instalação e montagem",
+        "Segurança e monitoramento",
+        "Consultoria e serviços profissionais",
+        "Eventos e locação"
+      ],
+      "footnote": "Não achou o seu segmento? Os serviços, os itens do orçamento e os checklists de execução são definidos por você — o sistema não é preso a um ramo."
     },
     "pricing": {
       "title": "Planos simples e transparentes",
@@ -913,7 +914,7 @@
     },
     "finalCta": {
       "title": "Pronto para organizar sua empresa?",
-      "line1": "Junte-se a dezenas de empresas que já usam o ServiçoOS.",
+      "line1": "Do primeiro orçamento à nota fiscal, tudo num sistema só.",
       "line2": "Configure em minutos e comece hoje mesmo.",
       "button": "Criar conta",
       "badges": {
