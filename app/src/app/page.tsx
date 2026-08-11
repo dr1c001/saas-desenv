@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
 import { PublicLanguageToggle } from "@/components/layout/public-language-toggle"
-import { normalizarWhatsappBR } from "@/lib/utils"
+import { linkWhatsappSuporte } from "@/lib/utils"
 import {
   ClipboardList, MapPin, DollarSign, BarChart2, CheckCircle2,
   FileText, Users, Zap, Shield, ArrowRight, CreditCard,
@@ -62,7 +62,7 @@ export default async function LandingPage() {
   // então o botão flutuante levava o visitante a um número inexistente. Sem a
   // variável configurada — ou com número que não faz sentido — é melhor não
   // mostrar o botão do que mostrar quebrado.
-  const suporteWhatsapp = normalizarWhatsappBR(process.env.SUPPORT_WHATSAPP)
+  const suporteWhatsapp = linkWhatsappSuporte(process.env.SUPPORT_WHATSAPP, t("whatsapp.message"))
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -358,7 +358,7 @@ export default async function LandingPage() {
       {/* WhatsApp floating button */}
       {suporteWhatsapp && (
         <a
-          href={`https://wa.me/${suporteWhatsapp}?text=${encodeURIComponent(t("whatsapp.message"))}`}
+          href={suporteWhatsapp}
           target="_blank"
           rel="noopener noreferrer"
           className="fixed bottom-6 right-6 z-50 size-14 rounded-full bg-green-500 text-white flex items-center justify-center shadow-lg hover:bg-green-600 transition-colors"

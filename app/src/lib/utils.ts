@@ -77,3 +77,37 @@ export function normalizarWhatsappBR(bruto: string | undefined): string | null {
   // que mandar o visitante pra uma conversa com ninguém.
   return null
 }
+
+// Hosts oficiais de link do WhatsApp. A variável de ambiente é confiável, mas
+// um erro de digitação no domínio mandaria todo visitante do site pra fora —
+// e ninguém perceberia, porque o link continua abrindo alguma coisa.
+const HOSTS_WHATSAPP = new Set(["wa.me", "api.whatsapp.com", "chat.whatsapp.com"])
+
+/**
+ * Monta o endereço do botão de suporte a partir do que estiver configurado.
+ *
+ * Aceita as duas formas que o WhatsApp usa hoje:
+ *  - o número ("(19) 99280-2772"), e aí a mensagem inicial vem do nosso texto;
+ *  - o link curto do WhatsApp Business ("https://wa.me/message/XXXX"), que já
+ *    carrega a saudação configurada na conta — por isso não recebe `?text=`,
+ *    que o formato de convite ignora.
+ */
+export function linkWhatsappSuporte(
+  configurado: string | undefined,
+  mensagem: string
+): string | null {
+  const valor = (configurado ?? "").trim()
+  if (!valor) return null
+
+  if (/^https?:\/\//i.test(valor)) {
+    try {
+      const url = new URL(valor)
+      return HOSTS_WHATSAPP.has(url.hostname.toLowerCase()) ? url.toString() : null
+    } catch {
+      return null
+    }
+  }
+
+  const numero = normalizarWhatsappBR(valor)
+  return numero ? `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}` : null
+}

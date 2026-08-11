@@ -30,3 +30,44 @@ describe("número de WhatsApp do suporte", () => {
     expect(normalizarWhatsappBR("5519992802772000")).toBeNull()
   })
 })
+
+describe("link do botão de suporte", () => {
+  const MSG = "Olá, tenho uma dúvida"
+
+  it("monta o link a partir do número, com a mensagem inicial", async () => {
+    const { linkWhatsappSuporte } = await import("@/lib/utils")
+    expect(linkWhatsappSuporte("(19) 99280-2772", MSG)).toBe(
+      "https://wa.me/5519992802772?text=Ol%C3%A1%2C%20tenho%20uma%20d%C3%BAvida"
+    )
+  })
+
+  it("usa o link curto do WhatsApp Business como veio", async () => {
+    // O formato wa.me/message/CÓDIGO já carrega a saudação configurada na
+    // conta e ignora ?text= — anexar ali só sujaria a URL.
+    const { linkWhatsappSuporte } = await import("@/lib/utils")
+    expect(linkWhatsappSuporte("https://wa.me/message/AEG5ASAST4GTK1", MSG)).toBe(
+      "https://wa.me/message/AEG5ASAST4GTK1"
+    )
+  })
+
+  it("aceita os outros endereços oficiais", async () => {
+    const { linkWhatsappSuporte } = await import("@/lib/utils")
+    expect(linkWhatsappSuporte("https://api.whatsapp.com/send?phone=5519992802772", MSG)).toContain(
+      "api.whatsapp.com"
+    )
+  })
+
+  it("recusa endereço que não é do WhatsApp", async () => {
+    // Erro de digitação no domínio mandaria todo visitante do site pra fora,
+    // e ninguém perceberia porque o link continua abrindo alguma coisa.
+    const { linkWhatsappSuporte } = await import("@/lib/utils")
+    expect(linkWhatsappSuporte("https://wa.me.evil.com/123", MSG)).toBeNull()
+    expect(linkWhatsappSuporte("https://exemplo.com/contato", MSG)).toBeNull()
+  })
+
+  it("devolve null quando não há nada configurado", async () => {
+    const { linkWhatsappSuporte } = await import("@/lib/utils")
+    expect(linkWhatsappSuporte(undefined, MSG)).toBeNull()
+    expect(linkWhatsappSuporte("   ", MSG)).toBeNull()
+  })
+})
