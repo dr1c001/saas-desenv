@@ -885,6 +885,57 @@ desativado não entra nem com cookie válido; o financeiro, mesmo estando na
 equipe e com cookie legítimo, não entra na conta de cliente; e comercial
 disparando `cancelarAcesso` direto (sem passar pela tela) é barrado.
 
+### 7.2.13 Parecer jurídico aplicado — contrato v1.1 — 10/08/2026
+
+O contrato v1.0, gerado por cliente e anexado ao e-mail de confirmação de
+pagamento, foi submetido a revisão jurídica junto com um roteiro de 11 pontos
+sobre os quais havia dúvida. O parecer confirmou 2 e mandou ajustar 9.
+
+**Confirmados, mantidos sem alteração:**
+- **Legítimo interesse (5.3)** — não exige LIA prévia como condição de
+  validade; a ANPD pode pedir *a posteriori*. Documentar internamente é
+  recomendação de compliance, não redação contratual.
+- **Suboperadores por função (5.7)** — a LGPD, diferente do art. 28 do GDPR,
+  não exige nomeação individualizada no corpo do contrato.
+
+**Ajustados, com a redação literal proposta pelo parecer:**
+
+| Cláusula | O que mudou |
+|---|---|
+| 2.3 | Reajuste ganhou índice objetivo (IPCA/IBGE) — antes era discricionário |
+| 3.4 (nova) | Rescisão pela CONTRATADA: não existia hipótese nenhuma |
+| 5.1 | Segregado: nos dados do assinante o ServiçoOS é **controlador**, não operador |
+| 5.8 | Cláusulas-Padrão da Resolução CD/ANPD nº 19/2024, no lugar de redação genérica |
+| 5.9 | Prazo objetivo de 24h operador→controlador (a ANPD dá 3 dias úteis ao controlador) |
+| 5.10 | Ressalva de guarda fiscal — conflitava com a eliminação em 30 dias |
+| 8.4 (nova) | Teto de responsabilidade não vale para dolo, culpa grave ou arts. 42-45 da LGPD |
+| 11 | Foro da comarca da CONTRATADA para PJ, preservando o do consumidor (art. 101, I, CDC) |
+| 12 (nova) | Prevalência do contrato sobre os Termos de Uso em caso de divergência |
+| — | Aceite eletrônico: fundamento trocado para art. 107 do CC + art. 10, §2º da MP 2.200-2/2001 |
+
+**Dois achados que importam além do texto:**
+
+1. **A limitação de responsabilidade sem exceções era risco de nulidade
+   total**, não de afastamento pontual: cláusula que limita indiscriminadamente
+   qualquer dano — inclusive dolo — pode ser declarada nula por inteiro
+   (arts. 421, 422 e 424 do CC, este último para contratos de adesão).
+2. **A eleição de foro cobria só a exceção.** Escrevi foro do consumidor
+   "quando a CONTRATANTE for consumidora" — mas pela teoria finalista a maioria
+   dos clientes é PJ contratando insumo para a atividade-fim, ou seja, *não*
+   consumidora. A regra ficou sem foro; só a exceção tinha.
+
+**Fora do contrato, pendente de ação:** o período de adoção das Cláusulas-Padrão
+da ANPD encerrou em 23/08/2025. Referenciá-las no contrato não basta — é preciso
+**firmá-las com cada fornecedor estrangeiro**. Registrado como pendência
+operacional, não de código.
+
+**Verificação:** além dos testes de geração, um teste lê o código-fonte do
+contrato e confere que as citações exigidas pelo parecer continuam lá (artigos
+42-45, Resolução 19/2024, Resolução 15/2024, art. 101 I, IPCA, e outras), e
+que a Lei 14.063/2020 — apontada como fundamento errado — não voltou. Cláusula
+legal apagada por engano não gera erro em lugar nenhum: o PDF continua saindo
+bonito, só que sem a proteção.
+
 ### 7.3 Auditoria completa pré-venda — 05/08/2026
 
 Pedido explícito de revisar o código inteiro (não só o diff), todas as abas,

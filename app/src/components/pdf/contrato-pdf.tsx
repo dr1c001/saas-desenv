@@ -8,8 +8,18 @@ import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer"
 // mudança de copy. Qualquer alteração de conteúdo deve passar por advogado,
 // e a versão (VERSAO_CONTRATO) precisa subir junto, porque o cliente recebeu
 // uma versão específica no dia em que assinou.
+//
+// v1.1 (10/08/2026) — aplica o parecer jurídico sobre a v1.0. As redações
+// abaixo marcadas como "(parecer)" são transcrição literal do que o advogado
+// propôs; não reescrever "pra ficar mais claro" sem nova consulta. Foram
+// mantidas sem alteração, por aprovação expressa do parecer, as cláusulas
+// 5.3 (legítimo interesse) e 5.7 (suboperadores por função).
 
-export const VERSAO_CONTRATO = "1.0"
+export const VERSAO_CONTRATO = "1.1"
+
+/** Comarca da sede da CONTRATADA, usada na eleição de foro (cláusula 11).
+ *  Se a sede mudar, muda aqui — e a versão do contrato sobe junto. */
+const COMARCA_CONTRATADA = "Piracicaba/SP"
 
 const styles = StyleSheet.create({
   page: { fontFamily: "Helvetica", fontSize: 9.5, padding: 48, paddingBottom: 64, color: "#1a1a1a", lineHeight: 1.5 },
@@ -130,9 +140,10 @@ export function ContratoPDF({ dados }: { dados: DadosContrato }) {
           completos de cartão de crédito.
         </Text>
         <Text style={styles.p}>
-          2.3. Reajustes de preço serão comunicados com antecedência mínima de 30 (trinta) dias e
-          somente se aplicam ao ciclo seguinte, facultado à CONTRATANTE cancelar sem ônus antes da
-          nova cobrança.
+          2.3. Os valores da assinatura poderão ser reajustados anualmente com base na variação
+          acumulada do IPCA/IBGE nos 12 (doze) meses anteriores, ou outro índice que venha a
+          substituí-lo, mediante aviso prévio de 30 (trinta) dias, assegurado à CONTRATANTE o direito
+          de cancelamento sem ônus caso não concorde com o novo valor. (parecer)
         </Text>
 
         {/* ── 3 ── */}
@@ -150,9 +161,20 @@ export function ContratoPDF({ dados }: { dados: DadosContrato }) {
           3.3. Não há devolução proporcional de valores já pagos referentes ao período em curso, salvo
           nas hipóteses previstas no Código de Defesa do Consumidor.
         </Text>
+        <Text style={styles.p}>
+          3.4. A CONTRATADA poderá suspender ou rescindir este Contrato, mediante notificação, nas
+          hipóteses de: (i) inadimplência superior a 30 (trinta) dias, observado o procedimento de
+          suspensão previsto na Cláusula 4; (ii) uso da Plataforma em violação à lei, a direitos de
+          terceiros, ou à Política de Uso Aceitável; (iii) fraude ou tentativa de fraude comprovada.
+          Nas hipóteses (i) e (ii), será concedido à CONTRATANTE prazo de 15 (quinze) dias para
+          exportação de seus dados, na forma da Cláusula 5.10; na hipótese (iii), a CONTRATADA poderá
+          reter os dados pelo prazo necessário à apuração e ao atendimento de eventual requisição de
+          autoridade competente. (parecer)
+        </Text>
         <EmResumo>
           Sem fidelidade e sem multa. Você cancela sozinho, pelo sistema, e continua usando até acabar o
-          período que já pagou.
+          período que já pagou. Do nosso lado, só encerramos por uso ilegal, fraude ou conta parada há
+          mais de 30 dias sem pagamento — e mesmo assim você tem 15 dias para baixar seus dados.
         </EmResumo>
 
         {/* ── 4 ── */}
@@ -193,9 +215,17 @@ export function ContratoPDF({ dados }: { dados: DadosContrato }) {
           <Text style={{ fontFamily: "Helvetica-Bold" }}> OPERADORA</Text>, realizando o tratamento em nome e
           conforme instruções da CONTRATANTE.
         </Text>
+        <Text style={styles.p}>
+          Para os dados pessoais do próprio ASSINANTE (cadastro, faturamento, telemetria de uso da
+          Plataforma), a CONTRATADA atua como CONTROLADORA, nos termos do art. 5º, VI, da LGPD,
+          tratando tais dados com fundamento na execução do contrato (art. 7º, V), no cumprimento de
+          obrigação legal ou regulatória (art. 7º, II) e, quando aplicável, em legítimo interesse
+          (art. 7º, IX), conforme detalhado na Política de Privacidade da CONTRATADA. (parecer)
+        </Text>
         <EmResumo>
-          Os dados dos seus clientes são seus, e as decisões sobre eles são suas. Nós só processamos o que
-          você manda, para o sistema funcionar.
+          Os dados dos seus clientes são seus, e as decisões sobre eles são suas — nós só processamos o
+          que você manda. Já os dados da SUA empresa (cadastro, cobrança, uso do sistema) são tratados
+          por nós, e a Política de Privacidade explica como.
         </EmResumo>
 
         <Text style={styles.sub}>5.2. Finalidade do tratamento (art. 6º, I)</Text>
@@ -265,19 +295,24 @@ export function ContratoPDF({ dados }: { dados: DadosContrato }) {
 
         <Text style={styles.sub}>5.8. Transferência internacional (arts. 33 a 36)</Text>
         <Text style={styles.p}>
-          Parte da infraestrutura pode estar localizada fora do Brasil. Nesses casos, a transferência
-          observa as hipóteses legais aplicáveis, com cláusulas contratuais e garantias de nível de
-          proteção compatível com a LGPD. A infraestrutura principal de aplicação está configurada para
-          a região do Brasil.
+          Parte da infraestrutura pode estar localizada fora do Brasil. Eventual transferência
+          internacional de dados pessoais necessária à prestação dos serviços será realizada com amparo
+          nas Cláusulas-Padrão Contratuais aprovadas pela Resolução CD/ANPD nº 19/2024, firmadas entre a
+          CONTRATADA e o(s) operador(es) estrangeiro(s) envolvido(s), ou em outro mecanismo de
+          transferência internacional expressamente autorizado pela Autoridade Nacional de Proteção de
+          Dados. (parecer) A infraestrutura principal de aplicação está configurada para a região do
+          Brasil.
         </Text>
 
         <Text style={styles.sub}>5.9. Incidentes de segurança (art. 48)</Text>
         <Text style={styles.p}>
-          Constatado incidente de segurança que possa acarretar risco ou dano relevante aos titulares, a
-          CONTRATADA comunicará a CONTRATANTE em prazo razoável, informando natureza dos dados
-          afetados, titulares envolvidos, medidas técnicas adotadas e riscos identificados, de modo a
-          permitir que a CONTRATANTE, como controladora, cumpra seu dever de comunicação à ANPD e aos
-          titulares.
+          A CONTRATADA comunicará a CONTRATANTE sobre qualquer incidente de segurança que possa acarretar
+          risco ou dano relevante aos titulares de dados, em prazo não superior a 24 (vinte e quatro)
+          horas contadas da ciência do incidente, de modo a viabilizar o cumprimento, pela CONTRATANTE,
+          do prazo de 3 (três) dias úteis previsto na Resolução CD/ANPD nº 15/2024 para comunicação à
+          Autoridade Nacional de Proteção de Dados, ressalvado prazo diverso estabelecido em
+          regulamentação superveniente. (parecer) A comunicação informará a natureza dos dados afetados,
+          os titulares envolvidos, as medidas técnicas adotadas e os riscos identificados.
         </Text>
 
         <Text style={styles.sub}>5.10. Retenção e eliminação (arts. 15 e 16)</Text>
@@ -287,9 +322,17 @@ export function ContratoPDF({ dados }: { dados: DadosContrato }) {
           guarda de registros exigida por obrigação legal ou regulatória e a conservação de dados
           anonimizados para fins estatísticos.
         </Text>
+        <Text style={styles.p}>
+          Ressalvam-se da eliminação prevista nesta cláusula os documentos fiscais emitidos por meio da
+          Plataforma (para os CONTRATANTES que utilizarem o módulo de emissão de nota fiscal), os quais
+          serão retidos pela CONTRATADA ou por seu suboperador de emissão fiscal pelo prazo mínimo
+          exigido pela legislação tributária aplicável, ainda que superior ao prazo de eliminação dos
+          demais dados e ainda que solicitada a eliminação antecipada pela CONTRATANTE. (parecer)
+        </Text>
         <EmResumo>
-          Se você cancelar, tem 30 dias para baixar tudo. Depois disso, é só pedir que apagamos — guardando
-          apenas o que a lei obriga a guardar.
+          Se você cancelar, tem 30 dias para baixar tudo. Depois disso, é só pedir que apagamos. A única
+          exceção são as notas fiscais emitidas pelo sistema: a lei tributária obriga a guardá-las por
+          anos, então elas ficam mesmo que você peça a exclusão.
         </EmResumo>
 
         <Text style={styles.sub}>5.11. Encarregado (art. 41)</Text>
@@ -335,6 +378,16 @@ export function ContratoPDF({ dados }: { dados: DadosContrato }) {
           8.3. Nada nesta cláusula afasta direitos assegurados ao consumidor pelo Código de Defesa do
           Consumidor, quando aplicável.
         </Text>
+        <Text style={styles.p}>
+          8.4. Excetuam-se do teto de responsabilidade previsto nesta cláusula os danos decorrentes de
+          dolo ou culpa grave da CONTRATADA, bem como a responsabilidade da CONTRATADA perante titulares
+          de dados pessoais nos termos dos artigos 42 a 45 da Lei nº 13.709/2018 (LGPD), que não pode ser
+          afastada ou limitada por disposição contratual entre as partes. (parecer)
+        </Text>
+        <EmResumo>
+          Existe um teto de indenização, mas ele não vale para tudo: se houver má-fé ou erro grave da
+          nossa parte, ou se alguém tiver dado pessoal vazado, o teto não se aplica.
+        </EmResumo>
 
         <Text style={styles.clausula}>CLÁUSULA 9 — PROPRIEDADE INTELECTUAL</Text>
         <Text style={styles.p}>
@@ -350,16 +403,28 @@ export function ContratoPDF({ dados }: { dados: DadosContrato }) {
 
         <Text style={styles.clausula}>CLÁUSULA 11 — FORO</Text>
         <Text style={styles.p}>
-          Fica eleito o foro do domicílio da CONTRATANTE para dirimir controvérsias oriundas deste
-          contrato, quando a CONTRATANTE for consumidora, nos termos do Código de Defesa do Consumidor.
+          Fica eleito o foro da Comarca de {COMARCA_CONTRATADA} para dirimir quaisquer controvérsias
+          oriundas deste Contrato, com renúncia a qualquer outro, por mais privilegiado que seja, exceto
+          quando a CONTRATANTE for consumidora nos termos do Código de Defesa do Consumidor, hipótese em
+          que prevalecerá o foro do domicílio da CONTRATANTE, na forma do art. 101, I, da Lei nº
+          8.078/1990. (parecer)
+        </Text>
+
+        <Text style={styles.clausula}>CLÁUSULA 12 — PREVALÊNCIA SOBRE OS TERMOS DE USO</Text>
+        <Text style={styles.p}>
+          Em caso de conflito ou divergência entre este Contrato e os Termos de Uso publicados em
+          servicoos.com.br/terms, prevalecerão as disposições deste Contrato, sem prejuízo da aplicação
+          subsidiária dos Termos de Uso nas matérias por ele não reguladas. (parecer)
         </Text>
 
         <View style={styles.caixa}>
           <Text style={{ fontSize: 8.5 }}>
-            Este contrato foi aceito eletronicamente por {empresa.nome} em {dia(dados.inicioVigencia)}, mediante
-            contratação do plano {plano.nome} e confirmação de pagamento. O aceite eletrônico e o registro da
-            contratação constituem prova da manifestação de vontade, nos termos do art. 10 da Lei nº 14.063/2020
-            e do art. 107 do Código Civil.
+            O presente Contrato é formalizado por aceite eletrônico no ato da contratação, sendo válido e
+            eficaz nos termos do art. 107 do Código Civil e do art. 10, §2º, da Medida Provisória nº
+            2.200-2/2001, ficando registrados, para fins de comprovação de autoria e integridade, o
+            endereço IP, a data, a hora e a identificação da CONTRATANTE no momento da confirmação do
+            pagamento. (parecer) Aceito por {empresa.nome} em {dia(dados.inicioVigencia)}, mediante
+            contratação do plano {plano.nome}.
           </Text>
         </View>
 
