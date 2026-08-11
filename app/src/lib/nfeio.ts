@@ -1,6 +1,14 @@
+import { bloquearForaDeProducao } from "@/lib/ambiente"
+
 const BASE = "https://api.nfe.io/v1"
 
 async function req<T>(path: string, options: RequestInit = {}): Promise<T> {
+  // Emitir NFS-e gera documento fiscal de verdade, com número, na prefeitura.
+  // Não existe "modo de teste" — ou emite, ou não emite. Fora de produção nem
+  // tenta: uma nota emitida por engano precisa de cancelamento formal, com
+  // prazo, e em alguns municípios não dá pra cancelar depois de certo tempo.
+  bloquearForaDeProducao(`nfe.io ${path}`)
+
   const res = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {

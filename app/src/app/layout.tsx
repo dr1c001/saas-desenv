@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import { NextIntlClientProvider } from "next-intl"
+import { AmbienteBanner } from "@/components/layout/ambiente-banner"
 import { getLocale, getMessages } from "next-intl/server"
 import "./globals.css"
 
@@ -71,6 +72,9 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col">
+        {/* Fora do provider de i18n de propósito: o texto é fixo e precisa
+            aparecer mesmo se a tradução falhar. Some sozinho em produção. */}
+        <AmbienteBanner />
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
         </NextIntlClientProvider>

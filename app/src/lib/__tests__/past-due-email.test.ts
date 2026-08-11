@@ -10,6 +10,11 @@ beforeEach(() => {
   vi.resetModules()
   enviados.length = 0
   process.env.RESEND_API_KEY = "chave-de-teste"
+  // O que se testa aqui é o e-mail que o CLIENTE recebe, então o ambiente
+  // precisa ser produção. Fora dela, lib/resend.ts desvia todo envio para o
+  // endereço do dono e reescreve o assunto — o desvio em si tem teste próprio
+  // em resend-ambiente.test.ts.
+  process.env.VERCEL_ENV = "production"
   vi.doMock("resend", () => ({
     Resend: class {
       emails = {
@@ -22,7 +27,10 @@ beforeEach(() => {
   }))
 })
 
-afterEach(() => vi.doUnmock("resend"))
+afterEach(() => {
+  vi.doUnmock("resend")
+  delete process.env.VERCEL_ENV
+})
 
 async function enviar(dias: number, locale: "pt" | "en" = "pt") {
   const { sendPastDueWarningEmail } = await import("@/lib/resend")

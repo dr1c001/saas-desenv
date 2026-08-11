@@ -8,6 +8,7 @@ import {
 import { decidirAviso, diasDeAtraso, AVISOS_ATRASO } from "@/lib/past-due"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 import { geocodeAddress } from "@/lib/geocode"
+import { ambiente, ehProducao } from "@/lib/ambiente"
 import { gravarRetratoDoMes } from "@/lib/snapshot"
 
 // O padrão da Vercel (10-15s) não cabe reconciliação da Asaas + e-mails +
@@ -29,6 +30,14 @@ export async function GET(req: NextRequest) {
   const secret = req.headers.get("authorization")
   if (secret !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  // A Vercel só agenda cron em deploy de produção, mas a rota continua
+  // acessível em qualquer deploy pra quem tiver o segredo. Este cron manda
+  // e-mail de cobrança e reconcilia assinatura na Asaas — nada disso deve
+  // rodar a partir de um ambiente de teste, nem por engano nem por curiosidade.
+  if (!ehProducao()) {
+    return NextResponse.json({ skipped: `ambiente ${ambiente()}` }, { status: 200 })
   }
 
   const now = new Date()

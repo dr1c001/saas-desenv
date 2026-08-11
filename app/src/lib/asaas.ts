@@ -1,4 +1,12 @@
-const BASE_URL = process.env.ASAAS_SANDBOX === "true"
+import { ehProducao } from "@/lib/ambiente"
+
+// Fora de produção usa SEMPRE o sandbox, independente da variável: um deploy
+// de teste que herde a chave de produção por engano criaria cobrança de
+// verdade no cartão do cliente. A variável continua valendo pra poder testar
+// em sandbox dentro da própria produção.
+const USAR_SANDBOX = !ehProducao() || process.env.ASAAS_SANDBOX === "true"
+
+const BASE_URL = USAR_SANDBOX
   ? "https://sandbox.asaas.com/api/v3"
   : "https://www.asaas.com/api/v3"
 

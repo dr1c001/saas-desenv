@@ -1,5 +1,6 @@
 import { Resend } from "resend"
 import { getTranslator } from "@/lib/i18n"
+import { destinoDeEmailDeTeste, ehProducao, prefixoDeAssunto } from "@/lib/ambiente"
 
 let resendClient: Resend | null = null
 
@@ -39,8 +40,39 @@ const STRONG = { strong: (chunks: string) => `<strong>${chunks}</strong>` }
 // em cada função. (Achado verificando o sistema antes da primeira venda,
 // 2026-08-03.)
 async function send(payload: Parameters<ReturnType<typeof getResend>["emails"]["send"]>[0]) {
-  const { error } = await getResend().emails.send(payload)
+  const { error } = await getResend().emails.send(desviarSeForTeste(payload))
   if (error) throw new Error(`Resend: ${error.message}`)
+}
+
+/**
+ * Fora de produção, TODO e-mail vai para um endereço só — o do dono.
+ *
+ * Este é o ponto mais perigoso de ter um ambiente de teste: o banco de teste é
+ * uma cópia, e uma cópia tem os e-mails REAIS dos clientes finais. Um teste de
+ * cobrança em atraso dispararia aviso de inadimplência para gente que não deve
+ * nada. Aqui o destino é trocado antes de sair, e o assunto ganha prefixo pra
+ * ninguém confundir com o e-mail de verdade.
+ *
+ * Se não houver endereço de teste configurado, o envio é abortado: sem destino
+ * seguro, o certo é não enviar nada.
+ */
+function desviarSeForTeste<T extends { to: unknown; subject?: string }>(payload: T): T {
+  if (ehProducao()) return payload
+
+  const destino = destinoDeEmailDeTeste()
+  if (!destino) {
+    throw new Error(
+      "Ambiente de teste sem STAGING_EMAIL/SUPER_ADMIN_EMAIL definido — " +
+        "envio abortado pra não vazar e-mail pro cliente final."
+    )
+  }
+
+  const originais = Array.isArray(payload.to) ? payload.to.join(", ") : String(payload.to)
+  return {
+    ...payload,
+    to: destino,
+    subject: `${prefixoDeAssunto()}${payload.subject ?? ""} → ${originais}`,
+  }
 }
 
 export async function sendWelcomeEmail(to: string, name: string, locale: "pt" | "en") {

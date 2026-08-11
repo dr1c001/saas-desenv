@@ -2,6 +2,7 @@
 // Tenant configures zapiInstance + zapiToken in /settings
 
 import { getTranslator } from "@/lib/i18n"
+import { ehProducao } from "@/lib/ambiente"
 
 type Locale = "pt" | "en"
 
@@ -26,6 +27,15 @@ export async function sendWhatsApp(
   // venda, 2026-08-03.)
   const hasCountryCode = raw.startsWith("55") && (raw.length === 12 || raw.length === 13)
   const normalized = hasCountryCode ? raw : `55${raw}`
+
+  // Fora de produção não dispara: o banco de teste é cópia do real, então o
+  // número é o celular de um cliente final de verdade. Devolve true pra que o
+  // fluxo continue sendo testável até o fim (a OS marca "enviado"), sem que
+  // nada saia.
+  if (!ehProducao()) {
+    console.info(`[teste] WhatsApp NÃO enviado para ${normalized}: ${message.slice(0, 60)}...`)
+    return true
+  }
 
   try {
     const res = await fetch(

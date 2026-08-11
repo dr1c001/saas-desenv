@@ -10,7 +10,10 @@
     "pretest": "prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script --output src/test-utils/test-schema.sql",
     "test": "vitest run",
     "test:watch": "vitest",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "deploy:teste": "vercel",
+    "deploy:prod": "vercel --prod --yes",
+    "db:ensaio": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --script"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

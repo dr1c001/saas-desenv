@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next"
+import { ehProducao } from "@/lib/ambiente"
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://servicoos.com.br"
 
@@ -10,6 +11,13 @@ const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://servicoos.com.br"
 // no caso dos portais, é conteúdo privado do cliente que não deveria
 // aparecer indexado mesmo sendo tecnicamente acessível sem login.
 export default function robots(): MetadataRoute.Robots {
+  // Ambiente de teste fora do Google: além de ser conteúdo sem valor, uma
+  // cópia do site indexada compete com o site real pelo mesmo termo de busca
+  // e confunde quem procura o produto.
+  if (!ehProducao()) {
+    return { rules: { userAgent: "*", disallow: "/" } }
+  }
+
   return {
     rules: {
       userAgent: "*",
