@@ -1076,6 +1076,52 @@ editor ou merge pode comer sem ninguém notar.
 
 ---
 
+### 7.2.15 Campos personalizados por empresa — 11/08/2026
+
+Continuação direta do posicionamento horizontal (7.2.14): o sistema atende
+qualquer prestador de serviço, mas o cadastro era o mesmo para todo mundo. Um
+pet shop precisa de "raça/porte", uma empresa de limpeza de "metragem", uma de
+TI de "número de série". Sem isso, cada segmento novo esbarra numa parede e o
+posicionamento fica só no discurso.
+
+Cinco tipos (texto, número, data, lista de opções, sim/não), com obrigatoriedade
+e ordem definidas pela empresa, para cadastro de cliente e ordem de serviço.
+
+**Onde ficam os valores.** Num `Json` no próprio registro (`Client.customValues`
+/ `ServiceOrder.customValues`), não numa tabela de valores com chave estrangeira
+polimórfica. Dois motivos concretos:
+
+- Apagar um campo não deixa valor órfão na tela: a exibição percorre as
+  **definições**, não as chaves do Json. O valor continua guardado — recriar o
+  campo traz tudo de volta — mas some de todo lugar.
+- A exportação de dados (LGPD) leva os valores junto sem precisar lembrar de
+  incluir mais uma relação. É exatamente o tipo de coisa que se esquece e vira
+  dado faltando num pedido de titular.
+
+Contrapartida assumida: não dá para filtrar por campo personalizado com índice.
+Quando for pedido, o caminho é um índice GIN no Json, não remodelar.
+
+**Guardas que a validação puxou:**
+
+| Guarda | O que evita |
+|---|---|
+| Prefixo `cf_` no nome do input | Campo chamado "email" sobrescrevendo o e-mail do cliente |
+| Descarta id de campo inexistente | Server Action é endpoint HTTP; dá para montar a requisição na mão |
+| Recusa valor fora da lista | Ficaria gravado para sempre num campo que a tela apresenta como fechado |
+| Número aceita vírgula decimal | `<input type="number">` recusa "1,5" em pt-BR sem explicar |
+| `deleteMany` com `tenantId` no where | `delete` por id apagaria campo de outra empresa se o id vazasse |
+| Reordenar regrava a sequência inteira | `position` tinha buracos e repetições de criações/remoções anteriores |
+| Criar e editar usam o mesmo helper | Campo obrigatório cobrado num lugar e ignorado no outro |
+
+153 → 194 testes.
+
+**Gotcha novo (Prisma 7):** `migrate diff --to-schema-datamodel` foi renomeado
+para `--to-schema`. E `npx vitest run` pula o hook `pretest` que regenera
+`src/test-utils/test-schema.sql` — depois de mexer no schema, rodar `npm test`,
+senão os testes batem num banco sem a tabela nova.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`
