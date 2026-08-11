@@ -268,7 +268,7 @@
     "dashboard": "Dashboard",
     "clients": "Clientes",
     "quotes": "Orçamentos",
-    "serviceOrders": "Ordens de Serviço",
+    "serviceOrders": "[[OsP]]",
     "history": "Histórico",
     "maintenance": "Manutenção Interna",
     "providers": "Prestadores",
@@ -291,7 +291,8 @@
     "lightMode": "Modo claro",
     "darkMode": "Modo escuro",
     "platformAdmin": "Painel da plataforma",
-    "customFields": "Campos personalizados"
+    "customFields": "Campos personalizados",
+    "vocabulary": "Vocabulário"
   },
   "history": {
     "list": {
@@ -318,10 +319,10 @@
       "monthlyRevenue": {
         "title": "Faturamento do mês",
         "description": "Receitas pagas este mês",
-        "breakdown": "{paid} em receitas pagas + {concluded} em OS concluídas"
+        "breakdown": "{paid} em receitas pagas + {concluded} em [[osP]] concluíd[[osFimP]]"
       },
       "openOrders": {
-        "title": "OS em Aberto",
+        "title": "[[OsP]] em aberto",
         "description": "{open} abertas · {inProgress} em andamento"
       },
       "overdueRevenues": {
@@ -339,8 +340,8 @@
       "expense": "Despesa"
     },
     "activeOrders": {
-      "title": "OS Ativas",
-      "empty": "Nenhuma OS ativa no momento."
+      "title": "[[OsP]] ativ[[osFimP]]",
+      "empty": "Sem [[osP]] ativ[[osFimP]] no momento."
     }
   },
   "auth": {
@@ -426,7 +427,7 @@
         "name": "Nome",
         "document": "Documento",
         "phone": "Telefone",
-        "serviceOrders": "OS",
+        "serviceOrders": "[[osC]]",
         "status": "Status"
       },
       "importButton": "Importar planilha"
@@ -448,12 +449,12 @@
       "noContact": "Nenhum contato informado.",
       "notProvided": "Não informado.",
       "zipCodeLabel": "CEP:",
-      "totalOrders": "Total de OS",
+      "totalOrders": "Total de [[osP]]",
       "totalInvoiced": "Total Faturado",
-      "activeOrders": "OS Ativas",
-      "ordersTitle": "Ordens de Serviço",
-      "newOrderButton": "Nova OS",
-      "noOrders": "Nenhuma OS para este cliente."
+      "activeOrders": "[[OsP]] ativ[[osFimP]]",
+      "ordersTitle": "[[OsP]]",
+      "newOrderButton": "Nov[[osFim]] [[osC]]",
+      "noOrders": "Sem [[osP]] para este cliente."
     },
     "form": {
       "personalDataTitle": "Dados pessoais",
@@ -681,17 +682,17 @@
   },
   "serviceOrdersPages": {
     "list": {
-      "title": "Ordens de Serviço",
-      "newButton": "Nova OS",
+      "title": "[[OsP]]",
+      "newButton": "Nov[[osFim]] [[osC]]",
       "searchPlaceholder": "Buscar por título ou cliente...",
       "statusFilterPlaceholder": "Todos os status",
       "statusAll": "Todas",
       "countActive": "{count, plural, =0 {# ordens ativas} one {# ordem ativa} other {# ordens ativas}}",
       "countActiveFound": "{count, plural, =0 {# ordens ativas encontradas} one {# ordem ativa encontrada} other {# ordens ativas encontradas}}",
       "countFound": "{count, plural, =0 {# ordens encontradas} one {# ordem encontrada} other {# ordens encontradas}}",
-      "emptyFiltered": "Nenhuma OS encontrada com esses filtros.",
-      "emptyNone": "Nenhuma OS criada ainda.",
-      "createFirst": "Criar primeira OS",
+      "emptyFiltered": "Sem [[osP]] com esses filtros.",
+      "emptyNone": "Ainda não há [[osP]] criad[[osFimP]].",
+      "createFirst": "Criar [[osArt]] primeir[[osFim]] [[os]]",
       "columns": {
         "number": "Nº",
         "title": "Título",
@@ -707,7 +708,7 @@
     },
     "detail": {
       "clientPortal": "Portal cliente",
-      "deleteLabel": "Excluir OS",
+      "deleteLabel": "Excluir [[osC]]",
       "infoTitle": "Informações",
       "clientLabel": "Cliente: ",
       "responsibleLabel": "Responsável: ",
@@ -738,7 +739,7 @@
   },
   "serviceOrdersComponents": {
     "form": {
-      "orderDataTitle": "Dados da OS",
+      "orderDataTitle": "Dados d[[osArt]] [[os]]",
       "titleLabel": "Título *",
       "titlePlaceholder": "Ex: Manutenção elétrica",
       "descriptionLabel": "Descrição",
@@ -749,8 +750,8 @@
       "technicianPlaceholder": "Selecione um técnico (opcional)",
       "scheduledLabel": "Agendamento",
       "itemsTitle": "Itens / Serviços",
-      "createPending": "Criando OS...",
-      "createSubmit": "Criar OS",
+      "createPending": "Criando [[osC]]...",
+      "createSubmit": "Criar [[osC]]",
       "editSubmit": "Salvar alterações"
     },
     "items": {
@@ -796,7 +797,7 @@
     "nfseButton": {
       "statusEmitted": "emitida",
       "viewLink": "Ver NFS-e",
-      "confirmEmit": "Emitir NFS-e para esta OS?",
+      "confirmEmit": "Emitir NFS-e para est[[osFim]] [[os]]?",
       "emitButton": "Emitir NFS-e"
     },
     "signaturePad": {
@@ -1153,8 +1154,8 @@
         "lossInPeriod": "Prejuízo no período"
       },
       "osByStatus": {
-        "title": "OS por Status",
-        "empty": "Nenhuma OS no período."
+        "title": "[[OsP]] por status",
+        "empty": "Sem [[osP]] no período."
       },
       "topClients": {
         "title": "Top 10 Clientes",
@@ -1169,7 +1170,7 @@
         "empty": "Nenhuma receita no período.",
         "columns": {
           "description": "Descrição",
-          "order": "OS",
+          "order": "[[osC]]",
           "paidAt": "Recebido em",
           "amount": "Valor"
         }
@@ -1193,7 +1194,7 @@
     "title": "Configurações",
     "company": {
       "title": "Empresa",
-      "description": "Dados que aparecem nas OS e PDFs gerados.",
+      "description": "Dados que aparecem n[[osArtP]] [[osP]] e nos PDFs gerados.",
       "form": {
         "nameLabel": "Nome da empresa *",
         "documentLabel": "CNPJ / CPF",
@@ -1206,7 +1207,7 @@
       },
       "logo": {
         "title": "Logo da empresa",
-        "hint": "Aparece nos PDFs de orçamento, OS e recibo. PNG, JPG ou WEBP, até 2 MB.",
+        "hint": "Aparece nos PDFs de orçamento, [[os]] e recibo. PNG, JPG ou WEBP, até 2 MB.",
         "alt": "Logo da empresa",
         "remove": "Remover",
         "save": "Salvar logo",
@@ -1240,7 +1241,7 @@
     },
     "whatsapp": {
       "title": "WhatsApp (Z-API)",
-      "description": "Envie OS, orçamentos e pesquisas de satisfação diretamente pelo WhatsApp dos clientes.",
+      "description": "Envie [[osP]], orçamentos e pesquisas de satisfação diretamente pelo WhatsApp dos clientes.",
       "howToTitle": "Como configurar o Z-API:",
       "step1": "Crie sua conta em <strong>z-api.io</strong>",
       "step2": "Crie uma instância e escaneie o QR code com seu WhatsApp",
@@ -1253,7 +1254,7 @@
     },
     "export": {
       "title": "Exportar dados",
-      "description": "Baixe uma cópia de todos os dados da sua empresa (clientes, ordens de serviço, orçamentos, financeiro e equipe) em um arquivo <code>.json</code>, conforme seu direito de portabilidade previsto na LGPD (art. 18).",
+      "description": "Baixe uma cópia de todos os dados da sua empresa (clientes, [[osP]], orçamentos, financeiro e equipe) em um arquivo <code>.json</code>, conforme seu direito de portabilidade previsto na LGPD (art. 18).",
       "generating": "Gerando arquivo...",
       "downloadButton": "Baixar todos os meus dados (.json)",
       "error": "Erro ao exportar dados."
@@ -1380,10 +1381,10 @@
   },
   "schedule": {
     "title": "Agendamento",
-    "newOrderButton": "Nova OS",
+    "newOrderButton": "Nov[[osFim]] [[osC]]",
     "summary": {
-      "countTitle": "{count, plural, =0 {# OS agendadas no mês} one {# OS agendada no mês} other {# OS agendadas no mês}}",
-      "empty": "Nenhuma OS agendada."
+      "countTitle": "{count, plural, =0 {# [[osP]] agendad[[osFimP]] no mês} one {# [[os]] agendad[[osFim]] no mês} other {# [[osP]] agendad[[osFimP]] no mês}}",
+      "empty": "Sem [[osP]] agendad[[osFimP]]."
     },
     "calendar": {
       "weekdays": [
@@ -1409,7 +1410,7 @@
         "Novembro",
         "Dezembro"
       ],
-      "eventTooltip": "OS #{number} — {title}\n{client}",
+      "eventTooltip": "[[osC]] #{number} — {title}\n{client}",
       "moreEvents": "+{count} mais"
     }
   },
@@ -1462,7 +1463,7 @@
         "amount": "Valor",
         "dueDate": "Vencimento",
         "paidAt": "Pago em",
-        "linkedOrder": "OS vinculada"
+        "linkedOrder": "[[osC]] vinculad[[osFim]]"
       }
     },
     "referral": {
@@ -1518,23 +1519,23 @@
   "mapAdmin": {
     "map": {
       "title": "Mapa GPS",
-      "subtitle": "Técnicos em campo e ordens de serviço abertas",
+      "subtitle": "[[TecP]] em campo e [[osP]] em aberto",
       "autoRefresh": "Atualiza a cada 30s",
-      "orderNumber": "OS #{number}",
+      "orderNumber": "[[osC]] #{number}",
       "legend": {
         "technicians": "Técnicos",
-        "openOrders": "OS Abertas"
+        "openOrders": "[[OsP]] em aberto"
       },
       "empty": {
         "title": "Nenhum dado no mapa ainda",
         "description": "Técnicos precisam ativar localização e clientes precisam ter endereço cadastrado."
       },
       "missingCoords": {
-        "title": "{count, plural, one {# OS fora do mapa} other {# OS fora do mapa}}",
+        "title": "{count, plural, one {# [[osC]] fora do mapa} other {# [[osP]] fora do mapa}}",
         "description": "Não conseguimos localizar o endereço destes clientes. Clique para conferir e salvar o endereço — o mapa se corrige sozinho depois disso."
       },
       "pin": {
-        "orderLabel": "OS"
+        "orderLabel": "[[osC]]"
       },
       "popup": {
         "updatedAt": "atualizado {time}"
@@ -1573,7 +1574,7 @@
           "status": "Status",
           "plan": "Plano",
           "users": "Usuários",
-          "orders": "OS",
+          "orders": "[[osC]]",
           "clients": "Clientes",
           "renews": "Renova",
           "signedUpAt": "Cadastro",
@@ -1733,7 +1734,7 @@
       "amountReceivedLabel": "Valor recebido:",
       "paymentDataTitle": "Dados do Pagamento",
       "descriptionLabel": "Descrição:",
-      "linkedOrderLabel": "OS vinculada:",
+      "linkedOrderLabel": "[[osC]] vinculad[[osFim]]:",
       "dueDateLabel": "Vencimento:",
       "paidAtLabel": "Data de pagamento:",
       "payerSignature": "Assinatura do Pagador",
@@ -1778,7 +1779,7 @@
       "notSubscribed": "Você criou sua conta no <strong>ServiçoOS</strong> há 3 dias, mas ainda não escolheu um plano — por isso o acesso ao sistema continua bloqueado.",
       "startNow": "Assine agora e comece a usar na hora:",
       "step1": "Cadastre um cliente (ou use um existente)",
-      "step2": "Clique em <strong>+ Nova OS</strong>",
+      "step2": "Clique em <strong>+ Nov[[osFim]] [[osC]]</strong>",
       "step3": "Preencha os dados e salve",
       "step4": "Envie o PDF direto para o cliente 🎉",
       "cta": "Ver planos e assinar",
@@ -1790,7 +1791,7 @@
       "heading": "Olá, {name}",
       "intro": "A cobrança da assinatura de <strong>{company}</strong> não foi confirmada. Pode ter sido cartão vencido, limite ou saldo — acontece com frequência e costuma se resolver em um minuto.",
       "deadline": "Você tem <strong>{days, plural, one {mais # dia} other {mais # dias}}</strong> de acesso normal. Depois disso o sistema é bloqueado para <strong>toda a sua equipe</strong>, inclusive os técnicos em campo.",
-      "whatHappens": "Nada é apagado: suas ordens de serviço, clientes e histórico continuam guardados. Assim que o pagamento cair, o acesso volta sozinho para todo mundo.",
+      "whatHappens": "Nada é apagado: [[osArtP]] suas [[osP]], clientes e histórico continuam guardados. Assim que o pagamento cair, o acesso volta sozinho para todo mundo.",
       "cta": "Regularizar pagamento",
       "alreadyPaid": "Já pagou? Pode ignorar este aviso — a confirmação pode levar algumas horas para chegar. Se depois de um dia o acesso ainda estiver bloqueado, responda este e-mail que resolvemos.",
       "support": "Qualquer dúvida, é só responder este e-mail."
@@ -1798,7 +1799,7 @@
     "nps": {
       "subject": "Como foi sua experiência com o ServiçoOS?",
       "heading": "Olá, {name}! 🙏",
-      "intro": "Você concluiu uma OS no ServiçoOS. Queremos saber sua opinião!",
+      "intro": "[[OsArt]] [[os]] foi concluíd[[osFim]] no ServiçoOS. Queremos saber sua opinião!",
       "question": "Em uma escala de 0 a 10, <strong>o quanto você indicaria o ServiçoOS</strong> para outros empresários?",
       "scaleHint": "0 = não indicaria · 10 = com certeza indicaria",
       "ignoreNotice": "Se preferir não responder, ignore este e-mail."
@@ -1818,7 +1819,7 @@
     "description": "Esta tela ainda não foi aberta neste aparelho, então não há uma cópia salva pra mostrar.",
     "hints": {
       "visited": "As telas que você já abriu com sinal continuam funcionando.",
-      "writes": "Criar ou concluir OS precisa de conexão.",
+      "writes": "Criar ou concluir [[osP]] precisa de conexão.",
       "retry": "Assim que o sinal voltar, é só recarregar."
     },
     "banner": {
@@ -1858,7 +1859,7 @@
     "os": {
       "intro": "Olá! Sua Ordem de Serviço foi atualizada.",
       "statusLabel": "Status",
-      "trackLink": "Acompanhe sua OS"
+      "trackLink": "Acompanhe [[osArt]] [[os]]"
     },
     "quote": {
       "intro": "Você recebeu um novo orçamento!",
@@ -1882,7 +1883,7 @@
     },
     "planLimit": {
       "users": "Seu plano permite até {max} usuários e esse limite já foi atingido. Faça upgrade em Configurações → Plano para adicionar mais.",
-      "serviceOrders": "Seu plano permite {max} OS por mês e esse limite já foi atingido. A cota renova no dia 1º, ou faça upgrade em Configurações → Plano."
+      "serviceOrders": "Seu plano permite {max} [[osP]] por mês e esse limite já foi atingido. A cota renova no dia 1º, ou faça upgrade em Configurações → Plano."
     },
     "clientNotFound": "Cliente não encontrado.",
     "technicianNotFound": "Técnico não encontrado.",
@@ -1892,20 +1893,20 @@
     "itemNotFound": "Item não encontrado.",
     "companyNotFound": "Empresa não encontrada.",
     "tenantNotFound": "Empresa não encontrada.",
-    "invoicedOrderLocked": "OS já faturada não pode ser editada.",
+    "invoicedOrderLocked": "[[osC]] já faturad[[osFim]] não pode ser editad[[osFim]].",
     "invalidRequest": "Requisição inválida.",
     "invalidScore": "Nota inválida.",
     "invalidStatus": "Status inválido.",
     "invalidType": "Tipo inválido.",
     "invalidSignature": "Assinatura inválida.",
-    "cancelledOrderCannotSign": "OS cancelada não pode ser assinada.",
-    "invoicedSignatureLocked": "OS já faturada — assinatura não pode ser alterada.",
+    "cancelledOrderCannotSign": "[[osC]] cancelad[[osFim]] não pode ser assinad[[osFim]].",
+    "invoicedSignatureLocked": "[[osC]] já faturad[[osFim]] — assinatura não pode ser alterada.",
     "quoteWithoutPhone": "Orçamento sem telefone de contato.",
     "clientWithoutPhone": "Cliente sem WhatsApp/telefone.",
     "configureZapi": "Configure o Z-API em Configurações → WhatsApp.",
     "configureFiscal": "Configure os dados fiscais em Configurações → Fiscal.",
-    "nfseAlreadyIssued": "NFS-e já emitida para esta OS.",
-    "orderWithoutAmount": "OS sem valor — adicione itens antes de emitir NFS-e.",
+    "nfseAlreadyIssued": "NFS-e já emitida para est[[osFim]] [[os]].",
+    "orderWithoutAmount": "[[osC]] sem valor — adicione itens antes de emitir NFS-e.",
     "invalidLink": "Link inválido ou expirado.",
     "invalidReferralCode": "Código inválido.",
     "ownReferralCode": "Você não pode usar seu próprio código de indicação.",
@@ -1990,6 +1991,43 @@
       "numeroInvalido": "O campo “{campo}” precisa ser um número.",
       "dataInvalida": "O campo “{campo}” precisa ser uma data válida.",
       "opcaoInvalida": "A opção escolhida em “{campo}” não existe mais."
+    }
+  },
+  "vocabulario": {
+    "title": "Como você chama as coisas",
+    "subtitle": "Cada ramo usa uma palavra diferente. Ajuste aqui e o sistema inteiro passa a falar como a sua empresa fala.",
+    "os": {
+      "title": "O que você abre para cada trabalho",
+      "help": "Aparece no menu, nos botões, nos relatórios e nos e-mails."
+    },
+    "tec": {
+      "title": "Quem executa o trabalho",
+      "help": "Aparece no mapa, na equipe e nos relatórios de desempenho."
+    },
+    "fields": {
+      "curto": "Forma curta",
+      "curtoHint": "Usada em botões e colunas, onde o espaço é pouco. Ex: OS, Chamado.",
+      "singular": "Por extenso (uma)",
+      "singularHint": "Como aparece no meio de uma frase. Ex: ordem de serviço.",
+      "plural": "Por extenso (várias)",
+      "pluralHint": "Ex: ordens de serviço, chamados.",
+      "genero": "Gênero",
+      "generoHint": "Define se o sistema escreve “a ordem concluída” ou “o chamado concluído”.",
+      "feminino": "Feminino (a)",
+      "masculino": "Masculino (o)"
+    },
+    "preview": {
+      "title": "Como vai ficar"
+    },
+    "save": "Salvar",
+    "saved": "Salvo",
+    "restore": "Voltar ao padrão",
+    "confirmRestore": "Voltar aos nomes padrão do sistema? Isso muda o que toda a sua equipe vê.",
+    "errors": {
+      "semPermissao": "Você não tem permissão para mudar isso. Peça a um administrador da empresa.",
+      "termoCurto": "Cada campo precisa ter pelo menos 2 letras.",
+      "termoLongo": "Cada campo pode ter no máximo 30 letras.",
+      "generoInvalido": "Escolha feminino ou masculino."
     }
   }
 }

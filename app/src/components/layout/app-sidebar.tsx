@@ -28,6 +28,7 @@ import {
   Gift,
   Landmark,
   ListPlus,
+  Languages,
 } from "lucide-react"
 import {
   Sidebar,
@@ -197,6 +198,14 @@ export function AppSidebar({ allowedTabs, role, isSuperAdmin }: Props) {
               <SidebarMenuButton render={<Link href="/settings/fields" />}>
                 <ListPlus className="size-4" />
                 <span>{t("nav.customFields")}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
+          {(role === "OWNER" || role === "ADMIN") && (
+            <SidebarMenuItem>
+              <SidebarMenuButton render={<Link href="/settings/vocabulary" />}>
+                <Languages className="size-4" />
+                <span>{t("nav.vocabulary")}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )}

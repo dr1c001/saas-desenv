@@ -268,7 +268,7 @@
     "dashboard": "Dashboard",
     "clients": "Clients",
     "quotes": "Quotes",
-    "serviceOrders": "Service Orders",
+    "serviceOrders": "[[OsP]]",
     "history": "History",
     "maintenance": "Internal Maintenance",
     "providers": "Providers",
@@ -291,7 +291,8 @@
     "lightMode": "Light mode",
     "darkMode": "Dark mode",
     "platformAdmin": "Platform admin",
-    "customFields": "Custom fields"
+    "customFields": "Custom fields",
+    "vocabulary": "Vocabulary"
   },
   "history": {
     "list": {
@@ -318,10 +319,10 @@
       "monthlyRevenue": {
         "title": "Revenue This Month",
         "description": "Revenue paid this month",
-        "breakdown": "{paid} in paid revenue + {concluded} in completed jobs"
+        "breakdown": "{paid} in paid revenue + {concluded} in completed [[osP]]"
       },
       "openOrders": {
-        "title": "Open Service Orders",
+        "title": "Open [[osP]]",
         "description": "{open} open · {inProgress} in progress"
       },
       "overdueRevenues": {
@@ -339,8 +340,8 @@
       "expense": "Expense"
     },
     "activeOrders": {
-      "title": "Active Service Orders",
-      "empty": "No active service orders right now."
+      "title": "Active [[osP]]",
+      "empty": "No active [[osP]] right now."
     }
   },
   "auth": {
@@ -426,7 +427,7 @@
         "name": "Name",
         "document": "Document",
         "phone": "Phone",
-        "serviceOrders": "Orders",
+        "serviceOrders": "[[osC]]",
         "status": "Status"
       },
       "importButton": "Import spreadsheet"
@@ -448,12 +449,12 @@
       "noContact": "No contact information provided.",
       "notProvided": "Not provided.",
       "zipCodeLabel": "ZIP:",
-      "totalOrders": "Total Orders",
+      "totalOrders": "Total [[osP]]",
       "totalInvoiced": "Total Invoiced",
-      "activeOrders": "Active Orders",
-      "ordersTitle": "Service Orders",
-      "newOrderButton": "New Order",
-      "noOrders": "No service orders for this client yet."
+      "activeOrders": "Active [[osP]]",
+      "ordersTitle": "[[OsP]]",
+      "newOrderButton": "New [[osC]]",
+      "noOrders": "No [[osP]] for this client."
     },
     "form": {
       "personalDataTitle": "Personal details",
@@ -681,17 +682,17 @@
   },
   "serviceOrdersPages": {
     "list": {
-      "title": "Service Orders",
-      "newButton": "New order",
+      "title": "[[OsP]]",
+      "newButton": "New [[osC]]",
       "searchPlaceholder": "Search by title or client...",
       "statusFilterPlaceholder": "All statuses",
       "statusAll": "All",
       "countActive": "{count, plural, one {# active order} other {# active orders}}",
       "countActiveFound": "{count, plural, one {# active order found} other {# active orders found}}",
       "countFound": "{count, plural, one {# order found} other {# orders found}}",
-      "emptyFiltered": "No orders found with these filters.",
-      "emptyNone": "No orders created yet.",
-      "createFirst": "Create first order",
+      "emptyFiltered": "No [[osP]] match these filters.",
+      "emptyNone": "No [[osP]] created yet.",
+      "createFirst": "Create the first [[os]]",
       "columns": {
         "number": "No.",
         "title": "Title",
@@ -707,7 +708,7 @@
     },
     "detail": {
       "clientPortal": "Client portal",
-      "deleteLabel": "Delete order",
+      "deleteLabel": "Delete [[osC]]",
       "infoTitle": "Information",
       "clientLabel": "Client: ",
       "responsibleLabel": "Assigned to: ",
@@ -738,7 +739,7 @@
   },
   "serviceOrdersComponents": {
     "form": {
-      "orderDataTitle": "Order details",
+      "orderDataTitle": "[[Os]] details",
       "titleLabel": "Title *",
       "titlePlaceholder": "E.g. Electrical maintenance",
       "descriptionLabel": "Description",
@@ -749,8 +750,8 @@
       "technicianPlaceholder": "Select a technician (optional)",
       "scheduledLabel": "Schedule",
       "itemsTitle": "Items / Services",
-      "createPending": "Creating order...",
-      "createSubmit": "Create order",
+      "createPending": "Creating [[osC]]...",
+      "createSubmit": "Create [[osC]]",
       "editSubmit": "Save changes"
     },
     "items": {
@@ -796,7 +797,7 @@
     "nfseButton": {
       "statusEmitted": "issued",
       "viewLink": "View NFS-e",
-      "confirmEmit": "Issue NFS-e for this order?",
+      "confirmEmit": "Issue an e-invoice for this [[os]]?",
       "emitButton": "Issue NFS-e"
     },
     "signaturePad": {
@@ -1153,8 +1154,8 @@
         "lossInPeriod": "Loss for the period"
       },
       "osByStatus": {
-        "title": "Orders by Status",
-        "empty": "No service orders in this period."
+        "title": "[[OsP]] by status",
+        "empty": "No [[osP]] in this period."
       },
       "topClients": {
         "title": "Top 10 Clients",
@@ -1169,7 +1170,7 @@
         "empty": "No revenue in this period.",
         "columns": {
           "description": "Description",
-          "order": "Order",
+          "order": "[[osC]]",
           "paidAt": "Received on",
           "amount": "Amount"
         }
@@ -1193,7 +1194,7 @@
     "title": "Settings",
     "company": {
       "title": "Company",
-      "description": "Details that appear on service orders and generated PDFs.",
+      "description": "Details that appear on [[osP]] and generated PDFs.",
       "form": {
         "nameLabel": "Company name *",
         "documentLabel": "CNPJ / CPF",
@@ -1206,7 +1207,7 @@
       },
       "logo": {
         "title": "Company logo",
-        "hint": "Shows on quote, job and receipt PDFs. PNG, JPG or WEBP, up to 2 MB.",
+        "hint": "Shows on quote, [[os]] and receipt PDFs. PNG, JPG or WEBP, up to 2 MB.",
         "alt": "Company logo",
         "remove": "Remove",
         "save": "Save logo",
@@ -1240,7 +1241,7 @@
     },
     "whatsapp": {
       "title": "WhatsApp (Z-API)",
-      "description": "Send service orders, quotes, and satisfaction surveys straight to your clients' WhatsApp.",
+      "description": "Send [[osP]], quotes, and satisfaction surveys straight to your clients' WhatsApp.",
       "howToTitle": "How to set up Z-API:",
       "step1": "Create your account at <strong>z-api.io</strong>",
       "step2": "Create an instance and scan the QR code with your WhatsApp",
@@ -1253,7 +1254,7 @@
     },
     "export": {
       "title": "Export data",
-      "description": "Download a copy of all your company's data (clients, service orders, quotes, finances, and team) in a <code>.json</code> file, in line with your right to data portability under Brazil's LGPD (art. 18).",
+      "description": "Download a copy of all your company's data (clients, [[osP]], quotes, finances, and team) in a <code>.json</code> file, in line with your right to data portability under Brazil's LGPD (art. 18).",
       "generating": "Generating file...",
       "downloadButton": "Download all my data (.json)",
       "error": "Error exporting data."
@@ -1380,10 +1381,10 @@
   },
   "schedule": {
     "title": "Schedule",
-    "newOrderButton": "New order",
+    "newOrderButton": "New [[osC]]",
     "summary": {
-      "countTitle": "{count, plural, one {# service order scheduled this month} other {# service orders scheduled this month}}",
-      "empty": "No service orders scheduled."
+      "countTitle": "{count, plural, =0 {# [[osP]] scheduled this month} one {# [[os]] scheduled this month} other {# [[osP]] scheduled this month}}",
+      "empty": "No [[osP]] scheduled."
     },
     "calendar": {
       "weekdays": [
@@ -1409,7 +1410,7 @@
         "November",
         "December"
       ],
-      "eventTooltip": "Order #{number} — {title}\n{client}",
+      "eventTooltip": "[[osC]] #{number} — {title}\n{client}",
       "moreEvents": "+{count} more"
     }
   },
@@ -1462,7 +1463,7 @@
         "amount": "Amount",
         "dueDate": "Due date",
         "paidAt": "Paid on",
-        "linkedOrder": "Linked order"
+        "linkedOrder": "Linked [[osC]]"
       }
     },
     "referral": {
@@ -1518,15 +1519,15 @@
   "mapAdmin": {
     "map": {
       "title": "GPS Map",
-      "subtitle": "Field technicians and open service orders",
+      "subtitle": "[[TecP]] in the field and open [[osP]]",
       "autoRefresh": "Updates every 30s",
-      "orderNumber": "Order #{number}",
+      "orderNumber": "[[osC]] #{number}",
       "legend": {
         "technicians": "Technicians",
-        "openOrders": "Open orders"
+        "openOrders": "Open [[osP]]"
       },
       "missingCoords": {
-        "title": "{count, plural, one {# job off the map} other {# jobs off the map}}",
+        "title": "{count, plural, one {# [[osC]] off the map} other {# [[osP]] off the map}}",
         "description": "We couldn't locate these clients' addresses. Click to review and save the address — the map fixes itself after that."
       },
       "empty": {
@@ -1534,7 +1535,7 @@
         "description": "Technicians need to turn on location sharing and clients need a registered address."
       },
       "pin": {
-        "orderLabel": "SO"
+        "orderLabel": "[[osC]]"
       },
       "popup": {
         "updatedAt": "updated {time}"
@@ -1573,7 +1574,7 @@
           "status": "Status",
           "plan": "Plan",
           "users": "Users",
-          "orders": "Orders",
+          "orders": "[[osC]]",
           "clients": "Clients",
           "renews": "Renews",
           "signedUpAt": "Signed up",
@@ -1733,7 +1734,7 @@
       "amountReceivedLabel": "Amount received:",
       "paymentDataTitle": "Payment Details",
       "descriptionLabel": "Description:",
-      "linkedOrderLabel": "Linked order:",
+      "linkedOrderLabel": "Linked [[osC]]:",
       "dueDateLabel": "Due date:",
       "paidAtLabel": "Payment date:",
       "payerSignature": "Payer signature",
@@ -1778,7 +1779,7 @@
       "notSubscribed": "You created your <strong>ServiçoOS</strong> account 3 days ago, but you haven't chosen a plan yet — so access to the system is still blocked.",
       "startNow": "Subscribe now and start using it right away:",
       "step1": "Register a client (or use an existing one)",
-      "step2": "Click <strong>+ New order</strong>",
+      "step2": "Click <strong>+ New [[osC]]</strong>",
       "step3": "Fill in the details and save",
       "step4": "Send the PDF straight to your client 🎉",
       "cta": "View plans and subscribe",
@@ -1790,7 +1791,7 @@
       "heading": "Hi {name}",
       "intro": "We couldn't confirm the subscription payment for <strong>{company}</strong>. It's usually an expired card, a limit, or insufficient funds — common, and normally a one-minute fix.",
       "deadline": "You have <strong>{days, plural, one {# more day} other {# more days}}</strong> of normal access. After that the system is blocked for <strong>your whole team</strong>, field technicians included.",
-      "whatHappens": "Nothing is deleted: your jobs, clients and history stay right where they are. As soon as the payment clears, access comes back automatically for everyone.",
+      "whatHappens": "Nothing is deleted: your [[osP]], clients and history stay right where they are. As soon as the payment clears, access comes back automatically for everyone.",
       "cta": "Update payment",
       "alreadyPaid": "Already paid? You can ignore this — confirmation can take a few hours. If access is still blocked after a day, just reply to this email and we'll sort it out.",
       "support": "Any questions, just reply to this email."
@@ -1798,7 +1799,7 @@
     "nps": {
       "subject": "How was your experience with ServiçoOS?",
       "heading": "Hi, {name}! 🙏",
-      "intro": "You've just had a service order completed in ServiçoOS. We'd love to hear what you think!",
+      "intro": "Your [[os]] was completed in ServiçoOS. We would love your feedback!",
       "question": "On a scale of 0 to 10, <strong>how likely are you to recommend ServiçoOS</strong> to other business owners?",
       "scaleHint": "0 = would not recommend · 10 = would definitely recommend",
       "ignoreNotice": "If you'd rather not answer, just ignore this email."
@@ -1818,7 +1819,7 @@
     "description": "This screen hasn't been opened on this device yet, so there's no saved copy to show.",
     "hints": {
       "visited": "Screens you already opened while online still work.",
-      "writes": "Creating or completing jobs requires a connection.",
+      "writes": "Creating or completing [[osP]] needs a connection.",
       "retry": "Once you're back online, just reload."
     },
     "banner": {
@@ -1858,7 +1859,7 @@
     "os": {
       "intro": "Hello! Your service order has been updated.",
       "statusLabel": "Status",
-      "trackLink": "Track your service order"
+      "trackLink": "Track your [[os]]"
     },
     "quote": {
       "intro": "You received a new quote!",
@@ -1882,7 +1883,7 @@
     },
     "planLimit": {
       "users": "Your plan allows up to {max} users and that limit has been reached. Upgrade in Settings → Plan to add more.",
-      "serviceOrders": "Your plan allows {max} jobs per month and that limit has been reached. The quota resets on the 1st, or upgrade in Settings → Plan."
+      "serviceOrders": "Your plan allows {max} [[osP]] per month and that limit has been reached. The quota resets on the 1st, or upgrade in Settings → Plan."
     },
     "clientNotFound": "Client not found.",
     "technicianNotFound": "Technician not found.",
@@ -1892,20 +1893,20 @@
     "itemNotFound": "Item not found.",
     "companyNotFound": "Company not found.",
     "tenantNotFound": "Company not found.",
-    "invoicedOrderLocked": "An invoiced service order cannot be edited.",
+    "invoicedOrderLocked": "An invoiced [[os]] cannot be edited.",
     "invalidRequest": "Invalid request.",
     "invalidScore": "Invalid score.",
     "invalidStatus": "Invalid status.",
     "invalidType": "Invalid type.",
     "invalidSignature": "Invalid signature.",
-    "cancelledOrderCannotSign": "A cancelled service order cannot be signed.",
-    "invoicedSignatureLocked": "Service order already invoiced — the signature cannot be changed.",
+    "cancelledOrderCannotSign": "A cancelled [[os]] cannot be signed.",
+    "invoicedSignatureLocked": "[[osC]] already invoiced — the signature cannot be changed.",
     "quoteWithoutPhone": "Quote has no contact phone.",
     "clientWithoutPhone": "Client has no WhatsApp/phone number.",
     "configureZapi": "Set up Z-API under Settings → WhatsApp.",
     "configureFiscal": "Set up your tax details under Settings → Tax.",
-    "nfseAlreadyIssued": "An e-invoice was already issued for this service order.",
-    "orderWithoutAmount": "Service order has no amount — add items before issuing an e-invoice.",
+    "nfseAlreadyIssued": "An e-invoice was already issued for this [[os]].",
+    "orderWithoutAmount": "[[osC]] has no amount — add items before issuing an e-invoice.",
     "invalidLink": "Invalid or expired link.",
     "invalidReferralCode": "Invalid code.",
     "ownReferralCode": "You cannot use your own referral code.",
@@ -1990,6 +1991,43 @@
       "numeroInvalido": "The field “{campo}” must be a number.",
       "dataInvalida": "The field “{campo}” must be a valid date.",
       "opcaoInvalida": "The option chosen in “{campo}” no longer exists."
+    }
+  },
+  "vocabulario": {
+    "title": "What you call things",
+    "subtitle": "Every trade uses a different word. Set it here and the whole system speaks the way your company does.",
+    "os": {
+      "title": "What you open for each piece of work",
+      "help": "Shows in the menu, buttons, reports and emails."
+    },
+    "tec": {
+      "title": "Who does the work",
+      "help": "Shows on the map, in your team and in performance reports."
+    },
+    "fields": {
+      "curto": "Short form",
+      "curtoHint": "Used in buttons and columns, where space is tight. e.g. Order, Job.",
+      "singular": "Spelled out (one)",
+      "singularHint": "How it reads inside a sentence. e.g. service order.",
+      "plural": "Spelled out (many)",
+      "pluralHint": "e.g. service orders, jobs.",
+      "genero": "Gender",
+      "generoHint": "Only affects Portuguese, where articles and adjectives must agree.",
+      "feminino": "Feminine",
+      "masculino": "Masculine"
+    },
+    "preview": {
+      "title": "How it will look"
+    },
+    "save": "Save",
+    "saved": "Saved",
+    "restore": "Reset to default",
+    "confirmRestore": "Reset to the system default names? This changes what your whole team sees.",
+    "errors": {
+      "semPermissao": "You do not have permission to change this. Ask a company administrator.",
+      "termoCurto": "Each field needs at least 2 characters.",
+      "termoLongo": "Each field can have at most 30 characters.",
+      "generoInvalido": "Choose feminine or masculine."
     }
   }
 }

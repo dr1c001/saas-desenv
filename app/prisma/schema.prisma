@@ -79,6 +79,11 @@ model Tenant {
   plan              Plan?              @relation(fields: [planId], references: [id])
   subscriptions     Subscription[]
   customFields      CustomField[]
+
+  // Vocabulario adaptavel: como a empresa chama OS e tecnico.
+  // Formato em lib/vocabulario.ts. Fica junto do locale porque e lido no mesmo
+  // ponto (i18n/request.ts) e na mesma consulta — zero query extra.
+  vocabulary Json? @db.JsonB
 }
 
 // Idioma da empresa — governa dashboard, e-mails e PDFs gerados pro tenant
