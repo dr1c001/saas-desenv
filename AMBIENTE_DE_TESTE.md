@@ -102,6 +102,34 @@ teste.** É o único erro aqui que teria consequência real.
 Não precisa copiar: `NFEIO_API_KEY` (bloqueado), `ASAAS_TOKEN_B64`,
 `ASAAS_WEBHOOK_SECRET`, chaves do Sentry e VAPID.
 
+### 4. O endereço do ambiente (esquecer isto quebra o login)
+
+Dois passos que **não são óbvios** e que, esquecidos, produzem erros que não
+apontam para a causa. Descobertos na montagem de 11/08/2026.
+
+**Na Vercel, ainda no Preview**, adicione:
+
+| Variável | Valor |
+|---|---|
+| `NEXT_PUBLIC_APP_URL` | `https://app-dr1c001-adriel5.vercel.app` |
+
+Esse é o **apelido estável** do ambiente de teste — não muda a cada deploy,
+ao contrário da URL sorteada (`app-4xgfmad22-…`). Confirme o seu com
+`npx vercel inspect <url-do-deploy>`, seção *Aliases*.
+
+> Sem essa variável o código cai no padrão `https://servicoos.com.br`, e os
+> links dos e-mails do **teste** levam para a **produção**. É pior que um erro
+> visível: não falha em lugar nenhum, só manda a pessoa para o sistema real.
+
+**No Supabase de teste** → *Authentication → URL Configuration*:
+
+- **Site URL** → `https://app-dr1c001-adriel5.vercel.app`
+- **Redirect URLs** → `https://app-dr1c001-adriel5.vercel.app/**`
+
+Projeto novo vem com `localhost:3000` de fábrica, e o link de confirmação de
+cadastro vai parar lá. O `/**` no fim é obrigatório: sem ele o Supabase recusa
+qualquer caminho que não seja a raiz.
+
 ---
 
 ## Como usar no dia a dia
