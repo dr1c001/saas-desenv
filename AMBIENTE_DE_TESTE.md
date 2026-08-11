@@ -86,6 +86,19 @@ Para cada uma abaixo, marque **apenas o ambiente `Preview`** (nunca Production):
 **Confira duas vezes que `DATABASE_URL` do Preview aponta para o projeto de
 teste.** É o único erro aqui que teria consequência real.
 
+> **Não use a opção "Direct connection".** Ela só tem endereço IPv6, e as
+> funções da Vercel falam IPv4 — o build falharia ao criar as tabelas, com um
+> erro de conexão difícil de decifrar. Verificado em 11/08/2026:
+>
+> | Opção | Resolve para |
+> |---|---|
+> | Transaction / Session pooler | `15.229.150.166`, `54.94.90.106` (IPv4) ✅ |
+> | Direct connection | só `2600:1f1e:90b:...` (IPv6) ❌ |
+>
+> A tela do Supabase mostra o aviso *"uses IPv6 by default"* nas **três**
+> opções — é texto de template, não o comportamento real de cada uma. O jeito
+> de confiar é olhar o host: pooler termina em `.pooler.supabase.com`.
+
 Não precisa copiar: `NFEIO_API_KEY` (bloqueado), `ASAAS_TOKEN_B64`,
 `ASAAS_WEBHOOK_SECRET`, chaves do Sentry e VAPID.
 
