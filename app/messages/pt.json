@@ -1545,7 +1545,8 @@
       "layout": {
         "title": "ServiçoOS — Painel do Administrador",
         "subtitle": "Visão geral de todos os clientes do sistema",
-        "backToApp": "Voltar ao sistema"
+        "backToApp": "Voltar ao sistema",
+        "noCompany": "Esta conta administra a plataforma e não pertence a nenhuma empresa."
       },
       "stats": {
         "companies": "Empresas",

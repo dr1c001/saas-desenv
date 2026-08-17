@@ -1545,7 +1545,8 @@
       "layout": {
         "title": "ServiçoOS — Admin Panel",
         "subtitle": "Overview of every customer in the system",
-        "backToApp": "Back to the app"
+        "backToApp": "Back to the app",
+        "noCompany": "This account manages the platform and does not belong to any company."
       },
       "stats": {
         "companies": "Companies",
