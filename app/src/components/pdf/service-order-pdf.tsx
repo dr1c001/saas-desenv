@@ -67,6 +67,8 @@ const styles = StyleSheet.create({
   },
   totalLabel: { fontFamily: "Helvetica-Bold", marginRight: 24 },
   totalValue: { fontFamily: "Helvetica-Bold", fontSize: 12 },
+  fotosGrade: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
+  foto: { width: 120, height: 90, objectFit: "cover", borderRadius: 3 },
   signatureSection: {
     marginTop: 48,
     flexDirection: "row",
@@ -100,6 +102,9 @@ type OrderItem = {
 
 type Props = {
   locale: "pt" | "en"
+  /** Fotos ja em data URI. Vazio quando a OS nao tem foto ou o download
+   *  falhou — nesse caso a secao inteira some, sem espaco vazio no papel. */
+  fotos?: string[]
   companyName: string
   logoUrl?: string | null
   companyPhone?: string | null
@@ -143,7 +148,7 @@ function fmtDateFor(date: Date | string, locale: "pt" | "en") {
   return new Date(date).toLocaleDateString(locale === "en" ? "en-US" : "pt-BR")
 }
 
-export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, companyAddress, companyWebsite, locale }: Props) {
+export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, companyAddress, companyWebsite, locale, fotos = [] }: Props) {
   // PDFs são gerados via renderToBuffer, fora do request context do Next.js —
   // o locale vem explícito por prop (ver lib/i18n.ts).
   const t = getTranslator(locale, "pdf")
@@ -288,6 +293,20 @@ export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, com
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>{t("serviceOrder.totalLabel")}</Text>
               <Text style={styles.totalValue}>{fmt(Number(order.totalAmount))}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Fotos do servico — a prova de que o trabalho foi feito, que e o
+            que o cliente final guarda e mostra pra quem pagou. Vem antes das
+            assinaturas: assina-se depois de ver o registro. */}
+        {fotos.length > 0 && (
+          <View style={styles.section} wrap={false}>
+            <Text style={styles.sectionTitle}>{t("serviceOrder.photosTitle")}</Text>
+            <View style={styles.fotosGrade}>
+              {fotos.map((src, i) => (
+                <Image key={i} src={src} style={styles.foto} />
+              ))}
             </View>
           </View>
         )}

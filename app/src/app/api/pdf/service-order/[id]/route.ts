@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma"
 import { createClient } from "@/lib/supabase/server"
 import { requireActiveSubscription } from "@/lib/auth"
 import { getTranslator } from "@/lib/i18n"
+import { baixarArquivo } from "@/lib/storage"
+import { caminhoPertenceAoTenant } from "@/lib/foto"
 import React, { type ReactElement, type JSXElementConstructor } from "react"
 
 export async function GET(
@@ -39,6 +41,27 @@ export async function GET(
 
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
+  // Fotos embutidas como data URI: o @react-pdf busca URL de verdade durante
+  // a renderização, e link assinado expira — um PDF gerado hoje ficaria com
+  // buraco amanhã. Embutir resolve isso e faz o arquivo continuar completo
+  // depois de baixado, que é justamente o ponto de ter foto no documento.
+  //
+  // Teto de 6: é o que cabe em duas fileiras sem empurrar as assinaturas pra
+  // outra página, e mantém o arquivo em tamanho que se envia por WhatsApp.
+  const anexos = await prisma.attachment.findMany({
+    where: { orderId: id },
+    orderBy: { createdAt: "asc" },
+    select: { url: true },
+    take: 6,
+  })
+  const fotos: string[] = []
+  for (const a of anexos) {
+    if (!caminhoPertenceAoTenant(a.url, dbUser.tenantId)) continue
+    // Falha de download não derruba o PDF inteiro: a OS sai sem aquela foto.
+    const conteudo = await baixarArquivo(a.url).catch(() => null)
+    if (conteudo) fotos.push(`data:image/jpeg;base64,${conteudo.toString("base64")}`)
+  }
+
   // O PDF é renderizado fora do request context do Next.js — o locale do
   // tenant precisa ser passado explícito. (Item 1 do roadmap, 06/08/2026.)
   const locale = dbUser.tenant.locale
@@ -53,6 +76,7 @@ export async function GET(
       companyAddress: dbUser.tenant.address,
       companyWebsite: dbUser.tenant.website,
       locale,
+      fotos,
     }) as unknown as ReactElement<DocumentProps, JSXElementConstructor<DocumentProps>>
   }
 

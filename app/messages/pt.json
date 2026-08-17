@@ -1728,7 +1728,8 @@
         "total": "Total"
       },
       "totalLabel": "TOTAL",
-      "fileNamePrefix": "OS"
+      "fileNamePrefix": "OS",
+      "photosTitle": "Fotos do serviço"
     },
     "receipt": {
       "docTitle": "RECIBO",

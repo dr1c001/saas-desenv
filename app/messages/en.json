@@ -1728,7 +1728,8 @@
         "total": "Total"
       },
       "totalLabel": "TOTAL",
-      "fileNamePrefix": "ServiceOrder"
+      "fileNamePrefix": "ServiceOrder",
+      "photosTitle": "Service photos"
     },
     "receipt": {
       "docTitle": "RECEIPT",
