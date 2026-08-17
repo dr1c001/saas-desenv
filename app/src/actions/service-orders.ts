@@ -6,6 +6,7 @@ import { randomUUID } from "crypto"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { avisarClienteDaOs } from "@/lib/enviar-aviso-cliente"
 import { sendPushToUser } from "@/lib/push"
 import { retryOnUniqueConflict } from "@/lib/retry"
 import { requireCotaDeOs } from "@/lib/plan"
@@ -185,6 +186,11 @@ export async function updateOrderStatus(id: string, status: string) {
       })
     }
   }
+
+  // Avisa o cliente final, se a empresa tiver ligado isso. Depois da gravação
+  // e sem await no caminho crítico de erro: a função nunca lança, mas ainda
+  // assim o aviso é acessório e a OS já está salva.
+  await avisarClienteDaOs(id, current.status, status)
 
   revalidatePath("/service-orders")
   revalidatePath(`/service-orders/${id}`)

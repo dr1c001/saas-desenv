@@ -85,6 +85,12 @@ model Tenant {
   // Formato em lib/vocabulario.ts. Fica junto do locale porque e lido no mesmo
   // ponto (i18n/request.ts) e na mesma consulta — zero query extra.
   vocabulary Json? @db.JsonB
+
+  /// Aviso automatico ao cliente final. Formato em lib/aviso-cliente.ts.
+  /// Nasce NULL de proposito: sem configuracao, nada e enviado. Mandar
+  /// mensagem no celular do cliente final de outra empresa nao e decisao
+  /// que o sistema toma por ela.
+  clientNotifications Json? @db.JsonB
 }
 
 // Idioma da empresa — governa dashboard, e-mails e PDFs gerados pro tenant

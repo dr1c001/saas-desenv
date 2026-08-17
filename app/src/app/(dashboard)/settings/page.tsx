@@ -4,12 +4,15 @@ import { TenantForm } from "@/components/settings/tenant-form"
 import { LogoSetting } from "@/components/settings/logo-setting"
 import { ProfileForm } from "@/components/settings/profile-form"
 import { WhatsAppForm } from "@/components/settings/whatsapp-form"
+import { AvisoClienteForm } from "@/components/settings/aviso-cliente-form"
+import { getAvisoCliente } from "@/actions/aviso-cliente"
 import { ExportDataButton } from "@/components/settings/export-data-button"
 import { LanguageSetting } from "@/components/settings/language-setting"
 import { Separator } from "@/components/ui/separator"
 
 export default async function SettingsPage() {
   const { tenant, user, isAdmin, isOwner } = await getSettings()
+  const aviso = await getAvisoCliente()
   const t = await getTranslations("settingsCore")
 
   return (
@@ -62,6 +65,13 @@ export default async function SettingsPage() {
               <p className="text-sm text-muted-foreground">{t("whatsapp.description")}</p>
             </div>
             <WhatsAppForm zapiInstance={tenant?.zapiInstance ?? null} zapiToken={tenant?.zapiToken ?? null} />
+
+      {/* Aviso automático ao cliente final. Fica logo depois do WhatsApp
+          porque é o canal que ele usa, e a tela explica quando um depende
+          do outro. */}
+      {isAdmin && (
+        <AvisoClienteForm atual={aviso.config} whatsappConfigurado={aviso.whatsappConfigurado} />
+      )}
           </section>
         </>
       )}

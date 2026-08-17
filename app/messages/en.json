@@ -1815,6 +1815,9 @@
       "requestReceived": "We received a request to reset the password for your ServiçoOS account.",
       "cta": "Create new password",
       "ignoreNotice": "If you didn't request this change, you can safely ignore this email — your current password remains valid. This link expires shortly for security reasons."
+    },
+    "clientNotice": {
+      "subject": "update on your service"
     }
   },
   "offline": {
@@ -1874,6 +1877,11 @@
       "completed": "The service is complete! 🎉",
       "askOpinion": "We'd love to hear your feedback.",
       "rateLink": "Rate the service (takes less than a minute)"
+    },
+    "avisoCliente": {
+      "aCaminho": "Hello! This is {empresa}.\n\nWe are on our way for *{titulo}* ({os}).",
+      "concluido": "Hello! This is {empresa}.\n\nThe service *{titulo}* ({os}) has been completed.",
+      "acompanhe": "Follow it here"
     }
   },
   "errors": {
@@ -2110,6 +2118,33 @@
       "tecnicoNaoEncontrado": "Assignee not found.",
       "fimAntesDoInicio": "The end date cannot be before the start date.",
       "naoEncontrado": "Contract not found."
+    }
+  },
+  "avisoClienteConfig": {
+    "title": "Notify the client automatically",
+    "subtitle": "Automatic message when the job starts and when it ends. Saves the “are you coming today?” call.",
+    "master": "Turn on automatic notices",
+    "masterHint": "Starts off. While it is off, nothing is sent — not by WhatsApp, not by email.",
+    "whenTitle": "At which moments",
+    "when": {
+      "aCaminho": "When the job starts",
+      "aCaminhoHint": "Sent when the order moves to “In progress”.",
+      "concluido": "When the job ends",
+      "concluidoHint": "Sent when the order is completed."
+    },
+    "howTitle": "Through which channel",
+    "how": {
+      "whatsapp": "WhatsApp",
+      "whatsappHint": "Goes to the client's registered WhatsApp or phone.",
+      "whatsappMissing": "Set up the WhatsApp integration above for this channel to work.",
+      "email": "Email",
+      "emailHint": "Only for clients with an email on file."
+    },
+    "consent": "You are responsible for having your clients' consent to receive these messages. The system sends on behalf of your company, using the contacts you registered.",
+    "save": "Save",
+    "saved": "Saved",
+    "errors": {
+      "semPermissao": "You do not have permission to change this."
     }
   }
 }

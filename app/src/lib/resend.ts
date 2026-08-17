@@ -311,3 +311,33 @@ export async function sendPasswordResetEmail(to: string, name: string, resetUrl:
       </div>`,
   })
 }
+
+/**
+ * Aviso ao cliente FINAL do nosso cliente (não ao usuário do sistema).
+ *
+ * Texto vem pronto de lib/aviso-cliente.ts pra que WhatsApp e e-mail digam
+ * exatamente a mesma coisa — divergir entre canais confunde quem recebe os
+ * dois.
+ */
+export async function sendClientNoticeEmail(
+  to: string,
+  companyName: string,
+  texto: string,
+  locale: "pt" | "en"
+) {
+  const t = getTranslator(locale, "emails")
+  return send({
+    from: FROM,
+    replyTo: REPLY_TO,
+    to,
+    subject: `${companyName} — ${t("clientNotice.subject")}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
+        <h2 style="margin:0 0 16px">${companyName}</h2>
+        <p style="white-space:pre-line;line-height:1.6">${texto
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")}</p>
+      </div>`,
+  })
+}
