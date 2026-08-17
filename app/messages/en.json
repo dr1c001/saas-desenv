@@ -2030,5 +2030,27 @@
       "termoLongo": "Each field can have at most 30 characters.",
       "generoInvalido": "Choose feminine or masculine."
     }
+  },
+  "fotos": {
+    "title": "Service photos",
+    "add": "Add photo",
+    "sending": "Uploading...",
+    "empty": "No photos yet.",
+    "emptyLocked": "No photos on this order.",
+    "hint": "On a phone, the button opens the camera directly. Photos are shrunk on the device before uploading, so it works on a weak signal.",
+    "remove": "Remove photo",
+    "confirmRemove": "Remove this photo? It is the proof of work done and cannot be recovered.",
+    "unavailable": "unavailable",
+    "close": "Close",
+    "errors": {
+      "arquivoVazio": "Empty file. Pick a photo.",
+      "tipoNaoAceito": "Images only (JPG, PNG or WEBP).",
+      "muitoGrande": "Photo too large even after shrinking. Try another.",
+      "limitePorOs": "This order has reached the photo limit.",
+      "osNaoEncontrada": "Service order not found.",
+      "osFaturada": "An invoiced order does not accept photo changes.",
+      "semPermissao": "You do not have permission to remove photos.",
+      "naoEncontrada": "Photo not found."
+    }
   }
 }

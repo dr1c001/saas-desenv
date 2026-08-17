@@ -2030,5 +2030,27 @@
       "termoLongo": "Cada campo pode ter no máximo 30 letras.",
       "generoInvalido": "Escolha feminino ou masculino."
     }
+  },
+  "fotos": {
+    "title": "Fotos do serviço",
+    "add": "Adicionar foto",
+    "sending": "Enviando...",
+    "empty": "Nenhuma foto ainda.",
+    "emptyLocked": "Nenhuma foto registrada nesta OS.",
+    "hint": "No celular, o botão abre a câmera direto. As fotos são reduzidas no aparelho antes de subir, pra funcionar mesmo com sinal fraco.",
+    "remove": "Remover foto",
+    "confirmRemove": "Remover esta foto? Ela é a prova do serviço prestado e não dá pra recuperar depois.",
+    "unavailable": "indisponível",
+    "close": "Fechar",
+    "errors": {
+      "arquivoVazio": "Arquivo vazio. Escolha uma foto.",
+      "tipoNaoAceito": "Só aceitamos imagem (JPG, PNG ou WEBP).",
+      "muitoGrande": "Foto grande demais mesmo depois de reduzida. Tente outra.",
+      "limitePorOs": "Esta OS já atingiu o limite de fotos.",
+      "osNaoEncontrada": "Ordem de serviço não encontrada.",
+      "osFaturada": "OS já faturada não aceita alteração nas fotos.",
+      "semPermissao": "Você não tem permissão para remover fotos.",
+      "naoEncontrada": "Foto não encontrada."
+    }
   }
 }

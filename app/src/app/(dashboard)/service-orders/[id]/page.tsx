@@ -7,6 +7,9 @@ import { FileDown, Pencil, ExternalLink } from "lucide-react"
 import { NfseButton } from "@/components/service-orders/nfse-button"
 import { Checklist } from "@/components/service-orders/checklist"
 import { SignaturePad } from "@/components/service-orders/signature-pad"
+import { OsFotos } from "@/components/service-orders/os-fotos"
+import { getFotosDaOs } from "@/actions/attachments"
+import { getTenant } from "@/lib/auth"
 import { WhatsAppButton } from "@/components/service-orders/whatsapp-button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,6 +25,8 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
   const { id } = await params
   const os = await getServiceOrder(id)
   if (!os) notFound()
+
+  const [fotos, { role }] = await Promise.all([getFotosDaOs(id), getTenant()])
 
   const t = await getTranslations("serviceOrdersPages")
   const tCommon = await getTranslations("common")
@@ -157,6 +162,15 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
           </CardContent>
         </Card>
       ) : null}
+
+      {/* Fotos antes da assinatura de propósito: o cliente final assina
+          depois de ver o registro do que foi feito, não antes. */}
+      <OsFotos
+        orderId={id}
+        fotos={fotos}
+        podeApagar={role === "OWNER" || role === "ADMIN"}
+        bloqueada={os.status === "INVOICED"}
+      />
 
       <Card>
         <CardHeader>
