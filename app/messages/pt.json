@@ -292,7 +292,8 @@
     "darkMode": "Modo escuro",
     "platformAdmin": "Painel da plataforma",
     "customFields": "Campos personalizados",
-    "vocabulary": "Vocabulário"
+    "vocabulary": "Vocabulário",
+    "contracts": "Contratos"
   },
   "history": {
     "list": {
@@ -2052,6 +2053,63 @@
       "osFaturada": "OS já faturada não aceita alteração nas fotos.",
       "semPermissao": "Você não tem permissão para remover fotos.",
       "naoEncontrada": "Foto não encontrada."
+    }
+  },
+  "contratos": {
+    "title": "Contratos recorrentes",
+    "subtitle": "Serviços que se repetem. O sistema abre a ordem de serviço sozinho, na data certa.",
+    "newButton": "Novo contrato",
+    "formTitle": "Novo contrato recorrente",
+    "save": "Salvar contrato",
+    "listTitle": "{count, plural, =0 {Nenhum contrato} one {# contrato} other {# contratos}}",
+    "empty": "Nenhum contrato cadastrado.",
+    "emptyHint": "Limpeza semanal, jardinagem mensal, suporte de TI, dedetização trimestral — cadastre uma vez e a OS passa a nascer sozinha, três dias antes de cada visita.",
+    "needClient": "Cadastre um cliente antes de criar um contrato.",
+    "paused": "Pausado",
+    "pause": "Pausar",
+    "resume": "Retomar",
+    "delete": "Excluir",
+    "confirmDelete": "Excluir este contrato? Ele para de gerar novas ordens de serviço.",
+    "confirmDeleteWithOrders": "Excluir este contrato? As {count} ordens de serviço já geradas continuam no sistema — são trabalho realizado. Só param de nascer novas.",
+    "columns": {
+      "contract": "Contrato",
+      "frequency": "Frequência",
+      "next": "Próxima",
+      "amount": "Valor",
+      "generated": "OS geradas"
+    },
+    "frequencies": {
+      "WEEKLY": "Semanal",
+      "BIWEEKLY": "Quinzenal",
+      "MONTHLY": "Mensal",
+      "BIMONTHLY": "Bimestral",
+      "QUARTERLY": "Trimestral",
+      "SEMIANNUAL": "Semestral",
+      "ANNUAL": "Anual"
+    },
+    "fields": {
+      "client": "Cliente",
+      "title": "O que será feito",
+      "titlePlaceholder": "Ex: Limpeza da caixa d'água",
+      "frequency": "Com que frequência",
+      "dayOfMonth": "Dia do mês",
+      "dayOfMonthHint": "Em meses mais curtos, cai no último dia — e volta ao dia escolhido no mês seguinte.",
+      "amount": "Valor por visita",
+      "amountHint": "Vai preenchido na OS gerada; dá pra ajustar depois.",
+      "technician": "Responsável",
+      "noTechnician": "Definir depois",
+      "startsAt": "Começa em",
+      "endsAt": "Termina em",
+      "endsAtHint": "Deixe vazio para contrato sem prazo.",
+      "description": "Observações"
+    },
+    "errors": {
+      "semPermissao": "Você não tem permissão para gerenciar contratos.",
+      "dadosInvalidos": "Confira os campos preenchidos.",
+      "clienteNaoEncontrado": "Cliente não encontrado.",
+      "tecnicoNaoEncontrado": "Responsável não encontrado.",
+      "fimAntesDoInicio": "A data de término não pode ser antes do início.",
+      "naoEncontrado": "Contrato não encontrado."
     }
   }
 }

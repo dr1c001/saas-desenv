@@ -292,7 +292,8 @@
     "darkMode": "Dark mode",
     "platformAdmin": "Platform admin",
     "customFields": "Custom fields",
-    "vocabulary": "Vocabulary"
+    "vocabulary": "Vocabulary",
+    "contracts": "Contracts"
   },
   "history": {
     "list": {
@@ -2052,6 +2053,63 @@
       "osFaturada": "An invoiced order does not accept photo changes.",
       "semPermissao": "You do not have permission to remove photos.",
       "naoEncontrada": "Photo not found."
+    }
+  },
+  "contratos": {
+    "title": "Recurring contracts",
+    "subtitle": "Work that repeats. The system opens the service order on its own, on the right date.",
+    "newButton": "New contract",
+    "formTitle": "New recurring contract",
+    "save": "Save contract",
+    "listTitle": "{count, plural, =0 {No contracts} one {# contract} other {# contracts}}",
+    "empty": "No contracts yet.",
+    "emptyHint": "Weekly cleaning, monthly landscaping, IT support, quarterly pest control — set it once and the order shows up on its own, three days before each visit.",
+    "needClient": "Add a client before creating a contract.",
+    "paused": "Paused",
+    "pause": "Pause",
+    "resume": "Resume",
+    "delete": "Delete",
+    "confirmDelete": "Delete this contract? It stops generating new service orders.",
+    "confirmDeleteWithOrders": "Delete this contract? The {count} service orders already generated stay in the system — they are work done. Only new ones stop.",
+    "columns": {
+      "contract": "Contract",
+      "frequency": "Frequency",
+      "next": "Next",
+      "amount": "Amount",
+      "generated": "Orders"
+    },
+    "frequencies": {
+      "WEEKLY": "Weekly",
+      "BIWEEKLY": "Every 2 weeks",
+      "MONTHLY": "Monthly",
+      "BIMONTHLY": "Every 2 months",
+      "QUARTERLY": "Quarterly",
+      "SEMIANNUAL": "Every 6 months",
+      "ANNUAL": "Yearly"
+    },
+    "fields": {
+      "client": "Client",
+      "title": "What will be done",
+      "titlePlaceholder": "e.g. Water tank cleaning",
+      "frequency": "How often",
+      "dayOfMonth": "Day of month",
+      "dayOfMonthHint": "In shorter months it falls on the last day — and returns to the chosen day the month after.",
+      "amount": "Amount per visit",
+      "amountHint": "Pre-filled on the generated order; you can adjust it later.",
+      "technician": "Assigned to",
+      "noTechnician": "Decide later",
+      "startsAt": "Starts on",
+      "endsAt": "Ends on",
+      "endsAtHint": "Leave empty for an open-ended contract.",
+      "description": "Notes"
+    },
+    "errors": {
+      "semPermissao": "You do not have permission to manage contracts.",
+      "dadosInvalidos": "Please check the fields.",
+      "clienteNaoEncontrado": "Client not found.",
+      "tecnicoNaoEncontrado": "Assignee not found.",
+      "fimAntesDoInicio": "The end date cannot be before the start date.",
+      "naoEncontrado": "Contract not found."
     }
   }
 }

@@ -29,6 +29,7 @@ import {
   Landmark,
   ListPlus,
   Languages,
+  CalendarSync,
 } from "lucide-react"
 import {
   Sidebar,
@@ -53,6 +54,7 @@ const NAV_ITEMS: { titleKey: string; href: string; icon: React.ElementType; slug
   { titleKey: "clients", href: "/clients", icon: Users, slug: "clients" },
   { titleKey: "quotes", href: "/quotes", icon: FileText, slug: "quotes" },
   { titleKey: "serviceOrders", href: "/service-orders", icon: ClipboardList, slug: "service-orders" },
+  { titleKey: "contracts", href: "/contracts", icon: CalendarSync, slug: "contracts" },
   { titleKey: "history", href: "/history", icon: History, slug: "history" },
   { titleKey: "maintenance", href: "/maintenance", icon: Wrench, slug: "maintenance" },
   { titleKey: "providers", href: "/providers", icon: HardHat, slug: "providers" },

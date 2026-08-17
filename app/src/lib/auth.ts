@@ -252,6 +252,7 @@ export const ALL_TABS = [
   { slug: "dashboard", navKey: "dashboard" },
   { slug: "clients", navKey: "clients" },
   { slug: "service-orders", navKey: "serviceOrders" },
+  { slug: "contracts", navKey: "contracts" },
   { slug: "history", navKey: "history" },
   { slug: "maintenance", navKey: "maintenance" },
   { slug: "providers", navKey: "providers" },

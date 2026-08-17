@@ -79,6 +79,7 @@ model Tenant {
   plan              Plan?              @relation(fields: [planId], references: [id])
   subscriptions     Subscription[]
   customFields      CustomField[]
+  contracts         ServiceContract[]
 
   // Vocabulario adaptavel: como a empresa chama OS e tecnico.
   // Formato em lib/vocabulario.ts. Fica junto do locale porque e lido no mesmo
@@ -171,6 +172,7 @@ model User {
   location          UserLocation?
   pushSubscriptions PushSubscription[]
   userAddress       UserAddress?
+  serviceContracts  ServiceContract[]
 
   // Aba Equipe lista por tenant; seleção de técnico filtra por papel.
   @@index([tenantId, role])
@@ -213,9 +215,10 @@ model Client {
   updatedAt    DateTime     @updatedAt
 
   address       Address?
-  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  tenant        Tenant            @relation(fields: [tenantId], references: [id])
   serviceOrders ServiceOrder[]
   equipments    Equipment[]
+  contracts     ServiceContract[]
 
   // getClients(): where tenantId [+ status] order by createdAt desc
   @@index([tenantId, createdAt])
@@ -267,19 +270,22 @@ model ServiceOrder {
   clientToken        String?       @unique @default(uuid())
   // Valores dos CustomField de entity=SERVICE_ORDER: { [customFieldId]: valor }
   customValues       Json?         @db.JsonB
+  /// Preenchido quando a OS nasceu de um contrato recorrente.
+  contractId         String?
   npsScore           Int?
   npsFeedback        String?
   npsSentAt          DateTime?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
-  client      Client          @relation(fields: [clientId], references: [id])
-  tenant      Tenant          @relation(fields: [tenantId], references: [id])
-  technician  User?           @relation(fields: [technicianId], references: [id])
+  client      Client           @relation(fields: [clientId], references: [id])
+  tenant      Tenant           @relation(fields: [tenantId], references: [id])
+  technician  User?            @relation(fields: [technicianId], references: [id])
   items       ServiceItem[]
   attachments Attachment[]
   revenues    Revenue[]
   checklist   ChecklistItem[]
+  contract    ServiceContract? @relation(fields: [contractId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, number])
   // Listagem de OS e "OS ativas" do dashboard.
@@ -714,4 +720,63 @@ model CustomField {
 
   // getCustomFields(): where tenantId + entity order by position
   @@index([tenantId, entity, position])
+}
+
+// ─── Contrato de serviço recorrente ───────────────────────────────────────────
+//
+// Boa parte do mercado de serviço vive de contrato, não de chamado avulso:
+// limpeza semanal, jardinagem mensal, suporte de TI, piscina quinzenal,
+// dedetização trimestral. O sistema só sabia lidar com o avulso.
+//
+// NÃO confundir com MaintenanceOrder: aquela é manutenção da frota e dos
+// equipamentos DA PRÓPRIA EMPRESA. Esta é serviço prestado AO CLIENTE, que se
+// repete — e que gera OS de verdade, sozinho, na data certa.
+//
+// A geração acontece no cron diário, com antecedência (ver
+// lib/contrato-recorrente.ts): OS que nasce no dia da visita chega tarde
+// demais pra encaixar na rota.
+
+enum ContractFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  BIMONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
+}
+
+model ServiceContract {
+  id           String            @id @default(cuid())
+  tenantId     String
+  clientId     String
+  title        String
+  description  String?
+  frequency    ContractFrequency
+  /// Dia do mês escolhido no contrato. Guardado separado da última execução
+  /// de propósito: um contrato no dia 31 executa em 28/fev e precisa VOLTAR
+  /// pro 31 em março. Derivar da execução anterior faria a data andar pra
+  /// trás a cada mês curto.
+  dayOfMonth   Int?
+  amount       Decimal           @default(0) @db.Decimal(12, 2)
+  technicianId String?
+  startsAt     DateTime
+  endsAt       DateTime?
+  /// Próxima data de execução. É o que o cron consulta.
+  nextRunAt    DateTime
+  lastRunAt    DateTime?
+  active       Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id])
+  client     Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  technician User?          @relation(fields: [technicianId], references: [id], onDelete: SetNull)
+  orders     ServiceOrder[]
+
+  // O cron busca: where active + nextRunAt <= limite
+  @@index([active, nextRunAt])
+  // getContracts(): where tenantId order by createdAt desc
+  @@index([tenantId, createdAt])
+  @@index([clientId])
 }

@@ -9,6 +9,8 @@ import { decidirAviso, diasDeAtraso, AVISOS_ATRASO } from "@/lib/past-due"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 import { geocodeAddress } from "@/lib/geocode"
 import { ambiente, ehProducao } from "@/lib/ambiente"
+import { gerarOsDosContratos } from "@/actions/contracts"
+import { DIAS_DE_ANTECEDENCIA } from "@/lib/contrato-recorrente"
 import { gravarRetratoDoMes } from "@/lib/snapshot"
 
 // O padrão da Vercel (10-15s) não cabe reconciliação da Asaas + e-mails +
@@ -41,7 +43,7 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date()
-  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, retrato: "", errors: 0 }
+  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, contratos: 0, retrato: "", errors: 0 }
 
   // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
   // Em 07/08/2026 uma cliente pagou e ficou sem acesso por ~1 dia: os webhooks
@@ -197,6 +199,21 @@ export async function GET(req: NextRequest) {
       await prisma.serviceOrder.update({ where: { id: os.id }, data: { npsSentAt: new Date() } })
       results.nps++
     } catch { results.errors++ }
+  }
+
+  // ── Contratos recorrentes: gera a OS da próxima visita ───────────────────────
+  // Com antecedência (ver lib/contrato-recorrente.ts): OS que nasce no dia da
+  // visita chega tarde demais pra encaixar na rota e avisar o cliente.
+  //
+  // A geração é idempotente — se este cron rodar duas vezes no mesmo dia, a
+  // segunda não duplica OS. É o que permite reprocessar sem medo.
+  try {
+    const limiteContratos = new Date(now)
+    limiteContratos.setUTCDate(limiteContratos.getUTCDate() + DIAS_DE_ANTECEDENCIA)
+    results.contratos = await gerarOsDosContratos(now, limiteContratos)
+  } catch (e) {
+    console.error("Falha ao gerar OS de contratos recorrentes:", e)
+    results.errors++
   }
 
   // ── Backfill de coordenadas: endereço salvo, mas sem lat/long ────────────────
