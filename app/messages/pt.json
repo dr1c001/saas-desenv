@@ -1633,7 +1633,20 @@
         "impersonate": "Entrar",
         "impersonateTitle": "Entrar na conta do cliente",
         "impersonateDescription": "Você vai ver o sistema exatamente como {company} vê, com acesso aos dados dela. Uma faixa vermelha fica visível o tempo todo, o acesso expira em 1 hora e tudo fica registrado no log de auditoria.",
-        "impersonateConfirm": "Entrar na conta"
+        "impersonateConfirm": "Entrar na conta",
+        "features": "Recursos",
+        "featuresTitle": "Recursos liberados",
+        "featuresDescription": "Libere itens avulsos para {company}, por cima do que o plano dela já dá. Serve para negociação e para manter o que um cliente antigo já usava.",
+        "featuresConfirm": "Salvar recursos",
+        "featureIsTab": "abre uma aba",
+        "featureFromPlan": "Já vem no plano dela — para tirar, troque o plano.",
+        "featureNames": {
+          "gpsMap": "Mapa GPS",
+          "nfse": "Emissão de NFS-e",
+          "signature": "Assinatura digital do cliente",
+          "checklist": "Checklist de execução",
+          "advancedReports": "Relatórios avançados"
+        }
       },
       "impersonation": {
         "banner": "Você está vendo o sistema como {company}. Tudo o que fizer aqui vale na conta dela.",

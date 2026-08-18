@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/utils"
 import { requireSuperAdmin, permissoesDe, papelPode } from "@/lib/admin"
+import { ehRecurso, recursosDoPlano } from "@/lib/plan"
 import { AdminTeam, NOME_AREA, type MembroEquipe } from "@/components/admin/admin-team"
 import { calcularRetratoAtual, chaveMesBRT, valorMensal } from "@/lib/snapshot"
 import { TenantActions } from "@/components/admin/tenant-actions"
@@ -58,7 +59,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
           }
         : undefined,
       include: {
-        plan: { select: { id: true, name: true, priceMonthly: true, priceYearly: true } },
+        plan: { select: { id: true, name: true, slug: true, priceMonthly: true, priceYearly: true } },
         users: { select: { id: true, role: true } },
         _count: { select: { orders: true, clients: true, quotes: true } },
         subscriptions: {
@@ -287,6 +288,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
                           status={tenant.subscriptionStatus}
                           planId={tenant.planId}
                           planos={planos}
+                          recursosDoPlano={recursosDoPlano(tenant.plan?.slug)}
+                          recursosExtras={tenant.extraFeatures.filter(ehRecurso)}
                           permissoes={permissoes}
                         />
                       </td>

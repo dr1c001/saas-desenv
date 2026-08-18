@@ -11,6 +11,7 @@ import {
   tenantImpersonado,
 } from "@/lib/admin"
 import { sendTeamInviteEmail } from "@/lib/resend"
+import { ehRecurso, recursosDoPlano } from "@/lib/plan"
 import type { PlatformRole } from "@/generated/prisma/client"
 
 /** Áreas que podem ser atribuídas pela tela. DONO fica de fora de propósito:
@@ -119,6 +120,59 @@ export async function trocarPlano(tenantId: string, planId: string) {
 }
 
 /** Entra na conta do cliente para dar suporte. */
+/**
+ * Concede ou tira recursos avulsos, por cima do que o plano dá.
+ *
+ * Existe porque isto já foi feito DUAS VEZES por edição direta no banco de
+ * produção: a assinatura digital da primeira cliente pagante (10/08/2026) e o
+ * Mapa GPS dela (18/08/2026). Cada uma dessas exigiu alguém com acesso ao
+ * banco, e nenhuma ficou registrada em lugar nenhum — daqui a seis meses não
+ * haveria como saber quem liberou o quê, nem por quê.
+ *
+ * `recursos` é a lista COMPLETA dos extras depois da mudança, não um
+ * incremento: a tela manda o estado final, e o que sumiu da lista é removido.
+ * Assim conceder e revogar são a mesma operação, e não existe caminho em que
+ * a tela e o banco discordem sobre o que foi tirado.
+ */
+export async function alterarRecursosExtras(tenantId: string, recursos: string[]) {
+  const admin = await requireSuperAdmin("concederRecurso")
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { name: true, extraFeatures: true, plan: { select: { slug: true } } },
+  })
+  if (!tenant) throw new Error("Empresa não encontrada.")
+
+  // Só entra o que o código conhece. Sem esta peneira, um valor digitado
+  // errado viraria uma string morta no banco: nunca libera nada e ninguém
+  // descobre por que "o recurso foi concedido e não apareceu".
+  const validos = [...new Set(recursos.filter(ehRecurso))]
+
+  // O que o plano já dá não precisa estar nos extras. Guardar duplicado faria
+  // a lista crescer sozinha a cada upgrade e mentiria sobre o que foi
+  // concedido à mão — que é justamente o que este registro serve pra contar.
+  const doPlano = new Set(recursosDoPlano(tenant.plan?.slug))
+  const extras = validos.filter((r) => !doPlano.has(r))
+
+  // Set<string> e não Set<Recurso>: extraFeatures é texto livre no banco, e um
+  // valor que não é recurso conhecido (de uma edição manual antiga) precisa
+  // aparecer aqui como removido, não travar a comparação.
+  const antes = new Set<string>(tenant.extraFeatures)
+  const depois = new Set<string>(extras)
+  const ganhou = extras.filter((r) => !antes.has(r))
+  const perdeu = tenant.extraFeatures.filter((r) => !depois.has(r))
+  if (ganhou.length === 0 && perdeu.length === 0) return
+
+  await prisma.tenant.update({ where: { id: tenantId }, data: { extraFeatures: extras } })
+
+  const mudancas = [
+    ...ganhou.map((r) => `+${r}`),
+    ...perdeu.map((r) => `-${r}`),
+  ].join(", ")
+  await registrarAcaoAdmin(admin.email, "alterar_recursos", tenantId, `${tenant.name}: ${mudancas}`)
+  revalidatePath("/admin")
+}
+
 export async function entrarNaConta(tenantId: string) {
   const admin = await requireSuperAdmin("entrarNaConta")
 

@@ -36,36 +36,28 @@ export async function createTestDatabase(): Promise<TestDatabase> {
   const adapter = new PrismaPGlite(client)
   const db = new PrismaClient({ adapter })
 
-  // Ordem respeita FKs (filhos antes dos pais).
-  const TABLES = [
-    "AuthRateLimit",
-    "PushSubscription",
-    "UserLocation",
-    "TabPermission",
-    "ChecklistItem",
-    "ServiceItem",
-    "Attachment",
-    "MaintenanceItem",
-    "ServiceOrder",
-    "MaintenanceOrder",
-    "Quote",
-    "Equipment",
-    "Revenue",
-    "Expense",
-    "Address",
-    "UserAddress",
-    "Client",
-    "Provider",
-    "Subscription",
-    "User",
-    "Tenant",
-    "Plan",
-  ]
+  // As tabelas vêm do próprio banco, não de uma lista escrita à mão.
+  //
+  // A lista fixa que existia aqui foi ficando para trás a cada tabela nova
+  // (AdminAuditLog, PlatformAdmin, MonthlySnapshot, CustomField,
+  // ServiceContract, GeocodeBatch...). O sintoma é traiçoeiro: o teste não
+  // quebra, ele passa a enxergar as linhas que o teste anterior gravou — e o
+  // resultado depende da ORDEM em que os testes rodaram. Descoberto em
+  // 18/08/2026, quando um teste contou 6 registros de auditoria em vez de 0.
+  //
+  // Uma consulta ao catálogo não erra e não precisa ser lembrada.
+  const { rows } = await client.query<{ tablename: string }>(
+    `select tablename from pg_tables
+     where schemaname = 'public' and tablename <> '_prisma_migrations'`
+  )
+  // TRUNCATE de todas de uma vez com CASCADE: não há ordem de FK a respeitar.
+  const TABLES = rows.map((r) => r.tablename)
 
   return {
     db,
     client,
     async reset() {
+      if (TABLES.length === 0) return
       await client.exec(`TRUNCATE TABLE ${TABLES.map((t) => `"${t}"`).join(", ")} CASCADE;`)
     },
     async close() {

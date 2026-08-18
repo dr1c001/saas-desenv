@@ -38,16 +38,20 @@ export type Permissao =
   | "liberarAcesso"
   | "cancelarAcesso"
   | "trocarPlano"
+  // Conceder recurso avulso (Mapa GPS, NFS-e...) por cima do plano. Vai junto
+  // de trocarPlano porque é estritamente MENOS poderoso: trocar pro Pro libera
+  // tudo de uma vez; isto libera um item só.
+  | "concederRecurso"
   | "entrarNaConta"
   | "gerenciarEquipe"
 
 const PERMISSOES: Record<PlatformRole, Permissao[]> = {
   DONO: [
     "verPainel", "verFinanceiro", "gerarRelatorio", "liberarAcesso",
-    "cancelarAcesso", "trocarPlano", "entrarNaConta", "gerenciarEquipe",
+    "cancelarAcesso", "trocarPlano", "concederRecurso", "entrarNaConta", "gerenciarEquipe",
   ],
-  FINANCEIRO: ["verPainel", "verFinanceiro", "gerarRelatorio", "liberarAcesso", "cancelarAcesso", "trocarPlano"],
-  COMERCIAL: ["verPainel", "verFinanceiro", "gerarRelatorio", "trocarPlano"],
+  FINANCEIRO: ["verPainel", "verFinanceiro", "gerarRelatorio", "liberarAcesso", "cancelarAcesso", "trocarPlano", "concederRecurso"],
+  COMERCIAL: ["verPainel", "verFinanceiro", "gerarRelatorio", "trocarPlano", "concederRecurso"],
   LOGISTICO: ["verPainel", "entrarNaConta"],
   TI: ["verPainel", "liberarAcesso", "entrarNaConta"],
 }
@@ -146,6 +150,7 @@ export type AcaoAdmin =
   | "cancelar"
   | "reativar"
   | "trocar_plano"
+  | "alterar_recursos"
   | "entrar_na_conta"
   | "sair_da_conta"
   | "adicionar_admin"

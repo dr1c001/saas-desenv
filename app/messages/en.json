@@ -1633,7 +1633,20 @@
         "impersonate": "Enter",
         "impersonateTitle": "Enter the customer's account",
         "impersonateDescription": "You will see the system exactly as {company} sees it, with access to their data. A red banner stays visible the whole time, access expires in 1 hour, and everything is recorded in the audit log.",
-        "impersonateConfirm": "Enter account"
+        "impersonateConfirm": "Enter account",
+        "features": "Features",
+        "featuresTitle": "Enabled features",
+        "featuresDescription": "Grant individual items to {company}, on top of what their plan already includes. Useful for negotiation and for keeping what an existing client already used.",
+        "featuresConfirm": "Save features",
+        "featureIsTab": "opens a tab",
+        "featureFromPlan": "Included in their plan — to remove it, change the plan.",
+        "featureNames": {
+          "gpsMap": "GPS Map",
+          "nfse": "Invoice issuing (NFS-e)",
+          "signature": "Client digital signature",
+          "checklist": "Execution checklist",
+          "advancedReports": "Advanced reports"
+        }
       },
       "impersonation": {
         "banner": "You are viewing the system as {company}. Anything you do here applies to their account.",

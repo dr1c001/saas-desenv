@@ -1,6 +1,7 @@
 import { cache } from "react"
 import { prisma } from "./prisma"
 import { getTranslations } from "next-intl/server"
+import { RECURSOS, type Recurso } from "./recursos"
 
 // Fonte única do que cada plano libera.
 //
@@ -14,14 +15,18 @@ import { getTranslations } from "next-intl/server"
 // aquele campo é texto de vitrine ("Até 3 usuários") — serve pra mostrar na
 // tela, não pra decidir permissão. Chave é o Plan.slug.
 
-export type Recurso =
-  | "gpsMap"          // Mapa GPS
-  | "nfse"            // Emissão de NFS-e
-  | "signature"       // Assinatura digital do cliente
-  | "checklist"       // Checklist de execução
-  | "advancedReports" // Período personalizado, ranking de clientes, detalhamento
+// O catálogo (tipo + listas) vive em lib/recursos.ts, que é puro: componente
+// de cliente pode importar de lá sem arrastar o Prisma junto. Aqui fica só o
+// que precisa do banco. Reexportado pra não quebrar quem já importava daqui.
+export type { Recurso } from "./recursos"
+export { RECURSOS, RECURSOS_DE_ABA, ehRecurso } from "./recursos"
 
-const TODOS: Recurso[] = ["gpsMap", "nfse", "signature", "checklist", "advancedReports"]
+const TODOS: Recurso[] = [...RECURSOS]
+
+/** O que um plano libera, sem ir ao banco. Usado pela tela do painel. */
+export function recursosDoPlano(slug: string | null | undefined): Recurso[] {
+  return [...((slug && POR_PLANO[slug]) || PERMISSIVO).recursos]
+}
 
 export type Limites = {
   maxUsuarios: number | null // null = ilimitado
