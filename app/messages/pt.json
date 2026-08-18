@@ -1687,6 +1687,16 @@
       "altText": "Assinatura",
       "clearButton": "Limpar",
       "confirmButton": "Confirmar assinatura"
+    },
+    "pix": {
+      "title": "Pagar por PIX",
+      "amount": "Valor",
+      "scan": "Aponte a câmera do seu banco para o código",
+      "orCopy": "ou copie o código abaixo e cole no seu aplicativo",
+      "copy": "Copiar código",
+      "copied": "Copiado!",
+      "receiver": "Recebedor",
+      "openAmount": "O valor não está definido no código — digite no seu aplicativo."
     }
   },
   "pdf": {
@@ -1756,6 +1766,12 @@
       "meses": "{n} meses de garantia",
       "anos": "{n, plural, one {# ano} other {# anos}} de garantia",
       "semGarantia": "Sem garantia"
+    },
+    "pix": {
+      "title": "Pagamento por PIX",
+      "scan": "Aponte a câmera do seu banco para o código",
+      "orCopy": "Ou pague usando a chave PIX:",
+      "receiver": "Recebedor"
     }
   },
   "emails": {
@@ -2188,6 +2204,51 @@
     "errors": {
       "semPermissao": "Você não tem permissão para alterar isso.",
       "prazoInvalido": "Prazo inválido. Use um número de dias entre 0 e 3650."
+    }
+  },
+  "pix": {
+    "title": "Receber por PIX",
+    "subtitle": "O cliente final paga direto na conta da sua empresa. O sistema so imprime o codigo — o dinheiro nao passa por nos, e nao ha taxa nenhuma.",
+    "keyType": {
+      "label": "Tipo da chave",
+      "options": {
+        "CPF": "CPF",
+        "CNPJ": "CNPJ",
+        "EMAIL": "E-mail",
+        "TELEFONE": "Telefone",
+        "ALEATORIA": "Chave aleatória"
+      }
+    },
+    "key": {
+      "label": "Chave PIX",
+      "invalid": "Essa chave não está no formato do tipo escolhido. Confira antes de salvar — chave errada faz o app do banco recusar o pagamento.",
+      "placeholder": {
+        "CPF": "000.000.000-00",
+        "CNPJ": "00.000.000/0000-00",
+        "EMAIL": "financeiro@suaempresa.com.br",
+        "TELEFONE": "(11) 90000-0000",
+        "ALEATORIA": "00000000-0000-0000-0000-000000000000"
+      }
+    },
+    "receiver": {
+      "label": "Nome de quem recebe",
+      "placeholder": "Nome da empresa ou do titular",
+      "hint": "É o nome que aparece no app do cliente na hora de pagar. Máximo de 25 caracteres, sem acento — limite do padrão do Banco Central."
+    },
+    "city": {
+      "label": "Cidade",
+      "placeholder": "Sua cidade",
+      "hint": "Cidade do titular da conta. Máximo de 15 caracteres."
+    },
+    "notice": "Confira a chave com calma. Se estiver errada, o pagamento vai para outra pessoa — e não há como o sistema desfazer isso. Para desligar a cobrança por PIX, apague a chave e salve.",
+    "save": "Salvar",
+    "saved": "Salvo",
+    "errors": {
+      "semPermissao": "Você não tem permissão para alterar isso.",
+      "tipoInvalido": "Escolha o tipo da chave.",
+      "chaveInvalida": "A chave não confere com o tipo escolhido.",
+      "recebedorObrigatorio": "Informe o nome de quem recebe.",
+      "cidadeObrigatoria": "Informe a cidade."
     }
   }
 }

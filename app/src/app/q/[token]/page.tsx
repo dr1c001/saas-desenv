@@ -4,7 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/utils"
 import { QuoteApprovalButtons } from "@/components/portal/quote-approval-buttons"
+import { PixPagamento } from "@/components/portal/pix-pagamento"
 import { getTranslator } from "@/lib/i18n"
+import { cobrancaPix } from "@/lib/pix"
+import { gerarQr } from "@/lib/qr"
+import { QrCode } from "lucide-react"
 
 // Só a cor do badge — os rótulos dos 4 status vêm de common.quoteStatus,
 // compartilhados com o resto do app.
@@ -20,7 +24,14 @@ export default async function QuotePortalPage({ params }: { params: Promise<{ to
 
   const quote = await prisma.quote.findUnique({
     where: { clientToken: token },
-    include: { tenant: { select: { name: true, phone: true, locale: true } } },
+    include: {
+      tenant: {
+        select: {
+          name: true, phone: true, locale: true,
+          pixKey: true, pixKeyType: true, pixReceiver: true, pixCity: true,
+        },
+      },
+    },
   })
 
   if (!quote) notFound()
@@ -41,6 +52,15 @@ export default async function QuotePortalPage({ params }: { params: Promise<{ to
   const year = new Date(quote.createdAt).getFullYear()
   const quoteNum = `ORC${year}${String(quote.number).padStart(4, "0")}`
   const isPending = quote.status === "SENT" || quote.status === "DRAFT"
+
+  // PIX no orçamento só depois de APROVADO. Antes disso o cliente ainda está
+  // decidindo, e um QR de pagamento na tela de decisão parece cobrança
+  // antecipada — o que espanta mais gente do que converte.
+  const totalPix = Number(quote.amount)
+  const cobranca =
+    quote.status === "APPROVED" && totalPix > 0
+      ? cobrancaPix(quote.tenant, totalPix, quoteNum)
+      : null
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -105,6 +125,26 @@ export default async function QuotePortalPage({ params }: { params: Promise<{ to
             <p className="font-semibold">✅ {t("quote.approvedTitle")}</p>
             <p className="text-sm mt-1">{t("quote.approvedMessage")}</p>
           </div>
+        )}
+
+        {cobranca && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <QrCode className="size-4" />
+                {t("pix.title")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PixPagamento
+                codigo={cobranca.codigo}
+                qr={gerarQr(cobranca.codigo)}
+                valor={totalPix}
+                recebedor={cobranca.recebedor}
+                locale={locale}
+              />
+            </CardContent>
+          </Card>
         )}
 
         {quote.status === "REJECTED" && (

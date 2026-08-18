@@ -2,11 +2,14 @@ import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle2, Clock, Wrench, FileCheck2, XCircle, Star } from "lucide-react"
+import { CheckCircle2, Clock, Wrench, FileCheck2, XCircle, Star, QrCode } from "lucide-react"
 import { SignaturePadPublic } from "@/components/service-orders/signature-pad-public"
 import { NpsWidget } from "@/components/portal/nps-widget"
+import { PixPagamento } from "@/components/portal/pix-pagamento"
 import { formatCurrency } from "@/lib/utils"
 import { getTranslator } from "@/lib/i18n"
+import { cobrancaPix } from "@/lib/pix"
+import { gerarQr } from "@/lib/qr"
 
 // Só ícone e cor — os rótulos dos 5 status vêm de common.serviceOrderStatus,
 // compartilhados com o resto do app.
@@ -34,7 +37,12 @@ export default async function ClientPortalPage({
     where: { clientToken: token },
     include: {
       items: true,
-      tenant: { select: { name: true, phone: true, logoUrl: true, locale: true } },
+      tenant: {
+        select: {
+          name: true, phone: true, logoUrl: true, locale: true,
+          pixKey: true, pixKeyType: true, pixReceiver: true, pixCity: true,
+        },
+      },
       client: { select: { name: true } },
       technician: { select: { name: true } },
     },
@@ -59,6 +67,16 @@ export default async function ClientPortalPage({
   const year = new Date(order.createdAt).getFullYear()
   const osNum = `OS${year}${String(order.number).padStart(4, "0")}`
   const isDone = order.status === "DONE" || order.status === "INVOICED"
+
+  // Cobrança por PIX: só depois de concluída, e só se a empresa configurou a
+  // chave. Antes da conclusão o valor ainda pode mudar, e um QR com valor
+  // velho é pior que nenhum — o cliente paga a mais ou a menos e sobra
+  // acerto manual pros dois lados.
+  //
+  // Cancelada nunca cobra. INVOICED continua cobrando: nota emitida não quer
+  // dizer paga.
+  const totalPix = Number(order.totalAmount)
+  const cobranca = isDone && totalPix > 0 ? cobrancaPix(order.tenant, totalPix, osNum) : null
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -144,6 +162,28 @@ export default async function ClientPortalPage({
                   </tr>
                 </tbody>
               </table>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* PIX — logo depois do total, que é quando a pergunta "como pago?"
+            aparece. */}
+        {cobranca && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <QrCode className="size-4" />
+                {t("pix.title")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PixPagamento
+                codigo={cobranca.codigo}
+                qr={gerarQr(cobranca.codigo)}
+                valor={totalPix}
+                recebedor={cobranca.recebedor}
+                locale={locale}
+              />
             </CardContent>
           </Card>
         )}

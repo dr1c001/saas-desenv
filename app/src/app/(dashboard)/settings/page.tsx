@@ -8,6 +8,8 @@ import { AvisoClienteForm } from "@/components/settings/aviso-cliente-form"
 import { getAvisoCliente } from "@/actions/aviso-cliente"
 import { DocumentosForm } from "@/components/settings/documentos-form"
 import { getDocumentos } from "@/actions/documentos"
+import { PixForm } from "@/components/settings/pix-form"
+import { getPix } from "@/actions/pix"
 import { ExportDataButton } from "@/components/settings/export-data-button"
 import { LanguageSetting } from "@/components/settings/language-setting"
 import { Separator } from "@/components/ui/separator"
@@ -16,6 +18,7 @@ export default async function SettingsPage() {
   const { tenant, user, isAdmin, isOwner } = await getSettings()
   const aviso = await getAvisoCliente()
   const documentos = await getDocumentos()
+  const pix = await getPix()
   const t = await getTranslations("settingsCore")
 
   return (
@@ -83,6 +86,10 @@ export default async function SettingsPage() {
       {isAdmin && (
         <AvisoClienteForm atual={aviso.config} whatsappConfigurado={aviso.whatsappConfigurado} />
       )}
+
+      {/* Cobrança por PIX. Fica perto dos documentos porque é onde o código
+          sai impresso — OS e orçamento. */}
+      {isAdmin && <PixForm atual={pix} />}
           </section>
         </>
       )}

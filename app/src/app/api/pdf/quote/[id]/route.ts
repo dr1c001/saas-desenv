@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma"
 import { createClient } from "@/lib/supabase/server"
 import { requireActiveSubscription } from "@/lib/auth"
 import { getTranslator } from "@/lib/i18n"
+import { cobrancaPix } from "@/lib/pix"
+import { gerarQr } from "@/lib/qr"
 import React, { type ReactElement, type JSXElementConstructor } from "react"
 
 export async function GET(
@@ -19,7 +21,16 @@ export async function GET(
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { tenantId: true, tenant: { select: { name: true, logoUrl: true, phone: true, address: true, website: true, locale: true, quoteTerms: true } } },
+    select: {
+      tenantId: true,
+      tenant: {
+        select: {
+          name: true, logoUrl: true, phone: true, address: true, website: true,
+          locale: true, quoteTerms: true,
+          pixKey: true, pixKeyType: true, pixReceiver: true, pixCity: true,
+        },
+      },
+    },
   })
   if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   // Bloqueio de assinatura é só de página — essa rota é despachável direto
@@ -39,6 +50,22 @@ export async function GET(
   const locale = dbUser.tenant.locale
   const t = getTranslator(locale, "pdf")
 
+  // O identificador vai no formato do documento, pra empresa reconhecer no
+  // extrato de que orçamento veio o dinheiro.
+  const anoOrc = new Date(quote.createdAt).getFullYear()
+  const totalPix = Number(quote.amount)
+  const cobranca =
+    totalPix > 0
+      ? cobrancaPix(
+          dbUser.tenant,
+          totalPix,
+          `ORC${anoOrc}${String(quote.number).padStart(4, "0")}`
+        )
+      : null
+  const pix = cobranca
+    ? { qr: gerarQr(cobranca.codigo), chave: cobranca.chave, recebedor: cobranca.recebedor }
+    : null
+
   const buildElement = (logoUrl: string | null) => {
     return React.createElement(QuotePDF, {
       quote,
@@ -49,6 +76,7 @@ export async function GET(
       companyWebsite: dbUser.tenant.website,
       locale,
       termos: dbUser.tenant.quoteTerms,
+      pix,
     }) as unknown as ReactElement<DocumentProps, JSXElementConstructor<DocumentProps>>
   }
 

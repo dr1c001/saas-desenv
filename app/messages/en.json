@@ -1687,6 +1687,16 @@
       "altText": "Signature",
       "clearButton": "Clear",
       "confirmButton": "Confirm signature"
+    },
+    "pix": {
+      "title": "Pay by PIX",
+      "amount": "Amount",
+      "scan": "Point your bank app's camera at the code",
+      "orCopy": "or copy the code below and paste it into your app",
+      "copy": "Copy code",
+      "copied": "Copied!",
+      "receiver": "Receiver",
+      "openAmount": "The amount is not set in the code — type it in your app."
     }
   },
   "pdf": {
@@ -1756,6 +1766,12 @@
       "meses": "{n}-month warranty",
       "anos": "{n, plural, one {# year} other {# years}} warranty",
       "semGarantia": "No warranty"
+    },
+    "pix": {
+      "title": "Payment by PIX",
+      "scan": "Point your bank app's camera at the code",
+      "orCopy": "Or pay using the PIX key:",
+      "receiver": "Receiver"
     }
   },
   "emails": {
@@ -2188,6 +2204,51 @@
     "errors": {
       "semPermissao": "You do not have permission to change this.",
       "prazoInvalido": "Invalid period. Use a number of days between 0 and 3650."
+    }
+  },
+  "pix": {
+    "title": "Get paid by PIX",
+    "subtitle": "The client pays straight into your company's account. The system only prints the code — the money never passes through us, and there is no fee.",
+    "keyType": {
+      "label": "Key type",
+      "options": {
+        "CPF": "CPF",
+        "CNPJ": "CNPJ",
+        "EMAIL": "Email",
+        "TELEFONE": "Phone",
+        "ALEATORIA": "Random key"
+      }
+    },
+    "key": {
+      "label": "PIX key",
+      "invalid": "This key does not match the selected type. Check it before saving — a wrong key makes the bank app refuse the payment.",
+      "placeholder": {
+        "CPF": "000.000.000-00",
+        "CNPJ": "00.000.000/0000-00",
+        "EMAIL": "billing@yourcompany.com",
+        "TELEFONE": "(11) 90000-0000",
+        "ALEATORIA": "00000000-0000-0000-0000-000000000000"
+      }
+    },
+    "receiver": {
+      "label": "Receiver name",
+      "placeholder": "Company or account holder name",
+      "hint": "This is the name your client sees when paying. Up to 25 characters, no accents — a limit of the Central Bank standard."
+    },
+    "city": {
+      "label": "City",
+      "placeholder": "Your city",
+      "hint": "City of the account holder. Up to 15 characters."
+    },
+    "notice": "Check the key carefully. If it is wrong, the payment goes to someone else — and the system cannot undo that. To turn PIX off, clear the key and save.",
+    "save": "Save",
+    "saved": "Saved",
+    "errors": {
+      "semPermissao": "You do not have permission to change this.",
+      "tipoInvalido": "Choose the key type.",
+      "chaveInvalida": "The key does not match the selected type.",
+      "recebedorObrigatorio": "Enter the receiver name.",
+      "cidadeObrigatoria": "Enter the city."
     }
   }
 }

@@ -1,5 +1,7 @@
 import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer"
 import { getTranslator } from "@/lib/i18n"
+import { PixBloco } from "@/components/pdf/pix-bloco"
+import type { Qr } from "@/lib/qr"
 
 const styles = StyleSheet.create({
   page: {
@@ -75,6 +77,8 @@ type Props = {
   locale: "pt" | "en"
   /** Termos escritos pela empresa. Ausente = a secao nem aparece. */
   termos?: string | null
+  /** Cobranca por PIX. Ausente quando a empresa nao configurou chave. */
+  pix?: { qr: Qr; chave: string; recebedor: string } | null
   companyName: string
   logoUrl?: string | null
   companyPhone?: string | null
@@ -110,7 +114,7 @@ function quoteNum(number: number, createdAt: Date | string) {
   return `ORC${year}${String(number).padStart(4, "0")}`
 }
 
-export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAddress, companyWebsite, locale , termos }: Props) {
+export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAddress, companyWebsite, locale , termos, pix }: Props) {
   // PDFs são gerados via renderToBuffer, fora do request context do Next.js —
   // o locale vem explícito por prop (ver lib/i18n.ts).
   const t = getTranslator(locale, "pdf")
@@ -223,6 +227,8 @@ export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAdd
             <Text style={styles.termosTexto}>{termos}</Text>
           </View>
         )}
+
+        {pix && <PixBloco qr={pix.qr} chave={pix.chave} recebedor={pix.recebedor} locale={locale} />}
 
         <View style={styles.signatureSection}>
           <Text style={styles.signatureLine}>{t("common.clientSignature")}</Text>

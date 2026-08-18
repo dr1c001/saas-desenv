@@ -8,6 +8,8 @@ import {
 } from "@react-pdf/renderer"
 import { formatOsNumber } from "@/lib/utils"
 import { getTranslator } from "@/lib/i18n"
+import { PixBloco } from "@/components/pdf/pix-bloco"
+import type { Qr } from "@/lib/qr"
 
 const styles = StyleSheet.create({
   page: {
@@ -113,6 +115,8 @@ type Props = {
   termos?: string | null
   /** Ja formatado pela rota: "90 dias — valida ate 13/06/2026". */
   garantia?: string | null
+  /** Cobranca por PIX. Ausente quando a empresa nao configurou chave. */
+  pix?: { qr: Qr; chave: string; recebedor: string } | null
   /** Fotos ja em data URI. Vazio quando a OS nao tem foto ou o download
    *  falhou — nesse caso a secao inteira some, sem espaco vazio no papel. */
   fotos?: string[]
@@ -159,7 +163,7 @@ function fmtDateFor(date: Date | string, locale: "pt" | "en") {
   return new Date(date).toLocaleDateString(locale === "en" ? "en-US" : "pt-BR")
 }
 
-export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, companyAddress, companyWebsite, locale, fotos = [] , termos, garantia }: Props) {
+export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, companyAddress, companyWebsite, locale, fotos = [] , termos, garantia, pix }: Props) {
   // PDFs são gerados via renderToBuffer, fora do request context do Next.js —
   // o locale vem explícito por prop (ver lib/i18n.ts).
   const t = getTranslator(locale, "pdf")
@@ -339,6 +343,8 @@ export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, com
             <Text style={styles.termosTexto}>{termos}</Text>
           </View>
         )}
+
+        {pix && <PixBloco qr={pix.qr} chave={pix.chave} recebedor={pix.recebedor} locale={locale} />}
 
         <View style={styles.signatureSection}>
           <Text style={styles.signatureLine}>{t("common.clientSignature")}</Text>

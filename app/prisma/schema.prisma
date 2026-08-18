@@ -102,6 +102,20 @@ model Tenant {
 
   orderTerms String? @db.Text
   quoteTerms String? @db.Text
+
+  /// Cobranca do cliente final por PIX. A empresa usa a conta que ja tem —
+  /// nao exigimos conta em gateway nenhum. O codigo e montado localmente
+  /// (lib/pix.ts), entao nao ha API, nem chave secreta, nem intermediario:
+  /// o dinheiro vai direto do cliente final pra empresa e o ServicoOS nunca
+  /// toca nele.
+  pixKey       String?
+  pixKeyType   String?
+  /// Nome e cidade de quem recebe, como saem no app do banco do pagador.
+  /// Guardados a parte do nome/cidade do tenant porque o padrao limita a
+  /// 25 e 15 caracteres e o titular da conta pode ser outro (o socio, por
+  /// exemplo) — quem nao confere isso gera codigo que o banco recusa.
+  pixReceiver  String?
+  pixCity      String?
 }
 
 // Idioma da empresa — governa dashboard, e-mails e PDFs gerados pro tenant
