@@ -47,7 +47,8 @@
       "PENDING": "Pending",
       "PAID": "Paid",
       "OVERDUE": "Overdue"
-    }
+    },
+    "unassigned": "Unassigned"
   },
   "planFeatures": {
     "starter": [
@@ -1188,7 +1189,24 @@
       },
       "advancedOnly": "This analysis is part of the advanced reports, included from the Pro plan up.",
       "upgradeButton": "See plans",
-      "currentMonthOnly": "Current month — custom periods are a Pro plan feature"
+      "currentMonthOnly": "Current month — custom periods are a Pro plan feature",
+      "byProfessional": {
+        "title": "Performance by [[TecP]]",
+        "subtitle": "Counts what was COMPLETED in the period. Jobs opened earlier count in the month they finished.",
+        "empty": "Nothing completed in the period.",
+        "unassigned": "Unassigned",
+        "columns": {
+          "professional": "Professional",
+          "done": "Completed",
+          "total": "Amount",
+          "average": "Average ticket",
+          "days": "Days to complete",
+          "rating": "Client rating"
+        },
+        "daysHint": "From opening to completion — includes waiting for parts and for the client's availability, not just working time.",
+        "ratingCount": "{n, plural, one {# response} other {# responses}}",
+        "noRating": "not rated"
+      }
     }
   },
   "settingsCore": {

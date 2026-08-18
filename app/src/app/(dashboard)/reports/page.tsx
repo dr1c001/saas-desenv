@@ -184,6 +184,83 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
 
       <Separator />
 
+      {/* Desempenho por profissional */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold">{t("reports.byProfessional.title")}</h2>
+          <p className="text-sm text-muted-foreground">{t("reports.byProfessional.subtitle")}</p>
+        </div>
+        <Card>
+          <CardContent className="p-0">
+            {!data.avancado ? (
+              <UpgradeAviso texto={t("reports.advancedOnly")} botao={t("reports.upgradeButton")} />
+            ) : data.porProfissional.length === 0 ? (
+              <p className="text-sm text-muted-foreground p-4">{t("reports.byProfessional.empty")}</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("reports.byProfessional.columns.professional")}</TableHead>
+                      <TableHead className="text-right">{t("reports.byProfessional.columns.done")}</TableHead>
+                      <TableHead className="text-right">{t("reports.byProfessional.columns.total")}</TableHead>
+                      <TableHead className="text-right">{t("reports.byProfessional.columns.average")}</TableHead>
+                      <TableHead className="text-right" title={t("reports.byProfessional.daysHint")}>
+                        {t("reports.byProfessional.columns.days")}
+                      </TableHead>
+                      <TableHead className="text-right">{t("reports.byProfessional.columns.rating")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.porProfissional.map((p) => (
+                      <TableRow key={p.id ?? "__sem__"}>
+                        <TableCell className={`text-sm ${p.id === null ? "text-muted-foreground italic" : "font-medium"}`}>
+                          {p.nome}
+                        </TableCell>
+                        <TableCell className="text-right text-sm tabular-nums">{p.concluidas}</TableCell>
+                        <TableCell className="text-right text-sm tabular-nums">{formatCurrency(p.total)}</TableCell>
+                        <TableCell className="text-right text-sm tabular-nums text-muted-foreground">
+                          {formatCurrency(p.ticketMedio)}
+                        </TableCell>
+                        <TableCell className="text-right text-sm tabular-nums text-muted-foreground">
+                          {p.diasMedios === null ? "—" : p.diasMedios}
+                        </TableCell>
+                        <TableCell className="text-right text-sm">
+                          {/* A contagem de respostas anda junto com a nota:
+                              "10,0" de uma resposta só não é "10,0". */}
+                          {p.nota === null ? (
+                            <span className="text-muted-foreground">{t("reports.byProfessional.noRating")}</span>
+                          ) : (
+                            <>
+                              <span className="tabular-nums font-medium">{p.nota.toFixed(1)}</span>{" "}
+                              <span className="text-xs text-muted-foreground">
+                                ({t("reports.byProfessional.ratingCount", { n: p.respostas })})
+                              </span>
+                            </>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow>
+                      <TableCell className="font-semibold text-sm">{t("reports.totalLabel")}</TableCell>
+                      <TableCell className="text-right font-bold text-sm tabular-nums">
+                        {data.porProfissional.reduce((s, p) => s + p.concluidas, 0)}
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-sm tabular-nums">
+                        {formatCurrency(data.porProfissional.reduce((s, p) => s + p.total, 0))}
+                      </TableCell>
+                      <TableCell colSpan={3} />
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <Separator />
+
       {/* Detalhe receitas */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{t("reports.revenueDetail.title")}</h2>

@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest"
 import React from "react"
 import { Document, Page, renderToBuffer } from "@react-pdf/renderer"
-import parse from "parse-svg-path"
-import abs from "abs-svg-path"
 import { PixBloco } from "@/components/pdf/pix-bloco"
 import { gerarQr } from "@/lib/qr"
 import { cobrancaPix } from "@/lib/pix"
@@ -14,7 +12,7 @@ const tenant = {
   pixCity: "Piracicaba",
 }
 
-function paginaCom(qrCaminho: string, tamanho: number) {
+function paginaCom(caminho: string, tamanho: number) {
   return renderToBuffer(
     React.createElement(
       Document,
@@ -23,7 +21,7 @@ function paginaCom(qrCaminho: string, tamanho: number) {
         Page,
         null,
         React.createElement(PixBloco, {
-          qr: { tamanho, caminho: qrCaminho },
+          qr: { tamanho, caminho },
           chave: "12345678909",
           recebedor: "Limpeza Ltda",
           locale: "pt" as const,
@@ -37,30 +35,16 @@ describe("bloco de PIX no PDF", () => {
   const cobranca = cobrancaPix(tenant, 450, "OS20260042")!
   const qr = gerarQr(cobranca.codigo)
 
-  it("o desenho do QR sobrevive ao parser de path do react-pdf", () => {
-    // O react-pdf não desenha SVG direto: passa o `d` por parse-svg-path e
-    // abs-svg-path. Se ele engasgasse com `h`/`v`/`z` relativos, o caminho
-    // sairia vazio — e o PDF continuaria sendo gerado, com um quadrado branco
-    // no lugar do QR. Ninguém veria isso até um cliente tentar pagar.
-    const comandos = abs(parse(qr.caminho))
-    expect(comandos.length).toBeGreaterThan(100)
-    // Cada retângulo vira M + 3 traços + fechamento; nenhum comando pode ter
-    // NaN, que é como um parser confuso costuma falhar em silêncio.
-    for (const c of comandos) {
-      for (const n of c.slice(1)) {
-        expect(Number.isFinite(n as number)).toBe(true)
-      }
-    }
-    expect(comandos[0][0]).toBe("M")
-  })
-
   it("todo o desenho cabe dentro do viewBox", () => {
     // Módulo fora do viewBox é módulo cortado, e QR cortado não lê.
-    for (const [, ...args] of abs(parse(qr.caminho))) {
-      for (let i = 0; i < args.length; i++) {
-        expect(args[i] as number).toBeGreaterThanOrEqual(0)
-        expect(args[i] as number).toBeLessThanOrEqual(qr.tamanho)
-      }
+    const partes = [...qr.caminho.matchAll(/M(\d+) (\d+)h(\d+)v1h-\3z/g)]
+    expect(partes.length).toBeGreaterThan(50)
+    for (const g of partes) {
+      const [x, y, largura] = [+g[1], +g[2], +g[3]]
+      expect(x).toBeGreaterThanOrEqual(0)
+      expect(y).toBeGreaterThanOrEqual(0)
+      expect(x + largura).toBeLessThanOrEqual(qr.tamanho)
+      expect(y + 1).toBeLessThanOrEqual(qr.tamanho)
     }
   })
 
@@ -70,8 +54,11 @@ describe("bloco de PIX no PDF", () => {
   })
 
   it("o QR realmente entra no arquivo, não só o texto ao lado", async () => {
-    // Comparar com um caminho vazio: se o react-pdf estivesse ignorando o
-    // desenho, os dois arquivos teriam praticamente o mesmo tamanho.
+    // Esta é a prova de que o parser de path do react-pdf entende os comandos
+    // relativos que lib/qr.ts emite (h/v/z). Se engasgasse, o caminho sairia
+    // vazio: o PDF continuaria sendo gerado, com um quadrado branco no lugar
+    // do QR, e ninguém veria isso até um cliente tentar pagar. Comparar com o
+    // caminho vazio faz a diferença aparecer aqui.
     const [comQr, semQr] = await Promise.all([
       paginaCom(qr.caminho, qr.tamanho),
       paginaCom("", qr.tamanho),

@@ -47,7 +47,8 @@
       "PENDING": "Pendente",
       "PAID": "Pago",
       "OVERDUE": "Vencido"
-    }
+    },
+    "unassigned": "Sem responsável"
   },
   "planFeatures": {
     "starter": [
@@ -1188,7 +1189,24 @@
       },
       "advancedOnly": "Esta análise faz parte dos relatórios avançados, incluídos a partir do plano Pro.",
       "upgradeButton": "Ver planos",
-      "currentMonthOnly": "Mês atual — período personalizado é do plano Pro"
+      "currentMonthOnly": "Mês atual — período personalizado é do plano Pro",
+      "byProfessional": {
+        "title": "Desempenho por [[TecP]]",
+        "subtitle": "Conta pelo que foi CONCLUÍDO no período. [[OsP]] abert[[osFimP]] antes contam no mês em que terminaram.",
+        "empty": "Nenhum[[osFim]] concluíd[[osFim]] no período.",
+        "unassigned": "Sem responsável",
+        "columns": {
+          "professional": "Profissional",
+          "done": "Concluíd[[osArtP]]",
+          "total": "Valor",
+          "average": "Ticket médio",
+          "days": "Dias até concluir",
+          "rating": "Nota do cliente"
+        },
+        "daysHint": "Da abertura até a conclusão — inclui espera por peça e por horário do cliente, não só o tempo de trabalho.",
+        "ratingCount": "{n, plural, one {# resposta} other {# respostas}}",
+        "noRating": "sem avaliação"
+      }
     }
   },
   "settingsCore": {
