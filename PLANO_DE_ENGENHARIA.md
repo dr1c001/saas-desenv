@@ -1228,6 +1228,70 @@ liberando a landing, seção de segmentos intacta.
 
 ---
 
+### 7.2.18 Geocodificação: troca de provedor e lote — 18/08/2026
+
+**O gargalo.** A importação de planilha não geocodifica, e o backfill do cron
+processava ~10 endereços por dia (limite de 1 req/s do Nominatim, dentro de um
+orçamento de 25s). Uma empresa que importasse 800 clientes esperaria meses até
+o mapa encher — e o mapa é um dos motivos de assinar. Este era o único item do
+Nível 1 ainda aberto.
+
+**Por que Geoapify, e por que Google está fora.** O decisivo não é preço, é o
+direito de GUARDAR a coordenada: o sistema grava lat/long no `Address` e desenha
+num Leaflet com tiles do OpenStreetMap.
+
+| Provedor | Guardar | Mapa de terceiro | Situação |
+|---|---|---|---|
+| Google | não (cache restrito) | exige mapa do Google | inviável sem reescrever o mapa |
+| HERE / TomTom | 30 dias | ok | inviável |
+| Azure Maps | só com conta ativa | restringe | inviável |
+| Geocodio | sim, irrestrito | ok | só EUA/Canadá |
+| Mapbox permanente | sim | "preferencialmente mapa Mapbox" | US$ 5/mil |
+| **Geoapify** | **sim** | **ok** | **grátis até 3.000 créditos/dia** |
+
+O que se ganha é o LIMITE, não a precisão: Geoapify, LocationIQ e OpenCage são
+todos OpenStreetMap — o mesmo dado do Nominatim. Se um dia a queixa for "o pino
+cai na rua errada", nenhum deles resolve; o caminho seria o CNEFE do IBGE
+(base do pacote `geocodebr`, do IPEA).
+
+**Custo real medido:** 1 requisição = 1 crédito, lote custa metade. O grátis
+comporta ~1.500 endereços/dia com a cascata. Para estourar seria preciso
+geocodificar 1.500 endereços TODO dia — cerca de 5 empresas novas por dia.
+
+**O lote é assíncrono**, e é isso que molda o desenho: uma execução envia, a
+seguinte colhe. O job fica em `GeocodeBatch`; sem guardá-lo, um lote mais
+demorado que o orçamento da função seria abandonado e reenviado todo dia para
+sempre — o mapa nunca encheria e nada avisaria ninguém. Um lote em voo por vez,
+de propósito: o pior caso vira "demora mais um dia", nunca "gastou a cota do mês
+numa madrugada".
+
+**Inanição da fila** (achado ao revisar o próprio desenho): endereço que nunca
+resolve — cidade digitada errada — ficaria na frente da fila para sempre,
+ocupando as vagas do lote e impedindo endereço NOVO de ser processado. Daí
+`Address.geocodeTries`: a fila ordena por ele, e há teto de 6 tentativas.
+Editar o endereço zera o contador, então corrigir a digitação devolve o cliente
+para a fila.
+
+**Defeito de produção corrigido junto.** `updateClient` geocodificava em TODA
+edição e, quando a consulta falhava (tempo limite, provedor fora do ar),
+gravava `null` — **apagando a coordenada que já existia**. Trocar o telefone de
+um cliente podia tirá-lo do mapa, sem erro nenhum na tela. Agora só consulta
+quando rua/número/cidade/UF mudam, e nunca sobrescreve coordenada boa com nula.
+
+**Reserva:** sem `GEOAPIFY_API_KEY` tudo continua no Nominatim, um a um. Trocar
+de provedor não pode ser um degrau onde o sistema fica sem geocodificação.
+
+**Pendência operacional do dono:** criar conta no Geoapify e definir
+`GEOAPIFY_API_KEY` na Vercel (Production e Preview), depois redeploy — env var
+nova só vale em deploy novo (seção 9, item 18). Enquanto isso o sistema roda no
+Nominatim, como antes. Vale também confirmar por escrito com o suporte deles a
+cláusula de armazenamento permanente: está na documentação e no material
+comercial, não em cláusula nominal dos Termos.
+
+399 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

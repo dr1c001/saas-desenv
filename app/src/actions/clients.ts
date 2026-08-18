@@ -6,6 +6,7 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { geocodeAddress } from "@/lib/geocode"
+import { avancarFila } from "@/lib/geocode-fila"
 import { getTranslations } from "next-intl/server"
 import { translateFieldErrors } from "@/lib/validation"
 import { lerPlanilha, PlanilhaInvalida } from "@/lib/planilha"
@@ -149,7 +150,31 @@ export async function updateClient(
   const personalizados = await lerCamposPersonalizados(formData)
   if (personalizados.erro) return personalizados.erro
 
-  const coords = await geocodeAddress(address)
+  // Só geocodifica se o endereço realmente mudou.
+  //
+  // Antes chamava a API em TODA edição — trocar o telefone do cliente gastava
+  // uma consulta à toa. Pior: quando a consulta falhava (tempo limite, provedor
+  // fora do ar, endereço não encontrado), o update gravava null e APAGAVA a
+  // coordenada que já existia. O cliente saía do mapa por causa de uma edição
+  // que não tinha nada a ver com o endereço, sem erro nenhum na tela.
+  const atual = await prisma.address.findUnique({
+    where: { clientId: id },
+    select: { street: true, number: true, city: true, state: true, latitude: true, longitude: true },
+  })
+  // Compara só o que entra na consulta de geocodificação (ver consultasPara):
+  // mudar complemento ou CEP não muda o pino, então não vale uma consulta.
+  const mudouEndereco =
+    !atual ||
+    (atual.street ?? null) !== (address.street || null) ||
+    (atual.number ?? null) !== (address.number || null) ||
+    (atual.city ?? null) !== (address.city || null) ||
+    (atual.state ?? null) !== (address.state || null)
+
+  const coords = mudouEndereco
+    ? await geocodeAddress(address)
+    : atual.latitude !== null && atual.longitude !== null
+      ? { latitude: atual.latitude, longitude: atual.longitude }
+      : null
 
   await prisma.client.update({
     where: { id, tenantId },
@@ -184,6 +209,10 @@ export async function updateClient(
             zipCode: address.zipCode || null,
             latitude: coords?.latitude ?? null,
             longitude: coords?.longitude ?? null,
+            // Endereço novo devolve o cliente pra fila: corrigir a cidade
+            // digitada errada tem que dar nova chance a quem já esgotou as
+            // tentativas (ver MAX_TENTATIVAS em lib/geocode-fila.ts).
+            ...(mudouEndereco ? { geocodeTries: 0 } : {}),
           },
         },
       },
@@ -323,9 +352,10 @@ export async function importClients(
   // cliente por posição erraria em silêncio — cada cliente com o endereço do
   // vizinho. O Prisma faz a ligação certa aqui.
   //
-  // Sem geocodificar: o Nominatim aceita 1 requisição por segundo, então
-  // centenas de endereços não cabem no tempo da função. O backfill do cron
-  // diário pega quem está sem coordenada.
+  // Sem geocodificar aqui dentro: nem mesmo em lote, porque o lote é
+  // assíncrono e a importação não pode ficar esperando o job do provedor
+  // enquanto o usuário olha a tela. O que se faz é DISPARAR o lote logo
+  // depois de gravar (ver abaixo) — o resultado é colhido pelo cron.
   let importados = 0
   for (let i = 0; i < novos.length; i += TAMANHO_LOTE) {
     const lote = novos.slice(i, i + TAMANHO_LOTE)
@@ -367,6 +397,16 @@ export async function importClients(
     // lotes anteriores estão commitados e reimportar o mesmo arquivo os
     // reconhece como já existentes em vez de duplicar.
     importados += lote.length
+  }
+
+  // Dispara o lote de geocodificação já, sem esperar o cron da madrugada:
+  // quem acabou de importar 800 clientes quer ver o mapa hoje, não amanhã.
+  // Nunca derruba a importação — os clientes já estão gravados, e o cron
+  // pega a fila de qualquer jeito se isto falhar.
+  try {
+    await avancarFila()
+  } catch (e) {
+    console.error("Falha ao enfileirar geocodificação da importação:", e)
   }
 
   revalidatePath("/clients")

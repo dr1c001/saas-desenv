@@ -108,14 +108,14 @@ model Tenant {
   /// (lib/pix.ts), entao nao ha API, nem chave secreta, nem intermediario:
   /// o dinheiro vai direto do cliente final pra empresa e o ServicoOS nunca
   /// toca nele.
-  pixKey       String?
-  pixKeyType   String?
+  pixKey      String?
+  pixKeyType  String?
   /// Nome e cidade de quem recebe, como saem no app do banco do pagador.
   /// Guardados a parte do nome/cidade do tenant porque o padrao limita a
   /// 25 e 15 caracteres e o titular da conta pode ser outro (o socio, por
   /// exemplo) — quem nao confere isso gera codigo que o banco recusa.
-  pixReceiver  String?
-  pixCity      String?
+  pixReceiver String?
+  pixCity     String?
 }
 
 // Idioma da empresa — governa dashboard, e-mails e PDFs gerados pro tenant
@@ -275,7 +275,20 @@ model Address {
   longitude  Float?
   clientId   String  @unique
 
+  /// Quantas vezes ja se tentou geocodificar sem sucesso.
+  ///
+  /// Existe pra impedir inanicao da fila: endereco que nunca resolve (cidade
+  /// digitada errada, rua inexistente) ficaria na frente pra sempre, ocupando
+  /// as vagas do lote e impedindo endereco NOVO de ser processado. O mapa
+  /// pararia de encher e nada avisaria ninguem. A fila ordena por este
+  /// contador, entao quem nunca foi tentado passa na frente de quem ja falhou.
+  geocodeTries Int @default(0)
+
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  // Fila de geocodificacao: where latitude is null + geocodeTries < teto,
+  // order by geocodeTries, id
+  @@index([geocodeTries])
 }
 
 // ─── Ordem de Serviço ─────────────────────────────────────────────────────────
@@ -812,4 +825,25 @@ model ServiceContract {
   // getContracts(): where tenantId order by createdAt desc
   @@index([tenantId, createdAt])
   @@index([clientId])
+}
+
+/// Lote de geocodificacao ja enviado ao provedor, esperando resultado.
+///
+/// Existe porque o lote e assincrono e funcao serverless tem orcamento de
+/// tempo curto: sem guardar o job, um lote que demore mais que o orcamento
+/// seria abandonado e reenviado todo dia, para sempre — o mapa nunca
+/// encheria e nada avisaria ninguem.
+///
+/// Nao tem tenantId de proposito: o backfill e da plataforma inteira, e um
+/// lote pode carregar enderecos de empresas diferentes. O isolamento entre
+/// empresas continua valendo onde importa — cada Address so e atualizado pelo
+/// id que ja estava na fila.
+model GeocodeBatch {
+  id         String   @id @default(cuid())
+  jobId      String   @unique
+  /// Ids de Address na MESMA ordem em que foram enviados. O casamento do
+  /// resultado e por indice, entao esta ordem e o que impede o cliente de
+  /// receber a coordenada do vizinho.
+  addressIds Json
+  createdAt  DateTime @default(now())
 }

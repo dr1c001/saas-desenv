@@ -7,7 +7,8 @@ import {
 } from "@/lib/resend"
 import { decidirAviso, diasDeAtraso, AVISOS_ATRASO } from "@/lib/past-due"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
-import { geocodeAddress } from "@/lib/geocode"
+import { provedor } from "@/lib/geocode"
+import { avancarFila, geocodificarAvulso, semCoordenada } from "@/lib/geocode-fila"
 import { ambiente, ehProducao } from "@/lib/ambiente"
 import { gerarOsDosContratos } from "@/actions/contracts"
 import { DIAS_DE_ANTECEDENCIA } from "@/lib/contrato-recorrente"
@@ -224,21 +225,45 @@ export async function GET(req: NextRequest) {
   // estavam nesse estado.) Roda por último e com orçamento de tempo curto:
   // se estourar, o que importa acima já foi gravado, e amanhã continua de onde
   // parou. Lote pequeno também respeita o limite de 1 req/s do Nominatim.
+  //
+  // Desde 18/08/2026 isto passa pelo LOTE quando há chave do Geoapify: um
+  // envio cobre até 1.000 endereços e custa metade do crédito. Antes, um a um
+  // a 1 req/s do Nominatim, a planilha de 800 clientes levava semanas — o mapa
+  // ficava quebrado justamente na primeira semana de uso, que é quando a
+  // empresa decide se o sistema presta.
+  //
+  // O lote é assíncrono: uma execução envia, a seguinte colhe. Quem o lote não
+  // achou volta pela busca avulsa, que tem a cascata (rua-sem-número, cidade)
+  // que o lote não faz.
   const inicioBackfill = Date.now()
-  const semCoordenada = await prisma.address.findMany({
-    where: { latitude: null, OR: [{ city: { not: null } }, { street: { not: null } }] },
-    select: { id: true, street: true, number: true, city: true, state: true },
-    take: 10,
-  })
-  for (const addr of semCoordenada) {
-    if (Date.now() - inicioBackfill > 25_000) break
-    try {
-      const coords = await geocodeAddress(addr)
-      if (coords) {
-        await prisma.address.update({ where: { id: addr.id }, data: coords })
-        results.geocoded++
-      }
-    } catch { results.errors++ }
+  try {
+    const fila = await avancarFila()
+    results.geocoded += fila.gravados
+    results.errors += fila.erros
+
+    // Cascata de resgate, com o tempo que sobrou.
+    if (fila.paraCascata.length > 0) {
+      const resgate = await geocodificarAvulso(
+        fila.paraCascata,
+        Math.max(0, 25_000 - (Date.now() - inicioBackfill))
+      )
+      results.geocoded += resgate.gravados
+      results.errors += resgate.erros
+    }
+
+    // Sem chave do Geoapify não existe lote: segue um a um, como sempre foi.
+    if (provedor() === "nominatim") {
+      const avulsos = await semCoordenada(10)
+      const feito = await geocodificarAvulso(
+        avulsos,
+        Math.max(0, 25_000 - (Date.now() - inicioBackfill))
+      )
+      results.geocoded += feito.gravados
+      results.errors += feito.erros
+    }
+  } catch (e) {
+    console.error("Falha no backfill de coordenadas:", e)
+    results.errors++
   }
 
   // ── Aviso de cobrança em atraso, ANTES do corte ──────────────────────────
