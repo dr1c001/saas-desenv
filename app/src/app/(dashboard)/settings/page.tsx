@@ -6,6 +6,8 @@ import { ProfileForm } from "@/components/settings/profile-form"
 import { WhatsAppForm } from "@/components/settings/whatsapp-form"
 import { AvisoClienteForm } from "@/components/settings/aviso-cliente-form"
 import { getAvisoCliente } from "@/actions/aviso-cliente"
+import { DocumentosForm } from "@/components/settings/documentos-form"
+import { getDocumentos } from "@/actions/documentos"
 import { ExportDataButton } from "@/components/settings/export-data-button"
 import { LanguageSetting } from "@/components/settings/language-setting"
 import { Separator } from "@/components/ui/separator"
@@ -13,6 +15,7 @@ import { Separator } from "@/components/ui/separator"
 export default async function SettingsPage() {
   const { tenant, user, isAdmin, isOwner } = await getSettings()
   const aviso = await getAvisoCliente()
+  const documentos = await getDocumentos()
   const t = await getTranslations("settingsCore")
 
   return (
@@ -69,6 +72,14 @@ export default async function SettingsPage() {
       {/* Aviso automático ao cliente final. Fica logo depois do WhatsApp
           porque é o canal que ele usa, e a tela explica quando um depende
           do outro. */}
+      {isAdmin && (
+        <DocumentosForm
+          orderTerms={documentos.orderTerms}
+          quoteTerms={documentos.quoteTerms}
+          warrantyDays={documentos.warrantyDays}
+        />
+      )}
+
       {isAdmin && (
         <AvisoClienteForm atual={aviso.config} whatsappConfigurado={aviso.whatsappConfigurado} />
       )}

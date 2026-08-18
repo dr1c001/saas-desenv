@@ -91,6 +91,17 @@ model Tenant {
   /// mensagem no celular do cliente final de outra empresa nao e decisao
   /// que o sistema toma por ela.
   clientNotifications Json? @db.JsonB
+
+  /// Termos que a empresa escreve e que saem impressos nos documentos.
+  /// Garantia, condicoes, prazo, foro — o que ela achar necessario pro
+  /// ramo dela. Separados porque garantia (OS) e validade/pagamento
+  /// (orcamento) sao textos diferentes na vida real.
+  /// Prazo de garantia PADRAO, em dias, escolhido pela empresa. Cada OS pode
+  /// ter o seu proprio — servicos diferentes tem garantias diferentes.
+  warrantyDays Int?
+
+  orderTerms String? @db.Text
+  quoteTerms String? @db.Text
 }
 
 // Idioma da empresa — governa dashboard, e-mails e PDFs gerados pro tenant
@@ -277,6 +288,8 @@ model ServiceOrder {
   // Valores dos CustomField de entity=SERVICE_ORDER: { [customFieldId]: valor }
   customValues       Json?         @db.JsonB
   /// Preenchido quando a OS nasceu de um contrato recorrente.
+  /// Garantia desta OS em dias. Vazio = usa o padrao da empresa.
+  warrantyDays       Int?
   contractId         String?
   npsScore           Int?
   npsFeedback        String?

@@ -1708,7 +1708,8 @@
       "materialsTitle": "Materials to be used",
       "notesTitle": "Notes",
       "totalAmount": "TOTAL AMOUNT",
-      "fileNamePrefix": "Quote"
+      "fileNamePrefix": "Quote",
+      "termsTitle": "Terms and conditions"
     },
     "serviceOrder": {
       "docTitle": "Service Order",
@@ -1730,7 +1731,10 @@
       },
       "totalLabel": "TOTAL",
       "fileNamePrefix": "ServiceOrder",
-      "photosTitle": "Service photos"
+      "photosTitle": "Service photos",
+      "termsTitle": "Terms and conditions",
+      "warrantyTitle": "Warranty",
+      "warrantyUntil": "valid until {data}"
     },
     "receipt": {
       "docTitle": "RECEIPT",
@@ -1746,6 +1750,12 @@
     },
     "errors": {
       "generateFailed": "Failed to generate PDF"
+    },
+    "garantia": {
+      "dias": "{n}-day warranty",
+      "meses": "{n}-month warranty",
+      "anos": "{n, plural, one {# year} other {# years}} warranty",
+      "semGarantia": "No warranty"
     }
   },
   "emails": {
@@ -2145,6 +2155,39 @@
     "saved": "Saved",
     "errors": {
       "semPermissao": "You do not have permission to change this."
+    }
+  },
+  "documentos": {
+    "title": "Terms and warranty on documents",
+    "subtitle": "What gets printed on the service order and quote you hand to the client.",
+    "warranty": {
+      "label": "Default warranty period",
+      "placeholder": "days",
+      "hint": "Counted from job completion. The document shows the exact expiry date. Each order can have its own period.",
+      "presets": {
+        "0": "No warranty",
+        "30": "30 days",
+        "90": "3 months",
+        "180": "6 months",
+        "365": "1 year"
+      }
+    },
+    "orderTerms": {
+      "label": "Terms on the service order",
+      "placeholder": "e.g. The warranty covers workmanship defects and does not cover misuse...",
+      "hint": "Printed on the order PDF, before the signatures."
+    },
+    "quoteTerms": {
+      "label": "Terms on the quote",
+      "placeholder": "e.g. Quote valid for 15 days. Payment: 50% on approval...",
+      "hint": "Printed on the quote PDF, before the signatures."
+    },
+    "legalNotice": "This text is written by you and printed exactly as written. If it carries legal weight in your trade, have a lawyer review it — ServiçoOS only prints it.",
+    "save": "Save",
+    "saved": "Saved",
+    "errors": {
+      "semPermissao": "You do not have permission to change this.",
+      "prazoInvalido": "Invalid period. Use a number of days between 0 and 3650."
     }
   }
 }

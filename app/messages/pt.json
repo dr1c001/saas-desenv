@@ -1708,7 +1708,8 @@
       "materialsTitle": "Materiais a serem utilizados",
       "notesTitle": "Observações",
       "totalAmount": "VALOR TOTAL",
-      "fileNamePrefix": "Orcamento"
+      "fileNamePrefix": "Orcamento",
+      "termsTitle": "Termos e condições"
     },
     "serviceOrder": {
       "docTitle": "Ordem de Serviço",
@@ -1730,7 +1731,10 @@
       },
       "totalLabel": "TOTAL",
       "fileNamePrefix": "OS",
-      "photosTitle": "Fotos do serviço"
+      "photosTitle": "Fotos do serviço",
+      "termsTitle": "Termos e condições",
+      "warrantyTitle": "Garantia",
+      "warrantyUntil": "válida até {data}"
     },
     "receipt": {
       "docTitle": "RECIBO",
@@ -1746,6 +1750,12 @@
     },
     "errors": {
       "generateFailed": "Falha ao gerar PDF"
+    },
+    "garantia": {
+      "dias": "{n} dias de garantia",
+      "meses": "{n} meses de garantia",
+      "anos": "{n, plural, one {# ano} other {# anos}} de garantia",
+      "semGarantia": "Sem garantia"
     }
   },
   "emails": {
@@ -2145,6 +2155,39 @@
     "saved": "Salvo",
     "errors": {
       "semPermissao": "Você não tem permissão para alterar isso."
+    }
+  },
+  "documentos": {
+    "title": "Termos e garantia nos documentos",
+    "subtitle": "O que sai impresso na ordem de serviço e no orçamento que você entrega ao cliente.",
+    "warranty": {
+      "label": "Prazo de garantia padrão",
+      "placeholder": "dias",
+      "hint": "Contado a partir da conclusão do serviço. O documento mostra a data exata em que vence. Cada OS pode ter prazo próprio.",
+      "presets": {
+        "0": "Sem garantia",
+        "30": "30 dias",
+        "90": "3 meses",
+        "180": "6 meses",
+        "365": "1 ano"
+      }
+    },
+    "orderTerms": {
+      "label": "Termos na ordem de serviço",
+      "placeholder": "Ex: A garantia cobre defeito de execução e não cobre mau uso...",
+      "hint": "Sai no PDF da OS, antes das assinaturas."
+    },
+    "quoteTerms": {
+      "label": "Termos no orçamento",
+      "placeholder": "Ex: Orçamento válido por 15 dias. Pagamento: 50% na aprovação...",
+      "hint": "Sai no PDF do orçamento, antes das assinaturas."
+    },
+    "legalNotice": "Este texto é escrito por você e sai no documento como você o escreveu. Se ele tiver efeito legal no seu ramo, vale passar por um advogado — o ServiçoOS só imprime.",
+    "save": "Salvar",
+    "saved": "Salvo",
+    "errors": {
+      "semPermissao": "Você não tem permissão para alterar isso.",
+      "prazoInvalido": "Prazo inválido. Use um número de dias entre 0 e 3650."
     }
   }
 }

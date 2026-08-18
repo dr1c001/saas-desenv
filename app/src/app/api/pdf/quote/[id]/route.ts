@@ -19,7 +19,7 @@ export async function GET(
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { tenantId: true, tenant: { select: { name: true, logoUrl: true, phone: true, address: true, website: true, locale: true } } },
+    select: { tenantId: true, tenant: { select: { name: true, logoUrl: true, phone: true, address: true, website: true, locale: true, quoteTerms: true } } },
   })
   if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   // Bloqueio de assinatura é só de página — essa rota é despachável direto
@@ -48,6 +48,7 @@ export async function GET(
       companyAddress: dbUser.tenant.address,
       companyWebsite: dbUser.tenant.website,
       locale,
+      termos: dbUser.tenant.quoteTerms,
     }) as unknown as ReactElement<DocumentProps, JSXElementConstructor<DocumentProps>>
   }
 

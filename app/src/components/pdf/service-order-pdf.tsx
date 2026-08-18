@@ -69,6 +69,13 @@ const styles = StyleSheet.create({
   totalValue: { fontFamily: "Helvetica-Bold", fontSize: 12 },
   fotosGrade: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
   foto: { width: 120, height: 90, objectFit: "cover", borderRadius: 3 },
+  termos: {
+    marginTop: 20,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+  },
+  termosTexto: { fontSize: 7.5, color: "#555", lineHeight: 1.4 },
   signatureSection: {
     marginTop: 48,
     flexDirection: "row",
@@ -102,6 +109,10 @@ type OrderItem = {
 
 type Props = {
   locale: "pt" | "en"
+  /** Termos escritos pela empresa. Ausente = a secao nem aparece. */
+  termos?: string | null
+  /** Ja formatado pela rota: "90 dias — valida ate 13/06/2026". */
+  garantia?: string | null
   /** Fotos ja em data URI. Vazio quando a OS nao tem foto ou o download
    *  falhou — nesse caso a secao inteira some, sem espaco vazio no papel. */
   fotos?: string[]
@@ -148,7 +159,7 @@ function fmtDateFor(date: Date | string, locale: "pt" | "en") {
   return new Date(date).toLocaleDateString(locale === "en" ? "en-US" : "pt-BR")
 }
 
-export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, companyAddress, companyWebsite, locale, fotos = [] }: Props) {
+export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, companyAddress, companyWebsite, locale, fotos = [] , termos, garantia }: Props) {
   // PDFs são gerados via renderToBuffer, fora do request context do Next.js —
   // o locale vem explícito por prop (ver lib/i18n.ts).
   const t = getTranslator(locale, "pdf")
@@ -312,6 +323,23 @@ export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, com
         )}
 
         {/* Assinaturas */}
+        {/* Termos escritos pela propria empresa. Antes das assinaturas: quem
+            assina precisa ter lido o que esta assinando. wrap={false} pra o
+            texto nao ser cortado no meio entre duas paginas. */}
+        {garantia && (
+          <View style={styles.termos} wrap={false}>
+            <Text style={styles.sectionTitle}>{t("serviceOrder.warrantyTitle")}</Text>
+            <Text style={styles.termosTexto}>{garantia}</Text>
+          </View>
+        )}
+
+        {termos && (
+          <View style={styles.termos} wrap={false}>
+            <Text style={styles.sectionTitle}>{t("serviceOrder.termsTitle")}</Text>
+            <Text style={styles.termosTexto}>{termos}</Text>
+          </View>
+        )}
+
         <View style={styles.signatureSection}>
           <Text style={styles.signatureLine}>{t("common.clientSignature")}</Text>
           <Text style={styles.signatureLine}>{t("common.responsibleSignature")}</Text>

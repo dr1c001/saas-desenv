@@ -9,6 +9,8 @@ import { requireActiveSubscription } from "@/lib/auth"
 import { getTranslator } from "@/lib/i18n"
 import { baixarArquivo } from "@/lib/storage"
 import { caminhoPertenceAoTenant } from "@/lib/foto"
+import { diasDeGarantia, garantiaAte, prazoPorExtenso } from "@/lib/garantia"
+import { formatDate } from "@/lib/utils"
 import React, { type ReactElement, type JSXElementConstructor } from "react"
 
 export async function GET(
@@ -21,7 +23,7 @@ export async function GET(
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { tenantId: true, tenant: { select: { name: true, logoUrl: true, phone: true, address: true, website: true, locale: true } } },
+    select: { tenantId: true, tenant: { select: { name: true, logoUrl: true, phone: true, address: true, website: true, locale: true, orderTerms: true, warrantyDays: true } } },
   })
   if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   // Bloqueio de assinatura é só de página — essa rota é despachável direto
@@ -64,6 +66,11 @@ export async function GET(
 
   // O PDF é renderizado fora do request context do Next.js — o locale do
   // tenant precisa ser passado explícito. (Item 1 do roadmap, 06/08/2026.)
+  // Garantia: prazo da OS, ou o padrao da empresa. Vira texto aqui porque o
+  // componente do PDF nao deve fazer conta de data nem saber de traducao.
+  const dias = diasDeGarantia(order.warrantyDays, dbUser.tenant.warrantyDays)
+  const venceEm = garantiaAte(order.concludedAt, dias)
+
   const locale = dbUser.tenant.locale
   const t = getTranslator(locale, "pdf")
 
@@ -76,6 +83,12 @@ export async function GET(
       companyAddress: dbUser.tenant.address,
       companyWebsite: dbUser.tenant.website,
       locale,
+      termos: dbUser.tenant.orderTerms,
+      garantia:
+        dias === null || dias <= 0
+          ? null
+          : prazoPorExtenso(dias, (c, v) => t(c as "garantia.dias", v)) +
+            (venceEm ? ` — ${t("serviceOrder.warrantyUntil", { data: formatDate(venceEm) })}` : ""),
       fotos,
     }) as unknown as ReactElement<DocumentProps, JSXElementConstructor<DocumentProps>>
   }

@@ -41,6 +41,13 @@ const styles = StyleSheet.create({
   },
   totalLabel: { fontFamily: "Helvetica-Bold", marginRight: 24 },
   totalValue: { fontFamily: "Helvetica-Bold", fontSize: 12 },
+  termos: {
+    marginTop: 20,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+  },
+  termosTexto: { fontSize: 7.5, color: "#555", lineHeight: 1.4 },
   signatureSection: {
     marginTop: 48,
     flexDirection: "row",
@@ -66,6 +73,8 @@ const styles = StyleSheet.create({
 
 type Props = {
   locale: "pt" | "en"
+  /** Termos escritos pela empresa. Ausente = a secao nem aparece. */
+  termos?: string | null
   companyName: string
   logoUrl?: string | null
   companyPhone?: string | null
@@ -101,7 +110,7 @@ function quoteNum(number: number, createdAt: Date | string) {
   return `ORC${year}${String(number).padStart(4, "0")}`
 }
 
-export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAddress, companyWebsite, locale }: Props) {
+export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAddress, companyWebsite, locale , termos }: Props) {
   // PDFs são gerados via renderToBuffer, fora do request context do Next.js —
   // o locale vem explícito por prop (ver lib/i18n.ts).
   const t = getTranslator(locale, "pdf")
@@ -205,6 +214,16 @@ export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAdd
         </View>
 
         {/* Assinaturas */}
+        {/* Termos escritos pela propria empresa. Antes das assinaturas: quem
+            assina precisa ter lido o que esta assinando. wrap={false} pra o
+            texto nao ser cortado no meio entre duas paginas. */}
+        {termos && (
+          <View style={styles.termos} wrap={false}>
+            <Text style={styles.sectionTitle}>{t("quote.termsTitle")}</Text>
+            <Text style={styles.termosTexto}>{termos}</Text>
+          </View>
+        )}
+
         <View style={styles.signatureSection}>
           <Text style={styles.signatureLine}>{t("common.clientSignature")}</Text>
           <Text style={styles.signatureLine}>{t("common.responsibleSignature")}</Text>
