@@ -1646,7 +1646,10 @@
           "signature": "Assinatura digital do cliente",
           "checklist": "Checklist de execução",
           "advancedReports": "Relatórios avançados"
-        }
+        },
+        "featuresAll": "Liberar {count, plural, one {o recurso restante} other {os # recursos restantes}}",
+        "tabsTitle": "Abas que esta empresa vê ({visiveis} de {total})",
+        "tabsHint": "Só Mapa e Fiscal dependem de recurso. As demais já aparecem para qualquer empresa — quem restringe por pessoa é a própria empresa, em Configurações → Permissões."
       },
       "impersonation": {
         "banner": "Você está vendo o sistema como {company}. Tudo o que fizer aqui vale na conta dela.",
@@ -2280,6 +2283,38 @@
       "chaveInvalida": "A chave não confere com o tipo escolhido.",
       "recebedorObrigatorio": "Informe o nome de quem recebe.",
       "cidadeObrigatoria": "Informe a cidade."
+    }
+  },
+  "primeirosPassos": {
+    "title": "Primeiros passos",
+    "subtitle": "Cinco minutos agora poupam retrabalho em cada documento que você enviar daqui pra frente.",
+    "progress": "{feitos} de {total} concluídos",
+    "dismiss": "Fechar",
+    "passos": {
+      "dadosDaEmpresa": {
+        "titulo": "Complete os dados da empresa",
+        "porque": "Telefone e CNPJ saem impressos em todo documento que você entrega. Corrigir depois não conserta o que já foi enviado."
+      },
+      "logo": {
+        "titulo": "Envie a sua logo",
+        "porque": "Aparece no topo dos documentos que o seu cliente recebe."
+      },
+      "clientes": {
+        "titulo": "Cadastre ou importe seus clientes",
+        "porque": "Dá pra importar de uma planilha — não precisa digitar um por um."
+      },
+      "primeiraOs": {
+        "titulo": "Crie [[osArt]] primeir[[osFim]] [[os]]",
+        "porque": "É o coração do sistema: agenda, execução em campo, foto, assinatura e recebimento."
+      },
+      "pix": {
+        "titulo": "Configure o recebimento por PIX",
+        "porque": "O cliente final paga direto na sua conta, por QR code no documento. Sem taxa."
+      },
+      "termos": {
+        "titulo": "Escreva seus termos e garantia",
+        "porque": "Saem impressos nos documentos e são o que resolve discussão depois do serviço feito."
+      }
     }
   }
 }

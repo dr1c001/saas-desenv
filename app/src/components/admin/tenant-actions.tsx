@@ -23,6 +23,7 @@ import {
 // De lib/recursos (puro), NUNCA de lib/plan: aquele importa o Prisma, e num
 // componente de cliente isso arrasta o driver do Postgres pro navegador.
 import { RECURSOS, RECURSOS_DE_ABA, type Recurso } from "@/lib/recursos"
+import { ALL_TABS, abasVisiveis } from "@/lib/abas"
 
 type Plano = { id: string; name: string }
 
@@ -57,6 +58,7 @@ export function TenantActions({
 }: Props) {
   const pode = (p: string) => permissoes.includes(p)
   const t = useTranslations("mapAdmin.admin.actions")
+  const tNav = useTranslations("nav")
   const [pendente, startTransition] = useTransition()
   const [aberto, setAberto] = useState<
     null | "liberar" | "cancelar" | "plano" | "entrar" | "recursos"
@@ -67,6 +69,14 @@ export function TenantActions({
   const noPlano = new Set(recursosDoPlano)
   const alternar = (r: Recurso) =>
     setExtras((atual) => (atual.includes(r) ? atual.filter((x) => x !== r) : [...atual, r]))
+
+  // Tudo que a empresa teria com o que está marcado agora — e, a partir daí,
+  // as abas que ela enxergaria. Recalculado a cada clique de propósito: quem
+  // marca "Mapa GPS" vê a aba Mapa acender na mesma hora, em vez de salvar e
+  // adivinhar o efeito.
+  const recursosAtuais = [...new Set([...recursosDoPlano, ...extras])]
+  const abasLigadas = new Set<string>(abasVisiveis(recursosAtuais))
+  const faltando = RECURSOS.filter((r) => !noPlano.has(r) && !extras.includes(r))
 
   const fechar = () => setAberto(null)
   const executar = (fn: () => Promise<unknown>) =>
@@ -167,6 +177,20 @@ export function TenantActions({
               <DialogDescription>{t("featuresDescription", { company: tenantName })}</DialogDescription>
             </DialogHeader>
 
+            {/* Liberar tudo de uma vez: o caso comum da negociação é "deixa
+                tudo aberto pra ela", e marcar cinco caixas uma a uma é atrito
+                sem propósito. */}
+            {faltando.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setExtras([...extras, ...faltando])}
+                disabled={pendente}
+                className="self-start text-xs font-medium text-primary hover:underline"
+              >
+                {t("featuresAll", { count: faltando.length })}
+              </button>
+            )}
+
             <div className="space-y-1">
               {RECURSOS.map((r) => {
                 const doPlano = noPlano.has(r)
@@ -204,6 +228,34 @@ export function TenantActions({
                   </label>
                 )
               })}
+            </div>
+
+            {/* As abas que essa empresa enxerga. Informação, não controle: só
+                Mapa e Fiscal dependem de recurso — as outras 15 já aparecem
+                pra todo OWNER/ADMIN de qualquer empresa, e esconder qualquer
+                uma delas hoje seria cosmético (a URL continua digitável). */}
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="text-xs font-medium mb-2">
+                {t("tabsTitle", { visiveis: abasLigadas.size, total: ALL_TABS.length })}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {ALL_TABS.map((aba) => {
+                  const ligada = abasLigadas.has(aba.slug)
+                  return (
+                    <span
+                      key={aba.slug}
+                      className={`rounded px-1.5 py-0.5 text-[11px] ${
+                        ligada
+                          ? "bg-green-500/15 text-green-700 dark:text-green-400"
+                          : "bg-muted text-muted-foreground line-through"
+                      }`}
+                    >
+                      {tNav(aba.navKey as "dashboard")}
+                    </span>
+                  )
+                })}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">{t("tabsHint")}</p>
             </div>
 
             <DialogFooter>

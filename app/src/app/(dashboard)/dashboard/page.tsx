@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma"
 import { formatCurrency, formatDate, formatOsNumber, todayInBRT, brtMidnightUTC } from "@/lib/utils"
 import { getMonthlyRevenueChart } from "@/actions/dashboard"
 import { RevenueChart } from "@/components/dashboard/revenue-chart"
+import { PainelPrimeirosPassos } from "@/components/dashboard/primeiros-passos"
+import { getPrimeirosPassos } from "@/actions/primeiros-passos"
 import { getTranslations } from "next-intl/server"
 
 async function getDashboardData(tenantId: string) {
@@ -88,9 +90,12 @@ export default async function DashboardPage() {
   // todo o resto do sistema (finance.ts, reports.ts), a Action já se
   // recusa a rodar pra TECHNICIAN. (Achado em auditoria pré-venda, 2026-08-05.)
   const isAdmin = role === "OWNER" || role === "ADMIN"
-  const [data, chartData] = await Promise.all([
+  const [data, chartData, passos] = await Promise.all([
     getDashboardData(tenantId),
     isAdmin ? getMonthlyRevenueChart() : Promise.resolve(null),
+    // Só quem administra: o técnico não configura a empresa, e mostrar pra
+    // ele uma lista que ele não pode cumprir é ruído puro.
+    isAdmin ? getPrimeirosPassos() : Promise.resolve(null),
   ])
 
   const t = await getTranslations("dashboardHome")
@@ -143,6 +148,11 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">{t("title")}</h1>
+
+      {/* Acima dos cartões de propósito: o dono precisa ver o que falta antes
+          de ver os números zerados, senão lê "R$ 0" como defeito do sistema em
+          vez de "ainda não configurei". */}
+      {passos && <PainelPrimeirosPassos dados={passos} />}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (

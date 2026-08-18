@@ -1,7 +1,8 @@
 import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
-import { getLimites, type Recurso } from "@/lib/plan"
+import { getLimites } from "@/lib/plan"
+import { ALL_TABS, ABAS_POR_RECURSO, type TabSlug } from "@/lib/abas"
 import { tenantImpersonado, isSuperAdmin } from "@/lib/admin"
 import { PAST_DUE_GRACE_DAYS } from "@/lib/past-due"
 import { redirect } from "next/navigation"
@@ -243,44 +244,14 @@ export async function requireActiveSubscription(tenantId: string) {
   }
 }
 
-// Tabs available in the system. O rótulo NÃO vive aqui: este é um const de
-// módulo (sem request context pra resolver idioma) e os mesmos nomes já
-// existem traduzidos no namespace `nav`, usado pela sidebar — duplicar aqui
-// deixaria a tela de Permissões em português fixo mesmo com a conta em
-// inglês. navKey mapeia slug → chave de nav. (i18n, 07/08/2026.)
-export const ALL_TABS = [
-  { slug: "dashboard", navKey: "dashboard" },
-  { slug: "clients", navKey: "clients" },
-  { slug: "service-orders", navKey: "serviceOrders" },
-  { slug: "contracts", navKey: "contracts" },
-  { slug: "history", navKey: "history" },
-  { slug: "maintenance", navKey: "maintenance" },
-  { slug: "providers", navKey: "providers" },
-  { slug: "receipts", navKey: "receipts" },
-  { slug: "schedule", navKey: "schedule" },
-  { slug: "finance", navKey: "finance" },
-  { slug: "reports", navKey: "reports" },
-  { slug: "team", navKey: "team" },
-  { slug: "map", navKey: "map" },
-  { slug: "quotes", navKey: "quotes" },
-  { slug: "billing", navKey: "billing" },
-  { slug: "fiscal", navKey: "fiscal" },
-  { slug: "referral", navKey: "referral" },
-] as const
-
-export type TabSlug = (typeof ALL_TABS)[number]["slug"]
+// Catálogo das abas em lib/abas.ts, que é puro — componente de cliente precisa
+// da lista e não pode arrastar o Prisma junto. Reexportado pra não quebrar quem
+// já importava daqui.
+export { ALL_TABS, ABAS_POR_RECURSO } from "./abas"
+export type { TabSlug } from "./abas"
 
 // Tabs technician gets by default (admin can change this per-tenant)
 export const DEFAULT_TECHNICIAN_TABS: TabSlug[] = ["dashboard", "service-orders", "schedule"]
-
-// Abas que só existem se o plano incluir o recurso correspondente. Filtrar
-// aqui esconde a aba do menu em um lugar só; a página e a rota de API de cada
-// uma continuam se defendendo por conta própria (menu escondido não é
-// proteção — a URL continua digitável).
-const ABAS_POR_RECURSO: { slug: TabSlug; recurso: Recurso }[] = [
-  { slug: "map", recurso: "gpsMap" },
-  { slug: "fiscal", recurso: "nfse" },
-]
 
 export async function getAllowedTabs(tenantId: string, role: string): Promise<TabSlug[]> {
   const { recursos } = await getLimites(tenantId)

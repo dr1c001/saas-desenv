@@ -1646,7 +1646,10 @@
           "signature": "Client digital signature",
           "checklist": "Execution checklist",
           "advancedReports": "Advanced reports"
-        }
+        },
+        "featuresAll": "Enable {count, plural, one {the remaining feature} other {the # remaining features}}",
+        "tabsTitle": "Tabs this company sees ({visiveis} of {total})",
+        "tabsHint": "Only Map and Tax depend on a feature. The others already show for every company — restricting per person is done by the company itself, in Settings → Permissions."
       },
       "impersonation": {
         "banner": "You are viewing the system as {company}. Anything you do here applies to their account.",
@@ -2280,6 +2283,38 @@
       "chaveInvalida": "The key does not match the selected type.",
       "recebedorObrigatorio": "Enter the receiver name.",
       "cidadeObrigatoria": "Enter the city."
+    }
+  },
+  "primeirosPassos": {
+    "title": "First steps",
+    "subtitle": "Five minutes now saves rework on every document you send from here on.",
+    "progress": "{feitos} of {total} done",
+    "dismiss": "Dismiss",
+    "passos": {
+      "dadosDaEmpresa": {
+        "titulo": "Complete your company details",
+        "porque": "Phone and tax ID are printed on every job and quote. Fixing it later does not fix what was already delivered."
+      },
+      "logo": {
+        "titulo": "Upload your logo",
+        "porque": "It appears at the top of the documents your client receives."
+      },
+      "clientes": {
+        "titulo": "Add or import your clients",
+        "porque": "You can import from a spreadsheet — no need to type them one by one."
+      },
+      "primeiraOs": {
+        "titulo": "Create your first [[os]]",
+        "porque": "The heart of the system: scheduling, field work, photos, signature and payment."
+      },
+      "pix": {
+        "titulo": "Set up PIX payments",
+        "porque": "Your client pays straight into your account, by QR code on the document. No fee."
+      },
+      "termos": {
+        "titulo": "Write your terms and warranty",
+        "porque": "Printed on the documents — this is what settles arguments after the job is done."
+      }
     }
   }
 }

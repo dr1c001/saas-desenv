@@ -116,6 +116,15 @@ model Tenant {
   /// exemplo) — quem nao confere isso gera codigo que o banco recusa.
   pixReceiver String?
   pixCity     String?
+
+  /// Quando a empresa fechou o painel de primeiros passos na mao.
+  ///
+  /// Data, e nao booleano, porque a pergunta que aparece depois nao e "fechou?"
+  /// e sim "ha quanto tempo" — util pra entender abandono no inicio, que e
+  /// justamente o que esse painel existe pra combater. Nulo = nunca fechou; o
+  /// painel some sozinho quando todos os passos ficam prontos (ver
+  /// lib/primeiros-passos.ts), entao isto so registra a saida antecipada.
+  onboardingDismissedAt DateTime?
 }
 
 // Idioma da empresa — governa dashboard, e-mails e PDFs gerados pro tenant

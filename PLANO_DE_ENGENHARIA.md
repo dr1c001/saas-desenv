@@ -1292,6 +1292,60 @@ comercial, não em cláusula nominal dos Termos.
 
 ---
 
+### 7.2.19 Recurso avulso pelo painel e primeiros passos guiados — 18/08/2026
+
+**Conceder recurso sem tocar no banco.** Liberar um item pago para uma empresa
+específica só era possível editando `extraFeatures` direto em produção. Isso
+aconteceu duas vezes com a mesma cliente — assinatura digital (10/08) e Mapa
+GPS (18/08) — e nenhuma das duas ficou registrada em lugar nenhum. Agora é o
+botão **Recursos** na linha da empresa, com permissão própria
+(`concederRecurso`, dada a quem já podia trocar plano — é estritamente menos
+poderoso) e log de auditoria dizendo o que entrou e o que saiu.
+
+A ação recebe o estado FINAL, não um incremento: conceder e revogar viram a
+mesma operação, e não existe caminho em que a tela e o banco discordem sobre o
+que foi tirado. Valor desconhecido é peneirado, o que o plano já dá não é
+duplicado nos extras, e "nada mudou" não gera linha de log.
+
+**Sobre "liberar todas as abas".** Levantado ao atender o pedido: das 17 abas,
+**15 já aparecem** para todo OWNER/ADMIN de qualquer empresa. Só Mapa e Fiscal
+dependem de recurso. E esconder uma aba hoje seria **cosmético** —
+`getAllowedTabs` alimenta só o menu, e a URL continua digitável (as duas
+páginas travadas se defendem por conta própria, via `requireRecurso`). Por
+isso o diálogo mostra a lista de abas como INFORMAÇÃO, reagindo ao vivo aos
+recursos marcados, e não como controle falso. Controle de aba por empresa de
+verdade exigiria bloqueio em ~15 páginas — e tem armadilha: esconder
+Assinatura tranca o cliente sem poder pagar.
+
+**Primeiros passos guiados** (item 3 do Nível 1, o último em aberto). A empresa
+assinava e encontrava tela vazia — e boa parte do que ela paga nasce
+DESLIGADA por decisão nossa: PIX, termos, garantia, aviso ao cliente, campos
+personalizados, vocabulário. Cada recurso somado aumentou a distância entre
+"assinei" e "está configurado".
+
+Os seis passos são DETECTADOS do banco, nunca marcados à mão: lista com
+caixinha mente, some da tela sem o trabalho ter sido feito. Por consequência,
+empresa que já roda não vê nada — não há exceção pra "cliente antigo", e
+ninguém veterano é convidado a criar sua primeira OS. Um passo em destaque por
+vez, com botão; os outros listados apagados — seis botões competindo viram
+lista de tarefas, e lista de tarefas se ignora.
+
+**Dois problemas achados no caminho, ambos invisíveis:**
+
+| Achado | Sintoma |
+|---|---|
+| `reset()` dos testes truncava lista escrita à mão, defasada em 6 tabelas | Teste não quebra: passa a ver linhas do teste anterior, e o resultado depende da ORDEM de execução |
+| `lib/plan.ts` importa Prisma; componente de cliente que só queria o nome dos recursos arrastava o driver do Postgres pro navegador | Build falha com `Can't resolve 'dns'`, que não diz nada sobre a causa |
+
+O primeiro virou consulta ao catálogo do banco. O segundo motivou separar os
+catálogos puros: `lib/recursos.ts` e `lib/abas.ts`, sem nenhum import de
+servidor — `lib/plan.ts` e `lib/auth.ts` reexportam pra não quebrar quem já
+importava de lá.
+
+409 → 419 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`
