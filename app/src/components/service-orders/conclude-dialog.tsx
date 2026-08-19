@@ -17,6 +17,7 @@ import {
 import { Plus, Trash2, CheckCircle } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { completeServiceOrder } from "@/actions/service-orders"
+import { enfileirar, semRede } from "@/lib/usar-fila-offline"
 
 type Item = { description: string; quantity: number; unitPrice: number }
 
@@ -59,6 +60,23 @@ export function ConcluirDialog({
   function handleConclude(invoice: boolean) {
     setError(null)
     startTransition(async () => {
+      // Sem rede, guarda pra enviar depois em vez de falhar. O tecnico esta
+      // no subsolo e o servico ACONTECEU — recusar aqui faria o trabalho
+      // virar bilhete no bolso, que na pratica vira nunca.
+      //
+      // Com rede, nada muda: vai direto, como sempre foi, e o erro real chega
+      // ao tecnico. Trocar um caminho testado por um caminho novo em 99% dos
+      // casos nao traria ganho nenhum.
+      if (semRede()) {
+        await enfileirar("CONCLUIR_OS", orderId, {
+          conclusionNote,
+          items,
+          invoiceImmediately: invoice,
+        })
+        setOpen(false)
+        return
+      }
+
       try {
         await completeServiceOrder(orderId, conclusionNote, items, invoice)
         setOpen(false)

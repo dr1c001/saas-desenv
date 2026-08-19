@@ -6,6 +6,7 @@ import { PushSubscriber } from "@/components/layout/push-subscriber"
 import { LocationTracker } from "@/components/layout/location-tracker"
 import { ServiceWorkerRegistrar } from "@/components/layout/service-worker"
 import { OfflineBanner } from "@/components/layout/offline-banner"
+import { FilaOfflineBanner } from "@/components/layout/fila-offline-banner"
 import { ImpersonationBanner } from "@/components/layout/impersonation-banner"
 import { getTenant, getAllowedTabs, hasActiveSubscription } from "@/lib/auth"
 import { isSuperAdmin } from "@/lib/admin"
@@ -45,6 +46,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
             cliente, ele precisa saber disso o tempo todo. */}
         <ImpersonationBanner />
         <OfflineBanner />
+        {/* O que o tecnico gravou sem sinal e ainda nao chegou ao servidor.
+            Some sozinho quando a fila esvazia. */}
+        <FilaOfflineBanner />
         <Suspense>
           <OverdueAlerts tenantId={tenantId} />
         </Suspense>

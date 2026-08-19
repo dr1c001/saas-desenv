@@ -1895,6 +1895,13 @@
     "banner": {
       "title": "No connection.",
       "description": "You're seeing data saved on this device, which may be out of date. Changes won't be saved until you're back online."
+    },
+    "fila": {
+      "pendentes": "{n, plural, one {# change waiting to be sent} other {# changes waiting to be sent}}",
+      "pendentesAjuda": "Saved on this device. They are sent automatically when the signal returns — you can close the app.",
+      "enviando": "Sending...",
+      "travadas": "{n, plural, one {# change could not be sent} other {# changes could not be sent}}",
+      "travadasAjuda": "Someone probably changed those jobs while you were offline. Check before redoing them."
     }
   },
   "expired": {

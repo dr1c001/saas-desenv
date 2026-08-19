@@ -1592,6 +1592,56 @@ Link no rodapé da landing.
 
 ---
 
+### 7.2.25 Escrita offline — 19/08/2026
+
+Item 14 (Nível 4). O `sw.js` v2 (7.2.6) trouxe leitura offline e dizia no
+próprio comentário o que faltava: *"gravar offline (…) é um projeto à parte,
+bem maior — as Server Actions são POST, e haveria conflito de edição pra
+resolver"*. É esse projeto.
+
+O caso: o técnico chega no subsolo, conclui o serviço, não tem sinal. Antes ele
+podia LER a OS mas não fechar — e o trabalho ficava para depois, que vira nunca
+ou vira bilhete no bolso.
+
+**O que muda de natureza aqui.** Guardar página em cache é conveniência. Isto é
+uma promessa: o técnico afirma algo sobre o mundo ("este serviço foi concluído,
+custou R$ 400"), o sistema aceita, e ele vai embora achando que está
+registrado. Quebrar essa promessa é pior que ter recusado de cara.
+
+Três problemas definem o desenho:
+
+| Problema | Resposta |
+|---|---|
+| **Idempotência** | O id vem do CELULAR (`crypto.randomUUID`) e é chave primária de `OfflineOperation`. Repetir devolve "repetida" sem aplicar. Sem isso, uma resposta perdida no caminho faria a OS ser concluída duas vezes — **duas receitas e estoque baixado em dobro**, invisível até o financeiro não fechar |
+| **Conflito** | A OS pode ter mudado enquanto o celular estava sem rede. Já concluída, faturada ou cancelada ⇒ **recusa com motivo**, e o técnico vê o motivo. Aplicar por cima desfaria o trabalho de quem estava com sinal |
+| **Desistência** | Depois de 5 tentativas a operação para — mas **continua visível** como travada. Sumir sozinha seria perder trabalho em silêncio, exatamente o que a fila existe pra impedir |
+
+**Decisões que valem registrar:**
+
+- **Com sinal, nada muda.** A operação vai pelo caminho de sempre e o erro real
+  chega ao técnico. A fila só entra quando `navigator.onLine` é falso. Trocar
+  um caminho testado por um novo em 99% dos casos não traria ganho.
+- **O momento gravado é o do técnico**, não o da sincronização — que pode ser
+  dias depois. A OS registra quando o serviço aconteceu no mundo real.
+- **Um lote não é tudo-ou-nada.** Uma OS cancelada não pode fazer o técnico
+  perder as outras cinco conclusões do dia.
+- **Erro inesperado vira "falhou", não "recusada".** Falhou é reenviável;
+  recusada descartaria trabalho de campo por um problema momentâneo.
+- **IndexedDB, não localStorage**: síncrono trava a interface do celular na
+  mão do técnico, e 5MB não caberia foto depois.
+- **`useSyncExternalStore`**, o mesmo primitivo do `OfflineBanner` e pelo mesmo
+  motivo — com `useState`+`useEffect` a atualização vira setState dentro de
+  efeito. O lint pegou isso, e a correção trouxe de brinde uma trava contra
+  sincronização simultânea (duas abas mandariam o mesmo lote em paralelo).
+
+**Fora do escopo, de propósito: fotos.** São binário grande e merecem a mesma
+fila, não uma meia-solução que perde o trabalho do técnico. Hoje foto ainda
+exige sinal.
+
+504 → 530 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

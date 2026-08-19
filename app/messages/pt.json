@@ -1895,6 +1895,13 @@
     "banner": {
       "title": "Sem conexão.",
       "description": "Você está vendo dados salvos no aparelho, que podem estar desatualizados. Alterações não serão salvas até o sinal voltar."
+    },
+    "fila": {
+      "pendentes": "{n, plural, one {# alteração aguardando envio} other {# alterações aguardando envio}}",
+      "pendentesAjuda": "Guardadas no aparelho. São enviadas sozinhas quando o sinal voltar — pode fechar o aplicativo.",
+      "enviando": "Enviando...",
+      "travadas": "{n, plural, one {# alteração não pôde ser enviada} other {# alterações não puderam ser enviadas}}",
+      "travadasAjuda": "Provavelmente alguém já mexeu nessas ordens de serviço enquanto você estava sem sinal. Confira antes de refazer."
     }
   },
   "expired": {

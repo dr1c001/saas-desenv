@@ -59,6 +59,8 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
             <StatusButton
               action={updateOrderStatus.bind(null, id, config.next)}
               label={config.nextLabel!}
+              orderId={id}
+              status={config.next}
             />
           )}
           {/* updateServiceOrder recusa OS faturada (NFS-e emitida, assinatura

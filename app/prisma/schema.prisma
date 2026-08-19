@@ -130,6 +130,7 @@ model Tenant {
   stockMovements        StockMovement[]
   purchaseOrders        PurchaseOrder[]
   orderEvents           OrderEvent[]
+  offlineOperations     OfflineOperation[]
 }
 
 // Idioma da empresa — governa dashboard, e-mails e PDFs gerados pro tenant
@@ -1104,4 +1105,38 @@ model CronRun {
 
   // A consulta e sempre "a ultima execucao boa deste cron".
   @@index([name, ok, startedAt])
+}
+
+// ─── Escrita offline ─────────────────────────────────────────────────────────
+
+/// Operacao vinda da fila offline do celular do tecnico.
+///
+/// Existe por UMA razao: idempotencia. A sincronizacao repete — a rede oscila,
+/// o app reabre, a resposta se perde no caminho depois de o servidor ja ter
+/// aplicado. Concluir a mesma OS duas vezes criaria DUAS receitas e baixaria o
+/// estoque em DOBRO, e ninguem perceberia ate o financeiro nao fechar.
+///
+/// O id vem do CLIENTE (crypto.randomUUID) e e a chave primaria: se ja existe,
+/// a operacao ja foi aplicada e a repeticao e ignorada. Guardar no servidor um
+/// id gerado pelo cliente e seguro aqui porque ele so serve pra deduplicar
+/// dentro do proprio tenant — nao concede nada.
+model OfflineOperation {
+  /// UUID gerado no celular.
+  id        String   @id
+  tenantId  String
+  userId    String?
+  type      String
+  orderId   String?
+  /// O que aconteceu: aplicada ou recusada, e por que. Guardado pra a tela do
+  /// tecnico poder explicar, e pra diagnostico depois.
+  outcome   String
+  reason    String?
+  /// Quando o TECNICO fez, nao quando sincronizou. Pode ser dias antes.
+  clientAt  DateTime
+  appliedAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, appliedAt])
+  @@index([orderId])
 }
