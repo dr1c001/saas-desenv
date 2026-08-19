@@ -43,7 +43,14 @@ export type Entrada = {
   bancoRespondeu: boolean
   /** Último início de execução BEM-SUCEDIDA do cron. */
   ultimoCronOk: Date | null
-  /** Se o sistema já rodou tempo suficiente pra ter tido um cron. */
+  /**
+   * Desde quando o sistema DEVERIA ter registrado um cron.
+   *
+   * É a data em que a capacidade de registrar passou a existir — não a idade
+   * da empresa. Usar a idade da empresa faria o monitor julgar meses de
+   * silêncio que nunca foram observados, e nascer vermelho no dia em que fosse
+   * ligado. (Descoberto testando a rota em produção, 19/08/2026.)
+   */
   primeiroRegistroEm: Date | null
   agora: Date
 }
@@ -70,10 +77,10 @@ export function diagnosticar(e: Entrada): Diagnostico {
 function decidirCron(e: Entrada, horas: number | null): Estado {
   if (horas !== null) return horas > HORAS_ATE_ALARMAR ? "degradado" : "saudavel"
 
-  // Nunca rodou. Num sistema recém-implantado isso é normal — alarmar aqui
-  // faria o monitor nascer vermelho e ensinar a pessoa a ignorá-lo antes
-  // mesmo de ele servir pra alguma coisa. Só vira problema depois de ter
-  // passado tempo suficiente pra um cron ter acontecido.
+  // Nunca rodou. Recém-ligado isso é normal — alarmar aqui faria o monitor
+  // nascer vermelho e ensinar a pessoa a ignorá-lo antes mesmo de ele servir
+  // pra alguma coisa. Só vira problema depois de ter passado tempo suficiente
+  // pra um cron ter acontecido DESDE QUE se passou a observar.
   if (!e.primeiroRegistroEm) return "saudavel"
   const horasDeVida = (e.agora.getTime() - e.primeiroRegistroEm.getTime()) / 3_600_000
   return horasDeVida > HORAS_ATE_ALARMAR ? "degradado" : "saudavel"

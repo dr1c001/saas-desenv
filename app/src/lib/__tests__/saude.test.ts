@@ -51,9 +51,11 @@ describe("diagnóstico", () => {
     ).toBe("degradado")
   })
 
-  it("sistema recém-implantado não nasce vermelho", () => {
-    // Nunca rodou o cron porque acabou de subir. Alarmar aqui ensinaria a
-    // pessoa a ignorar o monitor antes mesmo de ele servir pra algo.
+  it("monitoramento recém-ligado não nasce vermelho", () => {
+    // Nunca rodou o cron porque o monitoramento acabou de subir. Alarmar aqui
+    // ensinaria a pessoa a ignorar o monitor antes mesmo de ele servir pra
+    // algo — e foi exatamente o que aconteceu na primeira consulta em
+    // producao, quando a referencia era a idade da EMPRESA. (19/08/2026.)
     const d = diagnosticar({
       ...base,
       ultimoCronOk: null,
@@ -63,9 +65,10 @@ describe("diagnóstico", () => {
     expect(d.horasDesdeOCron).toBeNull()
   })
 
-  it("mas sistema antigo que nunca rodou o cron É problema", () => {
-    // Passou tempo mais que suficiente pra um cron ter acontecido e não
-    // aconteceu nenhum. Isso é o cron nunca ter sido agendado de verdade.
+  it("mas dias observando sem nenhum cron É problema", () => {
+    // Passou tempo mais que suficiente pra um cron ter acontecido DESDE QUE
+    // se passou a observar, e não aconteceu nenhum. Isso é o cron nunca ter
+    // sido agendado de verdade.
     const d = diagnosticar({
       ...base,
       ultimoCronOk: null,

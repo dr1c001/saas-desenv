@@ -35,14 +35,22 @@ export async function GET() {
         orderBy: { startedAt: "desc" },
         select: { startedAt: true },
       }),
-      // A empresa mais antiga serve de "desde quando este sistema existe" —
-      // é o que distingue "recém-implantado, cron ainda não rodou" de "o cron
-      // morreu". Ver lib/saude.ts.
-      prisma.tenant.findFirst({ orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
+      // Desde quando se OBSERVA o cron: a data em que a migration que criou a
+      // tabela CronRun foi aplicada. É o que distingue "acabei de ligar o
+      // monitoramento" de "o cron morreu".
+      //
+      // A idade da EMPRESA seria a referência errada, e o erro apareceu na
+      // primeira consulta em produção: a rota nasceu devolvendo 503 por meses
+      // de silêncio que nunca foram observados — justo o alarme falso que
+      // ensina a pessoa a ignorar o monitor. (19/08/2026.)
+      prisma.$queryRaw<{ finished_at: Date | null }[]>`
+        select finished_at from _prisma_migrations
+        where migration_name = '20260819000001_add_cron_run' limit 1
+      `,
     ])
     bancoRespondeu = true
     ultimoCronOk = cron?.startedAt ?? null
-    primeiroRegistroEm = primeiro?.createdAt ?? null
+    primeiroRegistroEm = primeiro?.[0]?.finished_at ?? null
   } catch (err) {
     console.error("[health] banco não respondeu:", err)
   }
