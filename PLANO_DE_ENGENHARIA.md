@@ -1631,12 +1631,47 @@ Estes pontos custaram tempo real de debug — não repetir os mesmos caminhos:
 
 ## 10. Débito técnico conhecido
 
-- WhatsApp (Z-API): schema e UI prontos, integração nunca finalizada (único item do roadmap original ainda em aberto)
-- Histórico de migrations do Prisma com drift em relação ao schema real de produção (ver seção 9, itens 10 e 13) — funciona hoje com workaround manual (`db push` + `migrate resolve --applied`) tanto pra deploy quanto pra testes, mas a reconciliação de verdade (fazer o histórico bater com o schema real) continua pendente
-- Bônus de indicação via `user_metadata.ref_code` no cadastro (`/register?ref=CODE`) sem rate-limit/captcha — decisão consciente de não corrigir agora (ver seção 7.2); o cadastro base já não tem essa proteção independente de indicação, então o risco real é baixo
-- Ícones do PWA quebrados: `manifest.json` referencia `/icon-192.png` e `/icon-512.png`, nenhum dos dois existe em `public/` — achado ao procurar uma imagem pra usar no Open Graph (roadmap #3). App instalável fica com ícone quebrado
-- Sem imagem `og:image` (1200x630) — preview ao compartilhar link fica só texto. Precisa de asset de design real, não dá pra gerar
-- Cobertura de testes automatizados ainda pequena (16 testes, 3 arquivos — `rate-limit.ts`, `clients.ts`, `quotes.ts`) — infraestrutura pronta e validada (seção 9, item 13), mas a maior parte das Server Actions (principalmente `service-orders.ts`, `nfse.ts`, `billing.ts`) ainda não tem teste cobrindo isolamento entre tenants/checagem de papel
+> Revisado em 19/08/2026 conferindo item a item contra o código. **Quatro dos
+> seis itens anteriores estavam resolvidos e continuavam listados** — e uma
+> lista de débito errada é pior que lista nenhuma: quem lê ou refaz trabalho
+> pronto, ou acredita em risco que não existe. Confira esta seção sempre que
+> for planejar, não só quando for adicionar item novo.
+
+**Resolvido desde a última revisão, e removido daqui:**
+
+| Item | Estado real |
+|---|---|
+| WhatsApp (Z-API) "nunca finalizada" | Implementada e ligada em dois caminhos: envio manual (`api/whatsapp/send`) e aviso automático ao cliente final (`lib/enviar-aviso-cliente.ts`) |
+| Drift do histórico de migrations | Reparado em 12/06/2026 (migration de reparo); 31 migrations aplicam do zero e `migrate status` confirma |
+| Ícones do PWA quebrados | `icon-192.png` e `icon-512.png` existem em `public/` |
+| Cobertura de testes "16 testes, 3 arquivos" | 504 testes em 40 arquivos |
+
+**Aberto de verdade:**
+
+- **Sem imagem `og:image` (1200x630).** O `openGraph` do layout não define
+  `images`, então o preview ao compartilhar link fica só texto. Precisa de
+  asset de design real — não dá pra gerar.
+- **Bônus de indicação via `user_metadata.ref_code` sem rate-limit/captcha.**
+  Decisão consciente de não corrigir (ver 7.2): o cadastro base já não tem essa
+  proteção independente de indicação, então o risco marginal é baixo.
+- **Textos de marketing em inglês nunca revisados por falante nativo.** O EN
+  foi traduzido por IA. Aceitável pra funcionar, arriscado pra copy de vendas.
+
+**Pendências operacionais — não são código, e só o dono resolve:**
+
+- **Monitor externo não contratado.** Toda a instrumentação de 7.2.23 está
+  inerte até alguém apontar um serviço de fora para `/api/health`. Rota que
+  ninguém consulta é o mesmo que não ter monitoramento.
+- **Backup sem rotina e sem cópia fora do Supabase.** O mecanismo existe e está
+  provado (7.2.22), mas um backup de três meses atrás restaura o negócio de
+  três meses atrás — e se a conta do Supabase for perdida, o backup dele vai
+  junto.
+- **Cláusulas-Padrão da ANPD não firmadas com fornecedores estrangeiros.** O
+  período de adoção encerrou em 23/08/2025. Referenciá-las no contrato não
+  basta: é preciso firmá-las com cada fornecedor (Supabase, Vercel, Resend,
+  Sentry). É a pendência mais antiga e a única com prazo legal vencido.
+- **Split de pagamento do Asaas** depende de contrato de plataforma/marketplace
+  com eles, antes de qualquer linha de código.
 
 ---
 
