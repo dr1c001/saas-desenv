@@ -1557,6 +1557,41 @@ Enquanto o passo 1 não for feito, a rota existe e ninguém a consulta — o que
 
 ---
 
+### 7.2.24 Página de status pública — 19/08/2026
+
+Item 13 do Nível 3. **Fecha os três níveis da lista.**
+
+`/status`, pública, sem login — é justamente quando algo quebra que a pessoa
+vem olhar, e mandá-la pro login seria a resposta mais frustrante possível.
+
+**O limite está escrito na própria página.** Ela roda na mesma infraestrutura
+que descreve: se tudo cair, ela cai junto e nunca vai mostrar uma queda total.
+Página de status que se apresenta como onisciente engana o cliente exatamente
+no momento em que ele mais precisa de informação. Quem cobre a queda total é o
+monitor externo consultando `/api/health` (7.2.23).
+
+O que ela cobre é o caso mais comum e mais traiçoeiro: o sistema **no ar** com
+alguma coisa quebrada por dentro — que é o que o cliente não consegue enxergar
+sozinho.
+
+**Nenhum percentual de disponibilidade.** Não medimos isso daqui de dentro, e
+número inventado numa página de status é pior que página nenhuma: vira promessa
+que o cliente cobra. O que se mostra é registro próprio e verificável — as
+execuções diárias das tarefas automáticas, um quadrado por dia nos últimos 30.
+
+**Cinza não é vermelho.** Dia sem registro e dia com falha são coisas
+diferentes e aparecem diferentes. Antes de 19/08/2026 nada era registrado;
+pintar esse passado de vermelho seria inventar um histórico ruim que ninguém
+observou. Pelo mesmo motivo o resumo conta sobre os dias **observados**, nunca
+sobre a janela inteira — senão um sistema que passou a registrar ontem
+apareceria como "1 de 30", lido como catástrofe.
+
+Link no rodapé da landing.
+
+494 → 504 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

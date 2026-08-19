@@ -350,6 +350,7 @@ export default async function LandingPage() {
             <Link href="#faq" className="hover:text-foreground">{t("nav.faq")}</Link>
             <Link href="/terms" className="hover:text-foreground">{t("footer.termsOfUse")}</Link>
             <Link href="/privacy" className="hover:text-foreground">{t("footer.privacy")}</Link>
+            <Link href="/status" className="hover:text-foreground">{t("footer.status")}</Link>
           </div>
           <p>{t("footer.copyright")}</p>
         </div>

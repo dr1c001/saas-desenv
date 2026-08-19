@@ -41,6 +41,10 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/") ||
     request.nextUrl.pathname === "/terms" ||
     request.nextUrl.pathname === "/privacy" ||
+    // Status precisa responder pra quem NAO esta logado — e justamente quando
+    // algo esta quebrado que a pessoa vem olhar, e mandar pro login seria a
+    // resposta mais frustrante possivel.
+    request.nextUrl.pathname === "/status" ||
     // /offline é o destino de último recurso do service worker. Precisa ser
     // pública: se respondesse com redirect pro /login, o service worker
     // guardaria ESSE redirect no lugar da página, e o técnico sem sinal cairia

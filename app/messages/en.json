@@ -1007,7 +1007,8 @@
     "footer": {
       "termsOfUse": "Terms of Use",
       "privacy": "Privacy",
-      "copyright": "© 2026 ServiçoOS · All rights reserved"
+      "copyright": "© 2026 ServiçoOS · All rights reserved",
+      "status": "Status"
     },
     "whatsapp": {
       "ariaLabel": "Chat on WhatsApp",
@@ -2481,5 +2482,28 @@
       "CONCLUSAO": "Completion note edited",
       "GARANTIA": "Warranty changed from <de></de> to <para></para>"
     }
+  },
+  "status": {
+    "tudoBem": "All systems operational",
+    "comProblema": "System issue",
+    "verificadoEm": "Checked at {hora}",
+    "componentes": "Components",
+    "banco": "Database",
+    "tarefas": "Automated tasks",
+    "ultimaExecucao": "Last successful run {horas}h ago",
+    "semExecucao": "No run recorded yet",
+    "historico": "Last 30 days",
+    "resumoDias": "{bons} of {total} recorded days finished without error.",
+    "semHistorico": "No history recorded yet. Grey squares are days without a record, not days with a failure.",
+    "dia": {
+      "ok": "no error",
+      "falhou": "error",
+      "sem-registro": "no record"
+    },
+    "limite": {
+      "titulo": "What this page cannot tell you",
+      "texto": "It runs on the same infrastructure it describes. If everything goes down, this page goes down with it — so it will never show you a full outage. What it does cover is the most common case: the system being up with something broken inside, which is what you cannot see on your own. And it shows no uptime percentage because we do not measure that from in here — an invented number on a status page is worse than no page at all."
+    },
+    "contato": "Something odd and nothing here explains it? Write to"
   }
 }

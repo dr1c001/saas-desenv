@@ -1007,7 +1007,8 @@
     "footer": {
       "termsOfUse": "Termos de Uso",
       "privacy": "Privacidade",
-      "copyright": "© 2026 ServiçoOS · Todos os direitos reservados"
+      "copyright": "© 2026 ServiçoOS · Todos os direitos reservados",
+      "status": "Status"
     },
     "whatsapp": {
       "ariaLabel": "Falar pelo WhatsApp",
@@ -2481,5 +2482,28 @@
       "CONCLUSAO": "Observação de conclusão alterada",
       "GARANTIA": "Garantia mudou de <de></de> para <para></para>"
     }
+  },
+  "status": {
+    "tudoBem": "Todos os sistemas operando",
+    "comProblema": "Sistema com problema",
+    "verificadoEm": "Verificado em {hora}",
+    "componentes": "Componentes",
+    "banco": "Banco de dados",
+    "tarefas": "Tarefas automáticas",
+    "ultimaExecucao": "Última execução bem-sucedida há {horas}h",
+    "semExecucao": "Nenhuma execução registrada ainda",
+    "historico": "Últimos 30 dias",
+    "resumoDias": "{bons} de {total} dias registrados terminaram sem erro.",
+    "semHistorico": "Ainda sem histórico registrado. Os quadros cinza são dias sem registro, não dias com falha.",
+    "dia": {
+      "ok": "sem erro",
+      "falhou": "com erro",
+      "sem-registro": "sem registro"
+    },
+    "limite": {
+      "titulo": "O que esta página não consegue dizer",
+      "texto": "Ela roda na mesma infraestrutura que descreve. Se tudo cair, esta página cai junto — então ela nunca vai te mostrar uma queda total. O que ela cobre é o caso mais comum: o sistema estar no ar com alguma coisa quebrada por dentro, que é o que você não consegue enxergar sozinho. E ela não exibe percentual de disponibilidade porque não medimos isso daqui de dentro — número inventado numa página de status é pior que página nenhuma."
+    },
+    "contato": "Alguma coisa estranha e nada aqui explica? Escreva para"
   }
 }
