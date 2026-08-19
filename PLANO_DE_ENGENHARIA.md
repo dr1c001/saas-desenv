@@ -1441,6 +1441,61 @@ Ganchos em `createServiceOrder`, `updateOrderStatus`, `completeServiceOrder` e
 
 ---
 
+### 7.2.22 Backup testado — 18/08/2026
+
+Item 12 do Nível 3, e o único da lista cuja falha é irreversível.
+
+O ponto de partida: "o Supabase faz backup, mas ninguém nunca tentou
+restaurar". Backup não testado não é backup — é um arquivo que ninguém sabe se
+presta, e a hora de descobrir é a pior hora possível.
+
+**O que existe agora**, três comandos:
+
+| Comando | O quê |
+|---|---|
+| `npm run backup` | Exporta o banco inteiro para `backups/<data>/`: um `.jsonl` por tabela e um `manifest.json` com contagem por tabela e a última migration |
+| `npm run backup:provar <pasta>` | Sobe um Postgres **descartável em memória**, aplica o schema, carrega o backup e confere linha a linha. Sem risco, sem credencial, sem banco de ensaio |
+| `npm run backup:restaurar <pasta>` | Restauração num banco de verdade, com trava contra escrever em produção e confirmação digitada |
+
+**A ordem de carga vem do catálogo do banco**, nunca de lista escrita à mão.
+Essa lição já custou caro aqui: o `reset()` dos testes usava lista fixa e ficou
+defasado em seis tabelas sem ninguém notar (7.2.19). Num restore o sintoma
+seria pior — a carga falha por chave estrangeira, ou alguém desliga a checagem
+"pra funcionar" e restaura dado órfão.
+
+**Um defeito de corrupção silenciosa, achado pelo próprio teste.** A primeira
+versão devolvia toda data **três horas adiantada** — exatamente o fuso de
+Brasília. Causa: o driver lê coluna `timestamp` (sem fuso) interpretando no
+fuso LOCAL, mas grava de volta em UTC. Cada ciclo de backup e restauração
+deslocaria todas as datas do sistema. A correção é ler data/hora como TEXTO no
+próprio Postgres (`selectDeColunas`), tirando o fuso da conta. É a prova de que
+o teste de ida e volta se paga: sem ele, isso só apareceria numa restauração de
+emergência, com as datas erradas e ninguém entendendo por quê.
+
+**Executado de verdade**: backup de produção com 34 tabelas e 125 linhas,
+verificado com sucesso. Não é mais "temos backup" — é "o backup restaura, e
+está provado".
+
+Por que não `pg_dump`: não está instalado em toda máquina, e a versão do
+cliente precisa casar com a do servidor. O custo de não usá-lo é não trazer
+objetos de banco além de dados — aceitável porque o schema já é reproduzível
+pelas migrations (reparadas em 12/06) e isso é verificado pelo próprio ciclo.
+
+`backups/` e `.env.restore` entraram no `.gitignore`: o arquivo contém dados
+pessoais de clientes finais de terceiros.
+
+463 → 483 testes.
+
+**O que continua sendo do dono**, e nenhum script resolve:
+
+- Confirmar no painel do Supabase qual retenção o plano atual dá.
+- Guardar uma cópia FORA do Supabase — se a conta for perdida, o backup dele
+  vai junto.
+- Rodar `npm run backup` com alguma regularidade. Um backup de três meses atrás
+  restaura, mas restaura o negócio de três meses atrás.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

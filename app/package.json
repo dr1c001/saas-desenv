@@ -13,7 +13,10 @@
     "postinstall": "prisma generate",
     "deploy:teste": "vercel",
     "deploy:prod": "vercel --prod --yes",
-    "db:ensaio": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --script"
+    "db:ensaio": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --script",
+    "backup": "node --env-file=.env scripts/backup.mjs",
+    "backup:provar": "node scripts/verificar-backup.mjs",
+    "backup:restaurar": "node --env-file=.env.restore scripts/restore.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
