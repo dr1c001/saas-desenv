@@ -6,6 +6,7 @@ import { randomUUID } from "crypto"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { baixarPecasDaOs } from "@/lib/estoque-db"
 import { avisarClienteDaOs } from "@/lib/enviar-aviso-cliente"
 import { sendPushToUser } from "@/lib/push"
 import { retryOnUniqueConflict } from "@/lib/retry"
@@ -143,7 +144,7 @@ export async function createServiceOrder(
 }
 
 export async function updateOrderStatus(id: string, status: string) {
-  const { tenantId, role } = await getTenant()
+  const { tenantId, role, userId } = await getTenant()
   await requireActiveSubscription(tenantId)
 
   const validStatus = ["OPEN", "IN_PROGRESS", "DONE", "INVOICED", "CANCELLED"]
@@ -187,6 +188,13 @@ export async function updateOrderStatus(id: string, status: string) {
     }
   }
 
+  // Peça sai do estoque quando o serviço fica pronto — antes disso ela ainda
+  // está fisicamente na prateleira. Idempotente e à prova de falha: OS
+  // concluída não pode ser travada porque o estoque não fechou.
+  if (status === "DONE" || status === "INVOICED") {
+    await baixarPecasDaOs(prisma, tenantId, id, userId)
+  }
+
   // Avisa o cliente final, se a empresa tiver ligado isso. Depois da gravação
   // e sem await no caminho crítico de erro: a função nunca lança, mas ainda
   // assim o aviso é acessório e a OS já está salva.
@@ -200,10 +208,12 @@ export async function updateOrderStatus(id: string, status: string) {
 export async function completeServiceOrder(
   id: string,
   conclusionNote: string,
-  items: { description: string; quantity: number; unitPrice: number }[],
+  // partId opcional: item digitado na hora (mao de obra, taxa) continua sendo
+  // o caminho normal de quem nao controla estoque.
+  items: { description: string; quantity: number; unitPrice: number; partId?: string | null }[],
   invoiceImmediately: boolean
 ) {
-  const { tenantId } = await getTenant()
+  const { tenantId, userId } = await getTenant()
   await requireActiveSubscription(tenantId)
 
   const total = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
@@ -238,6 +248,7 @@ export async function completeServiceOrder(
           unitPrice: i.unitPrice,
           total: i.quantity * i.unitPrice,
           orderId: id,
+          partId: i.partId || null,
         })),
       })
     }
@@ -268,10 +279,15 @@ export async function completeServiceOrder(
     }
   })
 
+  // Depois da transacao: a OS concluida ja esta gravada, e o estoque nao pode
+  // travar o trabalho de campo se falhar. Idempotente por orderId.
+  await baixarPecasDaOs(prisma, tenantId, id, userId)
+
   revalidatePath("/service-orders")
   revalidatePath(`/service-orders/${id}`)
   revalidatePath("/history")
   revalidatePath("/finance")
+  revalidatePath("/parts")
 }
 
 export async function updateServiceOrder(

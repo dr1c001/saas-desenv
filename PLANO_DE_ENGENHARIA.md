@@ -1346,6 +1346,62 @@ importava de lá.
 
 ---
 
+### 7.2.20 Estoque de peças e ordens de compra — 18/08/2026
+
+Item 8 do Nível 2. Fecha o Nível 2 inteiro.
+
+**A regra que sustenta o modelo: `Part.stock` NUNCA é editado direto.** Toda
+mudança passa por um `StockMovement`, na mesma transação. Sem isso, histórico e
+saldo passam a discordar e não há como saber qual dos dois está certo — que é
+exatamente o momento em que a empresa para de confiar no estoque e volta pro
+caderno.
+
+`StockMovement.quantity` guarda a **variação com sinal** (+5 numa entrada, -2
+numa saída, -3 num ajuste de 10 pra 7). Assim a soma dos movimentos de uma peça
+tem que ser igual ao saldo dela — invariante testável, que um campo "quantidade
+sempre positiva + tipo" não daria sem recalcular sinal em toda leitura.
+
+Três decisões que mudam o comportamento:
+
+| Decisão | Por quê |
+|---|---|
+| **AJUSTE define o saldo, não soma** | Quem conta a prateleira e acha 7 quer que fique 7. É o erro mais comum de sistema de estoque, e a tela mostra o saldo resultante antes de confirmar |
+| **Saldo negativo é permitido** | O serviço aconteceu no mundo real. Recusar o registro porque o cadastro estava desatualizado só faz a empresa parar de registrar. O negativo fica visível como pendência |
+| **Ajuste exige motivo** | Correção sem rastro é indistinguível de erro seis meses depois |
+
+**Baixa pela OS.** `ServiceItem` ganhou `partId` opcional — item digitado na
+hora (mão de obra, taxa) continua sendo o caminho normal. A peça sai do estoque
+na **conclusão**, não na criação: antes disso ela ainda está fisicamente na
+prateleira. É **idempotente** (a guarda é "já existe movimento desta OS?", pelo
+índice `StockMovement.orderId`) porque a conclusão pode disparar mais de uma vez
+— botão clicado duas vezes, OS reaberta. E **nunca lança**: OS concluída não
+pode ser travada porque o estoque não fechou.
+
+**Ordens de compra.** `Supplier` é separado de `Provider` de propósito: aquele é
+prestador terceirizado que executa serviço; este é quem vende peça. Recebimento
+é **parcial por item** — fornecedor mandar 8 de 10 é a regra, não a exceção, e
+um sistema que só aceita "tudo ou nada" faz a empresa parar de registrar. Cada
+item recebido vira ENTRADA na mesma transação em que o recebido é atualizado, e
+o custo da peça é atualizado com o que foi pago agora.
+
+Compra já recebida (total ou parcial) **não se cancela**: o estoque já entrou, e
+desfazer daqui deixaria saldo e histórico discordando. Devolver ao fornecedor é
+um movimento de saída, que fica registrado como tal.
+
+**Plano.** Recurso novo `stock`, Pro+, destravando as duas abas juntas — ordem
+de compra sem catálogo não tem o que comprar, e catálogo sem compra vira
+digitação manual eterna. Concedível avulso a qualquer cliente pelo botão
+Recursos do painel (7.2.19).
+
+Um teste de plano que travava a contagem em 5 recursos foi reescrito: agora
+compara com o catálogo inteiro, e ganhou o contraponto "Starter NÃO ganha
+recurso novo por descuido" — o alarme que impede a diferença entre R$ 97 e
+R$ 397 de evaporar em silêncio.
+
+419 → 451 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

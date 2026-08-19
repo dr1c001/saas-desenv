@@ -125,6 +125,10 @@ model Tenant {
   /// painel some sozinho quando todos os passos ficam prontos (ver
   /// lib/primeiros-passos.ts), entao isto so registra a saida antecipada.
   onboardingDismissedAt DateTime?
+  suppliers             Supplier[]
+  parts                 Part[]
+  stockMovements        StockMovement[]
+  purchaseOrders        PurchaseOrder[]
 }
 
 // Idioma da empresa — governa dashboard, e-mails e PDFs gerados pro tenant
@@ -213,6 +217,7 @@ model User {
   pushSubscriptions PushSubscription[]
   userAddress       UserAddress?
   serviceContracts  ServiceContract[]
+  stockMovements    StockMovement[]
 
   // Aba Equipe lista por tenant; seleção de técnico filtra por papel.
   @@index([tenantId, role])
@@ -333,14 +338,15 @@ model ServiceOrder {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
-  client      Client           @relation(fields: [clientId], references: [id])
-  tenant      Tenant           @relation(fields: [tenantId], references: [id])
-  technician  User?            @relation(fields: [technicianId], references: [id])
-  items       ServiceItem[]
-  attachments Attachment[]
-  revenues    Revenue[]
-  checklist   ChecklistItem[]
-  contract    ServiceContract? @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  client         Client           @relation(fields: [clientId], references: [id])
+  tenant         Tenant           @relation(fields: [tenantId], references: [id])
+  technician     User?            @relation(fields: [technicianId], references: [id])
+  items          ServiceItem[]
+  attachments    Attachment[]
+  revenues       Revenue[]
+  checklist      ChecklistItem[]
+  contract       ServiceContract? @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  stockMovements StockMovement[]
 
   @@unique([tenantId, number])
   // Listagem de OS e "OS ativas" do dashboard.
@@ -383,10 +389,16 @@ model ServiceItem {
   unitPrice   Decimal @db.Decimal(12, 2)
   total       Decimal @db.Decimal(12, 2)
   orderId     String
+  /// Peca do catalogo, quando o item veio do estoque. Nulo = item digitado
+  /// na hora (mao de obra, taxa, peca comprada avulsa) — que continua sendo
+  /// o caminho normal pra quem nao controla estoque.
+  partId      String?
 
   order ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  part  Part?        @relation(fields: [partId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
+  @@index([partId])
 }
 
 model Attachment {
@@ -855,4 +867,161 @@ model GeocodeBatch {
   /// receber a coordenada do vizinho.
   addressIds Json
   createdAt  DateTime @default(now())
+}
+
+// ─── Estoque de pecas e ordens de compra ─────────────────────────────────────
+
+/// Fornecedor de pecas. Separado de Provider de proposito: aquele e prestador
+/// TERCEIRIZADO, que executa servico pra empresa; este e quem VENDE peca pra
+/// ela. Juntar os dois daria uma lista so com duas coisas diferentes dentro,
+/// e o dia em que precisassem de campos distintos ninguem conseguiria separar.
+model Supplier {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  document  String?
+  email     String?
+  phone     String?
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  purchaseOrders PurchaseOrder[]
+
+  @@index([tenantId, name])
+}
+
+/// Peca de estoque.
+///
+/// `stock` NUNCA e editado direto: toda mudanca passa por um StockMovement,
+/// dentro de transacao. Sem essa regra o historico e o saldo passam a
+/// discordar, e nao ha como saber qual dos dois esta certo — que e o momento
+/// em que a empresa para de confiar no estoque e volta pro caderno.
+model Part {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  /// Codigo interno da empresa. Opcional: muita empresa pequena nao usa.
+  sku       String?
+  unit      String   @default("un")
+  /// Quanto custa comprar. Atualizado ao receber uma ordem de compra.
+  costPrice Decimal? @db.Decimal(12, 2)
+  /// Quanto se cobra do cliente. Vira o preco sugerido no item da OS.
+  salePrice Decimal? @db.Decimal(12, 2)
+  stock     Decimal  @default(0) @db.Decimal(12, 3)
+  /// Abaixo disto a peca aparece como alerta. Zero = sem alerta.
+  minStock  Decimal  @default(0) @db.Decimal(12, 3)
+  /// Peca desativada some das listas de escolha, mas o historico continua.
+  /// Apagar quebraria movimento e item de OS ja registrados.
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id])
+  movements     StockMovement[]
+  purchaseItems PurchaseItem[]
+  serviceItems  ServiceItem[]
+
+  // Listagem e busca por nome; a de escolha filtra por active.
+  @@index([tenantId, name])
+  @@index([tenantId, active])
+}
+
+enum StockMovementType {
+  ENTRADA
+  SAIDA
+  AJUSTE
+}
+
+/// Um movimento de estoque. Fonte da verdade do saldo.
+///
+/// `quantity` guarda a VARIACAO COM SINAL (+5 numa entrada, -2 numa saida,
+/// -3 num ajuste de 10 pra 7). Assim a soma dos movimentos de uma peca tem
+/// que ser igual ao saldo dela — invariante que da pra testar, e que um
+/// campo "quantidade sempre positiva + tipo" nao daria sem recalcular sinal
+/// em toda leitura.
+model StockMovement {
+  id              String            @id @default(cuid())
+  tenantId        String
+  partId          String
+  type            StockMovementType
+  quantity        Decimal           @db.Decimal(12, 3)
+  /// Saldo logo apos este movimento. Fotografia: deixa o historico legivel
+  /// sem precisar somar tudo de novo a cada linha da tela.
+  balanceAfter    Decimal           @db.Decimal(12, 3)
+  reason          String?
+  /// De qual OS saiu.
+  orderId         String?
+  /// De qual ordem de compra entrou.
+  purchaseOrderId String?
+  /// Quem fez. Fica nulo se a pessoa sair da empresa — o movimento continua.
+  userId          String?
+  createdAt       DateTime          @default(now())
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  part          Part           @relation(fields: [partId], references: [id], onDelete: Cascade)
+  order         ServiceOrder?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Historico da peca, do mais novo pro mais velho.
+  @@index([partId, createdAt])
+  @@index([tenantId, createdAt])
+  // Idempotencia da baixa por OS: "ja existe movimento desta OS?"
+  @@index([orderId])
+  @@index([purchaseOrderId])
+}
+
+enum PurchaseStatus {
+  RASCUNHO
+  ENVIADA
+  PARCIAL
+  RECEBIDA
+  CANCELADA
+}
+
+/// Ordem de compra de pecas ao fornecedor.
+model PurchaseOrder {
+  id         String         @id @default(cuid())
+  number     Int
+  tenantId   String
+  supplierId String?
+  status     PurchaseStatus @default(RASCUNHO)
+  /// Quando se espera receber. So pra cobrar o fornecedor.
+  expectedAt DateTime?
+  receivedAt DateTime?
+  notes      String?        @db.Text
+  total      Decimal        @default(0) @db.Decimal(12, 2)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  tenant    Tenant          @relation(fields: [tenantId], references: [id])
+  supplier  Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  items     PurchaseItem[]
+  movements StockMovement[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+  @@index([supplierId])
+}
+
+model PurchaseItem {
+  id               String  @id @default(cuid())
+  purchaseOrderId  String
+  partId           String
+  quantity         Decimal @db.Decimal(12, 3)
+  /// Quanto ja chegou. Entrega parcial e a regra, nao a excecao: fornecedor
+  /// mandar 8 de 10 e comum, e um sistema que so aceita "tudo ou nada" faz a
+  /// empresa parar de registrar.
+  receivedQuantity Decimal @default(0) @db.Decimal(12, 3)
+  unitCost         Decimal @db.Decimal(12, 2)
+  total            Decimal @db.Decimal(12, 2)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  part          Part          @relation(fields: [partId], references: [id])
+
+  @@index([purchaseOrderId])
+  @@index([partId])
 }

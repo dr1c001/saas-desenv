@@ -15,6 +15,7 @@ export type Recurso =
   | "signature"       // Assinatura digital do cliente
   | "checklist"       // Checklist de execução
   | "advancedReports" // Período personalizado, ranking de clientes, detalhamento
+  | "stock"           // Estoque de peças e ordens de compra
 
 /** Todos os recursos que existem. Fonte única — a tela do painel monta a partir daqui. */
 export const RECURSOS: readonly Recurso[] = [
@@ -23,6 +24,7 @@ export const RECURSOS: readonly Recurso[] = [
   "signature",
   "checklist",
   "advancedReports",
+  "stock",
 ]
 
 /**
@@ -31,7 +33,7 @@ export const RECURSOS: readonly Recurso[] = [
  * mostra essa diferença porque conceder "Mapa GPS" e conceder "Checklist" têm
  * efeitos bem diferentes pra quem está do outro lado.
  */
-export const RECURSOS_DE_ABA: readonly Recurso[] = ["gpsMap", "nfse"]
+export const RECURSOS_DE_ABA: readonly Recurso[] = ["gpsMap", "nfse", "stock"]
 
 export function ehRecurso(valor: string): valor is Recurso {
   return (RECURSOS as readonly string[]).includes(valor)

@@ -27,6 +27,8 @@ export const ALL_TABS = [
   { slug: "quotes", navKey: "quotes" },
   { slug: "billing", navKey: "billing" },
   { slug: "fiscal", navKey: "fiscal" },
+  { slug: "parts", navKey: "parts" },
+  { slug: "purchases", navKey: "purchases" },
   { slug: "referral", navKey: "referral" },
 ] as const
 
@@ -39,6 +41,10 @@ export type TabSlug = (typeof ALL_TABS)[number]["slug"]
 export const ABAS_POR_RECURSO: { slug: TabSlug; recurso: Recurso }[] = [
   { slug: "map", recurso: "gpsMap" },
   { slug: "fiscal", recurso: "nfse" },
+  // As duas do estoque andam juntas: ordem de compra sem catálogo de peça não
+  // tem o que comprar, e catálogo sem compra vira digitação manual eterna.
+  { slug: "parts", recurso: "stock" },
+  { slug: "purchases", recurso: "stock" },
 ]
 
 /**

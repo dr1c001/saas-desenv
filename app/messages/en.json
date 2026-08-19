@@ -294,7 +294,9 @@
     "platformAdmin": "Platform admin",
     "customFields": "Custom fields",
     "vocabulary": "Vocabulary",
-    "contracts": "Contracts"
+    "contracts": "Contracts",
+    "parts": "Inventory",
+    "purchases": "Purchases"
   },
   "history": {
     "list": {
@@ -1645,7 +1647,8 @@
           "nfse": "Invoice issuing (NFS-e)",
           "signature": "Client digital signature",
           "checklist": "Execution checklist",
-          "advancedReports": "Advanced reports"
+          "advancedReports": "Advanced reports",
+          "stock": "Inventory and purchasing"
         },
         "featuresAll": "Enable {count, plural, one {the remaining feature} other {the # remaining features}}",
         "tabsTitle": "Tabs this company sees ({visiveis} of {total})",
@@ -2315,6 +2318,153 @@
         "titulo": "Write your terms and warranty",
         "porque": "Printed on the documents — this is what settles arguments after the job is done."
       }
+    }
+  },
+  "estoque": {
+    "title": "Parts inventory",
+    "subtitle": "The balance only changes through movements, never by direct editing — so history and the number on screen never disagree.",
+    "nova": "New part",
+    "novaPeca": "New part",
+    "editarPeca": "Edit part",
+    "formAjuda": "The balance is not edited here: use Move.",
+    "buscar": "Search by name or code...",
+    "vazio": "No parts registered yet.",
+    "vazioBusca": "No parts found.",
+    "inativa": "inactive",
+    "desativar": "Deactivate",
+    "reativar": "Reactivate",
+    "salvar": "Save",
+    "cancelar": "Cancel",
+    "confirmar": "Confirm",
+    "movimentar": "Move stock",
+    "saldoAtual": "current balance: {saldo} {unidade}",
+    "saldoFicara": "Balance will be: {saldo} {unidade}",
+    "ficaraNegativo": "will go negative",
+    "alerta": {
+      "titulo": "{count, plural, one {# part needs attention} other {# parts need attention}}"
+    },
+    "colunas": {
+      "peca": "Part",
+      "saldo": "Balance",
+      "minimo": "Minimum",
+      "custo": "Cost",
+      "venda": "Price",
+      "acoes": "Actions"
+    },
+    "campos": {
+      "nome": "Name",
+      "codigo": "Code",
+      "unidade": "Unit",
+      "custo": "Cost",
+      "venda": "Price",
+      "minimo": "Minimum",
+      "minimoAjuda": "Below the minimum the part is flagged. Zero turns the alert off.",
+      "saldoAviso": "To change the balance use Move — that way the reason is recorded.",
+      "tipo": "Type",
+      "quantidade": "Quantity",
+      "contado": "Counted balance",
+      "motivo": "Reason",
+      "motivoExemplo": "e.g. inventory count",
+      "motivoAjuda": "An adjustment without a reason is indistinguishable from a mistake six months later."
+    },
+    "tipos": {
+      "ENTRADA": "In",
+      "SAIDA": "Out",
+      "AJUSTE": "Adjust"
+    },
+    "tiposAjuda": {
+      "ENTRADA": "Adds to the balance. e.g. a purchase received outside a purchase order.",
+      "SAIDA": "Subtracts from the balance. e.g. a broken or lost part.",
+      "AJUSTE": "SETS the balance. Type what you counted on the shelf — not the difference."
+    },
+    "erros": {
+      "semPermissao": "You do not have permission for this.",
+      "tipoInvalido": "Choose the movement type.",
+      "quantidadeInvalida": "Invalid quantity.",
+      "motivoObrigatorio": "An adjustment requires a reason.",
+      "pecaNaoEncontrada": "Part not found."
+    }
+  },
+  "compras": {
+    "title": "Purchase orders",
+    "subtitle": "Purchased parts enter stock when you record the receipt.",
+    "nova": "New purchase",
+    "novaCompra": "New purchase order",
+    "novaAjuda": "Pick the parts and quantities. Stock only changes when the goods arrive.",
+    "fornecedores": "Suppliers",
+    "fornecedoresTitulo": "Suppliers",
+    "fornecedoresAjuda": "Who sells you parts. A separate list from service providers.",
+    "novoFornecedor": "New supplier",
+    "excluirFornecedor": "Delete",
+    "adicionarItem": "Add item",
+    "criar": "Create purchase",
+    "salvar": "Save",
+    "cancelar": "Cancel",
+    "voltar": "Back to purchases",
+    "voltarBotao": "Back",
+    "total": "Total",
+    "vazio": "No purchase orders yet.",
+    "vazioSemPecas": "Register a part in inventory before creating a purchase order.",
+    "pendentes": "{count, plural, one {# purchase awaiting delivery} other {# purchases awaiting delivery}}",
+    "pendentesAjuda": "Open the purchase to record what arrived.",
+    "itensDaCompra": "Items",
+    "observacao": "Notes",
+    "semFornecedor": "No supplier",
+    "previsaoEm": "expected: {data}",
+    "recebidaEm": "Received on {data}",
+    "receber": "Record receipt",
+    "receberAjuda": "Pre-filled with what is missing. Adjust if less arrived.",
+    "receberAviso": "On confirm, the quantities enter stock and the part cost is updated.",
+    "confirmarRecebimento": "Confirm receipt",
+    "tudoRecebido": "All items on this purchase have been received.",
+    "faltamUnidades": "{qtd} {unidade} missing",
+    "cancelarCompra": "Cancel purchase order",
+    "cancelarAviso": "The purchase is marked as cancelled. Only possible before any receipt — once parts have entered, undoing here would leave balance and history disagreeing.",
+    "confirmarCancelamento": "Cancel purchase",
+    "status": {
+      "RASCUNHO": "Draft",
+      "ENVIADA": "Sent",
+      "PARCIAL": "Partial",
+      "RECEBIDA": "Received",
+      "CANCELADA": "Cancelled"
+    },
+    "colunas": {
+      "numero": "Number",
+      "fornecedor": "Supplier",
+      "status": "Status",
+      "itens": "Items",
+      "previsao": "Expected",
+      "total": "Total",
+      "peca": "Part",
+      "pedido": "Ordered",
+      "recebido": "Received",
+      "falta": "Missing",
+      "custoUnit": "Unit cost"
+    },
+    "campos": {
+      "fornecedor": "Supplier",
+      "semFornecedor": "No supplier",
+      "previsao": "Expected delivery",
+      "itens": "Items",
+      "escolhaPeca": "Choose the part",
+      "quantidade": "Qty",
+      "custoUnit": "Cost",
+      "observacao": "Notes",
+      "nomeFornecedor": "Name",
+      "documento": "Tax ID",
+      "telefone": "Phone",
+      "email": "Email"
+    },
+    "erros": {
+      "semPermissao": "You do not have permission for this.",
+      "semItens": "Add at least one item.",
+      "pecaInvalida": "One of the parts does not belong to your company.",
+      "fornecedorInvalido": "Invalid supplier.",
+      "nomeObrigatorio": "Enter the name.",
+      "naoEncontrada": "Purchase not found.",
+      "compraCancelada": "This purchase was cancelled.",
+      "jaRecebida": "This purchase was already fully received.",
+      "nadaARecebeber": "Enter how much arrived for at least one item."
     }
   }
 }

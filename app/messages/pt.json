@@ -294,7 +294,9 @@
     "platformAdmin": "Painel da plataforma",
     "customFields": "Campos personalizados",
     "vocabulary": "Vocabulário",
-    "contracts": "Contratos"
+    "contracts": "Contratos",
+    "parts": "Estoque",
+    "purchases": "Compras"
   },
   "history": {
     "list": {
@@ -1645,7 +1647,8 @@
           "nfse": "Emissão de NFS-e",
           "signature": "Assinatura digital do cliente",
           "checklist": "Checklist de execução",
-          "advancedReports": "Relatórios avançados"
+          "advancedReports": "Relatórios avançados",
+          "stock": "Estoque e compras"
         },
         "featuresAll": "Liberar {count, plural, one {o recurso restante} other {os # recursos restantes}}",
         "tabsTitle": "Abas que esta empresa vê ({visiveis} de {total})",
@@ -2315,6 +2318,153 @@
         "titulo": "Escreva seus termos e garantia",
         "porque": "Saem impressos nos documentos e são o que resolve discussão depois do serviço feito."
       }
+    }
+  },
+  "estoque": {
+    "title": "Estoque de peças",
+    "subtitle": "O saldo só muda por movimento, nunca por edição direta — assim o histórico e o número na tela nunca discordam.",
+    "nova": "Nova peça",
+    "novaPeca": "Nova peça",
+    "editarPeca": "Editar peça",
+    "formAjuda": "O saldo não é editado aqui: use Movimentar.",
+    "buscar": "Buscar por nome ou código...",
+    "vazio": "Nenhuma peça cadastrada ainda.",
+    "vazioBusca": "Nenhuma peça encontrada.",
+    "inativa": "inativa",
+    "desativar": "Desativar",
+    "reativar": "Reativar",
+    "salvar": "Salvar",
+    "cancelar": "Cancelar",
+    "confirmar": "Confirmar",
+    "movimentar": "Movimentar estoque",
+    "saldoAtual": "saldo atual: {saldo} {unidade}",
+    "saldoFicara": "Saldo ficará: {saldo} {unidade}",
+    "ficaraNegativo": "vai ficar negativo",
+    "alerta": {
+      "titulo": "{count, plural, one {# peça precisa de atenção} other {# peças precisam de atenção}}"
+    },
+    "colunas": {
+      "peca": "Peça",
+      "saldo": "Saldo",
+      "minimo": "Mínimo",
+      "custo": "Custo",
+      "venda": "Venda",
+      "acoes": "Ações"
+    },
+    "campos": {
+      "nome": "Nome",
+      "codigo": "Código",
+      "unidade": "Unidade",
+      "custo": "Custo",
+      "venda": "Venda",
+      "minimo": "Mínimo",
+      "minimoAjuda": "Abaixo do mínimo a peça vira alerta. Zero desliga o aviso.",
+      "saldoAviso": "Para mudar o saldo, use Movimentar — assim fica registrado o porquê.",
+      "tipo": "Tipo",
+      "quantidade": "Quantidade",
+      "contado": "Saldo contado",
+      "motivo": "Motivo",
+      "motivoExemplo": "Ex.: contagem de inventário",
+      "motivoAjuda": "Ajuste sem motivo é indistinguível de erro seis meses depois."
+    },
+    "tipos": {
+      "ENTRADA": "Entrada",
+      "SAIDA": "Saída",
+      "AJUSTE": "Ajuste"
+    },
+    "tiposAjuda": {
+      "ENTRADA": "Soma ao saldo. Ex.: compra recebida fora de uma ordem de compra.",
+      "SAIDA": "Subtrai do saldo. Ex.: peça quebrada ou perdida.",
+      "AJUSTE": "DEFINE o saldo. Digite o que você contou na prateleira — não a diferença."
+    },
+    "erros": {
+      "semPermissao": "Você não tem permissão para isso.",
+      "tipoInvalido": "Escolha o tipo do movimento.",
+      "quantidadeInvalida": "Quantidade inválida.",
+      "motivoObrigatorio": "Ajuste exige um motivo.",
+      "pecaNaoEncontrada": "Peça não encontrada."
+    }
+  },
+  "compras": {
+    "title": "Ordens de compra",
+    "subtitle": "Peça comprada entra no estoque quando você registra o recebimento.",
+    "nova": "Nova compra",
+    "novaCompra": "Nova ordem de compra",
+    "novaAjuda": "Escolha as peças e as quantidades. O estoque só muda quando a mercadoria chegar.",
+    "fornecedores": "Fornecedores",
+    "fornecedoresTitulo": "Fornecedores",
+    "fornecedoresAjuda": "Quem vende peça pra você. É lista separada dos prestadores de serviço.",
+    "novoFornecedor": "Novo fornecedor",
+    "excluirFornecedor": "Excluir",
+    "adicionarItem": "Adicionar item",
+    "criar": "Criar compra",
+    "salvar": "Salvar",
+    "cancelar": "Cancelar",
+    "voltar": "Voltar às compras",
+    "voltarBotao": "Voltar",
+    "total": "Total",
+    "vazio": "Nenhuma ordem de compra ainda.",
+    "vazioSemPecas": "Cadastre uma peça no estoque antes de criar uma ordem de compra.",
+    "pendentes": "{count, plural, one {# compra aguardando entrega} other {# compras aguardando entrega}}",
+    "pendentesAjuda": "Abra a compra para registrar o que chegou.",
+    "itensDaCompra": "Itens",
+    "observacao": "Observação",
+    "semFornecedor": "Sem fornecedor",
+    "previsaoEm": "previsão: {data}",
+    "recebidaEm": "Recebida em {data}",
+    "receber": "Registrar recebimento",
+    "receberAjuda": "Já vem preenchido com o que falta. Ajuste se veio menos.",
+    "receberAviso": "Ao confirmar, as quantidades entram no estoque e o custo da peça é atualizado.",
+    "confirmarRecebimento": "Confirmar recebimento",
+    "tudoRecebido": "Todos os itens desta compra já foram recebidos.",
+    "faltamUnidades": "faltam {qtd} {unidade}",
+    "cancelarCompra": "Cancelar ordem de compra",
+    "cancelarAviso": "A compra fica marcada como cancelada. Só é possível antes de qualquer recebimento — depois que a peça entrou, desfazer daqui deixaria saldo e histórico discordando.",
+    "confirmarCancelamento": "Cancelar compra",
+    "status": {
+      "RASCUNHO": "Rascunho",
+      "ENVIADA": "Enviada",
+      "PARCIAL": "Parcial",
+      "RECEBIDA": "Recebida",
+      "CANCELADA": "Cancelada"
+    },
+    "colunas": {
+      "numero": "Número",
+      "fornecedor": "Fornecedor",
+      "status": "Status",
+      "itens": "Itens",
+      "previsao": "Previsão",
+      "total": "Total",
+      "peca": "Peça",
+      "pedido": "Pedido",
+      "recebido": "Recebido",
+      "falta": "Falta",
+      "custoUnit": "Custo unit."
+    },
+    "campos": {
+      "fornecedor": "Fornecedor",
+      "semFornecedor": "Sem fornecedor",
+      "previsao": "Previsão de entrega",
+      "itens": "Itens",
+      "escolhaPeca": "Escolha a peça",
+      "quantidade": "Qtd",
+      "custoUnit": "Custo",
+      "observacao": "Observação",
+      "nomeFornecedor": "Nome",
+      "documento": "CNPJ",
+      "telefone": "Telefone",
+      "email": "E-mail"
+    },
+    "erros": {
+      "semPermissao": "Você não tem permissão para isso.",
+      "semItens": "Adicione ao menos um item.",
+      "pecaInvalida": "Uma das peças não é da sua empresa.",
+      "fornecedorInvalido": "Fornecedor inválido.",
+      "nomeObrigatorio": "Informe o nome.",
+      "naoEncontrada": "Compra não encontrada.",
+      "compraCancelada": "Esta compra foi cancelada.",
+      "jaRecebida": "Esta compra já foi totalmente recebida.",
+      "nadaARecebeber": "Informe quanto chegou de ao menos um item."
     }
   }
 }

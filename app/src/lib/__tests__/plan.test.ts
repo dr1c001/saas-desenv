@@ -76,10 +76,26 @@ describe("plan — o que cada plano libera", () => {
     await seedPlanos()
     const t = await seedTenant("enterprise")
 
+    const { RECURSOS } = await import("@/lib/recursos")
     const limites = await getLimites(t.id)
-    expect(limites.recursos).toHaveLength(5)
+    // Comparado com o catálogo inteiro, e não com um número fixo: assim
+    // "Enterprise tem tudo" continua sendo verificado de verdade quando um
+    // recurso novo entra, em vez de o teste quebrar pedindo que se troque o 5
+    // por 6 sem ninguém pensar em qual plano deveria recebê-lo.
+    expect([...limites.recursos].sort()).toEqual([...RECURSOS].sort())
     expect(limites.maxUsuarios).toBeNull()
     expect(limites.maxOsMes).toBeNull()
+  })
+
+  it("Starter NÃO ganha recurso novo por descuido", async () => {
+    // O contraponto do teste acima: se alguém adicionar um recurso ao catálogo
+    // e ele vazar pro Starter, a diferença entre R$ 97 e R$ 397 evapora em
+    // silêncio. Aqui a lista vazia é a afirmação.
+    const { getLimites } = await import("@/lib/plan")
+    await seedPlanos()
+    const t = await seedTenant("starter")
+
+    expect((await getLimites(t.id)).recursos).toEqual([])
   })
 
   it("extraFeatures soma ao plano sem alterar os limites numéricos", async () => {
