@@ -7,6 +7,12 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { baixarPecasDaOs } from "@/lib/estoque-db"
+import {
+  autorAtual,
+  registrarCriacao,
+  registrarMudancas,
+  retratoDaOs,
+} from "@/lib/historico-os-db"
 import { avisarClienteDaOs } from "@/lib/enviar-aviso-cliente"
 import { sendPushToUser } from "@/lib/push"
 import { retryOnUniqueConflict } from "@/lib/retry"
@@ -89,7 +95,7 @@ export async function createServiceOrder(
   // @@unique([tenantId, number]), então a segunda só falha (P2002) em vez de
   // duplicar; retryOnUniqueConflict tenta de novo com o número atualizado.
   // (Achado em auditoria pré-venda, 2026-08-05.)
-  await retryOnUniqueConflict(async () => {
+  const criada = await retryOnUniqueConflict(async () => {
     const number = await nextOrderNumber(tenantId)
     return prisma.serviceOrder.create({
       data: {
@@ -117,8 +123,13 @@ export async function createServiceOrder(
           })),
         },
       },
+      select: { id: true },
     })
   })
+
+  // Primeiro ponto da linha do tempo. Nunca lanca: historico e registro do
+  // que aconteceu, nao parte do que esta acontecendo.
+  await registrarCriacao(tenantId, criada.id, await autorAtual(userId))
 
   // Send push notification to assigned technician
   if (technicianId && technicianId !== userId) {
@@ -157,7 +168,19 @@ export async function updateOrderStatus(id: string, status: string) {
   // "desfaturar" mudando o status de novo depois. TECHNICIAN continua livre
   // pra mover entre OPEN/IN_PROGRESS/DONE/CANCELLED, seu fluxo legítimo de
   // campo. (Achado em auditoria pré-venda, 2026-08-05.)
-  const current = await prisma.serviceOrder.findUnique({ where: { id, tenantId }, select: { status: true } })
+  const current = await prisma.serviceOrder.findUnique({
+    where: { id, tenantId },
+    // Campos a mais servem ao historico: sem o retrato de ANTES nao ha o que
+    // comparar depois da gravacao.
+    select: {
+      status: true,
+      scheduledAt: true,
+      totalAmount: true,
+      conclusionNote: true,
+      warrantyDays: true,
+      technician: { select: { name: true } },
+    },
+  })
   if (!current || current.status === "INVOICED") return
   if (status === "INVOICED" && role !== "OWNER" && role !== "ADMIN") return
 
@@ -167,8 +190,20 @@ export async function updateOrderStatus(id: string, status: string) {
   const order = await prisma.serviceOrder.update({
     where: { id, tenantId },
     data,
-    select: { number: true, title: true, totalAmount: true, createdAt: true },
+    select: {
+      number: true, title: true, totalAmount: true, createdAt: true,
+      status: true, scheduledAt: true, conclusionNote: true, warrantyDays: true,
+      technician: { select: { name: true } },
+    },
   })
+
+  await registrarMudancas(
+    tenantId,
+    id,
+    retratoDaOs(current),
+    retratoDaOs(order),
+    await autorAtual(userId)
+  )
 
   // Auto-create revenue when OS is invoiced
   if (status === "INVOICED" && Number(order.totalAmount) > 0) {
@@ -222,7 +257,12 @@ export async function completeServiceOrder(
   // Fetch order before transaction — needed for revenue description
   const order = await prisma.serviceOrder.findUnique({
     where: { id, tenantId },
-    select: { number: true, title: true, createdAt: true, status: true },
+    select: {
+      number: true, title: true, createdAt: true, status: true,
+      // Retrato de ANTES pro historico: sem ele nao ha o que comparar.
+      scheduledAt: true, totalAmount: true, conclusionNote: true,
+      warrantyDays: true, technician: { select: { name: true } },
+    },
   })
   const te2 = await getTranslations("errors")
   if (!order) throw new Error(te2("orderNotFound"))
@@ -283,6 +323,21 @@ export async function completeServiceOrder(
   // travar o trabalho de campo se falhar. Idempotente por orderId.
   await baixarPecasDaOs(prisma, tenantId, id, userId)
 
+  await registrarMudancas(
+    tenantId,
+    id,
+    retratoDaOs(order),
+    retratoDaOs({
+      status,
+      scheduledAt: order.scheduledAt,
+      totalAmount: total,
+      conclusionNote: conclusionNote || null,
+      warrantyDays: order.warrantyDays,
+      technician: order.technician,
+    }),
+    await autorAtual(userId)
+  )
+
   revalidatePath("/service-orders")
   revalidatePath(`/service-orders/${id}`)
   revalidatePath("/history")
@@ -295,7 +350,7 @@ export async function updateServiceOrder(
   _prev: OrderFormState,
   formData: FormData
 ): Promise<OrderFormState> {
-  const { tenantId } = await getTenant()
+  const { tenantId, userId } = await getTenant()
   await requireActiveSubscription(tenantId)
 
   const raw = Object.fromEntries(formData.entries())
@@ -309,7 +364,15 @@ export async function updateServiceOrder(
   // reais apagados/substituídos por itens forjados antes do update final
   // (que é quem checava tenantId) falhar. (Achado em revisão de segurança 2026-07-19.)
   const [order, client] = await Promise.all([
-    prisma.serviceOrder.findUnique({ where: { id, tenantId }, select: { id: true, status: true } }),
+    prisma.serviceOrder.findUnique({
+      where: { id, tenantId },
+      // Retrato de ANTES pro historico da OS.
+      select: {
+        id: true, status: true, scheduledAt: true, totalAmount: true,
+        conclusionNote: true, warrantyDays: true,
+        technician: { select: { name: true } },
+      },
+    }),
     prisma.client.findUnique({ where: { id: clientId, tenantId }, select: { id: true } }),
   ])
   const te3 = await getTranslations("errors")
@@ -360,6 +423,27 @@ export async function updateServiceOrder(
       },
     }),
   ])
+
+  // O responsavel novo pelo NOME: guardar id faria a linha do tempo virar
+  // "responsavel mudou para cmr04..." no dia em que a pessoa saisse.
+  const novoResponsavel = technicianId
+    ? (await prisma.user.findUnique({ where: { id: technicianId }, select: { name: true } }))?.name ?? null
+    : null
+
+  await registrarMudancas(
+    tenantId,
+    id,
+    retratoDaOs(order),
+    retratoDaOs({
+      status: order.status,
+      scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+      totalAmount: total,
+      conclusionNote: order.conclusionNote,
+      warrantyDays: order.warrantyDays,
+      technician: novoResponsavel ? { name: novoResponsavel } : null,
+    }),
+    await autorAtual(userId)
+  )
 
   revalidatePath("/service-orders")
   revalidatePath(`/service-orders/${id}`)

@@ -2466,5 +2466,20 @@
       "jaRecebida": "Esta compra já foi totalmente recebida.",
       "nadaARecebeber": "Informe quanto chegou de ao menos um item."
     }
+  },
+  "historicoOs": {
+    "titulo": "Histórico de alterações",
+    "alguem": "alguém da equipe",
+    "vazio": "não definido",
+    "dias": "{n, plural, one {# dia} other {# dias}}",
+    "eventos": {
+      "CRIADA": "[[OsArt]] [[os]] foi criad[[osFim]]",
+      "STATUS": "Status mudou de <de></de> para <para></para>",
+      "RESPONSAVEL": "Responsável mudou de <de></de> para <para></para>",
+      "AGENDAMENTO": "Agendamento mudou de <de></de> para <para></para>",
+      "VALOR": "Valor mudou de <de></de> para <para></para>",
+      "CONCLUSAO": "Observação de conclusão alterada",
+      "GARANTIA": "Garantia mudou de <de></de> para <para></para>"
+    }
   }
 }

@@ -10,6 +10,8 @@ import { SignaturePad } from "@/components/service-orders/signature-pad"
 import { OsFotos } from "@/components/service-orders/os-fotos"
 import { getFotosDaOs } from "@/actions/attachments"
 import { getTenant } from "@/lib/auth"
+import { historicoDaOs } from "@/lib/historico-os-db"
+import { HistoricoOs } from "@/components/service-orders/historico-os"
 import { WhatsAppButton } from "@/components/service-orders/whatsapp-button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,7 +28,10 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
   const os = await getServiceOrder(id)
   if (!os) notFound()
 
-  const [fotos, { role }] = await Promise.all([getFotosDaOs(id), getTenant()])
+  const [fotos, { role, tenantId, locale }] = await Promise.all([getFotosDaOs(id), getTenant()])
+  // Quem mudou o que, e quando. E o que resolve discussao sobre valor, status
+  // ou responsavel — ate aqui nao havia registro nenhum disso.
+  const eventos = await historicoDaOs(tenantId, id)
 
   const t = await getTranslations("serviceOrdersPages")
   const tCommon = await getTranslations("common")
@@ -220,6 +225,8 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
           )}
         </CardContent>
       </Card>
+
+      <HistoricoOs eventos={eventos} locale={locale} />
     </div>
   )
 }

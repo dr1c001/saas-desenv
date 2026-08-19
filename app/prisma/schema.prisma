@@ -129,6 +129,7 @@ model Tenant {
   parts                 Part[]
   stockMovements        StockMovement[]
   purchaseOrders        PurchaseOrder[]
+  orderEvents           OrderEvent[]
 }
 
 // Idioma da empresa — governa dashboard, e-mails e PDFs gerados pro tenant
@@ -218,6 +219,7 @@ model User {
   userAddress       UserAddress?
   serviceContracts  ServiceContract[]
   stockMovements    StockMovement[]
+  orderEvents       OrderEvent[]
 
   // Aba Equipe lista por tenant; seleção de técnico filtra por papel.
   @@index([tenantId, role])
@@ -347,6 +349,7 @@ model ServiceOrder {
   checklist      ChecklistItem[]
   contract       ServiceContract? @relation(fields: [contractId], references: [id], onDelete: SetNull)
   stockMovements StockMovement[]
+  orderEvents    OrderEvent[]
 
   @@unique([tenantId, number])
   // Listagem de OS e "OS ativas" do dashboard.
@@ -1024,4 +1027,54 @@ model PurchaseItem {
 
   @@index([purchaseOrderId])
   @@index([partId])
+}
+
+// ─── Historico de alteracao da OS ────────────────────────────────────────────
+
+enum OrderEventType {
+  CRIADA
+  STATUS
+  RESPONSAVEL
+  AGENDAMENTO
+  VALOR
+  CONCLUSAO
+  GARANTIA
+}
+
+/// Quem mudou o que, e quando, numa ordem de servico.
+///
+/// Ate 18/08/2026 existia log de auditoria do painel da plataforma, mas
+/// NENHUM dos dados do cliente. Quando aparecia discussao — "esse valor nao
+/// era esse", "quem cancelou?", "o tecnico era outro" — nao havia como saber.
+/// Numa empresa de servico isso e a diferenca entre resolver em um minuto e
+/// perder o cliente.
+model OrderEvent {
+  id       String         @id @default(cuid())
+  tenantId String
+  orderId  String
+  type     OrderEventType
+
+  /// Nome de quem fez, guardado como TEXTO.
+  ///
+  /// Nao e desnormalizacao por descuido: o historico precisa continuar
+  /// legivel depois que a pessoa sai da empresa. Guardar so o id faria a
+  /// linha do tempo virar "responsavel mudou para cmr04..." justamente no
+  /// caso em que alguem vai consultar o registro.
+  actorName String?
+  actorId   String?
+
+  /// Valor antes e depois, como texto. Para STATUS o texto E o codigo, e a
+  /// tela traduz; para os demais ja vem legivel. Ver lib/historico-os.ts.
+  before String?
+  after  String?
+
+  createdAt DateTime @default(now())
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id])
+  order  ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actor  User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  // A consulta e sempre "a linha do tempo desta OS, da mais nova pra mais velha".
+  @@index([orderId, createdAt])
+  @@index([tenantId, createdAt])
 }

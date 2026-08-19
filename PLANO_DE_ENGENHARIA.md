@@ -1402,6 +1402,45 @@ R$ 397 de evaporar em silêncio.
 
 ---
 
+### 7.2.21 Histórico de alteração da OS — 18/08/2026
+
+Item 9 do Nível 3.
+
+Até aqui existia log de auditoria do painel da plataforma (`AdminAuditLog`,
+7.2.9) mas **nenhum** dos dados do cliente. Quando aparecesse discussão — "esse
+valor não era esse", "quem cancelou?", "o técnico era outro" — não havia como
+saber quem mudou o quê nem quando. Numa empresa de serviço isso não é
+curiosidade: é a diferença entre resolver em um minuto e perder o cliente.
+
+**Nem toda mudança vira evento.** Registrar cada campo enterraria os que
+importam no meio de ruído, e histórico que ninguém lê é o mesmo que não ter
+histórico. Entram seis: status, responsável, agendamento, valor, conclusão e
+garantia. Salvar a OS sem tocar em nada não gera linha nenhuma.
+
+Três decisões que aparecem no comportamento:
+
+| Decisão | Por quê |
+|---|---|
+| **`actorName` é texto, não só FK** | O registro precisa continuar legível depois que a pessoa sai da empresa. Guardar só o id faria a linha do tempo virar "responsável mudou para cmr04…" justamente quando alguém for consultá-la |
+| **Valor comparado como número** | `"100"` e `"100.00"` são o mesmo dinheiro; comparar como texto geraria um evento a cada gravação e em um mês o histórico ficaria ilegível |
+| **Da conclusão guarda só QUE mudou** | São parágrafos inteiros. Duplicá-los incharia a tabela sem ajudar ninguém — o texto atual está na própria OS |
+
+Status é o único campo cujo valor guardado é um **código**, traduzido na tela —
+senão o histórico ficaria em português numa conta em inglês. Os demais já são
+gravados legíveis.
+
+A gravação **nunca lança**: histórico é registro do que aconteceu, não parte do
+que está acontecendo. Falhar aqui não pode impedir o técnico de concluir a OS
+no meio da rua — um histórico com buraco ainda é melhor que uma OS que não
+fecha.
+
+Ganchos em `createServiceOrder`, `updateOrderStatus`, `completeServiceOrder` e
+`updateServiceOrder`.
+
+451 → 463 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

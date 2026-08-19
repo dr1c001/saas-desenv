@@ -2466,5 +2466,20 @@
       "jaRecebida": "This purchase was already fully received.",
       "nadaARecebeber": "Enter how much arrived for at least one item."
     }
+  },
+  "historicoOs": {
+    "titulo": "Change history",
+    "alguem": "a team member",
+    "vazio": "not set",
+    "dias": "{n, plural, one {# day} other {# days}}",
+    "eventos": {
+      "CRIADA": "The [[os]] was created",
+      "STATUS": "Status changed from <de></de> to <para></para>",
+      "RESPONSAVEL": "Assignee changed from <de></de> to <para></para>",
+      "AGENDAMENTO": "Schedule changed from <de></de> to <para></para>",
+      "VALOR": "Amount changed from <de></de> to <para></para>",
+      "CONCLUSAO": "Completion note edited",
+      "GARANTIA": "Warranty changed from <de></de> to <para></para>"
+    }
   }
 }
