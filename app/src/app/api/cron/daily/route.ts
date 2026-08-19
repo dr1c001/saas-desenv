@@ -4,6 +4,7 @@ import {
   sendOnboardingDay3Email,
   sendNpsEmail,
   sendPastDueWarningEmail,
+  avisarFalhaDoCron,
 } from "@/lib/resend"
 import { decidirAviso, diasDeAtraso, AVISOS_ATRASO } from "@/lib/past-due"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
@@ -44,6 +45,13 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date()
+  // Registra que ESTA execucao comecou. Sem isso, um cron que morreu ha tres
+  // dias e indistinguivel de um que rodou — e o estrago e invisivel: ninguem
+  // recebe aviso de atraso, contrato recorrente nao gera OS.
+  const execucao = await prisma.cronRun
+    .create({ data: { name: "daily" }, select: { id: true } })
+    .catch(() => null)
+
   const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, contratos: 0, retrato: "", errors: 0 }
 
   // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
@@ -339,5 +347,31 @@ export async function GET(req: NextRequest) {
     results.errors++
   }
 
-  return NextResponse.json({ ok: true, ...results })
+  // ── Fecha o registro da execucao ─────────────────────────────────────────
+  // ok = false quando houve QUALQUER erro: e o que faz /api/health devolver
+  // 503 e o monitor externo alertar. Cron que falha metade e conta como
+  // sucesso e pior que cron que nao roda, porque ninguem investiga.
+  const semErro = results.errors === 0
+  if (execucao) {
+    await prisma.cronRun
+      .update({
+        where: { id: execucao.id },
+        data: {
+          finishedAt: new Date(),
+          ok: semErro,
+          detail: `${results.errors} erro(s); nps ${results.nps}, contratos ${results.contratos}, geocodificados ${results.geocoded}`,
+        },
+      })
+      .catch((e) => console.error("[cron] falha ao registrar execucao:", e))
+  }
+
+  // Aviso ao dono. Ate aqui o erro era contado e esquecido: o resultado ficava
+  // no corpo de uma resposta HTTP que ninguem le.
+  if (!semErro) {
+    await avisarFalhaDoCron(results.errors, results).catch((e) =>
+      console.error("[cron] falha ao avisar sobre o proprio erro:", e)
+    )
+  }
+
+  return NextResponse.json({ ok: semErro, ...results })
 }

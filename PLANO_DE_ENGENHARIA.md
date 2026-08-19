@@ -1496,6 +1496,67 @@ pessoais de clientes finais de terceiros.
 
 ---
 
+### 7.2.23 Monitoramento ativo — 19/08/2026
+
+Item 11 do Nível 3. Fecha o Nível 3, exceto a página de status pública (13).
+
+O ponto de partida: o Sentry pega exceção, mas ninguém é avisado quando o site
+simplesmente para de responder às 2h da manhã — nem quando o cron diário morre
+em silêncio. **Silêncio é indistinguível de sucesso**, e essa é a pior
+propriedade que um sistema de fundo pode ter.
+
+**O que decide o desenho:** um monitor que roda na mesma infraestrutura que
+monitora não serve. Se a Vercel cair, um cron da Vercel não avisa ninguém. A
+checagem de fora é, obrigatoriamente, serviço de terceiro. O que este trabalho
+faz é dar a ela algo honesto para encontrar.
+
+**`GET /api/health`** — pública (monitor não faz login), sem nenhum dado de
+negócio no corpo. Verifica dois sinais:
+
+| Sinal | Como |
+|---|---|
+| Banco | Uma consulta trivial. Se não responde, degradado |
+| Cron | Última execução BEM-SUCEDIDA. Mais velha que 26h, degradado |
+
+O detalhe que faz tudo funcionar: **503 quando degradado**. Monitor de uptime
+alerta em resposta não-2xx e não lê corpo por padrão — devolver 200 com
+`{"estado":"degradado"}` seria bonito e completamente inútil.
+
+O cron é o sinal que de fora ninguém consegue enxergar: o site responde, tudo
+parece bem, e há três dias ninguém recebe aviso de cobrança, contrato
+recorrente não gera OS e coordenada não é preenchida. Por isso a tabela
+`CronRun` registra cada execução, e `ok = false` quando houve **qualquer**
+erro — cron que falha metade e conta como sucesso é pior que cron que não
+roda, porque ninguém investiga.
+
+**Tolerância de 26h, não 24.** A Vercel não garante o minuto exato, e um
+atraso de meia hora não é queda. Alarme que dispara por atraso normal é alarme
+que a pessoa aprende a ignorar — e aí ele deixa de funcionar justamente no dia
+real. Pelo mesmo motivo, sistema recém-implantado que ainda não teve um cron
+**não** nasce vermelho: só vira problema depois de ter passado tempo
+suficiente para um cron ter acontecido.
+
+**E-mail ao dono quando o cron falha.** Até aqui o erro era contado numa
+variável e esquecido — o resultado ficava no corpo de uma resposta HTTP que
+ninguém lê.
+
+483 → 494 testes.
+
+**O que só o dono pode fazer**, e sem o que nada disto alerta:
+
+1. Contratar um monitor externo (UptimeRobot, Better Stack e similares têm
+   plano grátis suficiente para isto).
+2. Apontar para `https://servicoos.com.br/api/health`, intervalo de 5 minutos.
+3. Configurar o alerta para o **celular**, não só e-mail — às 2h da manhã o
+   e-mail não acorda ninguém.
+4. Conferir que `SUPER_ADMIN_EMAIL` está definida em Production, senão o aviso
+   de falha do cron não tem para onde ir.
+
+Enquanto o passo 1 não for feito, a rota existe e ninguém a consulta — o que
+é exatamente o mesmo que não ter monitoramento.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

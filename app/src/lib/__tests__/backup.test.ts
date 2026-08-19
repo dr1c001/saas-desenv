@@ -81,8 +81,11 @@ describe("serialização", () => {
   })
 
   it("bigint sobrevive — e sem ele o JSON.stringify lançaria", () => {
-    const voltou = doJson(JSON.parse(JSON.stringify(paraJson(123456789012345678n))))
-    expect(voltou).toBe(123456789012345678n)
+    // BigInt() em vez do literal `...n`: o alvo do tsconfig é anterior ao
+    // ES2020, e o literal compila no vitest mas quebra o typecheck.
+    const grande = BigInt("123456789012345678")
+    const voltou = doJson(JSON.parse(JSON.stringify(paraJson(grande))))
+    expect(voltou).toBe(grande)
   })
 
   it("bytes sobrevivem em base64", () => {

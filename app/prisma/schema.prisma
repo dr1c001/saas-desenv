@@ -1078,3 +1078,30 @@ model OrderEvent {
   @@index([orderId, createdAt])
   @@index([tenantId, createdAt])
 }
+
+// ─── Saude do sistema ────────────────────────────────────────────────────────
+
+/// Registro de cada execucao do cron.
+///
+/// Existe porque silencio e indistinguivel de sucesso: sem gravar, um cron que
+/// morreu ha tres dias parece exatamente igual a um cron que rodou. E o
+/// estrago e invisivel — ninguem recebe aviso de atraso, contrato recorrente
+/// nao gera OS, coordenada nao e preenchida.
+///
+/// A rota /api/health le a ultima execucao bem-sucedida e devolve 503 quando
+/// esta velha demais, que e o que faz o monitor externo alertar.
+model CronRun {
+  id         String    @id @default(cuid())
+  /// Qual cron. Ha um so hoje ("daily"), mas nomear evita que o segundo
+  /// precise de outra tabela.
+  name       String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  ok         Boolean   @default(false)
+  /// Resumo do que foi feito, ou do que falhou. Texto curto: isto e sinal de
+  /// saude, nao log de aplicacao.
+  detail     String?
+
+  // A consulta e sempre "a ultima execucao boa deste cron".
+  @@index([name, ok, startedAt])
+}

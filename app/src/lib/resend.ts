@@ -341,3 +341,49 @@ export async function sendClientNoticeEmail(
       </div>`,
   })
 }
+
+/**
+ * Avisa o dono da plataforma que o cron diário falhou.
+ *
+ * Até 19/08/2026 o erro do cron era contado numa variável e esquecido: o
+ * resultado ficava no corpo de uma resposta HTTP que ninguém lê. Um cron que
+ * falha em silêncio significa cobrança que não sai, contrato recorrente que
+ * não gera OS e cliente inadimplente sem aviso — tudo invisível até alguém
+ * reclamar.
+ *
+ * Vai em texto simples e sem tradução de propósito: é e-mail de máquina para
+ * uma pessoa só, o dono, e o que importa é chegar.
+ */
+export async function avisarFalhaDoCron(
+  erros: number,
+  detalhe: Record<string, unknown>
+) {
+  const para = process.env.SUPER_ADMIN_EMAIL?.trim()
+  if (!para) {
+    console.error("[cron] falhou, mas SUPER_ADMIN_EMAIL não está definido — ninguém foi avisado.")
+    return
+  }
+
+  return send({
+    from: FROM,
+    replyTo: REPLY_TO,
+    to: para,
+    subject: `[ServiçoOS] Cron diário falhou (${erros} erro${erros > 1 ? "s" : ""})`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+        <h2 style="color:#dc2626;margin-bottom:8px">O cron diário terminou com erro</h2>
+        <p style="color:#374151;line-height:1.6">
+          Parte das tarefas de fundo não rodou. Enquanto isso não for resolvido,
+          pode faltar aviso de cobrança, geração de OS de contrato recorrente e
+          reconciliação de pagamento.
+        </p>
+        <pre style="background:#f3f4f6;padding:12px;border-radius:6px;font-size:12px;overflow-x:auto">${
+          JSON.stringify(detalhe, null, 2)
+        }</pre>
+        <p style="color:#6b7280;font-size:13px">
+          Os detalhes do erro estão no log da função em
+          <a href="https://vercel.com">vercel.com</a> e no Sentry.
+        </p>
+      </div>`,
+  })
+}
