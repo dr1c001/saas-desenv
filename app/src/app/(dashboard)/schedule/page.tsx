@@ -9,11 +9,20 @@ import { formatOsNumber } from "@/lib/utils"
 
 type SearchParams = Promise<{ year?: string; month?: string }>
 
+function numeroEntre(valor: string | undefined, min: number, max: number): number | null {
+  if (!valor) return null
+  const n = Number(valor)
+  return Number.isInteger(n) && n >= min && n <= max ? n : null
+}
+
 export default async function SchedulePage({ searchParams }: { searchParams: SearchParams }) {
   const { year: ys, month: ms } = await searchParams
   const now = new Date()
-  const year = ys ? parseInt(ys) : now.getFullYear()
-  const month = ms ? parseInt(ms) : now.getMonth() + 1
+  // Cai no mês atual quando o valor não presta. Passou a importar mais desde
+  // que navegar de mês virou navegação de URL: `?year=abc` daria NaN, e
+  // `new Date(NaN, ...)` desenha uma grade inteira de vazio sem dizer por quê.
+  const year = numeroEntre(ys, 1970, 2100) ?? now.getFullYear()
+  const month = numeroEntre(ms, 1, 12) ?? now.getMonth() + 1
 
   const events = await getScheduledOrders(year, month)
   const t = await getTranslations("schedule")
@@ -31,7 +40,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Sea
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
         <Card>
           <CardContent className="pt-4">
-            <Calendar events={events} initialYear={year} initialMonth={month} />
+            <Calendar events={events} year={year} month={month} />
           </CardContent>
         </Card>
 

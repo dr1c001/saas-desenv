@@ -1434,6 +1434,23 @@
       ],
       "eventTooltip": "[[osC]] #{number} — {title}\n{client}",
       "moreEvents": "+{count} mais"
+    },
+    "reagendar": {
+      "mover": "Mover [[osC]] #{number}",
+      "mesAnterior": "Mês anterior",
+      "mesSeguinte": "Próximo mês",
+      "escolhaODia": "Toque no dia para onde quer mover.",
+      "soltarNoDia": "Mover para o dia {dia}",
+      "movida": "[[osC]] #{number} movid[[osFim]] para {data} às {hora}.",
+      "conflito": "{count, plural, one {Atenção: {nome} já tem outro serviço nesse horário.} other {Atenção: {nome} já tem # serviços nesse horário.}}",
+      "motivo": {
+        "concluida": "Já concluíd[[osFim]]. Para corrigir a data, use a tela de edição.",
+        "faturada": "Já faturad[[osFim]]. A nota fiscal está vinculada a esta data.",
+        "cancelada": "Cancelad[[osFim]]. Não está mais na agenda.",
+        "naoEncontrada": "[[osC]] não encontrad[[osFim]].",
+        "semAgendamento": "Sem data agendada para mover.",
+        "dataInvalida": "Data inválida."
+      }
     }
   },
   "billingReferral": {

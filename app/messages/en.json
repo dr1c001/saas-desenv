@@ -1434,6 +1434,23 @@
       ],
       "eventTooltip": "[[osC]] #{number} — {title}\n{client}",
       "moreEvents": "+{count} more"
+    },
+    "reagendar": {
+      "mover": "Move [[osC]] #{number}",
+      "mesAnterior": "Previous month",
+      "mesSeguinte": "Next month",
+      "escolhaODia": "Tap the day you want to move it to.",
+      "soltarNoDia": "Move to day {dia}",
+      "movida": "[[osC]] #{number} moved to {data} at {hora}.",
+      "conflito": "{count, plural, one {Heads up: {nome} already has another job at that time.} other {Heads up: {nome} already has # jobs at that time.}}",
+      "motivo": {
+        "concluida": "Already completed. To correct the date, use the edit screen.",
+        "faturada": "Already invoiced. The tax invoice is tied to this date.",
+        "cancelada": "Cancelled. No longer on the schedule.",
+        "naoEncontrada": "[[osC]] not found.",
+        "semAgendamento": "No scheduled date to move.",
+        "dataInvalida": "Invalid date."
+      }
     }
   },
   "billingReferral": {

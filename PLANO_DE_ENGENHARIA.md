@@ -1642,6 +1642,64 @@ exige sinal.
 
 ---
 
+### 7.2.26 Agenda arrastar-e-soltar — 20/08/2026
+
+A agenda era uma grade de **leitura**. Reagendar exigia abrir a OS, entrar em
+editar, mexer na data e salvar — três telas para mover um card um dia adiante.
+Quem monta a semana faz isso dezenas de vezes, e o custo não está em nenhuma
+tela isolada: está em ter que sair da visão que mostra o problema (a semana
+cheia) para resolver o problema.
+
+**Dois defeitos encontrados no caminho, ambos no código que já existia:**
+
+1. **Os botões de mês não refaziam a busca.** Mexiam só em estado local, e o
+   agrupamento por dia usava `getDate()` sem conferir o mês. Avançar um mês
+   redesenhava as **mesmas OS** nos mesmos números de dia. Enganoso por si só;
+   com arrastar, passaria a mover a OS errada. Corrigido: navegar de mês agora
+   é navegação de URL (`?year=&month=`), o servidor refaz a busca, e o
+   agrupamento confere ano e mês.
+2. **`?year=abc` dava `NaN`** e `new Date(NaN, …)` desenhava uma grade inteira
+   de vazio sem explicar. Passou a importar mais justamente porque o mês virou
+   URL. Agora cai no mês atual.
+
+**Decisões que definem o recurso:**
+
+- **O cliente escolhe o DIA, não o instante.** A hora vem do agendamento que já
+  está no banco e o servidor monta a data final. Server Action é endereço HTTP
+  como outro qualquer: aceitar um instante pronto significaria que bastava
+  chamar direto para gravar qualquer data em qualquer OS.
+- **A hora sobrevive ao arrasto.** Arrastar responde "quando", não "que horas".
+  Zerar a hora transformaria a agenda do dia inteiro em meia-noite.
+- **Concluída, faturada e cancelada não arrastam**, cada uma com seu motivo na
+  tela. Mais restrito que o formulário de propósito: o formulário é ato
+  deliberado com campo de data à vista; arrastar é gesto, e gesto acontece sem
+  querer. Quem precisa corrigir a data de uma OS concluída ainda consegue pela
+  edição.
+- **Entra no histórico igual ao formulário.** Se só o formulário registrasse, o
+  caminho mais rápido seria também o que não deixa rastro — e a linha do tempo
+  mentiria por omissão exatamente no campo que mais gera discussão com cliente.
+- **Conflito avisa, não impede.** A OS não tem duração no modelo, só o instante.
+  Então o aviso é o honesto que os dados permitem — "esta pessoa já tem outro
+  serviço nesse horário" — e não uma sobreposição simulada com duração
+  inventada, que daria falso alarme em visita de quinze minutos e silêncio em
+  reforma de um dia. Quem monta a agenda às vezes encaixa dois de propósito.
+- **No celular não existe arrastar.** A alça vira "pegar", e o dia de destino
+  recebe um alvo que cobre a célula inteira. O card continua sendo link: o
+  toque que abre a OS é a ação principal e não podia virar refém do arrastar.
+
+O cálculo de data dá o mesmo resultado no servidor (UTC) e no navegador (fuso
+do usuário) porque lê e escreve no mesmo fuso — a diferença se cancela. Valeria
+revisar se o Brasil voltasse a ter horário de verão.
+
+`lib/agenda.ts` é puro porque a regra precisa valer igual nos dois lados: a
+tela decide o que deixa arrastar, o servidor decide o que aceita. Se as cópias
+divergirem, a tela promete um movimento que o servidor recusa — ou aceita um
+que a tela achava impossível.
+
+530 → 542 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`
