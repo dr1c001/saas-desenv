@@ -28,6 +28,7 @@ import {
   Gift,
   Landmark,
   ListPlus,
+  Building2,
   Languages,
   Plug,
   CalendarSync,
@@ -89,9 +90,11 @@ type Props = {
    *  mostrar e mandar para a tela de planos ao clicar é propaganda disfarçada
    *  de funcionalidade. */
   temApi?: boolean
+  /** Filiais também é recurso do Enterprise. Mesmo motivo do temApi. */
+  temFiliais?: boolean
 }
 
-export function AppSidebar({ allowedTabs, role, isSuperAdmin, temApi }: Props) {
+export function AppSidebar({ allowedTabs, role, isSuperAdmin, temApi, temFiliais }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const t = useTranslations()
@@ -209,6 +212,14 @@ export function AppSidebar({ allowedTabs, role, isSuperAdmin, temApi }: Props) {
               <SidebarMenuButton render={<Link href="/settings/fields" />}>
                 <ListPlus className="size-4" />
                 <span>{t("nav.customFields")}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
+          {(role === "OWNER" || role === "ADMIN") && temFiliais && (
+            <SidebarMenuItem>
+              <SidebarMenuButton render={<Link href="/settings/filiais" />}>
+                <Building2 className="size-4" />
+                <span>{t("nav.filiais")}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )}

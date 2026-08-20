@@ -7,7 +7,7 @@ import Link from "next/link"
 import { Plus } from "lucide-react"
 import { formatOsNumber } from "@/lib/utils"
 
-type SearchParams = Promise<{ year?: string; month?: string }>
+type SearchParams = Promise<{ year?: string; month?: string; filial?: string }>
 
 function numeroEntre(valor: string | undefined, min: number, max: number): number | null {
   if (!valor) return null
@@ -16,7 +16,7 @@ function numeroEntre(valor: string | undefined, min: number, max: number): numbe
 }
 
 export default async function SchedulePage({ searchParams }: { searchParams: SearchParams }) {
-  const { year: ys, month: ms } = await searchParams
+  const { year: ys, month: ms, filial } = await searchParams
   const now = new Date()
   // Cai no mês atual quando o valor não presta. Passou a importar mais desde
   // que navegar de mês virou navegação de URL: `?year=abc` daria NaN, e
@@ -24,7 +24,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Sea
   const year = numeroEntre(ys, 1970, 2100) ?? now.getFullYear()
   const month = numeroEntre(ms, 1, 12) ?? now.getMonth() + 1
 
-  const events = await getScheduledOrders(year, month)
+  const events = await getScheduledOrders(year, month, filial)
   const t = await getTranslations("schedule")
 
   return (

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { ChevronLeft, ChevronRight, GripVertical, Lock, X } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
@@ -39,6 +39,7 @@ export function Calendar({ events, year, month }: Props) {
   const t = useTranslations("schedule")
   const tc = useTranslations("common")
   const router = useRouter()
+  const searchParams = useSearchParams()
   const weekdays = t.raw("calendar.weekdays") as string[]
   const months = t.raw("calendar.months") as string[]
 
@@ -52,6 +53,16 @@ export function Calendar({ events, year, month }: Props) {
 
   const anterior = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 }
   const proximo = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 }
+
+  /** Troca ano e mês PRESERVANDO o resto da URL. Montar o endereço à mão
+   *  descartaria o filtro de filial — e a pessoa que filtrou uma unidade
+   *  voltaria a ver a empresa toda só por avançar um mês, sem perceber. */
+  function mes(y: number, m: number): string {
+    const p = new URLSearchParams(searchParams.toString())
+    p.set("year", String(y))
+    p.set("month", String(m))
+    return `/schedule?${p.toString()}`
+  }
 
   const firstDay = new Date(year, month - 1, 1).getDay()
   const daysInMonth = new Date(year, month, 0).getDate()
@@ -150,7 +161,7 @@ export function Calendar({ events, year, month }: Props) {
           refaz a busca no servidor), e não só estado da tela. */}
       <div className="flex items-center justify-between">
         <Link
-          href={`/schedule?year=${anterior.y}&month=${anterior.m}`}
+          href={mes(anterior.y, anterior.m)}
           className={buttonVariants({ variant: "ghost" })}
           aria-label={t("reagendar.mesAnterior")}
         >
@@ -158,7 +169,7 @@ export function Calendar({ events, year, month }: Props) {
         </Link>
         <span className="font-semibold text-base">{months[month - 1]} {year}</span>
         <Link
-          href={`/schedule?year=${proximo.y}&month=${proximo.m}`}
+          href={mes(proximo.y, proximo.m)}
           className={buttonVariants({ variant: "ghost" })}
           aria-label={t("reagendar.mesSeguinte")}
         >

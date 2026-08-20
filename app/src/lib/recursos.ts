@@ -17,6 +17,7 @@ export type Recurso =
   | "advancedReports" // Período personalizado, ranking de clientes, detalhamento
   | "stock"           // Estoque de peças e ordens de compra
   | "api"             // API de integração — SÓ Enterprise (ver lib/plan.ts)
+  | "filiais"         // Mais de uma unidade — SÓ Enterprise (ver lib/plan.ts)
 
 /** Todos os recursos que existem. Fonte única — a tela do painel monta a partir daqui. */
 export const RECURSOS: readonly Recurso[] = [
@@ -27,6 +28,7 @@ export const RECURSOS: readonly Recurso[] = [
   "advancedReports",
   "stock",
   "api",
+  "filiais",
 ]
 
 /**

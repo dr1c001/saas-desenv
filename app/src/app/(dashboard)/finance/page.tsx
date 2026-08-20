@@ -14,17 +14,22 @@ import { TrendingUp, TrendingDown, DollarSign } from "lucide-react"
 import { ExpenseDialog } from "@/components/finance/expense-dialog"
 import { PayButton } from "@/components/finance/pay-button"
 import { SearchBar } from "@/components/shared/search-bar"
+import { StatusFilter } from "@/components/shared/status-filter"
+import { filiaisAtivas } from "@/actions/filiais"
 
-type SearchParams = Promise<{ q?: string }>
+type SearchParams = Promise<{ q?: string; filial?: string }>
 
 export default async function FinancePage({ searchParams }: { searchParams: SearchParams }) {
-  const { q } = await searchParams
+  const { q, filial } = await searchParams
   const t = await getTranslations("finance")
+  const tFil = await getTranslations("filiais.filtro")
   const { role } = await getTenant()
   if (role !== "OWNER" && role !== "ADMIN") redirect("/dashboard")
 
-  const { revenues, expenses, monthlyRevenue, pendingRevenues, pendingExpenses } =
-    await getFinanceSummary(q)
+  // Cada unidade fecha o mês dela. O que não tem filial (despesa da empresa)
+  // entra em todas — ver lib/filial.ts.
+  const [{ revenues, expenses, monthlyRevenue, pendingRevenues, pendingExpenses }, filiais] =
+    await Promise.all([getFinanceSummary(q, filial), filiaisAtivas()])
 
   const totalPendingRevenue = pendingRevenues.reduce((s, r) => s + Number(r.amount), 0)
   const totalPendingExpense = pendingExpenses.reduce((s, e) => s + Number(e.amount), 0)
@@ -39,9 +44,20 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
         <ExpenseDialog />
       </div>
 
-      <Suspense>
-        <SearchBar placeholder={t("list.searchPlaceholder")} />
-      </Suspense>
+      <div className="flex flex-wrap gap-2">
+        <Suspense>
+          <SearchBar placeholder={t("list.searchPlaceholder")} />
+          {/* Só aparece quando há filial de verdade: um seletor com uma opção
+              só é ruído. */}
+          {filiais.length > 0 && (
+            <StatusFilter
+              paramKey="filial"
+              options={filiais.map((f) => ({ value: f.id, label: f.name }))}
+              placeholder={tFil("todas")}
+            />
+          )}
+        </Suspense>
+      </div>
 
       {/* KPI cards */}
       <div className="grid gap-4 md:grid-cols-3">

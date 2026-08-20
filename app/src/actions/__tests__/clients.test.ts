@@ -11,6 +11,10 @@ beforeAll(async () => {
   vi.doMock("@/lib/auth", () => ({
     getTenant: mockGetTenant,
     requireActiveSubscription: vi.fn().mockResolvedValue(undefined),
+    // {} = ve tudo. O escopo por filial tem os testes dele em filial.test.ts e
+    // filial-consulta.test.ts; aqui o assunto e isolamento entre EMPRESAS.
+    filtroDeFilialAtual: vi.fn().mockResolvedValue({}),
+    checarAcao: vi.fn().mockResolvedValue(null),
   }))
 })
 

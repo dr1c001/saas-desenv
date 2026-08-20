@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { filtroDeFilialAtual, getTenant, requireActiveSubscription } from "@/lib/auth"
+import { filialParaNovo } from "@/lib/filial"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 import { getTranslations } from "next-intl/server"
 import { translateFieldErrors } from "@/lib/validation"
@@ -25,7 +26,7 @@ export async function createExpense(
   _prev: FinanceFormState,
   formData: FormData
 ): Promise<FinanceFormState> {
-  const { tenantId, role } = await getTenant()
+  const { tenantId, role, branchId } = await getTenant()
   await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return { message: (await getTranslations("common"))("noPermission") }
 
@@ -41,6 +42,7 @@ export async function createExpense(
       ...parsed.data,
       dueDate: new Date(parsed.data.dueDate),
       tenantId,
+      branchId: filialParaNovo(null, branchId),
     },
   })
 
@@ -70,7 +72,7 @@ export async function markExpensePaid(id: string) {
   revalidatePath("/finance")
 }
 
-export async function getFinanceSummary(q?: string) {
+export async function getFinanceSummary(q?: string, filial?: string | null) {
   const { tenantId, role } = await getTenant()
   // Auto-defesa: essa função já tem um Action ID registrado e despachável
   // pelo Next.js independente de quem a importa hoje — não dá pra confiar
@@ -80,9 +82,12 @@ export async function getFinanceSummary(q?: string) {
   await requireActiveSubscription(tenantId)
 
   // Fetch all data for KPI calculations, then filter for table display
+  // O financeiro é escopado: cada unidade fecha o mês dela. O que não tem
+  // filial entra em todas — é despesa da empresa, não de uma unidade.
+  const filtro = await filtroDeFilialAtual(filial)
   const [allRevenues, allExpenses] = await Promise.all([
-    prisma.revenue.findMany({ where: { tenantId }, orderBy: { dueDate: "asc" } }),
-    prisma.expense.findMany({ where: { tenantId }, orderBy: { dueDate: "asc" } }),
+    prisma.revenue.findMany({ where: { tenantId, ...filtro }, orderBy: { dueDate: "asc" } }),
+    prisma.expense.findMany({ where: { tenantId, ...filtro }, orderBy: { dueDate: "asc" } }),
   ])
 
   // Início do mês em horário de Brasília, não UTC do servidor — ver

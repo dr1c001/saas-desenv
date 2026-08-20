@@ -84,6 +84,7 @@ model Tenant {
   maintenanceOrders MaintenanceOrder[]
   tabPermissions    TabPermission[]
   actionPermissions ActionPermission[]
+  branches          Branch[]
   apiKeys           ApiKey[]
   quotes            Quote[]
   plan              Plan?              @relation(fields: [planId], references: [id])
@@ -221,8 +222,11 @@ model User {
   tenantId  String
   document  String?
   phone     String?
+  /// A filial da pessoa. NULL = nao esta presa a nenhuma, e ve tudo.
+  branchId  String?
   createdAt DateTime @default(now())
 
+  branch            Branch?            @relation(fields: [branchId], references: [id], onDelete: SetNull)
   tenant            Tenant             @relation(fields: [tenantId], references: [id])
   serviceOrders     ServiceOrder[]
   location          UserLocation?
@@ -234,6 +238,7 @@ model User {
 
   // Aba Equipe lista por tenant; seleção de técnico filtra por papel.
   @@index([tenantId, role])
+  @@index([branchId])
 }
 
 model UserAddress {
@@ -269,9 +274,12 @@ model Client {
   // Valores dos CustomField de entity=CLIENT: { [customFieldId]: valor }
   customValues Json?        @db.JsonB
   tenantId     String
+  /// NULL = cliente da empresa toda, visivel em todas as filiais.
+  branchId     String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
+  branch        Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
   address       Address?
   tenant        Tenant            @relation(fields: [tenantId], references: [id])
   serviceOrders ServiceOrder[]
@@ -281,6 +289,7 @@ model Client {
   // getClients(): where tenantId [+ status] order by createdAt desc
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
+  @@index([tenantId, branchId])
 }
 
 enum ClientStatus {
@@ -330,6 +339,10 @@ model ServiceOrder {
   totalAmount        Decimal       @default(0) @db.Decimal(12, 2)
   clientId           String
   tenantId           String
+  /// Herdada do CLIENTE, e nao de quem digitou: o cliente e da unidade que o
+  /// atende, e um atendente da matriz abrindo OS pra cliente da filial nao
+  /// muda de quem e aquele cliente. Ver lib/filial.ts.
+  branchId           String?
   technicianId       String?
   scheduledAt        DateTime?
   concludedAt        DateTime?
@@ -351,6 +364,7 @@ model ServiceOrder {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
+  branch         Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
   client         Client           @relation(fields: [clientId], references: [id])
   tenant         Tenant           @relation(fields: [tenantId], references: [id])
   technician     User?            @relation(fields: [technicianId], references: [id])
@@ -363,6 +377,7 @@ model ServiceOrder {
   orderEvents    OrderEvent[]
 
   @@unique([tenantId, number])
+  @@index([tenantId, branchId])
   // Listagem de OS e "OS ativas" do dashboard.
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
@@ -438,8 +453,11 @@ model Revenue {
   status      PaymentStatus @default(PENDING)
   tenantId    String
   orderId     String?
+  /// Herdada da OS que gerou a receita.
+  branchId    String?
   createdAt   DateTime      @default(now())
 
+  branch Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
   tenant Tenant        @relation(fields: [tenantId], references: [id])
   order  ServiceOrder? @relation(fields: [orderId], references: [id])
 
@@ -462,8 +480,11 @@ model Expense {
   category    ExpenseCategory @default(OTHER)
   tenantId    String
   recurring   Boolean         @default(false)
+  /// Escolhida no cadastro da despesa.
+  branchId    String?
   createdAt   DateTime        @default(now())
 
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   // Mesma forma da Revenue: gráfico do dashboard e listagem do Financeiro.
@@ -611,6 +632,38 @@ enum QuoteStatus {
 }
 
 // ─── Controle de Acesso ───────────────────────────────────────────────────────
+
+/// Unidade da empresa. Uma empresa com matriz e filiais.
+///
+/// O QUE E ESCOPADO por filial: clientes, ordens de servico, agenda,
+/// financeiro (receitas e despesas) e a equipe.
+/// O QUE E COMPARTILHADO, por decisao: estoque e pecas, fornecedores e
+/// compras, orcamentos, contratos, configuracoes, plano e cobranca.
+///
+/// A lista de compartilhados nao e esquecimento: 447 consultas do sistema
+/// filtram por tenantId, e escopar todas de uma vez seria reescrever o
+/// sistema. Filial meio-feita — algumas telas filtrando e outras nao — e PIOR
+/// que nenhuma, porque promete separacao e vaza. Regra em lib/filial.ts.
+///
+/// TODO branchId nasce NULL, e registro sem filial e visto por TODOS. Sem
+/// isso, criar a primeira filial faria a base historica inteira sumir da tela.
+model Branch {
+  id       String  @id @default(cuid())
+  tenantId String
+  name     String
+  active   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users         User[]
+  clients       Client[]
+  serviceOrders ServiceOrder[]
+  revenues      Revenue[]
+  expenses      Expense[]
+
+  @@index([tenantId, active])
+}
 
 model TabPermission {
   id       String   @id @default(cuid())

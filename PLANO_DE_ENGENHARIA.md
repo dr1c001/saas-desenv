@@ -1820,6 +1820,68 @@ do sistema por causa da API.
 
 ---
 
+### 7.2.29 Filiais — 20/08/2026
+
+**Só no Enterprise**, junto com a API. Os dois são de empresa que cresceu — quem
+integra com ERP e quem tem mais de uma unidade costuma ser a mesma pessoa.
+
+**O escopo é declarado, não implícito.** 447 consultas do sistema filtram por
+`tenantId`; escopar todas por filial de uma vez seria reescrever o sistema. E
+filial meio-feita — algumas telas filtrando e outras não — é **pior que
+nenhuma**, porque promete separação e vaza. Então:
+
+| Separado por filial | Compartilhado, por decisão |
+|---|---|
+| Clientes, OS, agenda | Estoque e peças |
+| Financeiro (receitas e despesas) | Fornecedores e compras |
+| Equipe | Orçamentos, contratos, configurações, cobrança |
+
+A tela de Filiais mostra essas duas listas. Uma empresa que **acha** que separou
+o estoque por unidade e descobre no inventário que não separou perdeu mais do
+que teria perdido sabendo desde o começo.
+
+**As regras que evitam os dois desastres óbvios:**
+
+1. **Registro sem filial é visto por todos.** Sem isso, criar a primeira filial
+   faria a base histórica inteira desaparecer da tela — anos de cliente e OS
+   sumindo porque alguém cadastrou "Unidade Centro". A migration não preenche
+   nada: ligar filiais não muda o que ninguém vê até a empresa vincular a
+   primeira pessoa.
+2. **Sem o recurso, filial se desliga.** Um downgrade de Enterprise para Pro
+   devolve a visão completa, em vez de deixar a equipe presa a uma divisão que
+   ninguém mais consegue administrar (a tela some junto com o plano). As colunas
+   continuam gravadas: voltar restaura tudo sem recadastrar. A direção segura é
+   essa — errar para "mostra mais" mostra dado da própria empresa a quem já tem
+   acesso a ela; errar para "mostra menos" esconde o trabalho da pessoa.
+
+**O erro que quase entrou.** O filtro ia ser `{ OR: [...] }`. As consultas de
+cliente e de OS **já usam `OR` no nível de cima**, para a busca por texto —
+espalhar outro por cima substituiria o da busca em silêncio: a pesquisa pararia
+de filtrar e a listagem devolveria a base inteira, **parecendo funcionar**. Vira
+`{ AND: [{ OR: [...] }] }`, com um teste da forma e outro rodando busca e filtro
+juntos contra o banco.
+
+**Outras decisões:**
+
+- A OS herda a filial do **cliente**, não de quem digitou: um atendente da
+  matriz abrindo OS para cliente da filial não muda de quem é aquele cliente. A
+  receita herda a da OS — senão o faturamento apareceria no fechamento de todas.
+- **O filtro da tela não vale para quem está preso a uma filial.** Se valesse,
+  bastaria trocar o parâmetro na URL para ler a unidade vizinha, e o seletor de
+  tela viraria a autorização.
+- **Desativa, não apaga.** Apagar levaria junto o vínculo de cada cliente, OS e
+  receita da unidade, e o faturamento por filial do ano sumiria por um clique de
+  organização. As chaves estrangeiras são `ON DELETE SET NULL` como rede embaixo.
+- **A API herda a filial igual à tela.** Se criasse OS sem filial, a integração
+  viraria o jeito de furar a divisão sem ninguém perceber.
+- Navegar de mês na agenda **preserva a URL inteira** — montar o endereço à mão
+  descartaria o filtro, e quem filtrou uma unidade voltaria a ver a empresa
+  toda só por avançar um mês.
+
+580 → 603 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

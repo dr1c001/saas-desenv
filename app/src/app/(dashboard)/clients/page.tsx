@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/table"
 import { Plus, User, Eye, Pencil, Upload } from "lucide-react"
 import { getClients } from "@/actions/clients"
+import { filiaisAtivas } from "@/actions/filiais"
 import { getAcoesPermitidas, getTenant } from "@/lib/auth"
 import { podeFazer } from "@/lib/acoes"
 import { SearchBar } from "@/components/shared/search-bar"
@@ -20,14 +21,18 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   DEFAULTER: "destructive",
 }
 
-type SearchParams = Promise<{ q?: string; status?: string }>
+type SearchParams = Promise<{ q?: string; status?: string; filial?: string }>
 
 export default async function ClientsPage({ searchParams }: { searchParams: SearchParams }) {
-  const { q, status } = await searchParams
-  const clients = await getClients({ q, status })
+  const { q, status, filial } = await searchParams
+  const [clients, filiais] = await Promise.all([
+    getClients({ q, status, filial }),
+    filiaisAtivas(),
+  ])
   const { tenantId, role } = await getTenant()
   const podeCriar = podeFazer(role, await getAcoesPermitidas(tenantId, role), "cliente.criar")
   const t = await getTranslations("clients")
+  const tFil = await getTranslations("filiais.filtro")
   const tc = await getTranslations("common")
   const podeImportar = role === "OWNER" || role === "ADMIN"
 
@@ -61,6 +66,13 @@ export default async function ClientsPage({ searchParams }: { searchParams: Sear
         <Suspense>
           <SearchBar placeholder={t("list.searchPlaceholder")} />
           <StatusFilter options={statusOptions} placeholder={t("list.statusFilterPlaceholder")} />
+          {filiais.length > 0 && (
+            <StatusFilter
+              paramKey="filial"
+              options={filiais.map((f) => ({ value: f.id, label: f.name }))}
+              placeholder={tFil("todas")}
+            />
+          )}
         </Suspense>
       </div>
 

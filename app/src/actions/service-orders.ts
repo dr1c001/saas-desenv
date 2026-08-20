@@ -5,7 +5,7 @@ import { redirect } from "next/navigation"
 import { randomUUID } from "crypto"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { checarAcao, getTenant, requireActiveSubscription } from "@/lib/auth"
+import { checarAcao, filtroDeFilialAtual, getTenant, requireActiveSubscription } from "@/lib/auth"
 import { baixarPecasDaOs } from "@/lib/estoque-db"
 import {
   autorAtual,
@@ -17,6 +17,7 @@ import { avisarClienteDaOs } from "@/lib/enviar-aviso-cliente"
 import { sendPushToUser } from "@/lib/push"
 import { retryOnUniqueConflict } from "@/lib/retry"
 import { proximoNumeroDeOs } from "@/lib/os-numero"
+import { filialParaNovo } from "@/lib/filial"
 import { requireCotaDeOs } from "@/lib/plan"
 import { getTranslations } from "next-intl/server"
 import { translateFieldErrors } from "@/lib/validation"
@@ -43,7 +44,7 @@ export async function createServiceOrder(
   _prev: OrderFormState,
   formData: FormData
 ): Promise<OrderFormState> {
-  const { tenantId, userId } = await getTenant()
+  const { tenantId, userId, branchId } = await getTenant()
   await requireActiveSubscription(tenantId)
   if (await checarAcao("os.criar")) return { message: (await getTranslations("common"))("noPermission") }
 
@@ -68,7 +69,13 @@ export async function createServiceOrder(
   // pertencem ao próprio tenant, dava pra linkar a OS a um Client/User de
   // outra empresa e ver os dados completos dele na página da OS.
   // (Achado em revisão de segurança 2026-07-19.)
-  const client = await prisma.client.findUnique({ where: { id: clientId, tenantId }, select: { id: true } })
+  const client = await prisma.client.findUnique({
+    where: { id: clientId, tenantId },
+    // branchId: a OS herda a filial do CLIENTE, e não de quem digitou. Um
+    // atendente da matriz abrindo OS para cliente da filial não muda de quem é
+    // aquele cliente. Ver lib/filial.ts.
+    select: { id: true, branchId: true },
+  })
   const te = await getTranslations("errors")
   if (!client) return { message: te("clientNotFound") }
 
@@ -99,6 +106,7 @@ export async function createServiceOrder(
         description: description || null,
         clientId,
         tenantId,
+        branchId: filialParaNovo(client.branchId, branchId),
         technicianId: technicianId || userId,
         status,
         totalAmount: total,
@@ -189,6 +197,8 @@ export async function updateOrderStatus(id: string, status: string) {
     data,
     select: {
       number: true, title: true, totalAmount: true, createdAt: true,
+      // A receita criada a partir desta OS herda a filial dela.
+      branchId: true,
       status: true, scheduledAt: true, conclusionNote: true, warrantyDays: true,
       technician: { select: { name: true } },
     },
@@ -214,6 +224,9 @@ export async function updateOrderStatus(id: string, status: string) {
           amount: order.totalAmount,
           dueDate: new Date(),
           tenantId,
+          // A receita é da unidade que executou o serviço. Sem herdar, o
+          // faturamento apareceria no fechamento de todas as filiais.
+          branchId: order.branchId,
           orderId: id,
         },
       })
@@ -259,6 +272,7 @@ export async function completeServiceOrder(
     where: { id, tenantId },
     select: {
       number: true, title: true, createdAt: true, status: true,
+      branchId: true,
       // Retrato de ANTES pro historico: sem ele nao ha o que comparar.
       scheduledAt: true, totalAmount: true, conclusionNote: true,
       warrantyDays: true, technician: { select: { name: true } },
@@ -312,6 +326,7 @@ export async function completeServiceOrder(
             amount: total,
             dueDate: new Date(),
             tenantId,
+            branchId: order.branchId,
             orderId: id,
           },
         })
@@ -468,12 +483,19 @@ export async function deleteServiceOrder(id: string) {
   redirect("/service-orders")
 }
 
-export async function getServiceOrders(filters?: { status?: string; statusIn?: string[]; q?: string }) {
+export async function getServiceOrders(filters?: {
+  status?: string
+  statusIn?: string[]
+  q?: string
+  filial?: string | null
+}) {
   const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
   return prisma.serviceOrder.findMany({
     where: {
       tenantId,
+      // Dentro de AND pelo mesmo motivo de getClients: o `OR` abaixo é da busca.
+      ...(await filtroDeFilialAtual(filters?.filial)),
       ...(filters?.statusIn
         ? { status: { in: filters.statusIn as never[] } }
         : filters?.status

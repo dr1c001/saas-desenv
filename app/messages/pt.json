@@ -75,6 +75,7 @@
       "OS ilimitadas",
       "Onboarding dedicado",
       "API de integração",
+      "Filiais (multiunidade)",
       "Suporte 24h via WhatsApp"
     ]
   },
@@ -298,7 +299,8 @@
     "contracts": "Contratos",
     "parts": "Estoque",
     "purchases": "Compras",
-    "apiKeys": "API de integração"
+    "apiKeys": "API de integração",
+    "filiais": "Filiais"
   },
   "history": {
     "list": {
@@ -2588,6 +2590,41 @@
       "paginacaoTexto": "Use limit (até 100) e cursor. A resposta traz next_cursor; quando vier nulo, acabou.",
       "limite": "Limite de uso",
       "limiteTexto": "120 chamadas por minuto por chave. Ao estourar, a resposta é 429 com o cabeçalho Retry-After dizendo quantos segundos esperar."
+    }
+  },
+  "filiais": {
+    "title": "Filiais",
+    "subtitle": "Sua empresa com mais de uma unidade. Recurso do plano Enterprise.",
+    "nomeLabel": "Nome da filial",
+    "nomePlaceholder": "Ex.: Unidade Centro",
+    "criarBotao": "Criar filial",
+    "vazio": "Nenhuma filial cadastrada. Enquanto não houver, todo mundo continua vendo tudo.",
+    "contagem": "{pessoas, plural, =0 {ninguém} one {# pessoa} other {# pessoas}} · {clientes, plural, =0 {nenhum cliente} one {# cliente} other {# clientes}}",
+    "inativa": "Inativa",
+    "desativar": "Desativar",
+    "reativar": "Reativar",
+    "desativarNota": "Filial se desativa, não se apaga. Apagar levaria junto o vínculo de cada cliente, [[os]] e receita da unidade — e o faturamento por filial do ano inteiro sumiria por causa de um clique de organização. Desativada, ela some dos seletores e para de receber registro novo; o histórico continua inteiro.",
+    "escopo": {
+      "separado": "Separado por filial",
+      "separadoLista": "Clientes, [[osP]], agenda, financeiro e equipe.",
+      "comum": "Compartilhado pela empresa",
+      "comumLista": "Estoque e peças, fornecedores e compras, orçamentos, contratos, configurações e cobrança.",
+      "semFilial": "Registro sem filial aparece para todo mundo. É o que garante que criar a primeira filial não faça sua base atual sumir da tela."
+    },
+    "equipe": {
+      "title": "Quem trabalha onde",
+      "subtitle": "Quem tem filial vê a unidade dele e o que é da empresa toda.",
+      "todas": "Vê tudo",
+      "nota": "Dono e administrador veem todas as filiais, independente do vínculo — e podem filtrar por uma na tela."
+    },
+    "erro": {
+      "semPermissao": "Só o dono ou um administrador pode mexer nas filiais.",
+      "semPlano": "Filiais é um recurso do plano Enterprise.",
+      "nomeVazio": "Dê um nome à filial.",
+      "naoEncontrada": "Filial não encontrada."
+    },
+    "filtro": {
+      "todas": "Todas as filiais"
     }
   }
 }

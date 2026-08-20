@@ -58,7 +58,7 @@ describe("plan — o que cada plano libera", () => {
     expect(limites.maxOsMes).toBe(50)
   })
 
-  it("Pro libera tudo MENOS a API, com limite de 10 usuários e OS ilimitada", async () => {
+  it("Pro libera tudo MENOS API e filiais, com limite de 10 usuários e OS ilimitada", async () => {
     const { getLimites } = await import("@/lib/plan")
     const { RECURSOS } = await import("@/lib/recursos")
     await seedPlanos()
@@ -66,22 +66,31 @@ describe("plan — o que cada plano libera", () => {
 
     const limites = await getLimites(t.id)
     // Derivado do catálogo, e não escrito à mão: assim um recurso novo cai
-    // automaticamente no Pro (que é a regra) e só a API precisa ser lembrada.
-    expect([...limites.recursos].sort()).toEqual([...RECURSOS].filter((r) => r !== "api").sort())
+    // automaticamente no Pro (que é a regra) e só os exclusivos do Enterprise
+    // precisam ser lembrados aqui.
+    const exclusivos = ["api", "filiais"]
+    expect([...limites.recursos].sort()).toEqual(
+      [...RECURSOS].filter((r) => !exclusivos.includes(r)).sort()
+    )
     expect(limites.maxUsuarios).toBe(10)
     expect(limites.maxOsMes).toBeNull()
   })
 
-  it("a API é o que separa Pro de Enterprise, e o Pro NÃO tem", async () => {
-    // É a única coisa exclusiva do Enterprise. Se esta linha cair, o plano de
-    // R$ 397 passa a não ter nada que o de R$ 97 não tenha — e ninguém percebe,
-    // porque nada quebra visivelmente.
+  it("API e filiais são o que separam Pro de Enterprise, e o Pro NÃO tem", async () => {
+    // São as duas únicas coisas exclusivas do Enterprise. Se esta linha cair, o
+    // plano de R$ 397 passa a não ter nada que o de R$ 97 não tenha — e ninguém
+    // percebe, porque nada quebra visivelmente.
     const { temRecurso } = await import("@/lib/plan")
     await seedPlanos()
+    const pro = (await seedTenant("pro")).id
+    const ent = (await seedTenant("enterprise")).id
+    const sta = (await seedTenant("starter")).id
 
-    expect(await temRecurso((await seedTenant("pro")).id, "api")).toBe(false)
-    expect(await temRecurso((await seedTenant("enterprise")).id, "api")).toBe(true)
-    expect(await temRecurso((await seedTenant("starter")).id, "api")).toBe(false)
+    for (const exclusivo of ["api", "filiais"] as const) {
+      expect(await temRecurso(pro, exclusivo), `pro/${exclusivo}`).toBe(false)
+      expect(await temRecurso(sta, exclusivo), `starter/${exclusivo}`).toBe(false)
+      expect(await temRecurso(ent, exclusivo), `enterprise/${exclusivo}`).toBe(true)
+    }
   })
 
   it("Enterprise libera tudo, sem limite de usuário nem de OS", async () => {

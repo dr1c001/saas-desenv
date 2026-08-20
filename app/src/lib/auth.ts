@@ -1,9 +1,10 @@
 import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
-import { getLimites } from "@/lib/plan"
+import { getLimites, temRecurso } from "@/lib/plan"
 import { ALL_TABS, ABAS_POR_RECURSO, type TabSlug } from "@/lib/abas"
 import { ACOES, acoesValendo, ehAcao, podeFazer, type Acao } from "@/lib/acoes"
+import { escopoDe, filtroDeFilial, type Escopo } from "@/lib/filial"
 import { tenantImpersonado, isSuperAdmin } from "@/lib/admin"
 import { PAST_DUE_GRACE_DAYS } from "@/lib/past-due"
 import { redirect } from "next/navigation"
@@ -63,12 +64,12 @@ export const getTenant = cache(async function getTenant() {
     const anfitriao =
       (await prisma.user.findFirst({
         where: { tenantId: alvoImpersonado, role: "OWNER" },
-        select: { id: true, tenantId: true, role: true, tenant: { select: { subscriptionStatus: true, trialEndsAt: true, locale: true } } },
+        select: { id: true, tenantId: true, role: true, branchId: true, tenant: { select: { subscriptionStatus: true, trialEndsAt: true, locale: true } } },
       })) ??
       // Empresa sem OWNER é anomalia, mas não pode impedir o suporte de olhar.
       (await prisma.user.findFirst({
         where: { tenantId: alvoImpersonado },
-        select: { id: true, tenantId: true, role: true, tenant: { select: { subscriptionStatus: true, trialEndsAt: true, locale: true } } },
+        select: { id: true, tenantId: true, role: true, branchId: true, tenant: { select: { subscriptionStatus: true, trialEndsAt: true, locale: true } } },
       }))
 
     // Sem nenhum usuário, não há o que ver — segue para a conta real em vez de
@@ -78,6 +79,9 @@ export const getTenant = cache(async function getTenant() {
         userId: anfitriao.id,
         tenantId: anfitriao.tenantId,
         role: anfitriao.role,
+        // A filial de quem está sendo visitado, para o suporte enxergar a tela
+        // que a pessoa enxerga.
+        branchId: anfitriao.branchId,
         tenantStatus: anfitriao.tenant,
         locale: anfitriao.tenant.locale,
       }
@@ -89,6 +93,7 @@ export const getTenant = cache(async function getTenant() {
     select: {
       tenantId: true,
       role: true,
+      branchId: true,
       tenant: { select: { subscriptionStatus: true, trialEndsAt: true, locale: true } },
     },
   })
@@ -173,6 +178,7 @@ export const getTenant = cache(async function getTenant() {
         select: {
           tenantId: true,
           role: true,
+          branchId: true,
           tenant: { select: { subscriptionStatus: true, trialEndsAt: true, locale: true } },
         },
       })
@@ -180,18 +186,21 @@ export const getTenant = cache(async function getTenant() {
         userId: user.id,
         tenantId: winner.tenantId,
         role: winner.role,
+        branchId: winner.branchId,
         tenantStatus: winner.tenant,
         locale: winner.tenant.locale,
       }
     }
 
-    return { userId: user.id, tenantId, role, tenantStatus, locale: tenant.locale }
+    // Empresa recém-criada não tem filial nenhuma ainda.
+    return { userId: user.id, tenantId, role, branchId: null, tenantStatus, locale: tenant.locale }
   }
 
   return {
     userId: user.id,
     tenantId: dbUser.tenantId,
     role: dbUser.role,
+    branchId: dbUser.branchId,
     tenantStatus: dbUser.tenant,
     locale: dbUser.tenant.locale,
   }
@@ -302,6 +311,29 @@ export async function getAcoesPermitidas(tenantId: string, role: string): Promis
     tenant?.actionsConfigured ?? false,
     perms.map((p) => p.action).filter(ehAcao)
   )
+}
+
+/**
+ * O escopo de filial de quem está pedindo, já contando o plano.
+ *
+ * Ponto único: toda consulta escopada passa por aqui. Se cada uma montasse o
+ * próprio filtro, bastaria uma esquecer para vazar dado de outra unidade — e
+ * vazamento de escopo não dá erro, mostra a tela errada calada.
+ *
+ * `escolhida` é o filtro que o dono aplica na tela, e `escopoDe` decide se ele
+ * vale: para quem está preso a uma filial, não vale.
+ */
+export async function escopoAtual(escolhida?: string | null): Promise<Escopo> {
+  const { tenantId, role, branchId } = await getTenant()
+  return escopoDe(
+    { role, branchId, temFiliais: await temRecurso(tenantId, "filiais") },
+    escolhida
+  )
+}
+
+/** O filtro pronto para espalhar no `where` de uma consulta. */
+export async function filtroDeFilialAtual(escolhida?: string | null) {
+  return filtroDeFilial(await escopoAtual(escolhida))
 }
 
 /**

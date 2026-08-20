@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
-import { checarAcao, getTenant, requireActiveSubscription } from "@/lib/auth"
+import { checarAcao, filtroDeFilialAtual, getTenant, requireActiveSubscription } from "@/lib/auth"
 import { comDiaTrocado, motivoParaNaoReagendar } from "@/lib/agenda"
 import { autorAtual, registrarMudancas, retratoDaOs } from "@/lib/historico-os-db"
 
-export async function getScheduledOrders(year: number, month: number) {
+export async function getScheduledOrders(year: number, month: number, filial?: string | null) {
   const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
 
@@ -16,6 +16,7 @@ export async function getScheduledOrders(year: number, month: number) {
   return prisma.serviceOrder.findMany({
     where: {
       tenantId,
+      ...(await filtroDeFilialAtual(filial)),
       scheduledAt: { gte: start, lte: end },
       status: { notIn: ["CANCELLED"] },
     },

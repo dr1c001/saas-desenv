@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { checarAcao, getTenant, requireActiveSubscription } from "@/lib/auth"
+import { checarAcao, filtroDeFilialAtual, getTenant, requireActiveSubscription } from "@/lib/auth"
+import { filialParaNovo } from "@/lib/filial"
 import { geocodeAddress } from "@/lib/geocode"
 import { avancarFila } from "@/lib/geocode-fila"
 import { getTranslations } from "next-intl/server"
@@ -77,7 +78,7 @@ export async function createClient(
   _prev: ClientFormState,
   formData: FormData
 ): Promise<ClientFormState> {
-  const { tenantId } = await getTenant()
+  const { tenantId, branchId } = await getTenant()
   await requireActiveSubscription(tenantId)
   if (await checarAcao("cliente.criar")) return { message: (await getTranslations("common"))("noPermission") }
 
@@ -97,6 +98,9 @@ export async function createClient(
 
   await prisma.client.create({
     data: {
+      // Nasce na filial de quem cadastrou. Sem autor com filial, fica sem —
+      // que é VISÍVEL para todos, e não escondido de todos.
+      branchId: filialParaNovo(null, branchId),
       name,
       document: document || null,
       email: email || null,
@@ -233,12 +237,15 @@ export async function deleteClient(id: string) {
   redirect("/clients")
 }
 
-export async function getClients(filters?: { q?: string; status?: string }) {
+export async function getClients(filters?: { q?: string; status?: string; filial?: string | null }) {
   const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
   return prisma.client.findMany({
     where: {
       tenantId,
+      // Vem dentro de AND: o `OR` logo abaixo é o da busca por texto, e dois
+      // ORs no mesmo nível se sobrescrevem.
+      ...(await filtroDeFilialAtual(filters?.filial)),
       ...(filters?.status ? { status: filters.status as never } : {}),
       ...(filters?.q
         ? {

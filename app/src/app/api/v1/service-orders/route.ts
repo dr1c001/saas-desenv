@@ -94,7 +94,10 @@ export async function POST(req: Request) {
   // outra empresa e ler os dados dele na resposta.
   const cliente = await prisma.client.findFirst({
     where: { id: dados.client_id, tenantId },
-    select: { id: true },
+    // A OS herda a filial do cliente, igual ao caminho da tela. Se a API
+    // criasse OS sem filial, a integração viraria o jeito de furar a divisão
+    // por unidade sem ninguém perceber.
+    select: { id: true, branchId: true },
   })
   if (!cliente) return erroApi(422, "client_not_found", "client_id does not exist in this account.")
 
@@ -120,6 +123,7 @@ export async function POST(req: Request) {
         title: dados.title,
         description: dados.description ?? null,
         clientId: cliente.id,
+        branchId: cliente.branchId,
         technicianId: dados.technician_id ?? null,
         status: dados.status,
         totalAmount: total,

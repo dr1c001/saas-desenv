@@ -35,11 +35,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const allowedTabs = await getAllowedTabs(tenantId, role)
   const souDono = await isSuperAdmin()
-  const temApi = await temRecurso(tenantId, "api")
+  const [temApi, temFiliais] = await Promise.all([
+    temRecurso(tenantId, "api"),
+    temRecurso(tenantId, "filiais"),
+  ])
 
   return (
     <SidebarProvider>
-      <AppSidebar allowedTabs={allowedTabs} role={role} userId={userId} isSuperAdmin={souDono} temApi={temApi} />
+      <AppSidebar allowedTabs={allowedTabs} role={role} userId={userId} isSuperAdmin={souDono} temApi={temApi} temFiliais={temFiliais} />
       <main className="flex-1 flex flex-col min-h-screen">
         <header className="h-14 border-b flex items-center px-4 gap-2">
           <SidebarTrigger />

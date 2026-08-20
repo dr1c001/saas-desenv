@@ -13,6 +13,7 @@ import { getAcoesPermitidas, getTenant } from "@/lib/auth"
 import { podeFazer } from "@/lib/acoes"
 import { SearchBar } from "@/components/shared/search-bar"
 import { StatusFilter } from "@/components/shared/status-filter"
+import { filiaisAtivas } from "@/actions/filiais"
 import { formatCurrency, formatOsNumber } from "@/lib/utils"
 import { OsActionsRow } from "@/components/service-orders/os-actions-row"
 
@@ -24,19 +25,24 @@ const statusVariant: Record<string, "default" | "secondary" | "outline" | "destr
   CANCELLED: "destructive",
 }
 
-type SearchParams = Promise<{ q?: string; status?: string }>
+type SearchParams = Promise<{ q?: string; status?: string; filial?: string }>
 
 export default async function ServiceOrdersPage({ searchParams }: { searchParams: SearchParams }) {
-  const { q, status } = await searchParams
+  const { q, status, filial } = await searchParams
   const t = await getTranslations("serviceOrdersPages")
   const tCommon = await getTranslations("common")
+  const tFil = await getTranslations("filiais.filtro")
   // Default to active orders only; "all" shows everything
   const activeOnly = !status || (status !== "all" && !["DONE", "INVOICED", "CANCELLED", "OPEN", "IN_PROGRESS"].includes(status))
-  const orders = await getServiceOrders({
-    q,
-    status: status && status !== "all" ? status : undefined,
-    statusIn: (!status || status === "") ? ["OPEN", "IN_PROGRESS"] : undefined,
-  })
+  const [orders, filiais] = await Promise.all([
+    getServiceOrders({
+      q,
+      status: status && status !== "all" ? status : undefined,
+      statusIn: (!status || status === "") ? ["OPEN", "IN_PROGRESS"] : undefined,
+      filial,
+    }),
+    filiaisAtivas(),
+  ])
 
   // Uma consulta só, e não uma por linha da tabela: a lista pode ter cem OS.
   const { tenantId, role } = await getTenant()
@@ -80,6 +86,13 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
         <Suspense>
           <SearchBar placeholder={t("list.searchPlaceholder")} />
           <StatusFilter options={statusOptions} placeholder={t("list.statusFilterPlaceholder")} />
+          {filiais.length > 0 && (
+            <StatusFilter
+              paramKey="filial"
+              options={filiais.map((f) => ({ value: f.id, label: f.name }))}
+              placeholder={tFil("todas")}
+            />
+          )}
         </Suspense>
       </div>
 
