@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { checarAcao, getTenant, requireActiveSubscription } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 import { getTranslations } from "next-intl/server"
 
@@ -17,6 +17,7 @@ export async function getClientEquipments(clientId: string) {
 export async function createEquipment(clientId: string, formData: FormData) {
   const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
+  if (await checarAcao("cliente.equipamento")) return
   const client = await prisma.client.findUnique({ where: { id: clientId, tenantId } })
   if (!client) throw new Error((await getTranslations("errors"))("clientNotFound"))
 

@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/table"
 import { Plus, ClipboardList } from "lucide-react"
 import { getServiceOrders } from "@/actions/service-orders"
+import { getAcoesPermitidas, getTenant } from "@/lib/auth"
+import { podeFazer } from "@/lib/acoes"
 import { SearchBar } from "@/components/shared/search-bar"
 import { StatusFilter } from "@/components/shared/status-filter"
 import { formatCurrency, formatOsNumber } from "@/lib/utils"
@@ -36,6 +38,11 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
     statusIn: (!status || status === "") ? ["OPEN", "IN_PROGRESS"] : undefined,
   })
 
+  // Uma consulta só, e não uma por linha da tabela: a lista pode ter cem OS.
+  const { tenantId, role } = await getTenant()
+  const permitidas = await getAcoesPermitidas(tenantId, role)
+  const pode = (acao: Parameters<typeof podeFazer>[2]) => podeFazer(role, permitidas, acao)
+
   const statusOptions = [
     { value: "all", label: t("list.statusAll") },
     { value: "OPEN", label: tCommon("serviceOrderStatus.OPEN") },
@@ -61,10 +68,12 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("list.title")}</h1>
-        <Link href="/service-orders/new" className={buttonVariants()}>
-          <Plus className="size-4 mr-2" />
-          {t("list.newButton")}
-        </Link>
+        {pode("os.criar") && (
+          <Link href="/service-orders/new" className={buttonVariants()}>
+            <Plus className="size-4 mr-2" />
+            {t("list.newButton")}
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -87,7 +96,7 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
               <p className="text-sm">
                 {q || status ? t("list.emptyFiltered") : t("list.emptyNone")}
               </p>
-              {!q && !status && (
+              {!q && !status && pode("os.criar") && (
                 <Link href="/service-orders/new" className={buttonVariants({ variant: "outline" })}>
                   {t("list.createFirst")}
                 </Link>
@@ -140,6 +149,9 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
                           quantity: Number(i.quantity),
                           unitPrice: Number(i.unitPrice),
                         }))}
+                        podeStatus={pode("os.status")}
+                        podeConcluir={pode("os.concluir")}
+                        podeEditar={pode("os.editar")}
                       />
                     </TableCell>
                   </TableRow>

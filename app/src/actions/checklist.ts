@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { checarAcao, getTenant, requireActiveSubscription } from "@/lib/auth"
 import { requireRecurso } from "@/lib/plan"
 import { revalidatePath } from "next/cache"
 import { getTranslations } from "next-intl/server"
@@ -13,6 +13,7 @@ export async function addChecklistItem(orderId: string, description: string) {
   // marcar ou apagar item já existente continua livre, senão quem trocasse
   // de plano ficaria com um checklist preso na tela, sem como limpar.
   await requireRecurso(tenantId, "checklist")
+  if (await checarAcao("os.checklist")) return
   const order = await prisma.serviceOrder.findUnique({ where: { id: orderId, tenantId } })
   if (!order) throw new Error((await getTranslations("errors"))("orderNotFound"))
 
@@ -24,6 +25,7 @@ export async function addChecklistItem(orderId: string, description: string) {
 export async function toggleChecklistItem(itemId: string, completed: boolean) {
   const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
+  if (await checarAcao("os.checklist")) return
   const item = await prisma.checklistItem.findFirst({
     where: { id: itemId, order: { tenantId } },
   })
@@ -35,6 +37,7 @@ export async function toggleChecklistItem(itemId: string, completed: boolean) {
 export async function deleteChecklistItem(itemId: string) {
   const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
+  if (await checarAcao("os.checklist")) return
   const item = await prisma.checklistItem.findFirst({
     where: { id: itemId, order: { tenantId } },
   })

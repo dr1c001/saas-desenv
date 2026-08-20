@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { getLimites } from "@/lib/plan"
 import { ALL_TABS, ABAS_POR_RECURSO, type TabSlug } from "@/lib/abas"
+import { ACOES, acoesValendo, ehAcao, podeFazer, type Acao } from "@/lib/acoes"
 import { tenantImpersonado, isSuperAdmin } from "@/lib/admin"
 import { PAST_DUE_GRACE_DAYS } from "@/lib/past-due"
 import { redirect } from "next/navigation"
@@ -263,12 +264,56 @@ export async function getAllowedTabs(tenantId: string, role: string): Promise<Ta
     return ALL_TABS.map((t) => t.slug).filter((s) => !bloqueadas.has(s))
   }
 
-  // TECHNICIAN: check TabPermission table; fall back to defaults
-  const perms = await prisma.tabPermission.findMany({
-    where: { tenantId, role: role as never },
-    select: { tab: true },
-  })
+  const [perms, tenant] = await Promise.all([
+    prisma.tabPermission.findMany({
+      where: { tenantId, role: role as never },
+      select: { tab: true },
+    }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { tabsConfigured: true } }),
+  ])
 
-  const base = perms.length === 0 ? DEFAULT_TECHNICIAN_TABS : perms.map((p) => p.tab as TabSlug)
+  // Cai no padrão só quando a empresa NUNCA mexeu nisso. Antes a condição era
+  // apenas `perms.length === 0`, e aí desmarcar as 19 abas na tela gravava zero
+  // linhas — que eram lidas como "usar o padrão" e concediam 3 abas de volta. A
+  // tela prometia acesso nenhum e o código dava três.
+  const nuncaConfigurou = !tenant?.tabsConfigured && perms.length === 0
+  const base = nuncaConfigurou ? DEFAULT_TECHNICIAN_TABS : perms.map((p) => p.tab as TabSlug)
   return base.filter((s) => !bloqueadas.has(s))
+}
+
+/**
+ * As ações que este papel pode executar nesta empresa.
+ *
+ * OWNER/ADMIN não consultam nada: `podeFazer` já os libera, e ir ao banco só
+ * para confirmar o óbvio custaria uma consulta em todo clique do dono.
+ */
+export async function getAcoesPermitidas(tenantId: string, role: string): Promise<readonly Acao[]> {
+  if (role === "OWNER" || role === "ADMIN") return ACOES
+
+  const [perms, tenant] = await Promise.all([
+    prisma.actionPermission.findMany({
+      where: { tenantId, role: role as never },
+      select: { action: true },
+    }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { actionsConfigured: true } }),
+  ])
+
+  return acoesValendo(
+    tenant?.actionsConfigured ?? false,
+    perms.map((p) => p.action).filter(ehAcao)
+  )
+}
+
+/**
+ * Barra a ação quando o papel não pode.
+ *
+ * Devolve `null` quando pode, e o código do erro quando não — em vez de lançar.
+ * As Actions daqui já respondem com `{ erro: "semPermissao" }` ou `{ message }`,
+ * e cada uma sabe o formato que a tela dela espera; lançar transformaria uma
+ * recusa prevista em tela de erro genérica.
+ */
+export async function checarAcao(acao: Acao): Promise<"semPermissao" | null> {
+  const { tenantId, role } = await getTenant()
+  const permitidas = await getAcoesPermitidas(tenantId, role)
+  return podeFazer(role, permitidas, acao) ? null : "semPermissao"
 }

@@ -63,6 +63,14 @@ model Tenant {
   // Ver lib/plan.ts.
   extraFeatures           String[]           @default([])
   locale                  Locale             @default(pt)
+
+  /// Separam "nunca mexeram nisso" de "mexeram e nao liberaram nada".
+  /// Sem esses sinais a lista vazia tem dois significados opostos e o sistema
+  /// escolhe o errado — desmarcar tudo na tela devolvia o PADRAO. Era o caso
+  /// real da permissao por aba: desmarcar as 19 abas concedia 3.
+  tabsConfigured          Boolean            @default(false)
+  actionsConfigured       Boolean            @default(false)
+
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
 
@@ -75,6 +83,7 @@ model Tenant {
   providers         Provider[]
   maintenanceOrders MaintenanceOrder[]
   tabPermissions    TabPermission[]
+  actionPermissions ActionPermission[]
   quotes            Quote[]
   plan              Plan?              @relation(fields: [planId], references: [id])
   subscriptions     Subscription[]
@@ -611,6 +620,21 @@ model TabPermission {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, role, tab])
+}
+
+/// Permissao um degrau abaixo da aba: o que o papel pode FAZER dentro dela.
+/// Catalogo em lib/acoes.ts. Existe porque a permissao por aba e grossa demais
+/// para o caso que mais importa — hoje qualquer tecnico com a aba de OS reescreve
+/// os itens e o VALOR TOTAL de um servico ja executado.
+model ActionPermission {
+  id       String   @id @default(cuid())
+  tenantId String
+  role     UserRole
+  action   String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, role, action])
 }
 
 // ─── Notificações Push ────────────────────────────────────────────────────────

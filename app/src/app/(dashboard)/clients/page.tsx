@@ -8,7 +8,8 @@ import {
 } from "@/components/ui/table"
 import { Plus, User, Eye, Pencil, Upload } from "lucide-react"
 import { getClients } from "@/actions/clients"
-import { getTenant } from "@/lib/auth"
+import { getAcoesPermitidas, getTenant } from "@/lib/auth"
+import { podeFazer } from "@/lib/acoes"
 import { SearchBar } from "@/components/shared/search-bar"
 import { StatusFilter } from "@/components/shared/status-filter"
 import { getTranslations } from "next-intl/server"
@@ -24,7 +25,8 @@ type SearchParams = Promise<{ q?: string; status?: string }>
 export default async function ClientsPage({ searchParams }: { searchParams: SearchParams }) {
   const { q, status } = await searchParams
   const clients = await getClients({ q, status })
-  const { role } = await getTenant()
+  const { tenantId, role } = await getTenant()
+  const podeCriar = podeFazer(role, await getAcoesPermitidas(tenantId, role), "cliente.criar")
   const t = await getTranslations("clients")
   const tc = await getTranslations("common")
   const podeImportar = role === "OWNER" || role === "ADMIN"
@@ -46,10 +48,12 @@ export default async function ClientsPage({ searchParams }: { searchParams: Sear
               {t("list.importButton")}
             </Link>
           )}
-          <Link href="/clients/new" className={buttonVariants()}>
-            <Plus className="size-4 mr-2" />
-            {t("list.newButton")}
-          </Link>
+          {podeCriar && (
+            <Link href="/clients/new" className={buttonVariants()}>
+              <Plus className="size-4 mr-2" />
+              {t("list.newButton")}
+            </Link>
+          )}
         </div>
       </div>
 

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation"
 import { randomUUID } from "crypto"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { checarAcao, getTenant, requireActiveSubscription } from "@/lib/auth"
 import { baixarPecasDaOs } from "@/lib/estoque-db"
 import {
   autorAtual,
@@ -51,6 +51,7 @@ export async function createServiceOrder(
 ): Promise<OrderFormState> {
   const { tenantId, userId } = await getTenant()
   await requireActiveSubscription(tenantId)
+  if (await checarAcao("os.criar")) return { message: (await getTranslations("common"))("noPermission") }
 
   // "50 OS por mês" do Starter não era verificado em lugar nenhum. Checa antes
   // de validar o formulário pra não deixar a pessoa preencher tudo à toa.
@@ -158,6 +159,8 @@ export async function updateOrderStatus(id: string, status: string) {
   const { tenantId, role, userId } = await getTenant()
   await requireActiveSubscription(tenantId)
 
+  if (await checarAcao("os.status")) return
+
   const validStatus = ["OPEN", "IN_PROGRESS", "DONE", "INVOICED", "CANCELLED"]
   if (!validStatus.includes(status)) return
 
@@ -250,6 +253,9 @@ export async function completeServiceOrder(
 ) {
   const { tenantId, userId } = await getTenant()
   await requireActiveSubscription(tenantId)
+  // Concluir grava receita e baixa estoque. Quem não pode concluir não pode
+  // disparar isso nem pela fila offline, que chama esta mesma função.
+  if (await checarAcao("os.concluir")) throw new Error((await getTranslations("common"))("noPermission"))
 
   const total = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
   const status = invoiceImmediately ? "INVOICED" : "DONE"
@@ -358,6 +364,11 @@ export async function updateServiceOrder(
   if (!parsed.success) return { errors: await translateFieldErrors(parsed.error.flatten().fieldErrors) }
 
   const { title, description, clientId, technicianId, scheduledAt } = parsed.data
+
+  // A que mais pesa: esta função reescreve os ITENS e o VALOR TOTAL. Até aqui
+  // não tinha checagem de papel nenhuma — qualquer técnico com a aba mudava o
+  // preço de um serviço já executado.
+  if (await checarAcao("os.editar")) return { message: (await getTranslations("common"))("noPermission") }
 
   // Confere posse da OS e valida clientId/technicianId ANTES de tocar em
   // ServiceItem — antes disso, um id de OS de outro tenant tinha os itens

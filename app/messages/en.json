@@ -1301,10 +1301,32 @@
   "settingsAdvanced": {
     "permissions": {
       "title": "Access Control",
-      "subtitle": "Choose which tabs technicians can access in the system",
+      "subtitle": "Choose what technicians see in the menu and what they can do.",
       "saveButton": "Save permissions",
       "savedMessage": "Saved successfully",
-      "effectNote": "Permission changes take effect the next time the technician loads the page."
+      "effectNote": "Permission changes take effect the next time the technician loads the page.",
+      "abasTitle": "Tabs the technician sees",
+      "acoes": {
+        "title": "What the technician can do",
+        "subtitle": "One level below tabs: within an allowed tab, which actions they can perform.",
+        "saveButton": "Save actions",
+        "savedMessage": "Saved successfully",
+        "effectNote": "Applies to the technician role. Owner and admin can do everything.",
+        "labels": {
+          "os": {
+            "criar": "Open [[osP]]",
+            "editar": "Edit [[os]] — includes line items and the total AMOUNT",
+            "status": "Change the status",
+            "concluir": "Complete [[os]]",
+            "reagendar": "Reschedule from the calendar",
+            "checklist": "Edit the checklist"
+          },
+          "cliente": {
+            "criar": "Create clients",
+            "equipamento": "Create client equipment"
+          }
+        }
+      }
     },
     "fiscal": {
       "title": "Tax Settings — NFS-e",
@@ -1449,7 +1471,8 @@
         "cancelada": "Cancelled. No longer on the schedule.",
         "naoEncontrada": "[[osC]] not found.",
         "semAgendamento": "No scheduled date to move.",
-        "dataInvalida": "Invalid date."
+        "dataInvalida": "Invalid date.",
+        "semPermissao": "You do not have permission to reschedule."
       }
     }
   },

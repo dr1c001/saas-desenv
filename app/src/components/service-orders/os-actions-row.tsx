@@ -16,9 +16,18 @@ type Props = {
   status: string
   conclusionNote?: string | null
   items?: Item[]
+  /** O que este usuário pode fazer. Vem do servidor (lib/acoes.ts): esconder o
+   *  botão é cortesia, não proteção — a Action se defende sozinha. Mas botão
+   *  que aparece e falha é pior que botão que não aparece. */
+  podeStatus?: boolean
+  podeConcluir?: boolean
+  podeEditar?: boolean
 }
 
-export function OsActionsRow({ id, title, status, conclusionNote, items }: Props) {
+export function OsActionsRow({
+  id, title, status, conclusionNote, items,
+  podeStatus = true, podeConcluir = true, podeEditar = true,
+}: Props) {
   const t = useTranslations("serviceOrdersComponents")
   const tCommon = useTranslations("common")
   const [isPending, startTransition] = useTransition()
@@ -29,7 +38,7 @@ export function OsActionsRow({ id, title, status, conclusionNote, items }: Props
 
   return (
     <div className="flex items-center justify-end gap-1.5">
-      {status === "OPEN" && (
+      {status === "OPEN" && podeStatus && (
         <Button
           size="sm"
           variant="outline"
@@ -41,19 +50,21 @@ export function OsActionsRow({ id, title, status, conclusionNote, items }: Props
           {t("osActionsRow.startButton")}
         </Button>
       )}
-      <ConcluirDialog
-        orderId={id}
-        orderTitle={title}
-        currentStatus={status}
-        initialConclusionNote={conclusionNote}
-        initialItems={items}
-      />
+      {podeConcluir && (
+        <ConcluirDialog
+          orderId={id}
+          orderTitle={title}
+          currentStatus={status}
+          initialConclusionNote={conclusionNote}
+          initialItems={items}
+        />
+      )}
       {/* Editar direto da lista: antes era preciso abrir a OS pra achar o
           botão. Some quando a OS está faturada porque updateServiceOrder
           recusa INVOICED (NFS-e emitida, assinatura coletada) — mostrar o
           botão ali seria convidar o usuário a preencher o formulário inteiro
           pra levar erro no fim. (Pedido do usuário em 10/08/2026.) */}
-      {status !== "INVOICED" && (
+      {status !== "INVOICED" && podeEditar && (
         <Link
           href={`/service-orders/${id}/edit`}
           className={buttonVariants({ variant: "outline", size: "sm" })}

@@ -9,7 +9,8 @@ import { Checklist } from "@/components/service-orders/checklist"
 import { SignaturePad } from "@/components/service-orders/signature-pad"
 import { OsFotos } from "@/components/service-orders/os-fotos"
 import { getFotosDaOs } from "@/actions/attachments"
-import { getTenant } from "@/lib/auth"
+import { getAcoesPermitidas, getTenant } from "@/lib/auth"
+import { podeFazer } from "@/lib/acoes"
 import { historicoDaOs } from "@/lib/historico-os-db"
 import { HistoricoOs } from "@/components/service-orders/historico-os"
 import { WhatsAppButton } from "@/components/service-orders/whatsapp-button"
@@ -29,6 +30,8 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
   if (!os) notFound()
 
   const [fotos, { role, tenantId, locale }] = await Promise.all([getFotosDaOs(id), getTenant()])
+  const permitidas = await getAcoesPermitidas(tenantId, role)
+  const pode = (acao: Parameters<typeof podeFazer>[2]) => podeFazer(role, permitidas, acao)
   // Quem mudou o que, e quando. E o que resolve discussao sobre valor, status
   // ou responsavel — ate aqui nao havia registro nenhum disso.
   const eventos = await historicoDaOs(tenantId, id)
@@ -55,7 +58,7 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
           <Badge variant={config.variant} className="mt-1">{config.label}</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
-          {config.next && (
+          {config.next && pode("os.status") && (
             <StatusButton
               action={updateOrderStatus.bind(null, id, config.next)}
               label={config.nextLabel!}
@@ -66,7 +69,7 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
           {/* updateServiceOrder recusa OS faturada (NFS-e emitida, assinatura
               coletada). O botão aparecia mesmo assim, e só dava erro depois de
               preencher o formulário inteiro. */}
-          {os.status !== "INVOICED" && (
+          {os.status !== "INVOICED" && pode("os.editar") && (
             <Link
               href={`/service-orders/${id}/edit`}
               className={buttonVariants({ variant: "outline" })}

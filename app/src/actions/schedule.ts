@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
-import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { checarAcao, getTenant, requireActiveSubscription } from "@/lib/auth"
 import { comDiaTrocado, motivoParaNaoReagendar } from "@/lib/agenda"
 import { autorAtual, registrarMudancas, retratoDaOs } from "@/lib/historico-os-db"
 
@@ -52,6 +52,7 @@ export async function reagendarOs(
 ): Promise<ResultadoDoReagendamento> {
   const { tenantId, userId } = await getTenant()
   await requireActiveSubscription(tenantId)
+  if (await checarAcao("os.reagendar")) return { ok: false, motivo: "semPermissao" }
 
   if (!Number.isInteger(dia) || dia < 1 || dia > 31 || !Number.isInteger(mes) || mes < 1 || mes > 12) {
     return { ok: false, motivo: "dataInvalida" }

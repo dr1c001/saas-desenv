@@ -1700,6 +1700,59 @@ que a tela achava impossível.
 
 ---
 
+### 7.2.27 Permissão por ação — 20/08/2026
+
+A permissão era por **aba**: quem enxerga "Ordens de Serviço" faz tudo dentro
+dela. Antes de construir, levantei o que o técnico consegue de fato hoje — e
+quase tudo já era OWNER/ADMIN (excluir, financeiro, orçamento, estoque, equipe,
+compras, contratos). Sobraram oito coisas sem barreira nenhuma, e **uma pesa
+muito mais que as outras**:
+
+> `updateServiceOrder` reescreve os ITENS e o VALOR TOTAL da OS, sem checagem
+> de papel nenhuma. Qualquer técnico com a aba mudava o preço de um serviço já
+> executado.
+
+Não é hipótese distante: é a discussão que aparece quando o faturamento do mês
+não bate com o que foi combinado.
+
+**O defeito que apareceu no caminho.** A tela de Permissões deixa desmarcar
+todas as 19 abas. `savePermissions` gravava zero linhas, e `getAllowedTabs` lia
+zero linhas como "usar o padrão" — que **concede 3 abas**. A tela prometia
+acesso nenhum e o sistema dava três. Corrigido com `Tenant.tabsConfigured`, que
+separa "nunca mexeram nisso" de "mexeram e não liberaram nada". A migration já
+marca como configurado quem tem permissão gravada, para não desfazer escolha de
+ninguém.
+
+**Decisões:**
+
+- **O padrão é tudo liberado**, e não o contrário. Fechar por padrão é mais
+  seguro no papel e péssimo na prática: toda empresa que já usa o sistema
+  chegaria na segunda-feira com os técnicos sem conseguir trabalhar, sem ter
+  pedido mudança nenhuma. Fechar é decisão do dono, tomada por ele, na tela.
+- **Só entra no catálogo o que o técnico já consegue fazer.** Trazer "excluir"
+  ou "faturar" para cá sugeriria que dá para liberar, e a tela passaria a
+  oferecer um botão que não deveria existir. Há um teste que guarda isso.
+- **OWNER/ADMIN passam sempre**, sem consultar o banco. Um dono que se
+  trancasse para fora não teria por onde voltar — a tela que conserta é a dele.
+- **`checarAcao` devolve código, não lança.** As Actions daqui já respondem
+  `{ erro }` ou `{ message }` e cada uma sabe o formato que a tela dela espera;
+  lançar transformaria recusa prevista em tela de erro genérica.
+- **A tela esconde o que não pode**, e as páginas de formulário redirecionam.
+  Esconder botão nunca foi proteção — a Action se defende sozinha —, mas botão
+  que aparece e falha é pior que botão que não aparece, e preencher um
+  formulário inteiro para levar recusa no fim é pior ainda.
+- **Uma consulta por página, não por linha.** A lista de OS pode ter cem itens.
+
+**Onde ficou:** `lib/acoes.ts` (puro), `ActionPermission`, `Tenant.actionsConfigured`,
+`getAcoesPermitidas`/`checarAcao` em `lib/auth.ts`, e uma segunda seção na tela
+de Permissões — duas seções e não uma lista só, porque quais abas a pessoa
+ENXERGA e o que ela FAZ dentro delas são perguntas diferentes, e vinte e sete
+caixas numa lista só esconderiam justamente a que mais importa.
+
+542 → 557 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

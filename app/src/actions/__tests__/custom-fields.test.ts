@@ -10,6 +10,9 @@ beforeAll(async () => {
   vi.doMock("@/lib/auth", () => ({
     getTenant: mockGetTenant,
     requireActiveSubscription: vi.fn().mockResolvedValue(undefined),
+    // null = pode. A permissão por ação tem os testes dela em acoes.test.ts e
+    // permissao-acao.test.ts; aqui o assunto é campo personalizado.
+    checarAcao: vi.fn().mockResolvedValue(null),
   }))
   // A mensagem de erro precisa do nome do campo interpolado ("Preencha o campo
   // 'Metragem'"), então a tradução acontece na action — mesmo padrão do

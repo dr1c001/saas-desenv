@@ -1301,10 +1301,32 @@
   "settingsAdvanced": {
     "permissions": {
       "title": "Controle de Acesso",
-      "subtitle": "Defina quais abas os técnicos podem acessar no sistema",
+      "subtitle": "Defina o que os técnicos enxergam no menu e o que podem fazer.",
       "saveButton": "Salvar permissões",
       "savedMessage": "Salvo com sucesso",
-      "effectNote": "As alterações de permissão entram em vigor na próxima vez que o técnico carregar a página."
+      "effectNote": "As alterações de permissão entram em vigor na próxima vez que o técnico carregar a página.",
+      "abasTitle": "Abas que o técnico enxerga",
+      "acoes": {
+        "title": "O que o técnico pode fazer",
+        "subtitle": "Um degrau abaixo das abas: dentro de uma aba liberada, quais ações ele executa.",
+        "saveButton": "Salvar ações",
+        "savedMessage": "Salvo com sucesso",
+        "effectNote": "Vale para quem tem o papel de técnico. Dono e administrador fazem tudo.",
+        "labels": {
+          "os": {
+            "criar": "Abrir [[osP]]",
+            "editar": "Editar [[os]] — inclui os itens e o VALOR total",
+            "status": "Mudar o status",
+            "concluir": "Concluir [[os]]",
+            "reagendar": "Reagendar pela agenda",
+            "checklist": "Mexer no checklist"
+          },
+          "cliente": {
+            "criar": "Cadastrar cliente",
+            "equipamento": "Cadastrar equipamento do cliente"
+          }
+        }
+      }
     },
     "fiscal": {
       "title": "Configuração Fiscal — NFS-e",
@@ -1449,7 +1471,8 @@
         "cancelada": "Cancelad[[osFim]]. Não está mais na agenda.",
         "naoEncontrada": "[[osC]] não encontrad[[osFim]].",
         "semAgendamento": "Sem data agendada para mover.",
-        "dataInvalida": "Data inválida."
+        "dataInvalida": "Data inválida.",
+        "semPermissao": "Você não tem permissão para reagendar."
       }
     }
   },

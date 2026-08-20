@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { checarAcao, getTenant, requireActiveSubscription } from "@/lib/auth"
 import { geocodeAddress } from "@/lib/geocode"
 import { avancarFila } from "@/lib/geocode-fila"
 import { getTranslations } from "next-intl/server"
@@ -79,6 +79,7 @@ export async function createClient(
 ): Promise<ClientFormState> {
   const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
+  if (await checarAcao("cliente.criar")) return { message: (await getTranslations("common"))("noPermission") }
 
   const raw = Object.fromEntries(formData.entries())
   const parsed = clientSchema.safeParse(raw)
