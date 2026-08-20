@@ -16,6 +16,7 @@ import {
 import { avisarClienteDaOs } from "@/lib/enviar-aviso-cliente"
 import { sendPushToUser } from "@/lib/push"
 import { retryOnUniqueConflict } from "@/lib/retry"
+import { proximoNumeroDeOs } from "@/lib/os-numero"
 import { requireCotaDeOs } from "@/lib/plan"
 import { getTranslations } from "next-intl/server"
 import { translateFieldErrors } from "@/lib/validation"
@@ -36,14 +37,7 @@ export type OrderFormState = {
   message?: string
 }
 
-async function nextOrderNumber(tenantId: string) {
-  const last = await prisma.serviceOrder.findFirst({
-    where: { tenantId },
-    orderBy: { number: "desc" },
-    select: { number: true },
-  })
-  return (last?.number ?? 0) + 1
-}
+
 
 export async function createServiceOrder(
   _prev: OrderFormState,
@@ -91,13 +85,13 @@ export async function createServiceOrder(
 
   const total = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0)
 
-  // nextOrderNumber lê "o último número" sem lock — duas criações
+  // proximoNumeroDeOs lê "o último número" sem lock — duas criações
   // simultâneas podem calcular o mesmo número. number tem
   // @@unique([tenantId, number]), então a segunda só falha (P2002) em vez de
   // duplicar; retryOnUniqueConflict tenta de novo com o número atualizado.
   // (Achado em auditoria pré-venda, 2026-08-05.)
   const criada = await retryOnUniqueConflict(async () => {
-    const number = await nextOrderNumber(tenantId)
+    const number = await proximoNumeroDeOs(tenantId)
     return prisma.serviceOrder.create({
       data: {
         number,

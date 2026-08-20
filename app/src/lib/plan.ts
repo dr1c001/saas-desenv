@@ -34,9 +34,15 @@ export type Limites = {
   recursos: Recurso[]
 }
 
+// A API de integração é o ÚNICO recurso que o Pro não tem. É a linha que separa
+// os dois planos pagos de cima: fora dela, Pro e Enterprise diferem só em
+// quantidade (usuários ilimitados) e atendimento. Sem um recurso exclusivo, o
+// Enterprise não tem o que oferecer a quem já cabe nos 10 usuários do Pro.
+const SEM_API: Recurso[] = TODOS.filter((r) => r !== "api")
+
 const POR_PLANO: Record<string, Limites> = {
   starter: { maxUsuarios: 3, maxOsMes: 50, recursos: [] },
-  pro: { maxUsuarios: 10, maxOsMes: null, recursos: TODOS },
+  pro: { maxUsuarios: 10, maxOsMes: null, recursos: SEM_API },
   enterprise: { maxUsuarios: null, maxOsMes: null, recursos: TODOS },
 }
 

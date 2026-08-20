@@ -84,6 +84,7 @@ model Tenant {
   maintenanceOrders MaintenanceOrder[]
   tabPermissions    TabPermission[]
   actionPermissions ActionPermission[]
+  apiKeys           ApiKey[]
   quotes            Quote[]
   plan              Plan?              @relation(fields: [planId], references: [id])
   subscriptions     Subscription[]
@@ -620,6 +621,30 @@ model TabPermission {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, role, tab])
+}
+
+/// Chave da API de integracao. Recurso do plano Enterprise.
+///
+/// O banco guarda o HASH, nunca a chave: ela e uma senha que vai parar em
+/// arquivo de configuracao de terceiro, e um vazamento do banco (ou um backup
+/// nosso, que circula por definicao) nao pode virar uma pilha de credenciais
+/// validas. O `prefix` e publico e existe para achar a linha por indice — sem
+/// ele, conferir uma chave exigiria testar o hash de todas as chaves de todas
+/// as empresas. Formato e conferencia em lib/api-chave.ts.
+model ApiKey {
+  id         String    @id @default(cuid())
+  tenantId   String
+  name       String
+  prefix     String    @unique
+  hash       String
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdBy  String?
+  createdAt  DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 /// Permissao um degrau abaixo da aba: o que o papel pode FAZER dentro dela.

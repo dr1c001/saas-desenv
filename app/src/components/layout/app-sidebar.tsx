@@ -29,6 +29,7 @@ import {
   Landmark,
   ListPlus,
   Languages,
+  Plug,
   CalendarSync,
   Package,
   ShoppingCart,
@@ -84,9 +85,13 @@ type Props = {
   userId: string
   /** Dono da plataforma (não do tenant). Só ele vê o link do painel. */
   isSuperAdmin?: boolean
+  /** A API é recurso do Enterprise. O link não aparece para quem não tem —
+   *  mostrar e mandar para a tela de planos ao clicar é propaganda disfarçada
+   *  de funcionalidade. */
+  temApi?: boolean
 }
 
-export function AppSidebar({ allowedTabs, role, isSuperAdmin }: Props) {
+export function AppSidebar({ allowedTabs, role, isSuperAdmin, temApi }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const t = useTranslations()
@@ -204,6 +209,14 @@ export function AppSidebar({ allowedTabs, role, isSuperAdmin }: Props) {
               <SidebarMenuButton render={<Link href="/settings/fields" />}>
                 <ListPlus className="size-4" />
                 <span>{t("nav.customFields")}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
+          {(role === "OWNER" || role === "ADMIN") && temApi && (
+            <SidebarMenuItem>
+              <SidebarMenuButton render={<Link href="/settings/api" />}>
+                <Plug className="size-4" />
+                <span>{t("nav.apiKeys")}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )}

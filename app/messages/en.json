@@ -74,6 +74,7 @@
       "Unlimited users",
       "Unlimited jobs",
       "Dedicated onboarding",
+      "Integration API",
       "24h support via WhatsApp"
     ]
   },
@@ -296,7 +297,8 @@
     "vocabulary": "Vocabulary",
     "contracts": "Contracts",
     "parts": "Inventory",
-    "purchases": "Purchases"
+    "purchases": "Purchases",
+    "apiKeys": "Integration API"
   },
   "history": {
     "list": {
@@ -2552,5 +2554,40 @@
       "texto": "It runs on the same infrastructure it describes. If everything goes down, this page goes down with it — so it will never show you a full outage. What it does cover is the most common case: the system being up with something broken inside, which is what you cannot see on your own. And it shows no uptime percentage because we do not measure that from in here — an invented number on a status page is worse than no page at all."
     },
     "contato": "Something odd and nothing here explains it? Write to"
+  },
+  "apiKeys": {
+    "title": "Integration API",
+    "subtitle": "Connect ServiçoOS to your website, your ERP, or an automation. Enterprise plan feature.",
+    "nomeLabel": "Key name",
+    "nomePlaceholder": "e.g. Website form",
+    "criarBotao": "Create key",
+    "apareceUmaVez": "Copy it now. This key is shown once — we only store a digest of it, and not even we can show it again.",
+    "copiar": "Copy",
+    "copiada": "Copied",
+    "jaGuardei": "I saved it",
+    "vazio": "No keys created yet.",
+    "revogar": "Revoke",
+    "revogada": "Revoked",
+    "nuncaUsada": "Never used",
+    "ultimoUso": "Last used {data}",
+    "rodape": "A key grants read and write access to your company's data. Treat it like a password: never put it in public code or send it over chat. If in doubt, revoke it and create another.",
+    "erro": {
+      "semPermissao": "Only the owner or an admin can create a key.",
+      "semPlano": "The integration API is an Enterprise plan feature.",
+      "nomeVazio": "Name the key, so you know later where it is being used.",
+      "limite": "You already have 5 active keys. Revoke an unused one before creating another."
+    },
+    "docs": {
+      "title": "How to use",
+      "intro": "Every call needs the key in the header. Responses are JSON, and error objects carry a stable code — read the code, not the text.",
+      "baseUrl": "Base URL",
+      "autenticacao": "Authentication",
+      "endpoints": "Available endpoints",
+      "exemplo": "Example: open a [[os]]",
+      "paginacao": "Pages",
+      "paginacaoTexto": "Use limit (up to 100) and cursor. The response returns next_cursor; when it is null, you have reached the end.",
+      "limite": "Rate limit",
+      "limiteTexto": "120 calls per minute per key. When exceeded, the response is 429 with a Retry-After header telling you how many seconds to wait."
+    }
   }
 }

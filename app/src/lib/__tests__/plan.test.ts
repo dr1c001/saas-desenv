@@ -58,17 +58,30 @@ describe("plan — o que cada plano libera", () => {
     expect(limites.maxOsMes).toBe(50)
   })
 
-  it("Pro libera todos os recursos, com limite de 10 usuários e OS ilimitada", async () => {
+  it("Pro libera tudo MENOS a API, com limite de 10 usuários e OS ilimitada", async () => {
     const { getLimites } = await import("@/lib/plan")
+    const { RECURSOS } = await import("@/lib/recursos")
     await seedPlanos()
     const t = await seedTenant("pro")
 
     const limites = await getLimites(t.id)
-    expect(limites.recursos).toEqual(
-      expect.arrayContaining(["gpsMap", "nfse", "signature", "checklist", "advancedReports"])
-    )
+    // Derivado do catálogo, e não escrito à mão: assim um recurso novo cai
+    // automaticamente no Pro (que é a regra) e só a API precisa ser lembrada.
+    expect([...limites.recursos].sort()).toEqual([...RECURSOS].filter((r) => r !== "api").sort())
     expect(limites.maxUsuarios).toBe(10)
     expect(limites.maxOsMes).toBeNull()
+  })
+
+  it("a API é o que separa Pro de Enterprise, e o Pro NÃO tem", async () => {
+    // É a única coisa exclusiva do Enterprise. Se esta linha cair, o plano de
+    // R$ 397 passa a não ter nada que o de R$ 97 não tenha — e ninguém percebe,
+    // porque nada quebra visivelmente.
+    const { temRecurso } = await import("@/lib/plan")
+    await seedPlanos()
+
+    expect(await temRecurso((await seedTenant("pro")).id, "api")).toBe(false)
+    expect(await temRecurso((await seedTenant("enterprise")).id, "api")).toBe(true)
+    expect(await temRecurso((await seedTenant("starter")).id, "api")).toBe(false)
   })
 
   it("Enterprise libera tudo, sem limite de usuário nem de OS", async () => {

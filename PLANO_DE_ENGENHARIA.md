@@ -1753,6 +1753,73 @@ caixas numa lista só esconderiam justamente a que mais importa.
 
 ---
 
+### 7.2.28 API de integração — 20/08/2026
+
+**Só no Enterprise**, e essa é a razão de ela existir agora. Fora dela, Pro e
+Enterprise diferiam só em quantidade (usuários ilimitados) e atendimento — ou
+seja, o plano de R$ 397 não tinha nada que o de R$ 97 não tivesse para quem já
+cabia em 10 usuários. `pro` deixou de receber `TODOS` os recursos, e um teste
+guarda a linha: se ela cair, o Enterprise volta a não ter o que oferecer, e
+nada quebra visivelmente para avisar.
+
+**A chave é tratada como senha, não como identificador.** Ela vai parar em
+arquivo de configuração de terceiro, em variável de ambiente, em backup:
+
+- O banco guarda **o hash, nunca a chave**. Um vazamento do banco — ou um
+  backup nosso, que circula por definição — não vira uma pilha de credenciais
+  válidas.
+- A chave **aparece uma vez**. Poder reexibir obrigaria a guardar o texto.
+- **Comparação em tempo constante**, para o tempo de resposta não contar
+  quantos caracteres iniciais um palpite acertou.
+- **Prefixo público separado do segredo.** Sem ele, conferir uma chave exigiria
+  carregar todas as chaves de todas as empresas e testar o hash uma a uma.
+- Chave inexistente, malformada e **revogada dão a mesma resposta**: distinguir
+  contaria a quem tenta se o prefixo existe.
+- **Sem limite de tentativa para chave inválida**, de propósito: o segredo tem
+  ~190 bits, adivinhar é inviável, e gravar uma linha de contagem por tentativa
+  recusada daria a quem varre a internet uma forma de encher uma tabela nossa.
+
+**Plano e assinatura são conferidos a cada chamada**, e não só na criação.
+Cancelar a assinatura ou cair de Enterprise para Pro desliga a chave — senão o
+recurso que justifica o preço viraria vitalício para quem passou por lá uma vez.
+
+**O contrato não é o modelo do banco.** `lib/api-formato.ts` lista campo por
+campo o que sai. Devolver a linha do Prisma direto publicaria cada coluna nova
+que alguém adicionasse — inclusive `clientToken`, que dá acesso ao portal
+público da OS. Latitude/longitude também ficam de fora: são resultado da nossa
+geocodificação, não cadastro do cliente.
+
+**Outras decisões:**
+
+- `POST /service-orders` aceita só `OPEN` e `IN_PROGRESS`. Aceitar `DONE` ou
+  `INVOICED` deixaria criar receita e nota fiscal por aqui, pulando conclusão,
+  estoque e assinatura.
+- **A cota de OS do plano vale na API.** Sem isso ela seria a porta dos fundos
+  do limite que a tela cobra, e o Starter viraria ilimitado para quem soubesse
+  chamar.
+- `GET /service-orders/{id}` usa `findFirst` com `tenantId`, não `findUnique`
+  por id. É o IDOR clássico, e já foi achado de verdade neste projeto
+  (revisão de 19/07/2026). Responde **404 e não 403**: dizer "existe, mas não é
+  sua" já conta que o id é válido em algum lugar.
+- **Paginação por cursor**, não offset: com offset, um registro criado enquanto
+  o cliente pagina faz um item repetir e outro sumir.
+- Erros em **inglês, com `code` estável**. Quem consome API lê o código, não a
+  frase — e `getTranslations` depende de contexto de request que rota de API
+  pode não ter, o que transformaria um 401 honesto num 500.
+- Criar cliente pela API **não geocodifica na hora**: gastaria crédito do
+  Geoapify a cada chamada. O lote noturno pega quem entrou por aqui.
+- `nextOrderNumber` saiu da action para `lib/os-numero.ts`, porque a API cria
+  OS pelo mesmo caminho. Duas cópias da numeração acabariam divergindo — e isso
+  só aparece quando o cliente liga reclamando de duas ordens com o mesmo número.
+
+**Endereço:** `neighborhood` no contrato público, `district` na coluna. O nome
+de fora é o que o consumidor entende; renomear a coluna agora quebraria o resto
+do sistema por causa da API.
+
+557 → 580 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

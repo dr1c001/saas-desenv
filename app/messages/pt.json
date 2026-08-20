@@ -74,6 +74,7 @@
       "Usuários ilimitados",
       "OS ilimitadas",
       "Onboarding dedicado",
+      "API de integração",
       "Suporte 24h via WhatsApp"
     ]
   },
@@ -296,7 +297,8 @@
     "vocabulary": "Vocabulário",
     "contracts": "Contratos",
     "parts": "Estoque",
-    "purchases": "Compras"
+    "purchases": "Compras",
+    "apiKeys": "API de integração"
   },
   "history": {
     "list": {
@@ -2552,5 +2554,40 @@
       "texto": "Ela roda na mesma infraestrutura que descreve. Se tudo cair, esta página cai junto — então ela nunca vai te mostrar uma queda total. O que ela cobre é o caso mais comum: o sistema estar no ar com alguma coisa quebrada por dentro, que é o que você não consegue enxergar sozinho. E ela não exibe percentual de disponibilidade porque não medimos isso daqui de dentro — número inventado numa página de status é pior que página nenhuma."
     },
     "contato": "Alguma coisa estranha e nada aqui explica? Escreva para"
+  },
+  "apiKeys": {
+    "title": "API de integração",
+    "subtitle": "Conecte o ServiçoOS ao site da sua empresa, ao seu ERP ou a uma automação. Recurso do plano Enterprise.",
+    "nomeLabel": "Nome da chave",
+    "nomePlaceholder": "Ex.: Formulário do site",
+    "criarBotao": "Criar chave",
+    "apareceUmaVez": "Copie agora. Esta chave aparece uma única vez — guardamos só um resumo dela, e nem nós conseguimos mostrá-la de novo.",
+    "copiar": "Copiar",
+    "copiada": "Copiada",
+    "jaGuardei": "Já guardei",
+    "vazio": "Nenhuma chave criada ainda.",
+    "revogar": "Revogar",
+    "revogada": "Revogada",
+    "nuncaUsada": "Nunca usada",
+    "ultimoUso": "Último uso em {data}",
+    "rodape": "Uma chave dá acesso de leitura e escrita aos dados da sua empresa. Trate como senha: não coloque em código público nem envie por mensagem. Se desconfiar, revogue e crie outra.",
+    "erro": {
+      "semPermissao": "Só o dono ou um administrador pode criar chave.",
+      "semPlano": "A API de integração é um recurso do plano Enterprise.",
+      "nomeVazio": "Dê um nome à chave, para saber depois onde ela está sendo usada.",
+      "limite": "Você já tem 5 chaves ativas. Revogue uma que não usa antes de criar outra."
+    },
+    "docs": {
+      "title": "Como usar",
+      "intro": "Toda chamada precisa da chave no cabeçalho. As respostas são JSON e os campos de erro têm um código estável — leia o código, não o texto.",
+      "baseUrl": "Endereço base",
+      "autenticacao": "Autenticação",
+      "endpoints": "O que existe",
+      "exemplo": "Exemplo: abrir uma [[os]]",
+      "paginacao": "Páginas",
+      "paginacaoTexto": "Use limit (até 100) e cursor. A resposta traz next_cursor; quando vier nulo, acabou.",
+      "limite": "Limite de uso",
+      "limiteTexto": "120 chamadas por minuto por chave. Ao estourar, a resposta é 429 com o cabeçalho Retry-After dizendo quantos segundos esperar."
+    }
   }
 }

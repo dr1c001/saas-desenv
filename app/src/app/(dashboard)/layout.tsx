@@ -10,6 +10,7 @@ import { FilaOfflineBanner } from "@/components/layout/fila-offline-banner"
 import { ImpersonationBanner } from "@/components/layout/impersonation-banner"
 import { getTenant, getAllowedTabs, hasActiveSubscription } from "@/lib/auth"
 import { isSuperAdmin } from "@/lib/admin"
+import { temRecurso } from "@/lib/plan"
 import { redirect } from "next/navigation"
 import { headers } from "next/headers"
 
@@ -34,10 +35,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const allowedTabs = await getAllowedTabs(tenantId, role)
   const souDono = await isSuperAdmin()
+  const temApi = await temRecurso(tenantId, "api")
 
   return (
     <SidebarProvider>
-      <AppSidebar allowedTabs={allowedTabs} role={role} userId={userId} isSuperAdmin={souDono} />
+      <AppSidebar allowedTabs={allowedTabs} role={role} userId={userId} isSuperAdmin={souDono} temApi={temApi} />
       <main className="flex-1 flex flex-col min-h-screen">
         <header className="h-14 border-b flex items-center px-4 gap-2">
           <SidebarTrigger />
