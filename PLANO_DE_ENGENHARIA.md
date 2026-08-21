@@ -1882,6 +1882,101 @@ juntos contra o banco.
 
 ---
 
+### 7.2.30 Auditoria por subsistema — 20-21/08/2026
+
+Cinco frentes independentes lendo o código, cada achado verificado por um
+cético que tentava refutá-lo lendo os arquivos. **Nove defeitos reais.** Duas
+frentes (código morto, duas-fontes-da-verdade) nunca completaram por limite de
+uso — **essa parte do sistema segue sem ter sido olhada.**
+
+**O pior não era técnico.** Os Termos de Uso, seção 4, prometiam *"15 dias
+corridos de teste gratuito, sem necessidade de cartão de crédito"*, e a seção 7
+prometia "dias extras de teste" pela indicação. O trial foi removido do produto
+em 10/08 — landing, cadastro e `getTenant` foram limpos, e **o contrato ficou
+para trás**. Reescritas para descrever o que o sistema faz: acesso exige plano
+pago ativo, e a indicação dá desconto. **Isto é texto contratual e merece o
+olhar do advogado que fez o parecer da v1.1** — o que fiz foi corrigir uma
+divergência factual, não redigir cláusula nova.
+
+**Marcadores crus chegavam ao cliente final.** Havia dois caminhos de tradução
+e só um trocava os marcadores de vocabulário:
+
+```
+getTranslations()/useTranslations() → i18n/request.ts → trocava   ✓
+getTranslator(locale, ns)           → lib/i18n.ts     → NÃO trocava ✗
+```
+
+O segundo é justamente o que gera e-mail, WhatsApp e PDF. Onze textos passavam
+crus, então o cliente da nossa cliente recebia `[[osC]] #1234`. A troca virou
+`lib/mensagens.ts`, usada pelos dois caminhos — o defeito e a duplicação caem
+juntos. O padrão agora é **trocar sempre**: sem vocabulário informado vale o
+texto padrão, nunca o marcador. Errar para "texto padrão" é invisível; errar
+para "marcador cru" é constrangedor na frente do cliente de outra empresa.
+
+**Um defeito nosso, do dia anterior.** A permissão por ação (7.2.27) fez
+`updateOrderStatus` recusar com um `return` seco. A fila offline (7.2.25) grava
+"aplicada" antes de aplicar — de propósito, para nunca duplicar dinheiro. As
+duas decisões juntas viravam perda silenciosa: desmarcar "mudar status" de um
+técnico passava a **descartar o trabalho de campo dele sem aviso**. Agora
+`sincronizar` confere a permissão antes e RECUSA com motivo.
+
+**Aviso de conclusão que nunca disparava.** A regra "mudou de status, avisa o
+cliente" estava escrita só no `updateOrderStatus`. O botão Concluir — o caminho
+normal, e também o da fila offline — não avisava ninguém. Somava-se a isso que
+`momentoDoStatus` ignorava `INVOICED`, que é onde a maioria das OS concluídas
+termina em produção (o comentário do cron de NPS já registrava isso). A empresa
+ligava o aviso, via o "a caminho" funcionando, e concluía que estava tudo no ar.
+
+**O cron, endurecido.** Três achados no mesmo lugar, e um deles se escondia:
+
+- **Teto de 40 reconciliações.** O laço faz uma chamada HTTP por linha num
+  conjunto que só cresce. Estourar os 60s mata tudo depois — e a Vercel mata a
+  função antes do `avisarFalhaDoCron`, então **a falha apagaria o próprio
+  alarme**. Hoje há 0 assinaturas presas e o cron roda em 0,45s; o teto existe
+  para o dia em que não for assim.
+- **Timeout de 3s** no `fetch` da Asaas. O padrão já existia no projeto
+  (`geocode.ts`) e não tinha sido aplicado aqui.
+- **`try/catch` nas duas etapas que não tinham.** Eram as menos importantes
+  (e-mails de acompanhamento e NPS) e derrubavam a cobrança que vem depois.
+
+**Geocodificação atropelando o limite.** O comentário afirmava respeitar 1 req/s
+do Nominatim e não havia pausa nenhuma. Falha muda com perda de trabalho: o
+Nominatim recusa, o endereço conta tentativa, o cron fecha verde — e depois de
+6 dias o endereço **sai da fila para sempre**. Pausa de 1,1s, só quando o
+provedor é o Nominatim (com Geoapify o limite é por crédito/dia).
+
+**E-mail de pagamento morrendo com a instância.** `gerarContrato().then(email)`
+disparado sem `after()`: em serverless a instância congela quando o handler
+retorna. O cliente pagava, era ativado, e não recebia confirmação nem o
+contrato em PDF — sem erro no Sentry, sem linha no log.
+
+#### Penhascos conhecidos, com o número em que passam a doer
+
+Reais e verificados, mas **não vale mexer hoje**: 4 empresas, 6 clientes, 11 OS,
+7 receitas, 0 contratos.
+
+| Onde | O que acontece | Dói a partir de |
+|---|---|---|
+| `finance.ts:89` | Carrega o razão inteiro e faz KPI e busca em JS | ~3.000 linhas de receita+despesa |
+| `cron/daily:73` | Uma chamada HTTP por assinatura presa | ~150 presas (teto já mitiga) |
+| `reports.ts:64` | Carteira inteira com OS aninhadas para ranquear 10 | ~2.000 clientes |
+| `service-orders.ts` | Lista traz todos os itens de todas as OS | ~1.000 OS ativas |
+
+Refutado corretamente: o N+1 de contratos recorrentes. Existe, mas com 0
+contratos não roda nunca.
+
+#### O que continua sem ter sido olhado
+
+Código morto e duplicação de regra. É onde este projeto já teve problema antes
+(numeração de OS duplicada, `reset()` de teste desatualizado por 6 tabelas) — e,
+durante esta mesma auditoria, achei **uma terceira** implementação da numeração
+de OS em `contracts.ts:211`, sem o `retryOnUniqueConflict` que os outros dois
+caminhos têm. Fica registrado como pendência.
+
+603 → 617 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

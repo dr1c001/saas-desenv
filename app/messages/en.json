@@ -83,7 +83,7 @@
     "terms": {
       "metaTitle": "Terms of Use — ServiçoOS",
       "title": "Terms of Use",
-      "lastUpdated": "Last updated: July 3, 2026",
+      "lastUpdated": "Last updated: August 21, 2026",
       "section1": {
         "title": "1. Who provides this service",
         "p1": "ServiçoOS is operated by <strong>ADRIEL WELLINGTON RODRIGUES</strong>, registered under CNPJ No. <strong>53.325.011/0001-08</strong>, hereinafter referred to as “ServiçoOS,” “we,” or “provider.”",
@@ -100,9 +100,9 @@
         "p2": "Each account represents a company (“tenant”) and can have multiple users with different permission levels ({owner}, {admin}, {technician}), controlled by the account owner."
       },
       "section4": {
-        "title": "4. Free trial period",
-        "p1": "New accounts are entitled to a <strong>15-calendar-day</strong> free trial, with no credit card required, with full access to the features of the available subscription plan. This period may be extended by additional days through the referral program (section 7).",
-        "p2": "At the end of the trial period, if no plan has been purchased, access to the system's features is blocked until a paid plan is purchased — registered data remains saved and is automatically restored as soon as a plan is subscribed to."
+        "title": "4. Subscription and access",
+        "p1": "Access to ServiçoOS features requires an active paid plan. There is no free trial period: a newly created account stays locked until the first payment is confirmed.",
+        "p2": "If the subscription is cancelled or goes unpaid, access to the features is blocked — registered data remains saved and is automatically restored as soon as a plan is subscribed to again. In case of late payment, there is a grace period before the block, shown in the billing area of the system."
       },
       "section5": {
         "title": "5. Plans, payment, and billing",
@@ -117,7 +117,7 @@
       },
       "section7": {
         "title": "7. Referral program",
-        "p1": "Users can refer ServiçoOS to third parties through an exclusive link. Whoever signs up through a referral earns extra days of free trial; whoever refers someone earns extra days of subscription when the referred person purchases a paid plan. The current details and amounts are shown in the system's referral area and may be adjusted at any time, with no retroactive effect on benefits already granted."
+        "p1": "Users can refer ServiçoOS to third parties through an exclusive link. Whoever signs up through a referral receives a discount on their first payment; whoever refers someone receives a discount when the referred person purchases a paid plan. Current percentages are shown in the referral area of the system and may be adjusted at any time, with no retroactive effect on benefits already granted."
       },
       "section8": {
         "title": "8. Your data and your clients' data",

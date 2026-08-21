@@ -58,8 +58,22 @@ describe("momento da mudança de status", () => {
   })
 
   it("não avisa em status que não interessam ao cliente", () => {
-    expect(momentoDoStatus("DONE", "INVOICED")).toBeNull()
     expect(momentoDoStatus("OPEN", "CANCELLED")).toBeNull()
+    expect(momentoDoStatus("DONE", "CANCELLED")).toBeNull()
+  })
+
+  it("concluir E faturar de uma vez também avisa", () => {
+    // completeServiceOrder com "faturar agora" pula o DONE e vai direto pra
+    // INVOICED. Este é o caminho mais usado em produção (o comentário do cron
+    // de NPS registra isso), e era justamente o que não avisava ninguém.
+    expect(momentoDoStatus("IN_PROGRESS", "INVOICED")).toBe("concluido")
+    expect(momentoDoStatus("OPEN", "INVOICED")).toBe("concluido")
+  })
+
+  it("faturar DEPOIS de concluir NÃO avisa de novo", () => {
+    // O cliente já foi avisado quando a OS foi concluída. Faturar é assunto
+    // interno da empresa e não é uma segunda mensagem pra ele.
+    expect(momentoDoStatus("DONE", "INVOICED")).toBeNull()
   })
 
   it("não avisa quando o status não mudou", () => {

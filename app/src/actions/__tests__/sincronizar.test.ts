@@ -11,6 +11,7 @@ let testDb: TestDatabase
 const mockGetTenant = vi.fn()
 const mockConcluir = vi.fn()
 const mockStatus = vi.fn()
+const mockChecarAcao = vi.fn()
 
 beforeAll(async () => {
   testDb = await createTestDatabase()
@@ -18,6 +19,7 @@ beforeAll(async () => {
   vi.doMock("@/lib/auth", () => ({
     getTenant: mockGetTenant,
     requireActiveSubscription: vi.fn().mockResolvedValue(undefined),
+    checarAcao: mockChecarAcao,
   }))
   // O efeito real já tem os próprios testes; aqui o que se verifica é SE ele é
   // chamado, e quantas vezes.
@@ -36,6 +38,8 @@ beforeEach(async () => {
   mockGetTenant.mockReset()
   mockConcluir.mockReset().mockResolvedValue(undefined)
   mockStatus.mockReset().mockResolvedValue(undefined)
+  // null = pode. Cada teste que precisa de recusa sobrescreve.
+  mockChecarAcao.mockReset().mockResolvedValue(null)
 })
 
 async function cenario(status = "OPEN") {
@@ -222,5 +226,58 @@ describe("o momento registrado", () => {
 
     const registro = await testDb.db.offlineOperation.findUnique({ where: { id: "op-1" } })
     expect(registro!.clientAt.toISOString()).toBe("2026-08-19T08:00:00.000Z")
+  })
+})
+
+describe("permissão revogada não descarta trabalho de campo", () => {
+  it("recusa com motivo em vez de dizer que aplicou", async () => {
+    // O defeito real: updateOrderStatus recusa com um `return` seco, sem sinal
+    // nenhum. A fila gravava "aplicada", apagava do celular, e nada tinha sido
+    // gravado. Bastava o dono desmarcar "mudar status" do técnico na tela de
+    // Permissões — que é exatamente para isso que ela existe.
+    const { os } = await cenario()
+    mockChecarAcao.mockResolvedValue("semPermissao")
+    const { sincronizar } = await import("@/actions/sincronizar")
+
+    const r = await sincronizar([op(os.id, { tipo: "MUDAR_STATUS", dados: { status: "DONE" } })])
+
+    expect(r[0].veredito).toEqual({ estado: "recusada", motivo: "semPermissao" })
+    expect(mockStatus).not.toHaveBeenCalled()
+  })
+
+  it("também recusa a conclusão, sem deixar completeServiceOrder lançar", async () => {
+    // Este caminho LANÇAVA: virava "falhou", o celular reenviava, e a segunda
+    // tentativa achava o registro e respondia "repetida" — que também apaga.
+    const { os } = await cenario()
+    mockChecarAcao.mockResolvedValue("semPermissao")
+    const { sincronizar } = await import("@/actions/sincronizar")
+
+    const r = await sincronizar([op(os.id)])
+
+    expect(r[0].veredito).toEqual({ estado: "recusada", motivo: "semPermissao" })
+    expect(mockConcluir).not.toHaveBeenCalled()
+  })
+
+  it("a recusa CONTINUA recusada quando o celular reenvia", async () => {
+    // O técnico precisa continuar vendo o motivo, e não um "repetida" que não
+    // explica nada.
+    const { os } = await cenario()
+    mockChecarAcao.mockResolvedValue("semPermissao")
+    const { sincronizar } = await import("@/actions/sincronizar")
+
+    await sincronizar([op(os.id)])
+    const segunda = await sincronizar([op(os.id)])
+
+    expect(segunda[0].veredito).toEqual({ estado: "recusada", motivo: "semPermissao" })
+  })
+
+  it("com permissão, segue aplicando normalmente", async () => {
+    const { os } = await cenario()
+    const { sincronizar } = await import("@/actions/sincronizar")
+
+    const r = await sincronizar([op(os.id)])
+
+    expect(r[0].veredito.estado).toBe("aplicada")
+    expect(mockConcluir).toHaveBeenCalledOnce()
   })
 })

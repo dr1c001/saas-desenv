@@ -353,6 +353,14 @@ export async function completeServiceOrder(
     await autorAtual(userId)
   )
 
+  // Avisa o cliente final. Esta chamada FALTAVA: a regra de "mudou de status,
+  // avisa o cliente" estava escrita só no updateOrderStatus, e concluir pelo
+  // botão Concluir — que é o caminho normal, e também o que a fila offline usa
+  // — nunca avisava ninguém. A empresa ligava "avisar ao concluir" na tela,
+  // via o aviso de "a caminho" funcionando, e concluía que estava tudo no ar.
+  // (Achado em auditoria, 20/08/2026.)
+  await avisarClienteDaOs(id, order.status, status)
+
   revalidatePath("/service-orders")
   revalidatePath(`/service-orders/${id}`)
   revalidatePath("/history")

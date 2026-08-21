@@ -64,6 +64,19 @@ export function momentoDoStatus(anterior: string, novo: string): MomentoAviso | 
   if (anterior === novo) return null
   if (novo === "IN_PROGRESS") return "aCaminho"
   if (novo === "DONE") return "concluido"
+
+  // INVOICED conta como conclusão quando a OS NÃO passou por DONE antes.
+  //
+  // completeServiceOrder com "faturar agora" vai direto de OPEN/IN_PROGRESS
+  // para INVOICED e nunca encosta em DONE — e o comentário do cron de NPS já
+  // registrava que "na prática, a maioria das OS concluídas em produção está
+  // em INVOICED". Sem esta linha, justamente o caminho mais usado não avisa
+  // ninguém.
+  //
+  // A condição `anterior !== "DONE"` é o que impede o aviso duplicado: quem
+  // concluiu e faturou depois já foi avisado na conclusão.
+  if (novo === "INVOICED" && anterior !== "DONE") return "concluido"
+
   return null
 }
 

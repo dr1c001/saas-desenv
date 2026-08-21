@@ -26,7 +26,7 @@ export async function GET(
       tenant: {
         select: {
           name: true, logoUrl: true, phone: true, address: true, website: true,
-          locale: true, quoteTerms: true,
+          locale: true, vocabulary: true, quoteTerms: true,
           pixKey: true, pixKeyType: true, pixReceiver: true, pixCity: true,
         },
       },
@@ -48,7 +48,9 @@ export async function GET(
   // O PDF é renderizado fora do request context do Next.js — o locale do
   // tenant precisa ser passado explícito. (Item 1 do roadmap, 06/08/2026.)
   const locale = dbUser.tenant.locale
-  const t = getTranslator(locale, "pdf")
+  // O vocabulário da empresa vai junto: o PDF é o documento que chega
+  // ao cliente final, e é onde a palavra escolhida por ela mais importa.
+  const t = getTranslator(locale, "pdf", dbUser.tenant.vocabulary)
 
   // O identificador vai no formato do documento, pra empresa reconhecer no
   // extrato de que orçamento veio o dinheiro.

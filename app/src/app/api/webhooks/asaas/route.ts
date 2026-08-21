@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { after, NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { sendPaymentConfirmedEmail } from "@/lib/resend"
 import { gerarContrato } from "@/lib/contrato"
@@ -138,24 +138,35 @@ export async function POST(req: NextRequest) {
 
       const owner = sub.tenant.users[0]
       if (owner?.email) {
-        // Gera o contrato e anexa. Melhor esforço, e depois da resposta: o
+        // Gera o contrato e anexa. Melhor esforço, e DEPOIS da resposta: o
         // webhook precisa responder rápido pra Asaas, e falhar em gerar PDF
         // nunca pode impedir a ativação do cliente que acabou de pagar.
-        gerarContrato(sub.tenantId)
-          .catch((err) => {
-            console.error("[contrato] falha ao gerar:", err)
-            return null
-          })
-          .then((contrato) =>
-            sendPaymentConfirmedEmail(
-              owner.email,
-              owner.name ?? "Cliente",
-              sub.plan.name,
-              sub.tenant.locale,
-              contrato ? { nomeArquivo: contrato.nomeArquivo, buffer: contrato.buffer } : undefined
+        //
+        // Dentro de after(). Sem ele, a promessa era só disparada e esquecida:
+        // em runtime serverless a instância pode ser congelada assim que o
+        // handler retorna, e o trabalho pendente morre no meio. O cliente
+        // pagava, era ativado, e simplesmente não recebia o e-mail de
+        // confirmação nem o contrato — que é o documento da relação comercial.
+        // Sem erro no Sentry (o catch engole) e sem linha no log. after() é a
+        // forma que o Next.js dá de dizer "só congele depois disto".
+        // (Achado em auditoria, 20/08/2026.)
+        after(
+          gerarContrato(sub.tenantId)
+            .catch((err) => {
+              console.error("[contrato] falha ao gerar:", err)
+              return null
+            })
+            .then((contrato) =>
+              sendPaymentConfirmedEmail(
+                owner.email,
+                owner.name ?? "Cliente",
+                sub.plan.name,
+                sub.tenant.locale,
+                contrato ? { nomeArquivo: contrato.nomeArquivo, buffer: contrato.buffer } : undefined
+              )
             )
-          )
-          .catch(() => null)
+            .catch(() => null)
+        )
       }
     }
 

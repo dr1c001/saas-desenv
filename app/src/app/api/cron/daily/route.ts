@@ -19,6 +19,13 @@ import { gravarRetratoDoMes } from "@/lib/snapshot"
 // backfill de geocodificação no mesmo processo.
 export const maxDuration = 60
 
+// Quantas assinaturas presas reconciliar por execução. Cada uma custa uma
+// chamada HTTP à Asaas, e o orçamento da função inteira é maxDuration.
+const MAX_RECONCILIACOES = 40
+// Teto por chamada. 40 × 3s = 120s no pior caso absoluto, mas o normal é
+// ~200ms cada; o timeout existe para o caso patológico, não para o comum.
+const TIMEOUT_ASAAS_MS = 3000
+
 // Mesma decodificação base64 usada em lib/asaas.ts (ver o porquê lá) — aqui a
 // chave é lida direto pra não importar o módulo inteiro só por uma consulta.
 const ASAAS_BASE =
@@ -70,7 +77,19 @@ export async function GET(req: NextRequest) {
     // reliberado pelo webhook, mas se ESSE webhook se perder ele fica bloqueado
     // sem nada perceber — mesmo defeito de 07/08, só que na renovação em vez da
     // primeira compra, e agora com a equipe inteira parada.
+    // TETO. Este laço faz uma chamada HTTP por linha, e o conjunto só cresce:
+    // toda assinatura PENDING abandonada fica aqui para sempre. Sem limite, o
+    // primeiro bloco do cron é o que estoura os 60s — e aí NADA depois roda:
+    // sem NPS, sem OS de contrato, sem aviso de inadimplência, sem retrato
+    // mensal. Pior: a Vercel mata a função antes do avisarFalhaDoCron lá
+    // embaixo, então a falha apaga o próprio alarme.
+    //
+    // O que sobra da fila entra amanhã. Reconciliação é rede de segurança do
+    // webhook, não caminho principal — atrasar um dia não machuca ninguém.
     const stuck = await prisma.subscription.findMany({
+      take: MAX_RECONCILIACOES,
+      // Mais velhas primeiro: quem está preso há mais tempo é quem mais precisa.
+      orderBy: { createdAt: "asc" },
       where: { status: { in: ["PENDING", "PAST_DUE"] }, asaasId: { not: null } },
       select: {
         id: true, asaasId: true, tenantId: true, planId: true, status: true,
@@ -79,8 +98,13 @@ export async function GET(req: NextRequest) {
     })
     results.stuckPending = stuck.length
     for (const sub of stuck) {
+      // AbortSignal.timeout: sem ele, uma Asaas travada segura a função até a
+      // Vercel matá-la, e o dia inteiro de trabalho de fundo se perde. O padrão
+      // já existia no projeto (geocode.ts:99 e :112) e não tinha sido aplicado
+      // aqui. (Achado em auditoria, 20/08/2026.)
       const r = await fetch(`${ASAAS_BASE}/payments?subscription=${sub.asaasId}`, {
         headers: { access_token: asaasKey() },
+        signal: AbortSignal.timeout(TIMEOUT_ASAAS_MS),
       })
       if (!r.ok) { results.errors++; continue }
       const { data } = (await r.json()) as { data?: { id: string; status: string; dueDate?: string }[] }
@@ -154,17 +178,27 @@ export async function GET(req: NextRequest) {
   const day3Start = brtMidnightUTC(year, month, day - 3)
   const day3End = brtMidnightUTC(year, month, day - 2)
 
-  const day3Tenants = await prisma.tenant.findMany({
-    where: { createdAt: { gte: day3Start, lt: day3End }, subscriptionStatus: "TRIAL" },
-    include: { users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } } },
-  })
-  for (const t of day3Tenants) {
-    const owner = t.users[0]
-    if (!owner?.email) continue
-    try {
-      await sendOnboardingDay3Email(owner.email, owner.name, t.locale)
-      results.day3++
-    } catch { results.errors++ }
+  // A CONSULTA também dentro do try. Sete das nove etapas do cron já estavam
+  // isoladas; estas duas não, e eram justamente as menos importantes — um erro
+  // no e-mail de acompanhamento derrubava a cobrança que vem depois (aviso de
+  // inadimplência, OS de contrato, retrato mensal) e pulava o registro de
+  // saúde no fim. (Achado em auditoria, 20/08/2026.)
+  try {
+    const day3Tenants = await prisma.tenant.findMany({
+      where: { createdAt: { gte: day3Start, lt: day3End }, subscriptionStatus: "TRIAL" },
+      include: { users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } } },
+    })
+    for (const t of day3Tenants) {
+      const owner = t.users[0]
+      if (!owner?.email) continue
+      try {
+        await sendOnboardingDay3Email(owner.email, owner.name, t.locale)
+        results.day3++
+      } catch { results.errors++ }
+    }
+  } catch (e) {
+    console.error("[cron] lembrete de acompanhamento falhou:", e)
+    results.errors++
   }
 
   // ── NPS: OS concluída há 7+ dias, nunca contatada ────────────────────────────
@@ -185,29 +219,36 @@ export async function GET(req: NextRequest) {
   const sevenDaysAgo = new Date(now)
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-  const npsOrders = await prisma.serviceOrder.findMany({
-    where: {
-      status: { in: ["DONE", "INVOICED"] },
-      concludedAt: { lte: sevenDaysAgo },
-      npsSentAt: null,
-      npsScore: null,
-      clientToken: { not: null },
-    },
-    include: {
-      client: { select: { email: true, name: true } },
-      // A pesquisa vai pro cliente final, mas quem "fala" é a empresa: sai no
-      // idioma dela (Tenant.locale), igual à OS e ao PDF. (i18n, item 1.)
-      tenant: { select: { locale: true } },
-    },
-    take: 100,
-  })
-  for (const os of npsOrders) {
-    if (!os.client.email || !os.clientToken) continue
-    try {
-      await sendNpsEmail(os.client.email, os.client.name, os.clientToken, os.tenant.locale)
-      await prisma.serviceOrder.update({ where: { id: os.id }, data: { npsSentAt: new Date() } })
-      results.nps++
-    } catch { results.errors++ }
+  // Mesmo motivo do bloco acima: a CONSULTA também dentro do try, senão um
+  // erro aqui derruba a cobrança e o retrato mensal que vêm depois.
+  try {
+    const npsOrders = await prisma.serviceOrder.findMany({
+      where: {
+        status: { in: ["DONE", "INVOICED"] },
+        concludedAt: { lte: sevenDaysAgo },
+        npsSentAt: null,
+        npsScore: null,
+        clientToken: { not: null },
+      },
+      include: {
+        client: { select: { email: true, name: true } },
+        // A pesquisa vai pro cliente final, mas quem "fala" é a empresa: sai no
+        // idioma dela (Tenant.locale), igual à OS e ao PDF. (i18n, item 1.)
+        tenant: { select: { locale: true } },
+      },
+      take: 100,
+    })
+    for (const os of npsOrders) {
+      if (!os.client.email || !os.clientToken) continue
+      try {
+        await sendNpsEmail(os.client.email, os.client.name, os.clientToken, os.tenant.locale)
+        await prisma.serviceOrder.update({ where: { id: os.id }, data: { npsSentAt: new Date() } })
+        results.nps++
+      } catch { results.errors++ }
+    }
+  } catch (e) {
+    console.error("[cron] pesquisa de satisfação falhou:", e)
+    results.errors++
   }
 
   // ── Contratos recorrentes: gera a OS da próxima visita ───────────────────────

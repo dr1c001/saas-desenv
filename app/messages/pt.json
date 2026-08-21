@@ -83,7 +83,7 @@
     "terms": {
       "metaTitle": "Termos de Uso — ServiçoOS",
       "title": "Termos de Uso",
-      "lastUpdated": "Última atualização: 3 de julho de 2026",
+      "lastUpdated": "Última atualização: 21 de agosto de 2026",
       "section1": {
         "title": "1. Quem presta este serviço",
         "p1": "O ServiçoOS é operado por <strong>ADRIEL WELLINGTON RODRIGUES</strong>, inscrito no CNPJ nº <strong>53.325.011/0001-08</strong>, doravante denominado “ServiçoOS”, “nós” ou “prestador”.",
@@ -100,9 +100,9 @@
         "p2": "Cada conta representa uma empresa (“tenant”) e pode ter múltiplos usuários com diferentes níveis de permissão ({owner}, {admin}, {technician}), controlados pelo proprietário da conta."
       },
       "section4": {
-        "title": "4. Período de teste gratuito",
-        "p1": "Novas contas têm direito a <strong>15 dias corridos</strong> de teste gratuito, sem necessidade de cartão de crédito, com acesso completo às funcionalidades do plano contratável. Esse período pode ser estendido por dias adicionais por meio do programa de indicação (seção 7).",
-        "p2": "Ao final do período de teste, caso nenhum plano seja contratado, o acesso às funcionalidades do sistema é bloqueado até a contratação de um plano pago — os dados cadastrados permanecem salvos e são restaurados automaticamente assim que um plano for assinado."
+        "title": "4. Contratação e acesso",
+        "p1": "O acesso às funcionalidades do ServiçoOS exige um plano pago ativo. Não há período de teste gratuito: a conta criada permanece bloqueada até a confirmação do primeiro pagamento.",
+        "p2": "Caso a assinatura seja cancelada ou deixe de ser paga, o acesso às funcionalidades é bloqueado — os dados cadastrados permanecem salvos e são restaurados automaticamente assim que um plano voltar a ser assinado. Em caso de atraso de pagamento, há um período de carência antes do bloqueio, informado na área de cobrança do sistema."
       },
       "section5": {
         "title": "5. Planos, pagamento e cobrança",
@@ -117,7 +117,7 @@
       },
       "section7": {
         "title": "7. Programa de indicação",
-        "p1": "Usuários podem indicar o ServiçoOS para terceiros por meio de um link exclusivo. Quem se cadastra por indicação ganha dias extras de teste gratuito; quem indica ganha dias extras de assinatura quando o indicado contrata um plano pago. Os detalhes e quantidades vigentes são exibidos na área de indicação do sistema e podem ser ajustados a qualquer momento, sem efeito retroativo sobre benefícios já concedidos."
+        "p1": "Usuários podem indicar o ServiçoOS para terceiros por meio de um link exclusivo. Quem se cadastra por indicação recebe um desconto no primeiro pagamento; quem indica recebe um desconto quando o indicado contrata um plano pago. Os percentuais vigentes são exibidos na área de indicação do sistema e podem ser ajustados a qualquer momento, sem efeito retroativo sobre benefícios já concedidos."
       },
       "section8": {
         "title": "8. Seus dados e os dados dos seus clientes",

@@ -24,6 +24,12 @@ import {
   MAX_POR_LOTE,
 } from "@/lib/geocode-lote"
 
+/** O Nominatim permite 1 requisição por segundo. A folga de 100ms cobre a
+ *  variação de relógio entre a nossa máquina e a deles. */
+const INTERVALO_NOMINATIM_MS = 1100
+
+const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
 /**
  * Depois disto o endereço sai da fila.
  *
@@ -187,8 +193,27 @@ export async function geocodificarAvulso(
   let erros = 0
   const falharam: string[] = []
 
-  for (const addr of enderecos) {
+  for (const [i, addr] of enderecos.entries()) {
     if (Date.now() - inicio > orcamentoMs) break
+
+    // A pausa entre chamadas. O comentário do cron afirma que o lote "respeita
+    // o limite de 1 req/s do Nominatim" — e não havia pausa nenhuma: o laço
+    // disparava tão rápido quanto a rede deixasse.
+    //
+    // Atropelar o limite não dá erro visível: o Nominatim responde 403/429, o
+    // geocodeAddress devolve null, o endereço conta uma tentativa e o cron
+    // fecha com ok=true. Repetindo dias seguidos, o endereço consome as 6
+    // tentativas de MAX_TENTATIVAS e SAI DA FILA PARA SEMPRE — some do mapa e
+    // só volta se alguém reeditar o cliente à mão. Falha muda, com perda de
+    // trabalho, e o /status pintando o dia de verde.
+    //
+    // Só espera quando é o Nominatim: com chave do Geoapify o limite é por
+    // crédito/dia, não por segundo, e dormir à toa gastaria o orçamento do
+    // cron. A condição vem do MESMO chaveGeoapify() que o geocode usa para
+    // escolher o provedor — reler a variável de ambiente aqui criaria uma
+    // segunda fonte da verdade que pode divergir.
+    if (i > 0 && !chaveGeoapify()) await esperar(INTERVALO_NOMINATIM_MS)
+
     try {
       const coords = await geocodeAddress(addr)
       if (coords) {

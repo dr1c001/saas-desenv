@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { checarAcao, getTenant, requireActiveSubscription } from "@/lib/auth"
 import { completeServiceOrder, updateOrderStatus } from "@/actions/service-orders"
 import type { Operacao, Veredito } from "@/lib/fila-offline"
 
@@ -94,6 +94,27 @@ async function aplicar(
   }
 
   if (!os) return registrar({ estado: "recusada", motivo: "osNaoEncontrada" })
+
+  // ── A permissão é conferida AQUI, e não lá dentro ─────────────────────────
+  //
+  // completeServiceOrder e updateOrderStatus checam a permissão por conta
+  // própria, mas o jeito como cada uma RECUSA não serve para a fila:
+  //
+  //   updateOrderStatus  → `return` seco, sem sinal nenhum
+  //   completeServiceOrder → lança
+  //
+  // O primeiro fazia a fila gravar "aplicada" e apagar do celular uma operação
+  // que não gravou nada. O segundo virava "falhou", o celular reenviava, e a
+  // segunda tentativa encontrava o registro e respondia "repetida" — que
+  // também apaga. Nos dois casos o técnico perdia o trabalho de campo em
+  // silêncio, e bastava o dono desmarcar a ação na tela de Permissões, que é
+  // exatamente para isso que ela existe.
+  //
+  // Conferindo antes, a operação é RECUSADA com motivo e o técnico vê por quê.
+  // (Achado em auditoria, 20/08/2026 — defeito introduzido junto com a
+  // permissão por ação no dia anterior.)
+  const acao = op.tipo === "CONCLUIR_OS" ? "os.concluir" : "os.status"
+  if (await checarAcao(acao)) return registrar({ estado: "recusada", motivo: "semPermissao" })
 
   if (op.tipo === "CONCLUIR_OS") {
     // Já concluída ou faturada: não sobrescreve. Quem estava com sinal já

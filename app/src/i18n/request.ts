@@ -2,12 +2,7 @@ import { getRequestConfig } from "next-intl/server"
 import { cookies } from "next/headers"
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
-import {
-  aplicarNasMensagens,
-  lerVocabulario,
-  tabelaDeTrocas,
-  VOCABULARIO_PADRAO,
-} from "@/lib/vocabulario"
+import { mensagensComVocabulario } from "@/lib/mensagens"
 
 export const LOCALES = ["pt", "en"] as const
 export type Locale = (typeof LOCALES)[number]
@@ -52,40 +47,12 @@ async function resolverContexto(): Promise<{ locale: Locale; vocabulario: unknow
   return { locale: isValidLocale(cookieLocale) ? cookieLocale : DEFAULT_LOCALE, vocabulario: null }
 }
 
-// Trocar os marcadores percorre ~1400 textos. É barato, mas roda em TODA
-// requisição — e o resultado só muda quando a empresa altera o vocabulário.
-// A chave inclui o vocabulário inteiro, então mudar a configuração invalida
-// sozinho, sem precisar limpar nada.
-const cacheMensagens = new Map<string, unknown>()
-
-async function mensagensComVocabulario(locale: Locale, vocabularioGravado: unknown) {
-  const vocabulario = lerVocabulario(vocabularioGravado, locale)
-  const chave = `${locale}:${JSON.stringify(vocabulario)}`
-
-  const emCache = cacheMensagens.get(chave)
-  if (emCache) return emCache
-
-  const originais = (await import(`../../messages/${locale}.json`)).default
-  const aplicadas = aplicarNasMensagens(originais, tabelaDeTrocas(vocabulario))
-
-  // Teto pra não crescer sem limite num servidor com muitos tenants: o padrão
-  // (a maioria das empresas) fica sempre, os customizados rodam.
-  if (cacheMensagens.size > 50) {
-    for (const k of cacheMensagens.keys()) {
-      if (!k.endsWith(JSON.stringify(VOCABULARIO_PADRAO[locale]))) {
-        cacheMensagens.delete(k)
-        break
-      }
-    }
-  }
-  cacheMensagens.set(chave, aplicadas)
-  return aplicadas
-}
-
 export default getRequestConfig(async () => {
   const { locale, vocabulario } = await resolverContexto()
   return {
     locale,
-    messages: (await mensagensComVocabulario(locale, vocabulario)) as Record<string, unknown>,
+    // A troca de marcadores mora em lib/mensagens.ts, compartilhada com o
+    // getTranslator dos e-mails e PDFs. Eram duas cópias, e só esta trocava.
+    messages: mensagensComVocabulario(locale, vocabulario) as Record<string, unknown>,
   }
 })

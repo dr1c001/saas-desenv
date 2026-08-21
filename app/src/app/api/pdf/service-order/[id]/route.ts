@@ -30,7 +30,7 @@ export async function GET(
       tenant: {
         select: {
           name: true, logoUrl: true, phone: true, address: true, website: true,
-          locale: true, orderTerms: true, warrantyDays: true,
+          locale: true, vocabulary: true, orderTerms: true, warrantyDays: true,
           pixKey: true, pixKeyType: true, pixReceiver: true, pixCity: true,
         },
       },
@@ -83,7 +83,9 @@ export async function GET(
   const venceEm = garantiaAte(order.concludedAt, dias)
 
   const locale = dbUser.tenant.locale
-  const t = getTranslator(locale, "pdf")
+  // O vocabulário da empresa vai junto: o PDF é o documento que chega
+  // ao cliente final, e é onde a palavra escolhida por ela mais importa.
+  const t = getTranslator(locale, "pdf", dbUser.tenant.vocabulary)
 
   // Cobrança por PIX no papel. O valor entra no código, então o cliente não
   // digita nada além de confirmar — mas o QR fica no documento desde a

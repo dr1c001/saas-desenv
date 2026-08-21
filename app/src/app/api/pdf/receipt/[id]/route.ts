@@ -19,7 +19,7 @@ export async function GET(
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { tenantId: true, tenant: { select: { name: true, logoUrl: true, locale: true } } },
+    select: { tenantId: true, tenant: { select: { name: true, logoUrl: true, locale: true, vocabulary: true } } },
   })
   if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   // Bloqueio de assinatura é só de página — essa rota é despachável direto
@@ -43,7 +43,9 @@ export async function GET(
   // O PDF é renderizado fora do request context do Next.js — o locale do
   // tenant precisa ser passado explícito. (Item 1 do roadmap, 06/08/2026.)
   const locale = dbUser.tenant.locale
-  const t = getTranslator(locale, "pdf")
+  // O vocabulário da empresa vai junto: o PDF é o documento que chega
+  // ao cliente final, e é onde a palavra escolhida por ela mais importa.
+  const t = getTranslator(locale, "pdf", dbUser.tenant.vocabulary)
 
   const buildElement = (logoUrl: string | null) => {
     return React.createElement(ReceiptPDF, {
