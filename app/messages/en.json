@@ -1988,11 +1988,6 @@
       "amountLabel": "Amount",
       "viewLink": "View and approve"
     },
-    "nps": {
-      "completed": "The service is complete! 🎉",
-      "askOpinion": "We'd love to hear your feedback.",
-      "rateLink": "Rate the service (takes less than a minute)"
-    },
     "avisoCliente": {
       "aCaminho": "Hello! This is {empresa}.\n\nWe are on our way for *{titulo}* ({os}).",
       "concluido": "Hello! This is {empresa}.\n\nThe service *{titulo}* ({os}) has been completed.",
@@ -2034,9 +2029,6 @@
     "nfseAlreadyIssued": "An e-invoice was already issued for this [[os]].",
     "orderWithoutAmount": "[[osC]] has no amount — add items before issuing an e-invoice.",
     "invalidLink": "Invalid or expired link.",
-    "invalidReferralCode": "Invalid code.",
-    "ownReferralCode": "You cannot use your own referral code.",
-    "referralAlreadyApplied": "Referral already applied.",
     "duplicateEmailAccount": "An account already exists with the email {email}, linked to another account. Please contact support.",
     "defaultUserName": "User",
     "inactiveSubscription": "Inactive subscription. Subscribe to a plan to keep using the system.",

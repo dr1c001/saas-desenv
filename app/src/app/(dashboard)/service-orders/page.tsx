@@ -32,13 +32,22 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
   const t = await getTranslations("serviceOrdersPages")
   const tCommon = await getTranslations("common")
   const tFil = await getTranslations("filiais.filtro")
-  // Default to active orders only; "all" shows everything
-  const activeOnly = !status || (status !== "all" && !["DONE", "INVOICED", "CANCELLED", "OPEN", "IN_PROGRESS"].includes(status))
+  // O padrão é mostrar só as ativas; "all" mostra tudo.
+  //
+  // `activeOnly` era calculado e nunca usado — a única validação de status
+  // desta tela estava desligada, e um link velho ou digitado errado
+  // (?status=ABERTO) entregava a string crua ao Prisma como enum inválido, em
+  // vez de cair no padrão que o comentário prometia. Agora ela DECIDE.
+  // (Achado em auditoria, 21/08/2026.)
+  const STATUS_CONHECIDOS = ["DONE", "INVOICED", "CANCELLED", "OPEN", "IN_PROGRESS"]
+  const statusValido = status === "all" || (!!status && STATUS_CONHECIDOS.includes(status))
+  const activeOnly = !statusValido || status === undefined
+
   const [orders, filiais] = await Promise.all([
     getServiceOrders({
       q,
-      status: status && status !== "all" ? status : undefined,
-      statusIn: (!status || status === "") ? ["OPEN", "IN_PROGRESS"] : undefined,
+      status: statusValido && status !== "all" ? status : undefined,
+      statusIn: activeOnly ? ["OPEN", "IN_PROGRESS"] : undefined,
       filial,
     }),
     filiaisAtivas(),

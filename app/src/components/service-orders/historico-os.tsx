@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server"
 import { History } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/utils"
-import type { TipoEvento } from "@/lib/historico-os"
+import { TIPOS_COM_CODIGO, type TipoEvento } from "@/lib/historico-os"
 
 type EventoNaTela = {
   id: string
@@ -37,7 +37,13 @@ export async function HistoricoOs({
   // já foram gravados legíveis. (Ver lib/historico-os.ts.)
   const legivel = (tipo: string, valor: string | null): string => {
     if (!valor) return t("vazio")
-    if (tipo === "STATUS") {
+    // Da constante, e não de um "STATUS" cravado aqui: ela foi escrita para ser
+    // a dona desta decisão e o componente a ignorava, reimplementando a regra.
+    // No dia em que um segundo tipo carregar código, a lista seria atualizada
+    // em lib/ e esta tela continuaria mostrando o código cru do banco — falha
+    // de i18n silenciosa, visível só para quem abrisse aquela OS.
+    // (Achado em auditoria, 21/08/2026.)
+    if (TIPOS_COM_CODIGO.includes(tipo as TipoEvento)) {
       const chave = `serviceOrderStatus.${valor}` as "serviceOrderStatus.OPEN"
       return tc.has(chave) ? tc(chave) : valor
     }

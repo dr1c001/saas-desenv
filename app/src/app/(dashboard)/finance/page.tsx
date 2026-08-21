@@ -33,9 +33,6 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
 
   const totalPendingRevenue = pendingRevenues.reduce((s, r) => s + Number(r.amount), 0)
   const totalPendingExpense = pendingExpenses.reduce((s, e) => s + Number(e.amount), 0)
-  const balance = monthlyRevenue - expenses
-    .filter((e) => e.status === "PAID" && e.paidAt)
-    .reduce((s, e) => s + Number(e.amount), 0)
 
   return (
     <div className="space-y-6">

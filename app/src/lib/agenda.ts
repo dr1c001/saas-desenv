@@ -93,9 +93,3 @@ export function conflitos(agenda: Agendado[], movida: Agendado): Agendado[] {
       Math.abs(a.quando.getTime() - movida.quando.getTime()) < limite
   )
 }
-
-/** O dia do mês, para agrupar na grade. Um lugar só, para a tela e o teste
- *  concordarem sobre o que "cair no dia 5" significa. */
-export function diaDoMes(quando: Date): number {
-  return quando.getDate()
-}

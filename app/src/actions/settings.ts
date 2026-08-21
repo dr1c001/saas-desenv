@@ -7,44 +7,6 @@ import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { getTranslations } from "next-intl/server"
 import { translateFieldErrors } from "@/lib/validation"
 
-// logoUrl é buscado pelo servidor (@react-pdf/renderer faz fetch() dela ao
-// gerar PDFs) — sem bloquear IPs privados/loopback/link-local, qualquer
-// OWNER/ADMIN podia apontar o logo pra rede interna (ex: 169.254.169.254,
-// metadata de nuvem) e ter o servidor buscando aquilo a cada PDF gerado
-// (SSRF). Isso bloqueia o vetor direto (IP literal); não protege contra
-// DNS rebinding (domínio que resolve pra IP público na validação e pra IP
-// privado no fetch real) — mitigação completa disso exigiria buscar a
-// imagem nós mesmos com IP pinning, fora do escopo desta correção.
-// (Achado em revisão de segurança 2026-07-19.)
-function isPrivateOrLoopbackHost(hostname: string): boolean {
-  // new URL(...).hostname preserva colchetes em literais IPv6 (ex: "[::1]",
-  // não "::1") — sem remover isso, nenhuma comparação abaixo pra IPv6 batia,
-  // deixando o bloqueio de loopback/link-local burlável via IPv6 literal.
-  // (Achado em revisão de segurança 2026-07-21.)
-  const h = hostname.toLowerCase().replace(/^\[|\]$/g, "")
-  if (h === "localhost" || h === "0.0.0.0" || h === "::1") return true
-  if (h.startsWith("fe80:") || h.startsWith("fc") || h.startsWith("fd")) return true
-
-  const ipv4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
-  if (ipv4) {
-    const a = Number(ipv4[1])
-    const b = Number(ipv4[2])
-    if (a === 127 || a === 10 || a === 0) return true
-    if (a === 172 && b >= 16 && b <= 31) return true
-    if (a === 192 && b === 168) return true
-    if (a === 169 && b === 254) return true // inclui metadata de nuvem
-  }
-  return false
-}
-
-function isSafeLogoUrl(url: string): boolean {
-  try {
-    const { protocol, hostname } = new URL(url)
-    return protocol === "https:" && !isPrivateOrLoopbackHost(hostname)
-  } catch {
-    return false
-  }
-}
 
 const tenantSchema = z.object({
   name: z.string().min(2, "nameRequired"),
@@ -180,13 +142,21 @@ export async function getSettings() {
 // Antes o logo era um campo de URL: a empresa precisava hospedar a imagem em
 // algum lugar e colar o endereço. Fora de ser trabalhoso, isso fazia o servidor
 // BUSCAR aquela URL toda vez que gerava um PDF — o que exigia todo um bloqueio
-// de IP privado pra evitar SSRF (ver isSafeLogoUrl acima) e ainda deixava o PDF
-// à mercê de a URL sair do ar.
+// de IP privado pra evitar SSRF (169.254.169.254, metadata de nuvem) e ainda
+// deixava o PDF à mercê de a URL sair do ar.
+//
+// Esse bloqueio virou código morto quando o campo deixou de existir, e o
+// comentário dele continuou por aqui PROMETENDO uma proteção que não estava
+// mais ligada — o pior tipo de comentário, o que mente para quem revisa.
+// Removido em 21/08/2026, depois de confirmar em produção que nenhuma empresa
+// tem mais logo por URL externa (0 de 4).
+//
+// Se um dia o campo de URL voltar, o bloqueio precisa voltar JUNTO: o
+// @react-pdf/renderer busca a URL do lado do servidor.
 //
 // Agora o arquivo é enviado direto, convertido pra PNG e guardado embutido
 // (data URI) na mesma coluna. O PDF não busca nada na rede, e converter no
 // servidor neutraliza qualquer payload escondido no arquivo original.
-// URLs antigas continuam funcionando pra quem já tem.
 
 const TAMANHO_MAXIMO = 2 * 1024 * 1024
 const TIPOS_ACEITOS = ["image/png", "image/jpeg", "image/webp"]

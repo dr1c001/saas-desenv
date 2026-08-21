@@ -95,13 +95,3 @@ export function buildQuoteMessage(opts: {
     `${t("quote.viewLink")}: ${opts.portalUrl}`
   )
 }
-
-export function buildNpsMessage(opts: { tenantName: string; portalUrl: string; locale: Locale }) {
-  const t = getTranslator(opts.locale, "whatsapp")
-  return (
-    `*${opts.tenantName}*\n\n` +
-    `${t("nps.completed")}\n\n` +
-    `${t("nps.askOpinion")}\n` +
-    `${t("nps.rateLink")}: ${opts.portalUrl}/nps`
-  )
-}

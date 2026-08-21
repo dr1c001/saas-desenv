@@ -1988,11 +1988,6 @@
       "amountLabel": "Valor",
       "viewLink": "Visualize e aprove"
     },
-    "nps": {
-      "completed": "O serviço foi concluído! 🎉",
-      "askOpinion": "Gostaríamos muito de saber sua opinião.",
-      "rateLink": "Avalie o atendimento (leva menos de 1 minuto)"
-    },
     "avisoCliente": {
       "aCaminho": "Olá! Aqui é da {empresa}.\n\nEstamos a caminho para o serviço *{titulo}* ({os}).",
       "concluido": "Olá! Aqui é da {empresa}.\n\nO serviço *{titulo}* ({os}) foi concluído.",
@@ -2034,9 +2029,6 @@
     "nfseAlreadyIssued": "NFS-e já emitida para est[[osFim]] [[os]].",
     "orderWithoutAmount": "[[osC]] sem valor — adicione itens antes de emitir NFS-e.",
     "invalidLink": "Link inválido ou expirado.",
-    "invalidReferralCode": "Código inválido.",
-    "ownReferralCode": "Você não pode usar seu próprio código de indicação.",
-    "referralAlreadyApplied": "Indicação já aplicada.",
     "duplicateEmailAccount": "Já existe um cadastro com o e-mail {email}, associado a outra conta. Contate o suporte.",
     "defaultUserName": "Usuário",
     "inactiveSubscription": "Assinatura inativa. Assine um plano para continuar usando o sistema.",
