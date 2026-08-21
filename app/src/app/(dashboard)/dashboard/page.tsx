@@ -101,24 +101,46 @@ export default async function DashboardPage() {
   const t = await getTranslations("dashboardHome")
   const tc = await getTranslations("common")
 
+  // Os cartões de DINHEIRO só para quem administra.
+  //
+  // O gráfico logo abaixo já era escondido, com o comentário explicando que
+  // financeiro é OWNER/ADMIN-only em todo o resto do sistema — e os cartões com
+  // os MESMOS números ficaram visíveis para todo mundo. "dashboard" é aba
+  // padrão de técnico, então todo técnico caía nesta tela no login e lia o
+  // faturamento do mês da empresa. Os dois cartões ainda apontavam para
+  // /finance, que redireciona o técnico de volta: o número aparecia e o clique
+  // não levava a lugar nenhum. (Achado em auditoria, 20/08/2026 — o mesmo
+  // vazamento que o gráfico corrigiu em 05/08, na metade que ficou para trás.)
   const stats = [
-    {
-      title: t("stats.monthlyRevenue.title"),
-      value: formatCurrency(data.paidRevenue + data.concludedNotInvoiced),
-      icon: DollarSign,
-      // Com as duas parcelas somadas num número só, o dono não teria como
-      // saber de onde veio o valor. Quando há OS concluída sem faturar, o
-      // rodapé mostra a composição em vez do texto genérico.
-      description:
-        data.concludedNotInvoiced > 0
-          ? t("stats.monthlyRevenue.breakdown", {
-              paid: formatCurrency(data.paidRevenue),
-              concluded: formatCurrency(data.concludedNotInvoiced),
-            })
-          : t("stats.monthlyRevenue.description"),
-      href: "/finance",
-      alert: false,
-    },
+    ...(isAdmin
+      ? [
+          {
+            title: t("stats.monthlyRevenue.title"),
+            value: formatCurrency(data.paidRevenue + data.concludedNotInvoiced),
+            icon: DollarSign,
+            // Com as duas parcelas somadas num número só, o dono não teria como
+            // saber de onde veio o valor. Quando há OS concluída sem faturar, o
+            // rodapé mostra a composição em vez do texto genérico.
+            description:
+              data.concludedNotInvoiced > 0
+                ? t("stats.monthlyRevenue.breakdown", {
+                    paid: formatCurrency(data.paidRevenue),
+                    concluded: formatCurrency(data.concludedNotInvoiced),
+                  })
+                : t("stats.monthlyRevenue.description"),
+            href: "/finance",
+            alert: false,
+          },
+          {
+            title: t("stats.overdueRevenues.title"),
+            value: String(data.overdueRevenues),
+            icon: AlertTriangle,
+            description: t("stats.overdueRevenues.description"),
+            href: "/finance",
+            alert: data.overdueRevenues > 0,
+          },
+        ]
+      : []),
     {
       title: t("stats.openOrders.title"),
       value: String(data.openOrders + data.inProgressOrders),
@@ -126,14 +148,6 @@ export default async function DashboardPage() {
       description: t("stats.openOrders.description", { open: data.openOrders, inProgress: data.inProgressOrders }),
       href: "/service-orders",
       alert: false,
-    },
-    {
-      title: t("stats.overdueRevenues.title"),
-      value: String(data.overdueRevenues),
-      icon: AlertTriangle,
-      description: t("stats.overdueRevenues.description"),
-      href: "/finance",
-      alert: data.overdueRevenues > 0,
     },
     {
       title: t("stats.activeClients.title"),
@@ -154,7 +168,11 @@ export default async function DashboardPage() {
           vez de "ainda não configurei". */}
       {passos && <PainelPrimeirosPassos dados={passos} />}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* A grade acompanha quantos cartões sobraram: com 2, quatro colunas
+          deixariam metade da linha vazia. */}
+      <div
+        className={`grid gap-4 md:grid-cols-2 ${isAdmin ? "lg:grid-cols-4" : "lg:grid-cols-2"}`}
+      >
         {stats.map((stat) => (
           <Link key={stat.title} href={stat.href}>
             <Card className={`transition-colors hover:bg-muted/50 ${stat.alert ? "border-destructive/60" : ""}`}>

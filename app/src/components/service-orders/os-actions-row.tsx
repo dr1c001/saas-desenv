@@ -7,6 +7,7 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { FileDown, Play, Pencil } from "lucide-react"
 import { ConcluirDialog } from "./conclude-dialog"
 import { updateOrderStatus } from "@/actions/service-orders"
+import { enfileirar, semRede } from "@/lib/usar-fila-offline"
 
 type Item = { description: string; quantity: number; unitPrice: number }
 
@@ -33,7 +34,25 @@ export function OsActionsRow({
   const [isPending, startTransition] = useTransition()
 
   function handleStart() {
-    startTransition(() => updateOrderStatus(id, "IN_PROGRESS"))
+    startTransition(async () => {
+      // Mesma regra do botão da tela de detalhe (status-button.tsx): com rede
+      // vai direto, sem rede entra na fila.
+      //
+      // Este aqui ficou de fora quando a fila foi construída, e é justamente o
+      // botão do cenário que ela existe para cobrir — o técnico marca "em
+      // andamento" ao chegar no local, que costuma ser onde não há sinal. Sem
+      // isto a Server Action falhava no fetch, a promessa rejeitava dentro do
+      // transition e a tela não mudava nada: sem erro, sem faixa de pendência,
+      // e o técnico seguia achando que tinha marcado. Como essa transição é o
+      // gatilho do aviso "estamos a caminho", o cliente também não era avisado.
+      // Pior: pela tela de detalhe a MESMA ação funcionava offline, o que fazia
+      // o comportamento parecer aleatório. (Achado em auditoria, 20/08/2026.)
+      if (semRede()) {
+        await enfileirar("MUDAR_STATUS", id, { status: "IN_PROGRESS" })
+        return
+      }
+      await updateOrderStatus(id, "IN_PROGRESS")
+    })
   }
 
   return (

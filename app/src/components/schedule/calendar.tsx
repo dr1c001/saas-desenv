@@ -31,11 +31,15 @@ type Props = {
   events: OrderEvent[]
   year: number
   month: number
+  /** Permissão por ação (lib/acoes.ts). Sem ela, a alça de arrastar some — a
+   *  Action recusa de qualquer jeito, e alça que aparece e falha é pior que
+   *  alça que não aparece. */
+  podeReagendar?: boolean
 }
 
 type Aviso = { tom: "erro" | "ok"; texto: string }
 
-export function Calendar({ events, year, month }: Props) {
+export function Calendar({ events, year, month, podeReagendar = true }: Props) {
   const t = useTranslations("schedule")
   const tc = useTranslations("common")
   const router = useRouter()
@@ -237,7 +241,11 @@ export function Calendar({ events, year, month }: Props) {
                   </span>
                   <div className="mt-1 space-y-0.5">
                     {dayEvents.slice(0, 2).map(ev => {
-                      const travada = motivoParaNaoReagendar(ev.status)
+                      // Sem permissão, todo card fica travado — o motivo do
+                      // status continua tendo prioridade na explicação.
+                      const travada = podeReagendar
+                        ? motivoParaNaoReagendar(ev.status)
+                        : motivoParaNaoReagendar(ev.status) ?? "semPermissao"
                       return (
                         <div
                           key={ev.id}
@@ -298,7 +306,7 @@ export function Calendar({ events, year, month }: Props) {
                       cobre o dia inteiro enquanto há uma OS na mão. Cobrir por
                       cima em vez de escutar clique na célula evita que o toque
                       caia num link de OS que esteja embaixo. */}
-                  {movendo && (
+                  {movendo && podeReagendar && (
                     <button
                       type="button"
                       onClick={() => mover(movendo, day)}

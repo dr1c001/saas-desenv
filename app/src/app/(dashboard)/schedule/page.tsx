@@ -1,5 +1,7 @@
 import { getTranslations } from "next-intl/server"
 import { getScheduledOrders } from "@/actions/schedule"
+import { getAcoesPermitidas, getTenant } from "@/lib/auth"
+import { podeFazer } from "@/lib/acoes"
 import { Calendar } from "@/components/schedule/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { buttonVariants } from "@/components/ui/button"
@@ -25,22 +27,35 @@ export default async function SchedulePage({ searchParams }: { searchParams: Sea
   const month = numeroEntre(ms, 1, 12) ?? now.getMonth() + 1
 
   const events = await getScheduledOrders(year, month, filial)
+
+  // A agenda mostrava "Nova OS" e as alças de arrastar sem consultar a
+  // permissão por ação — as duas são configuráveis em Configurações >
+  // Permissões (os.criar e os.reagendar), e "agenda" é aba padrão de técnico.
+  // A lista de OS já fazia o certo; esta tela ficou para trás quando a
+  // permissão por ação foi ligada. (Achado em auditoria, 20/08/2026.)
+  const { tenantId, role } = await getTenant()
+  const permitidas = await getAcoesPermitidas(tenantId, role)
+  const podeCriar = podeFazer(role, permitidas, "os.criar")
+  const podeReagendar = podeFazer(role, permitidas, "os.reagendar")
+
   const t = await getTranslations("schedule")
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <Link href="/service-orders/new" className={buttonVariants()}>
-          <Plus className="size-4 mr-2" />
-          {t("newOrderButton")}
-        </Link>
+        {podeCriar && (
+          <Link href="/service-orders/new" className={buttonVariants()}>
+            <Plus className="size-4 mr-2" />
+            {t("newOrderButton")}
+          </Link>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
         <Card>
           <CardContent className="pt-4">
-            <Calendar events={events} year={year} month={month} />
+            <Calendar events={events} year={year} month={month} podeReagendar={podeReagendar} />
           </CardContent>
         </Card>
 
