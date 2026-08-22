@@ -103,6 +103,12 @@ export const nfeio = {
     })
   },
 
+  /** O estado ATUAL de uma nota já enviada.
+   *
+   *  Existia desde sempre e NINGUÉM chamava — emissão é assíncrona, o estado
+   *  devolvido na hora de emitir é quase sempre "processando", e sem perguntar
+   *  de novo o sistema nunca soube se a prefeitura aceitou. Passou a ser usada
+   *  pela conciliação diária em lib/nfse-conciliar.ts. */
   async getInvoice(companyId: string, invoiceId: string) {
     return req<NfeioInvoice>(`/companies/${companyId}/serviceinvoices/${invoiceId}`)
   },

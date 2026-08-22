@@ -31,6 +31,7 @@ export type Evento =
   | "osDeContrato"
   | "orcamentoRespondido"
   | "pagamentoConfirmado"
+  | "notaRejeitada"
 
 export type Definicao = {
   evento: Evento
@@ -50,6 +51,9 @@ export const EVENTOS: readonly Definicao[] = [
   { evento: "osStatus", publico: "escritorio" },
   { evento: "orcamentoRespondido", publico: "escritorio", insistente: true },
   { evento: "pagamentoConfirmado", publico: "escritorio" },
+  // Insistente: nota recusada significa OS faturada SEM documento fiscal. Some
+  // da tela e ninguém descobre — que é exatamente o problema que ela resolve.
+  { evento: "notaRejeitada", publico: "escritorio", insistente: true },
 ]
 
 export function ehEvento(valor: string): valor is Evento {

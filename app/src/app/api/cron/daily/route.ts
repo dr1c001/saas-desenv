@@ -15,6 +15,7 @@ import { gerarOsDosContratos } from "@/actions/contracts"
 import { DIAS_DE_ANTECEDENCIA } from "@/lib/contrato-recorrente"
 import { gravarRetratoDoMes } from "@/lib/snapshot"
 import { temFuncao } from "@/lib/plan"
+import { conciliarNotasPendentes } from "@/lib/nfse-conciliar"
 
 // O padrão da Vercel (10-15s) não cabe reconciliação da Asaas + e-mails +
 // backfill de geocodificação no mesmo processo.
@@ -60,7 +61,7 @@ export async function GET(req: NextRequest) {
     .create({ data: { name: "daily" }, select: { id: true } })
     .catch(() => null)
 
-  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, contratos: 0, retrato: "", errors: 0 }
+  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, contratos: 0, notasConsultadas: 0, notasRejeitadas: 0, retrato: "", errors: 0 }
 
   // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
   // Em 07/08/2026 uma cliente pagou e ficou sem acesso por ~1 dia: os webhooks
@@ -265,6 +266,25 @@ export async function GET(req: NextRequest) {
     const limiteContratos = new Date(now)
     limiteContratos.setUTCDate(limiteContratos.getUTCDate() + DIAS_DE_ANTECEDENCIA)
     results.contratos = await gerarOsDosContratos(now, limiteContratos)
+
+  // ── Notas fiscais: perguntar o que a prefeitura decidiu ────────────────────
+  //
+  // A metade que faltava da emissão. Emitir é assíncrono: o estado devolvido na
+  // hora é quase sempre "processando", e até 22/08/2026 ninguém perguntava
+  // depois. O link do PDF ficava nulo, o status congelava, e a OS era marcada
+  // como faturada MESMO SE A PREFEITURA REJEITASSE — sem ninguém saber.
+  //
+  // Em try próprio, como as outras etapas: falha aqui não derruba o retrato
+  // mensal nem o aviso de cobrança que vêm depois.
+  try {
+    const notas = await conciliarNotasPendentes()
+    results.notasConsultadas = notas.consultadas
+    results.notasRejeitadas = notas.rejeitadas
+    results.errors += notas.erros
+  } catch (e) {
+    console.error("[cron] conciliação de notas fiscais falhou:", e)
+    results.errors++
+  }
   } catch (e) {
     console.error("Falha ao gerar OS de contratos recorrentes:", e)
     results.errors++

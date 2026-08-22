@@ -402,6 +402,14 @@ model ServiceOrder {
   scheduledAt        DateTime?
   concludedAt        DateTime?
   nfseId             String?
+  /// Quantas vezes ja se perguntou ao emissor pelo estado desta nota.
+  ///
+  /// Existe para o sistema DESISTIR. Emissao e assincrona e a nota pode ficar
+  /// pendente para sempre por problema na prefeitura — sem teto, o cron
+  /// perguntaria todo dia, para sempre, por uma nota que precisa de alguem
+  /// olhando e nao de mais uma consulta. Regra em lib/nfse-status.ts.
+  nfseChecks         Int           @default(0)
+
   /// Quando a nota saiu. Existe para a COTA MENSAL de NFS-e poder ser contada:
   /// uma OS aberta em julho e faturada em agosto gasta a cota de AGOSTO, e
   /// contar pelo createdAt da OS deixaria a cota do mes passado ser gasta neste.

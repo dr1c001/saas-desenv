@@ -2139,6 +2139,9 @@
     },
     "pagamentoConfirmado": {
       "title": "Pagamento confirmado"
+    },
+    "notaRejeitada": {
+      "title": "Nota fiscal recusada"
     }
   },
   "customFields": {
@@ -2736,7 +2739,8 @@
       "osConcluida": "Quando alguém da equipe conclui um serviço.",
       "osStatus": "Quando uma [[os]] muda de status em campo.",
       "orcamentoRespondido": "Quando o cliente aprova ou recusa um orçamento.",
-      "pagamentoConfirmado": "Quando o pagamento da assinatura é confirmado."
+      "pagamentoConfirmado": "Quando o pagamento da assinatura é confirmado.",
+      "notaRejeitada": "Quando a prefeitura recusa uma nota fiscal."
     }
   }
 }

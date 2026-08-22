@@ -2139,6 +2139,9 @@
     },
     "pagamentoConfirmado": {
       "title": "Payment confirmed"
+    },
+    "notaRejeitada": {
+      "title": "Tax invoice rejected"
     }
   },
   "customFields": {
@@ -2736,7 +2739,8 @@
       "osConcluida": "When someone on the team completes a job.",
       "osStatus": "When a [[os]] changes status in the field.",
       "orcamentoRespondido": "When the customer approves or declines a quote.",
-      "pagamentoConfirmado": "When the subscription payment clears."
+      "pagamentoConfirmado": "When the subscription payment clears.",
+      "notaRejeitada": "When the city rejects a tax invoice."
     }
   }
 }
