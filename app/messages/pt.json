@@ -2663,5 +2663,10 @@
       "pequena": "O traço ficou pequeno demais e sairia como sujeira no documento. Desenhe de novo, maior.",
       "falhou": "Não consegui salvar agora. Tente de novo."
     }
+  },
+  "buscaAbas": {
+    "placeholder": "Buscar tela ou número (1.1)",
+    "rotulo": "Buscar tela por nome ou número",
+    "semResultado": "Nada encontrado."
   }
 }

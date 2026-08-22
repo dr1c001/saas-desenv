@@ -52,6 +52,7 @@ import { useRouter } from "next/navigation"
 import type { TabSlug } from "@/lib/auth"
 import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
+import { BuscaAbas } from "@/components/layout/busca-abas"
 
 const NAV_ITEMS: { titleKey: string; href: string; icon: React.ElementType; slug: TabSlug }[] = [
   { titleKey: "dashboard", href: "/dashboard", icon: LayoutDashboard, slug: "dashboard" },
@@ -154,6 +155,13 @@ export function AppSidebar({ allowedTabs, role, isSuperAdmin, temApi, temFiliais
           )}
         </div>
       </SidebarHeader>
+
+      {/* A busca por número ou nome. Fica no topo do conteúdo, e não no
+          cabeçalho, para não competir com o nome da empresa. */}
+      <BuscaAbas
+        abasPermitidas={allowedTabs}
+        ehAdmin={role === "OWNER" || role === "ADMIN"}
+      />
 
       <SidebarContent>
         <SidebarGroup>
