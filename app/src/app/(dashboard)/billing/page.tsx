@@ -6,6 +6,7 @@ import { CheckCircle2, Clock, CreditCard, Zap } from "lucide-react"
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
 import { CancelSubscriptionButton } from "@/components/billing/cancel-button"
+import { precoCheio, precoCobrado } from "@/lib/preco"
 
 const STATUS_COLOR: Record<string, string> = {
   TRIAL: "bg-yellow-500",
@@ -40,6 +41,12 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   // descobria o valor real já na página de pagamento da Asaas.
   // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
   const discountPercent = billing?.referralDiscountPercent ?? 0
+  // A mensalidade combinada com esta empresa, quando existe. A tela mostrava o
+  // preço da TABELA enquanto a cobrança saía pelo combinado — o cliente via um
+  // número e pagava outro. (Achado ao ligar o preço customizado, 22/08/2026.)
+  const combinado = billing?.customPriceMonthly === null || billing?.customPriceMonthly === undefined
+    ? null
+    : Number(billing.customPriceMonthly)
 
   return (
     <div className="space-y-8 max-w-5xl">
@@ -159,19 +166,42 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                   <div className="mt-2">
                     {discountPercent > 0 && (
                       <span className="text-sm text-muted-foreground line-through mr-2">
-                        {formatCurrency(Number(plan.priceMonthly))}
+                        {formatCurrency(
+                          precoCheio(
+                            { priceMonthly: Number(plan.priceMonthly), priceYearly: Number(plan.priceYearly) },
+                            combinado,
+                            "MONTHLY"
+                          )
+                        )}
                       </span>
                     )}
                     <span className="text-3xl font-bold">
-                      {formatCurrency(Number(plan.priceMonthly) * (1 - discountPercent / 100))}
+                      {formatCurrency(
+                        precoCobrado(
+                          { priceMonthly: Number(plan.priceMonthly), priceYearly: Number(plan.priceYearly) },
+                          combinado,
+                          "MONTHLY",
+                          discountPercent
+                        )
+                      )}
                     </span>
                     <span className="text-muted-foreground text-sm">{t("plans.perMonth")}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {t("plans.yearlyNote", {
-                      price: formatCurrency(Number(plan.priceYearly) * (1 - discountPercent / 100)),
+                      price: formatCurrency(
+                        precoCobrado(
+                          { priceMonthly: Number(plan.priceMonthly), priceYearly: Number(plan.priceYearly) },
+                          combinado,
+                          "YEARLY",
+                          discountPercent
+                        )
+                      ),
                     })}
                   </p>
+                  {combinado !== null && (
+                    <p className="text-xs text-primary font-medium mt-1">{t("plans.agreedPrice")}</p>
+                  )}
                   {discountPercent > 0 && (
                     <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-1">
                       {t("plans.referralDiscount", { percent: discountPercent })}

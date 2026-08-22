@@ -1513,7 +1513,8 @@
         "referralDiscount": "{percent}% de desconto de indicação aplicado",
         "currentPlan": "Plano atual",
         "subscribeMonthly": "Assinar — Mensal",
-        "subscribeYearly": "Assinar — Anual (economize 2 meses)"
+        "subscribeYearly": "Assinar — Anual (economize 2 meses)",
+        "agreedPrice": "Preço combinado com a sua empresa."
       },
       "contract": {
         "download": "Baixar contrato e termo de dados (LGPD)"

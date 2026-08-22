@@ -1513,7 +1513,8 @@
         "referralDiscount": "{percent}% referral discount applied",
         "currentPlan": "Current plan",
         "subscribeMonthly": "Subscribe — Monthly",
-        "subscribeYearly": "Subscribe — Yearly (save 2 months)"
+        "subscribeYearly": "Subscribe — Yearly (save 2 months)",
+        "agreedPrice": "Price agreed with your company."
       },
       "contract": {
         "download": "Download agreement and data terms (LGPD)"

@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { asaas } from "@/lib/asaas"
 import { getTranslations } from "next-intl/server"
+import { precoCobrado } from "@/lib/preco"
 
 export async function getBillingStatus() {
   const { tenantId } = await getTenant()
@@ -15,6 +16,7 @@ export async function getBillingStatus() {
     select: {
       subscriptionStatus: true,
       referralDiscountPercent: true,
+      customPriceMonthly: true,
       plan: { select: { id: true, name: true, slug: true, priceMonthly: true, priceYearly: true } },
       subscriptions: {
         orderBy: { createdAt: "desc" },
@@ -87,18 +89,24 @@ export async function subscribeToPlan(formData: FormData) {
           encodeURIComponent(tb("errors.missingDocument"))
       )
     }
-    const fullPrice = cycle === "YEARLY" ? Number(plan.priceYearly) : Number(plan.priceMonthly)
     // Desconto de indicação (creditado por quem indicou/foi indicado — ver
-    // lib/auth.ts, api/referral/join, api/webhooks/asaas) aplicado uma vez,
-    // no primeiro pagamento desta assinatura, e consumido logo abaixo.
+    // lib/auth.ts e api/webhooks/asaas) aplicado uma vez, no primeiro pagamento
+    // desta assinatura, e consumido logo abaixo.
     const discountPercent = tenant.referralDiscountPercent
-    // Arredondado antes de virar payload pra Asaas — fullPrice * (1 - N/100)
-    // gera resto de ponto flutuante pra praticamente qualquer desconto
-    // != 0/50 (ex: 197 * 0.8 = 157.60000000000002), e mandar isso cru numa
-    // API de pagamento não é uma prática correta de dinheiro, mesmo que a
-    // Asaas provavelmente arredonde do lado dela.
-    // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
-    const price = Math.round(fullPrice * (1 - discountPercent / 100) * 100) / 100
+
+    // A conta mora em lib/preco.ts, testada lá. Aqui só o efeito.
+    //
+    // `customPriceMonthly` é a mensalidade combinada com ESTA empresa. Ela
+    // existia desde 22/08/2026 e NÃO era usada: o painel gravava o valor, a
+    // auditoria registrava, e a cobrança continuava saindo pelo preço do plano
+    // — liberar recursos e ajustar tetos para alguém e continuar cobrando a
+    // tabela é dar o combinado de graça.
+    const price = precoCobrado(
+      { priceMonthly: Number(plan.priceMonthly), priceYearly: Number(plan.priceYearly) },
+      tenant.customPriceMonthly === null ? null : Number(tenant.customPriceMonthly),
+      cycle === "YEARLY" ? "YEARLY" : "MONTHLY",
+      discountPercent
+    )
 
     // Create or reuse Asaas customer
     let asaasCustomerId = tenant.asaasCustomerId
