@@ -3,6 +3,7 @@ import { prisma } from "./prisma"
 import { getTranslations } from "next-intl/server"
 import { RECURSOS, type Recurso } from "./recursos"
 import { brtMidnightUTC, todayInBRT } from "./utils"
+import { limiteEfetivo } from "./limite"
 
 // Fonte única do que cada plano libera.
 //
@@ -27,6 +28,17 @@ const TODOS: Recurso[] = [...RECURSOS]
 /** O que um plano libera, sem ir ao banco. Usado pela tela do painel. */
 export function recursosDoPlano(slug: string | null | undefined): Recurso[] {
   return [...((slug && POR_PLANO[slug]) || PERMISSIVO).recursos]
+}
+
+/** Os TETOS do plano, sem ir ao banco. A tela do painel mostra estes ao lado do
+ *  ajuste da empresa, para "herdar" não ser uma escolha às cegas. */
+export function limitesDoPlano(slug: string | null | undefined): {
+  usuarios: number | null
+  osMes: number | null
+  nfseMes: number | null
+} {
+  const p = (slug && POR_PLANO[slug]) || PERMISSIVO
+  return { usuarios: p.maxUsuarios, osMes: p.maxOsMes, nfseMes: p.maxNfseMes }
 }
 
 export type Limites = {
@@ -72,19 +84,33 @@ const PERMISSIVO: Limites = { maxUsuarios: null, maxOsMes: null, maxNfseMes: nul
 export const getLimites = cache(async function getLimites(tenantId: string): Promise<Limites> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
-    select: { extraFeatures: true, plan: { select: { slug: true } } },
+    select: {
+      extraFeatures: true,
+      maxUsersOverride: true,
+      maxOrdersOverride: true,
+      maxNfseOverride: true,
+      plan: { select: { slug: true } },
+    },
   })
 
-  const base = (tenant?.plan?.slug && POR_PLANO[tenant.plan.slug]) || PERMISSIVO
+  const doPlano = (tenant?.plan?.slug && POR_PLANO[tenant.plan.slug]) || PERMISSIVO
 
   // Recursos concedidos individualmente somam com os do plano (ver o comentário
   // de extraFeatures em schema.prisma).
   const extras = (tenant?.extraFeatures ?? []).filter((f): f is Recurso =>
     TODOS.includes(f as Recurso)
   )
-  if (extras.length === 0) return base
 
-  return { ...base, recursos: [...new Set([...base.recursos, ...extras])] }
+  // E os TETOS ajustados para esta empresa por cima do plano. `null` herda,
+  // `0` é sem limite — a diferença entre os dois está em lib/limite.ts, que é
+  // onde ela é testada.
+  return {
+    maxUsuarios: limiteEfetivo(doPlano.maxUsuarios, tenant?.maxUsersOverride ?? null),
+    maxOsMes: limiteEfetivo(doPlano.maxOsMes, tenant?.maxOrdersOverride ?? null),
+    maxNfseMes: limiteEfetivo(doPlano.maxNfseMes, tenant?.maxNfseOverride ?? null),
+    recursos:
+      extras.length === 0 ? doPlano.recursos : [...new Set([...doPlano.recursos, ...extras])],
+  }
 })
 
 export async function temRecurso(tenantId: string, recurso: Recurso): Promise<boolean> {

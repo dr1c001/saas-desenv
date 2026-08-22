@@ -173,6 +173,89 @@ export async function alterarRecursosExtras(tenantId: string, recursos: string[]
   revalidatePath("/admin")
 }
 
+/**
+ * Ajusta os tetos e o preço de UMA empresa, por cima do plano dela.
+ *
+ * É o que torna possível o plano customizado: os planos são três e as empresas
+ * não. Sempre aparece a que precisa de 12 usuários mas não quer o Enterprise.
+ *
+ * `null` herda do plano, `0` é sem limite — a diferença está em lib/limite.ts.
+ * Aqui os valores chegam já normalizados pela tela; o que esta função faz é
+ * conferir que são inteiros plausíveis antes de gravar, porque Server Action é
+ * endereço HTTP e o corpo dela não é confiável.
+ */
+export async function alterarLimitesDaEmpresa(
+  tenantId: string,
+  ajustes: {
+    usuarios: number | null
+    osMes: number | null
+    nfseMes: number | null
+    precoMensal: number | null
+  }
+) {
+  const admin = await requireSuperAdmin("alterarLimites")
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: {
+      name: true, maxUsersOverride: true, maxOrdersOverride: true,
+      maxNfseOverride: true, customPriceMonthly: true,
+    },
+  })
+  if (!tenant) throw new Error("Empresa não encontrada.")
+
+  // Teto absurdo é digitação errada, não combinado: 100 mil usuários não
+  // existe, e gravar isso equivale a "sem limite" sem dizer que é.
+  const teto = (v: number | null, maximo: number): number | null => {
+    if (v === null) return null
+    if (!Number.isInteger(v) || v < 0 || v > maximo) return null
+    return v
+  }
+  const preco = (v: number | null): number | null => {
+    if (v === null) return null
+    if (!Number.isFinite(v) || v < 0 || v > 1_000_000) return null
+    return Math.round(v * 100) / 100
+  }
+
+  const data = {
+    maxUsersOverride: teto(ajustes.usuarios, 10_000),
+    maxOrdersOverride: teto(ajustes.osMes, 1_000_000),
+    maxNfseOverride: teto(ajustes.nfseMes, 1_000_000),
+    customPriceMonthly: preco(ajustes.precoMensal),
+  }
+
+  // O registro conta o que MUDOU, não o estado — quem lê a auditoria depois
+  // quer saber o que foi combinado naquele dia, e um retrato completo a cada
+  // salvamento afogaria isso.
+  const antes = {
+    maxUsersOverride: tenant.maxUsersOverride,
+    maxOrdersOverride: tenant.maxOrdersOverride,
+    maxNfseOverride: tenant.maxNfseOverride,
+    customPriceMonthly: tenant.customPriceMonthly === null ? null : Number(tenant.customPriceMonthly),
+  }
+  const rotulo: Record<string, string> = {
+    maxUsersOverride: "usuários",
+    maxOrdersOverride: "OS/mês",
+    maxNfseOverride: "NFS-e/mês",
+    customPriceMonthly: "preço",
+  }
+  const comoTexto = (v: number | null) => (v === null ? "plano" : v === 0 ? "∞" : String(v))
+
+  const mudancas = (Object.keys(data) as (keyof typeof data)[])
+    .filter((k) => data[k] !== antes[k])
+    .map((k) => `${rotulo[k]}: ${comoTexto(antes[k])} → ${comoTexto(data[k])}`)
+  if (mudancas.length === 0) return
+
+  await prisma.tenant.update({ where: { id: tenantId }, data })
+  await registrarAcaoAdmin(
+    admin.email,
+    "alterar_limites",
+    tenantId,
+    `${tenant.name}: ${mudancas.join(", ")}`
+  )
+  revalidatePath("/admin")
+}
+
 export async function entrarNaConta(tenantId: string) {
   const admin = await requireSuperAdmin("entrarNaConta")
 

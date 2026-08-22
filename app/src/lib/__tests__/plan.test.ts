@@ -364,3 +364,83 @@ describe("plan — cota de notas fiscais", () => {
     await expect(requireCotaDeNfse(a.id)).resolves.toBeUndefined()
   })
 })
+
+describe("plan — tetos ajustados por empresa", () => {
+  /** Grava o ajuste direto, como o painel faria. */
+  async function comAjuste(slug: string, ajustes: Record<string, number | null>) {
+    const t = await seedTenant(slug)
+    await testDb.db.tenant.update({ where: { id: t.id }, data: ajustes })
+    return t
+  }
+
+  it("sem ajuste, vale o teto do plano", async () => {
+    const { getLimites } = await import("@/lib/plan")
+    await seedPlanos()
+    const l = await getLimites((await seedTenant("starter")).id)
+    expect(l.maxUsuarios).toBe(3)
+    expect(l.maxNfseMes).toBe(8)
+  })
+
+  it("um teto próprio manda mais que o plano", async () => {
+    // O caso concreto: a empresa que precisa de 12 usuários mas não quer o
+    // Enterprise. Hoje a única saída seria trocar o plano dela, o que muda o
+    // preço e todo o resto junto.
+    const { getLimites } = await import("@/lib/plan")
+    await seedPlanos()
+    const t = await comAjuste("starter", { maxUsersOverride: 12, maxNfseOverride: 30 })
+
+    const l = await getLimites(t.id)
+    expect(l.maxUsuarios).toBe(12)
+    expect(l.maxNfseMes).toBe(30)
+    // O que não foi ajustado continua vindo do plano.
+    expect(l.maxOsMes).toBe(50)
+  })
+
+  it("zero libera de vez, sem trocar de plano", async () => {
+    const { getLimites } = await import("@/lib/plan")
+    await seedPlanos()
+    const t = await comAjuste("starter", { maxOrdersOverride: 0 })
+
+    expect((await getLimites(t.id)).maxOsMes).toBeNull()
+  })
+
+  it("o ajuste também APERTA, não só afrouxa", async () => {
+    const { getLimites } = await import("@/lib/plan")
+    await seedPlanos()
+    const t = await comAjuste("pro", { maxOrdersOverride: 40 })
+
+    expect((await getLimites(t.id)).maxOsMes).toBe(40)
+  })
+
+  it("o teto ajustado é o que a COTA cobra de verdade", async () => {
+    // O que liga o painel ao sistema: ajustar o número na tela precisa mudar
+    // quem é barrado, e não só o que a tela mostra.
+    const { requireCotaDeNfse, inicioDoMesDaCota } = await import("@/lib/plan")
+    await seedPlanos()
+    const t = await comAjuste("starter", { maxNfseOverride: 2 })
+    const c = await testDb.db.client.create({ data: { tenantId: t.id, name: "C" } })
+
+    const agora = new Date(inicioDoMesDaCota().getTime() + 3600_000)
+    for (let i = 0; i < 2; i++) {
+      await testDb.db.serviceOrder.create({
+        data: {
+          tenantId: t.id, clientId: c.id, number: i + 1, title: `OS ${i}`,
+          nfseId: `nf-${i}`, nfseIssuedAt: agora,
+        },
+      })
+    }
+
+    // Duas notas com teto 2: estourou, mesmo o plano permitindo 8.
+    await expect(requireCotaDeNfse(t.id)).rejects.toThrow(/planLimit\.nfse/)
+  })
+
+  it("o ajuste de uma empresa não vaza para a outra", async () => {
+    const { getLimites } = await import("@/lib/plan")
+    await seedPlanos()
+    const ajustada = await comAjuste("starter", { maxUsersOverride: 99 })
+    const normal = await seedTenant("starter")
+
+    expect((await getLimites(ajustada.id)).maxUsuarios).toBe(99)
+    expect((await getLimites(normal.id)).maxUsuarios).toBe(3)
+  })
+})

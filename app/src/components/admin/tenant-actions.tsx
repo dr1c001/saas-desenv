@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { KeyRound, Ban, ArrowLeftRight, LogIn, Loader2, Sparkles } from "lucide-react"
+import { KeyRound, Ban, ArrowLeftRight, LogIn, Loader2, Sparkles, SlidersHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -19,7 +19,9 @@ import {
   trocarPlano,
   entrarNaConta,
   alterarRecursosExtras,
+  alterarLimitesDaEmpresa,
 } from "@/actions/admin"
+import { ajusteEscolhido, modoDoLimite, type ModoDoLimite } from "@/lib/limite"
 // De lib/recursos (puro), NUNCA de lib/plan: aquele importa o Prisma, e num
 // componente de cliente isso arrasta o driver do Postgres pro navegador.
 import { RECURSOS, RECURSOS_DE_ABA, type Recurso } from "@/lib/recursos"
@@ -37,6 +39,15 @@ type Props = {
   recursosDoPlano: Recurso[]
   /** Concedidos à mão, por cima do plano. */
   recursosExtras: Recurso[]
+  /** Tetos do PLANO dela, para a tela mostrar o que "herdar" significa hoje. */
+  limitesDoPlano: { usuarios: number | null; osMes: number | null; nfseMes: number | null }
+  /** Ajustes gravados para ESTA empresa. null = herda · 0 = sem limite. */
+  ajustes: {
+    usuarios: number | null
+    osMes: number | null
+    nfseMes: number | null
+    precoMensal: number | null
+  }
   /** Permissões da área de quem está olhando. Esconder o botão é só cortesia:
    *  cada Server Action confere por conta própria, porque tem ID próprio e é
    *  despachável sem passar por esta tela. */
@@ -54,6 +65,8 @@ export function TenantActions({
   planos,
   recursosDoPlano,
   recursosExtras,
+  limitesDoPlano,
+  ajustes,
   permissoes,
 }: Props) {
   const pode = (p: string) => permissoes.includes(p)
@@ -61,10 +74,32 @@ export function TenantActions({
   const tNav = useTranslations("nav")
   const [pendente, startTransition] = useTransition()
   const [aberto, setAberto] = useState<
-    null | "liberar" | "cancelar" | "plano" | "entrar" | "recursos"
+    null | "liberar" | "cancelar" | "plano" | "entrar" | "recursos" | "limites"
   >(null)
   const [planoEscolhido, setPlanoEscolhido] = useState(planId ?? planos[0]?.id ?? "")
   const [extras, setExtras] = useState<Recurso[]>(recursosExtras)
+
+  // Cada teto guarda MODO e número separados. Juntar os dois num campo só faria
+  // "herdar" e "sem limite" caírem no mesmo vazio — e são coisas diferentes:
+  // herdar acompanha o plano quando ele mudar, sem limite não. (lib/limite.ts.)
+  type Campo = { modo: ModoDoLimite; numero: string }
+  const doAjuste = (v: number | null): Campo => ({
+    modo: modoDoLimite(v),
+    numero: v && v > 0 ? String(v) : "",
+  })
+  const [lim, setLim] = useState({
+    usuarios: doAjuste(ajustes.usuarios),
+    osMes: doAjuste(ajustes.osMes),
+    nfseMes: doAjuste(ajustes.nfseMes),
+  })
+  const [preco, setPreco] = useState(
+    ajustes.precoMensal === null ? "" : String(ajustes.precoMensal)
+  )
+
+  const paraGravar = (c: Campo) => {
+    const n = c.numero.trim() === "" ? null : Number(c.numero)
+    return ajusteEscolhido(c.modo, Number.isFinite(n) ? (n as number) : null)
+  }
 
   const noPlano = new Set(recursosDoPlano)
   const alternar = (r: Recurso) =>
@@ -270,6 +305,110 @@ export function TenantActions({
               >
                 {pendente && <Loader2 className="size-3.5 mr-1.5 animate-spin" />}
                 {t("featuresConfirm")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {pode("alterarLimites") && (
+        <Dialog open={aberto === "limites"} onOpenChange={(o) => setAberto(o ? "limites" : null)}>
+          <DialogTrigger render={<Button size="sm" variant="ghost" className="gap-1" />}>
+            <SlidersHorizontal className="size-3.5" />
+            {t("limits")}
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("limitsTitle")}</DialogTitle>
+              <DialogDescription>{t("limitsDescription", { company: tenantName })}</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {([
+                ["usuarios", t("limitUsers"), limitesDoPlano.usuarios],
+                ["osMes", t("limitOrders"), limitesDoPlano.osMes],
+                ["nfseMes", t("limitNfse"), limitesDoPlano.nfseMes],
+              ] as const).map(([chave, rotulo, noPlanoValor]) => {
+                const campo = lim[chave]
+                return (
+                  <div key={chave} className="space-y-1.5">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <label className="text-sm font-medium">{rotulo}</label>
+                      <span className="text-xs text-muted-foreground">
+                        {t("limitFromPlan", {
+                          valor: noPlanoValor === null ? "∞" : String(noPlanoValor),
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(["herdar", "semLimite", "proprio"] as ModoDoLimite[]).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          disabled={pendente}
+                          onClick={() => setLim((x) => ({ ...x, [chave]: { ...x[chave], modo: m } }))}
+                          className={`rounded-full border px-2.5 py-1 text-xs ${
+                            campo.modo === m
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "hover:bg-muted"
+                          }`}
+                        >
+                          {t(`limitMode.${m}` as "limitMode.herdar")}
+                        </button>
+                      ))}
+                      {campo.modo === "proprio" && (
+                        <input
+                          type="number"
+                          min={1}
+                          value={campo.numero}
+                          disabled={pendente}
+                          onChange={(e) =>
+                            setLim((x) => ({ ...x, [chave]: { ...x[chave], numero: e.target.value } }))
+                          }
+                          className="w-24 rounded-md border bg-background px-2 py-1 text-sm"
+                          placeholder={t("limitPlaceholder")}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+
+              <div className="space-y-1.5 border-t pt-3">
+                <label className="text-sm font-medium">{t("limitPrice")}</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={preco}
+                  disabled={pendente}
+                  onChange={(e) => setPreco(e.target.value)}
+                  className="w-32 rounded-md border bg-background px-2 py-1 text-sm"
+                  placeholder={t("limitPricePlaceholder")}
+                />
+                <p className="text-xs text-muted-foreground">{t("limitPriceHint")}</p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={fechar} disabled={pendente}>
+                {t("back")}
+              </Button>
+              <Button
+                onClick={() =>
+                  executar(() =>
+                    alterarLimitesDaEmpresa(tenantId, {
+                      usuarios: paraGravar(lim.usuarios),
+                      osMes: paraGravar(lim.osMes),
+                      nfseMes: paraGravar(lim.nfseMes),
+                      precoMensal: preco.trim() === "" ? null : Number(preco),
+                    })
+                  )
+                }
+                disabled={pendente}
+              >
+                {pendente && <Loader2 className="size-3.5 mr-1.5 animate-spin" />}
+                {t("limitsConfirm")}
               </Button>
             </DialogFooter>
           </DialogContent>

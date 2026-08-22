@@ -71,6 +71,26 @@ model Tenant {
   tabsConfigured          Boolean            @default(false)
   actionsConfigured       Boolean            @default(false)
 
+  /// Tetos ajustados PARA ESTA EMPRESA, por cima do que o plano da.
+  ///
+  /// NULL = herda do plano · 0 = SEM LIMITE · outro numero = o teto dela.
+  ///
+  /// Os dois primeiros seriam o mesmo `null` num campo comum, e sao coisas
+  /// diferentes: "herdar" acompanha o plano quando ele mudar, "sem limite" nao.
+  /// Zero carrega o sentido de ilimitado porque zero usuario, zero OS ou zero
+  /// nota nao significa nada como teto real. Regra em lib/limite.ts.
+  ///
+  /// Existem porque os planos sao tres e as empresas nao: sempre aparece a que
+  /// precisa de 12 usuarios mas nao quer o Enterprise.
+  maxUsersOverride        Int?
+  maxOrdersOverride       Int?
+  maxNfseOverride         Int?
+
+  /// Mensalidade combinada com esta empresa, quando difere da do plano.
+  /// NULL = cobra o preco do plano. Serve ao plano customizado: recursos e
+  /// tetos proprios pedem preco proprio.
+  customPriceMonthly      Decimal?           @db.Decimal(10, 2)
+
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
 

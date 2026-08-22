@@ -1698,7 +1698,24 @@
         },
         "featuresAll": "Enable {count, plural, one {the remaining feature} other {the # remaining features}}",
         "tabsTitle": "Tabs this company sees ({visiveis} of {total})",
-        "tabsHint": "Only Map and Tax depend on a feature. The others already show for every company — restricting per person is done by the company itself, in Settings → Permissions."
+        "tabsHint": "Only Map and Tax depend on a feature. The others already show for every company — restricting per person is done by the company itself, in Settings → Permissions.",
+        "limits": "Limits",
+        "limitsTitle": "Limits and price for this company",
+        "limitsDescription": "Adjust {company}'s caps on top of their plan. This is what makes a custom plan possible: own features and limits, with its own price.",
+        "limitsConfirm": "Save limits",
+        "limitUsers": "Users",
+        "limitOrders": "Jobs per month",
+        "limitNfse": "Tax invoices per month",
+        "limitFromPlan": "Plan: {valor}",
+        "limitPlaceholder": "how many?",
+        "limitMode": {
+          "herdar": "Follow the plan",
+          "semLimite": "No limit",
+          "proprio": "Set"
+        },
+        "limitPrice": "Agreed monthly price (R$)",
+        "limitPricePlaceholder": "plan price",
+        "limitPriceHint": "Left blank, the plan price is charged. Filled in, this value applies — it is what completes the custom plan."
       },
       "impersonation": {
         "banner": "You are viewing the system as {company}. Anything you do here applies to their account.",

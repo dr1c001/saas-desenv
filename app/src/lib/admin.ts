@@ -42,16 +42,22 @@ export type Permissao =
   // de trocarPlano porque é estritamente MENOS poderoso: trocar pro Pro libera
   // tudo de uma vez; isto libera um item só.
   | "concederRecurso"
+  // Ajustar os TETOS e o preço de uma empresa por cima do plano. Fica junto de
+  // trocarPlano pelo mesmo motivo do concederRecurso — é menos poderoso que
+  // mudar o plano inteiro. O preço é o que amarra: quem pode mexer no valor
+  // cobrado é quem já podia trocar o plano e mudar o valor por essa via.
+  | "alterarLimites"
   | "entrarNaConta"
   | "gerenciarEquipe"
 
 const PERMISSOES: Record<PlatformRole, Permissao[]> = {
   DONO: [
     "verPainel", "verFinanceiro", "gerarRelatorio", "liberarAcesso",
-    "cancelarAcesso", "trocarPlano", "concederRecurso", "entrarNaConta", "gerenciarEquipe",
+    "cancelarAcesso", "trocarPlano", "concederRecurso", "alterarLimites",
+    "entrarNaConta", "gerenciarEquipe",
   ],
-  FINANCEIRO: ["verPainel", "verFinanceiro", "gerarRelatorio", "liberarAcesso", "cancelarAcesso", "trocarPlano", "concederRecurso"],
-  COMERCIAL: ["verPainel", "verFinanceiro", "gerarRelatorio", "trocarPlano", "concederRecurso"],
+  FINANCEIRO: ["verPainel", "verFinanceiro", "gerarRelatorio", "liberarAcesso", "cancelarAcesso", "trocarPlano", "concederRecurso", "alterarLimites"],
+  COMERCIAL: ["verPainel", "verFinanceiro", "gerarRelatorio", "trocarPlano", "concederRecurso", "alterarLimites"],
   LOGISTICO: ["verPainel", "entrarNaConta"],
   TI: ["verPainel", "liberarAcesso", "entrarNaConta"],
 }
@@ -151,6 +157,7 @@ export type AcaoAdmin =
   | "reativar"
   | "trocar_plano"
   | "alterar_recursos"
+  | "alterar_limites"
   | "entrar_na_conta"
   | "sair_da_conta"
   | "adicionar_admin"

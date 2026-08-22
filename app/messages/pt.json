@@ -1698,7 +1698,24 @@
         },
         "featuresAll": "Liberar {count, plural, one {o recurso restante} other {os # recursos restantes}}",
         "tabsTitle": "Abas que esta empresa vê ({visiveis} de {total})",
-        "tabsHint": "Só Mapa e Fiscal dependem de recurso. As demais já aparecem para qualquer empresa — quem restringe por pessoa é a própria empresa, em Configurações → Permissões."
+        "tabsHint": "Só Mapa e Fiscal dependem de recurso. As demais já aparecem para qualquer empresa — quem restringe por pessoa é a própria empresa, em Configurações → Permissões.",
+        "limits": "Limites",
+        "limitsTitle": "Limites e preço desta empresa",
+        "limitsDescription": "Ajuste os tetos de {company} por cima do plano dela. Serve para o plano customizado: recursos e limites próprios, com preço próprio.",
+        "limitsConfirm": "Salvar limites",
+        "limitUsers": "Usuários",
+        "limitOrders": "OS por mês",
+        "limitNfse": "Notas fiscais por mês",
+        "limitFromPlan": "No plano: {valor}",
+        "limitPlaceholder": "quanto?",
+        "limitMode": {
+          "herdar": "Seguir o plano",
+          "semLimite": "Sem limite",
+          "proprio": "Definir"
+        },
+        "limitPrice": "Mensalidade combinada (R$)",
+        "limitPricePlaceholder": "do plano",
+        "limitPriceHint": "Em branco, cobra o preço do plano. Preenchido, vale este valor — é o que fecha o plano customizado."
       },
       "impersonation": {
         "banner": "Você está vendo o sistema como {company}. Tudo o que fizer aqui vale na conta dela.",
