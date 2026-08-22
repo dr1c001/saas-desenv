@@ -2142,6 +2142,9 @@
     },
     "notaRejeitada": {
       "title": "Nota fiscal recusada"
+    },
+    "certificadoVencendo": {
+      "title": "Certificado digital vencendo"
     }
   },
   "customFields": {
@@ -2740,7 +2743,41 @@
       "osStatus": "Quando uma [[os]] muda de status em campo.",
       "orcamentoRespondido": "Quando o cliente aprova ou recusa um orçamento.",
       "pagamentoConfirmado": "Quando o pagamento da assinatura é confirmado.",
-      "notaRejeitada": "Quando a prefeitura recusa uma nota fiscal."
+      "notaRejeitada": "Quando a prefeitura recusa uma nota fiscal.",
+      "certificadoVencendo": "Quando o certificado digital está perto de vencer."
+    }
+  },
+  "certificado": {
+    "title": "Certificado digital",
+    "subtitle": "O certificado A1 da sua empresa. Sem ele a prefeitura não aceita a nota.",
+    "arquivo": "Arquivo do certificado (.pfx ou .p12)",
+    "arquivoAjuda": "O mesmo arquivo que você usa no e-CAC. Até 200 KB.",
+    "senha": "Senha do certificado",
+    "senhaAjuda": "Guardada cifrada. Não aparece em nenhuma tela depois de enviada.",
+    "validade": "Válido até (opcional)",
+    "validadeAjuda": "Serve para avisarmos antes de vencer. Certificado vencido para de emitir nota, e sem aviso ninguém descobre até tentar.",
+    "enviar": "Enviar certificado",
+    "enviado": "Certificado enviado e instalado.",
+    "instalado": "Certificado instalado",
+    "valeAte": "Válido até {data}",
+    "venceu": "VENCEU em {data} — a emissão de nota vai falhar",
+    "trocar": "Trocar certificado",
+    "reenviar": "Reenviar ao emissor",
+    "apagar": "Apagar",
+    "comoGuardamos": "O arquivo e a senha ficam cifrados no nosso banco, com a chave guardada fora dele. Um vazamento do banco não entrega o seu certificado. Ele é enviado ao emissor de nota fiscal para autorizar a emissão em nome da sua empresa.",
+    "cofreAusente": "O sistema ainda não está preparado para guardar certificado com segurança (falta a chave de cifra no servidor). Fale com o suporte — enviar assim gravaria o arquivo sem proteção.",
+    "erroDoEmissor": "O emissor recusou: {detalhe}",
+    "erro": {
+      "semPermissao": "Só o dono da conta pode enviar o certificado.",
+      "cofreAusente": "O servidor não está preparado para guardar certificado com segurança. Fale com o suporte.",
+      "arquivoAusente": "Escolha o arquivo do certificado.",
+      "arquivoGrande": "Arquivo grande demais para um certificado. Confira se é mesmo o .pfx.",
+      "arquivoTipo": "O certificado precisa ser um arquivo .pfx ou .p12.",
+      "senhaAusente": "Informe a senha do certificado.",
+      "validadeInvalida": "Data de validade inválida.",
+      "falhouGuardar": "Não consegui guardar o certificado agora. Tente de novo.",
+      "semEmpresaFiscal": "Cadastre os dados fiscais da empresa antes de enviar o certificado.",
+      "semCertificado": "Não há certificado guardado para reenviar."
     }
   }
 }

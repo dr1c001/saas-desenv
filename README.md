@@ -62,6 +62,7 @@ repositório** e nenhuma deve entrar:
 | `VAPID_PRIVATE_KEY` · `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | notificação push |
 | `CRON_SECRET` | protege `/api/cron/daily` |
 | `SUPER_ADMIN_EMAIL` | quem enxerga `/admin` |
+| `CERT_ENCRYPTION_KEY` | cifra o certificado digital das empresas (mín. 32 caracteres) |
 
 ⚠️ **Não existe banco de desenvolvimento separado.** `DATABASE_URL` aponta para
 produção. Leia **Armadilhas** antes de rodar qualquer comando de schema.

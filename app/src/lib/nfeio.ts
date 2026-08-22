@@ -2,6 +2,18 @@ import { bloquearForaDeProducao } from "@/lib/ambiente"
 
 const BASE = "https://api.nfe.io/v1"
 
+/** Remove cabeçalho marcado como `undefined`.
+ *
+ *  Serve ao envio de arquivo: `multipart/form-data` precisa de um boundary que
+ *  só o fetch sabe gerar, e mandar `Content-Type: multipart/form-data` sem ele
+ *  faz o servidor recusar sem dizer por quê. Marcar como undefined é a forma
+ *  de dizer "não mande este". */
+function limparIndefinidos(h: Record<string, string | undefined>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(h).filter(([, v]) => v !== undefined)
+  ) as Record<string, string>
+}
+
 async function req<T>(path: string, options: RequestInit = {}): Promise<T> {
   // Emitir NFS-e gera documento fiscal de verdade, com número, na prefeitura.
   // Não existe "modo de teste" — ou emite, ou não emite. Fora de produção nem
@@ -11,11 +23,13 @@ async function req<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const res = await fetch(`${BASE}${path}`, {
     ...options,
-    headers: {
+    // `as` porque HeadersInit também aceita array e Headers; aqui só se passa
+    // objeto simples, e o limparIndefinidos precisa enxergar as chaves.
+    headers: limparIndefinidos({
       Authorization: process.env.NFEIO_API_KEY!,
       "Content-Type": "application/json",
-      ...(options.headers ?? {}),
-    },
+      ...((options.headers ?? {}) as Record<string, string | undefined>),
+    }),
   })
   if (!res.ok) {
     const body = await res.text().catch(() => "")
@@ -73,6 +87,32 @@ export const nfeio = {
 
   async getCompany(id: string) {
     return req<NfeioCompany>(`/companies/${id}`)
+  },
+
+  /**
+   * Envia o certificado A1 da empresa para o emissor.
+   *
+   * ATENÇÃO A QUEM FOR MEXER: este é o único ponto da integração cuja forma
+   * exata NÃO foi verificada contra a API real — foi escrito a partir da
+   * documentação, e nenhuma empresa emitiu nota até hoje. `bloquearForaDeProducao`
+   * impede ensaiar fora de produção, então a primeira execução vale de verdade.
+   *
+   * Se falhar, o erro do emissor sobe inteiro para a tela em vez de virar
+   * "não foi possível": é ele que diz o que está errado no formato.
+   *
+   * `multipart/form-data` e não JSON: é arquivo binário. O `Content-Type` é
+   * omitido de propósito para o fetch montar o boundary sozinho — passá-lo à
+   * mão sem o boundary faz o servidor recusar sem explicar por quê.
+   */
+  async uploadCertificate(companyId: string, arquivo: Buffer, senha: string, nomeArquivo: string) {
+    const form = new FormData()
+    form.append("file", new Blob([new Uint8Array(arquivo)]), nomeArquivo)
+    form.append("password", senha)
+
+    return req<{ id?: string; status?: string; expiresOn?: string }>(
+      `/companies/${companyId}/certificate`,
+      { method: "POST", body: form, headers: { "Content-Type": undefined as unknown as string } }
+    )
   },
 
   async emitNfse(companyId: string, data: {

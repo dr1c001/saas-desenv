@@ -2142,6 +2142,9 @@
     },
     "notaRejeitada": {
       "title": "Tax invoice rejected"
+    },
+    "certificadoVencendo": {
+      "title": "Digital certificate expiring"
     }
   },
   "customFields": {
@@ -2740,7 +2743,41 @@
       "osStatus": "When a [[os]] changes status in the field.",
       "orcamentoRespondido": "When the customer approves or declines a quote.",
       "pagamentoConfirmado": "When the subscription payment clears.",
-      "notaRejeitada": "When the city rejects a tax invoice."
+      "notaRejeitada": "When the city rejects a tax invoice.",
+      "certificadoVencendo": "When the digital certificate is close to expiring."
+    }
+  },
+  "certificado": {
+    "title": "Digital certificate",
+    "subtitle": "Your company's A1 certificate. Without it the city will not accept the invoice.",
+    "arquivo": "Certificate file (.pfx or .p12)",
+    "arquivoAjuda": "The same file you use with the tax authority. Up to 200 KB.",
+    "senha": "Certificate password",
+    "senhaAjuda": "Stored encrypted. It never appears on any screen after upload.",
+    "validade": "Valid until (optional)",
+    "validadeAjuda": "Lets us warn you before it expires. An expired certificate stops invoicing, and without a warning nobody finds out until they try.",
+    "enviar": "Upload certificate",
+    "enviado": "Certificate uploaded and installed.",
+    "instalado": "Certificate installed",
+    "valeAte": "Valid until {data}",
+    "venceu": "EXPIRED on {data} — invoicing will fail",
+    "trocar": "Replace certificate",
+    "reenviar": "Resend to issuer",
+    "apagar": "Delete",
+    "comoGuardamos": "The file and password are encrypted in our database, with the key kept outside it. A database breach does not expose your certificate. It is sent to the invoice issuer to authorise issuing on your company's behalf.",
+    "cofreAusente": "The system is not yet set up to store certificates securely (the server encryption key is missing). Contact support — uploading now would store the file unprotected.",
+    "erroDoEmissor": "The issuer refused: {detalhe}",
+    "erro": {
+      "semPermissao": "Only the account owner can upload the certificate.",
+      "cofreAusente": "The server is not set up to store certificates securely. Contact support.",
+      "arquivoAusente": "Choose the certificate file.",
+      "arquivoGrande": "That file is too large for a certificate. Check that it is the .pfx.",
+      "arquivoTipo": "The certificate must be a .pfx or .p12 file.",
+      "senhaAusente": "Enter the certificate password.",
+      "validadeInvalida": "Invalid expiry date.",
+      "falhouGuardar": "Could not store the certificate right now. Please try again.",
+      "semEmpresaFiscal": "Register the company's tax details before uploading the certificate.",
+      "semCertificado": "There is no stored certificate to resend."
     }
   }
 }

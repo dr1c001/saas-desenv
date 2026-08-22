@@ -1,4 +1,6 @@
 import { getFiscalStatus, registerFiscalCompany } from "@/actions/nfse"
+import { estadoDoCertificado } from "@/actions/certificado"
+import { CertificadoForm } from "@/components/settings/certificado-form"
 import { getTenant } from "@/lib/auth"
 import { temRecurso } from "@/lib/plan"
 import { getTranslations } from "next-intl/server"
@@ -17,6 +19,9 @@ export default async function FiscalSettingsPage() {
   const t = await getTranslations("settingsAdvanced.fiscal")
   const fiscal = await getFiscalStatus()
   const isConfigured = !!fiscal?.nfeioCompanyId
+  const tCert = await getTranslations("certificado")
+  const cert = await estadoDoCertificado()
+
 
   return (
     <div className="space-y-8 max-w-2xl">
@@ -183,6 +188,25 @@ export default async function FiscalSettingsPage() {
             </button>
           </form>
         </div>
+      )}
+
+      {/* O certificado só faz sentido depois de a empresa existir no emissor —
+          é nela que ele é instalado. Mostrar antes convidaria a enviar um
+          arquivo que não teria onde ser aplicado. */}
+      {isConfigured && (
+        <section className="space-y-4 border-t pt-8">
+          <div>
+            <h2 className="text-lg font-semibold">{tCert("title")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{tCert("subtitle")}</p>
+          </div>
+          <CertificadoForm
+            temCertificado={cert.temCertificado}
+            nomeArquivo={cert.nomeArquivo}
+            validoAte={cert.validoAte}
+            diasParaVencer={cert.diasParaVencer}
+            cofrePronto={cert.cofrePronto}
+          />
+        </section>
       )}
     </div>
   )

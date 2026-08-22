@@ -16,6 +16,7 @@ import { DIAS_DE_ANTECEDENCIA } from "@/lib/contrato-recorrente"
 import { gravarRetratoDoMes } from "@/lib/snapshot"
 import { temFuncao } from "@/lib/plan"
 import { conciliarNotasPendentes } from "@/lib/nfse-conciliar"
+import { notificar } from "@/lib/notificar"
 
 // O padrão da Vercel (10-15s) não cabe reconciliação da Asaas + e-mails +
 // backfill de geocodificação no mesmo processo.
@@ -61,7 +62,7 @@ export async function GET(req: NextRequest) {
     .create({ data: { name: "daily" }, select: { id: true } })
     .catch(() => null)
 
-  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, contratos: 0, notasConsultadas: 0, notasRejeitadas: 0, retrato: "", errors: 0 }
+  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, retrato: "", errors: 0 }
 
   // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
   // Em 07/08/2026 uma cliente pagou e ficou sem acesso por ~1 dia: os webhooks
@@ -266,6 +267,36 @@ export async function GET(req: NextRequest) {
     const limiteContratos = new Date(now)
     limiteContratos.setUTCDate(limiteContratos.getUTCDate() + DIAS_DE_ANTECEDENCIA)
     results.contratos = await gerarOsDosContratos(now, limiteContratos)
+
+  // ── Certificado digital perto de vencer ───────────────────────────────────
+  //
+  // Certificado vencido para de emitir NOTA, e sem aviso ninguém descobre até
+  // precisar faturar — que é sempre a pior hora. Avisa aos 30 e aos 7 dias.
+  try {
+    const emBreve = new Date(now.getTime() + 30 * 86_400_000)
+    const vencendo = await prisma.fiscalCertificate.findMany({
+      where: { validoAte: { not: null, lte: emBreve } },
+      select: { tenantId: true, validoAte: true },
+    })
+    for (const c of vencendo) {
+      const dias = Math.ceil((c.validoAte!.getTime() - now.getTime()) / 86_400_000)
+      // Dois marcos, e não todo dia: aviso diário sobre a mesma coisa vira
+      // paisagem, e no dia em que importar ninguém olha.
+      if (dias !== 30 && dias !== 7 && dias !== 0) continue
+      await notificar({
+        tenantId: c.tenantId,
+        evento: "certificadoVencendo",
+        // O título vem do catálogo de notificações; aqui só o detalhe.
+        corpo: dias > 0 ? `${dias} dia(s)` : "vencido",
+        url: "/settings/fiscal",
+        referencia: c.tenantId,
+      })
+      results.certificadosVencendo++
+    }
+  } catch (e) {
+    console.error("[cron] aviso de certificado falhou:", e)
+    results.errors++
+  }
 
   // ── Notas fiscais: perguntar o que a prefeitura decidiu ────────────────────
   //

@@ -117,6 +117,7 @@ model Tenant {
   actionPermissions ActionPermission[]
   branches          Branch[]
   apiKeys           ApiKey[]
+  fiscalCertificate FiscalCertificate?
   quotes            Quote[]
   plan              Plan?              @relation(fields: [planId], references: [id])
   subscriptions     Subscription[]
@@ -755,6 +756,42 @@ model TabPermission {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, role, tab])
+}
+
+/// O certificado digital A1 da empresa, para emitir nota fiscal.
+///
+/// TABELA PROPRIA, e nao colunas no Tenant, de proposito: assim o certificado
+/// NUNCA vem junto num `include: { tenant: true }` distraido. Quem precisa
+/// dele tem que pedir por nome — e pedir por nome e uma decisao, nao um
+/// acidente. Mesmo raciocinio do contrato publico da API.
+///
+/// O arquivo e a senha ficam CIFRADOS (AES-256-GCM, lib/cofre.ts), com a chave
+/// numa variavel de ambiente e nunca no banco. Um dump do banco — backup
+/// vazado, acesso indevido ao Postgres — nao entrega certificado de ninguem.
+///
+/// Isto nao e paranoia: um A1 e a IDENTIDADE da empresa. Com ele e a senha,
+/// alguem emite nota no CNPJ dela e assina documento como ela. Se um token de
+/// WhatsApp vaza, troca-se o token; se um certificado vaza, so existe revogar
+/// na certificadora e comprar outro.
+model FiscalCertificate {
+  id        String   @id @default(cuid())
+  tenantId  String   @unique
+
+  /// O .pfx cifrado. Formato: iv.tag.dados, tudo em base64.
+  arquivo   String   @db.Text
+  /// A senha cifrada, no mesmo formato.
+  senha     String   @db.Text
+
+  /// Nome do arquivo enviado, so para a tela mostrar o que esta la.
+  nomeArquivo String?
+  /// Validade informada por quem enviou. Serve ao aviso de vencimento —
+  /// certificado vencido para de emitir NOTA, e ninguem descobre ate tentar.
+  validoAte   DateTime?
+
+  enviadoEm DateTime @default(now())
+  enviadoPor String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 /// Chave da API de integracao. Recurso do plano Enterprise.
