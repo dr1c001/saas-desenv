@@ -244,6 +244,7 @@ model User {
   serviceContracts  ServiceContract[]
   stockMovements    StockMovement[]
   orderEvents       OrderEvent[]
+  quotesCriados     Quote[]
 
   // Aba Equipe lista por tenant; seleção de técnico filtra por papel.
   @@index([tenantId, role])
@@ -598,15 +599,27 @@ model Quote {
   validUntil    DateTime?
   tenantId      String
   clientToken   String?     @unique @default(uuid())
+  /// Quem emitiu o orcamento.
+  ///
+  /// Existe para a assinatura CERTA sair no PDF. Sem isto, so daria para
+  /// carimbar quem esta BAIXANDO o documento — e um administrador baixando o
+  /// orcamento da Ana sairia com a assinatura dele. Assinatura errada e pior
+  /// que assinatura nenhuma: e atestado falso.
+  ///
+  /// NULL nos orcamentos criados antes desta coluna: eles saem com a linha
+  /// para assinar a mao, como sempre sairam.
+  createdById   String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  createdBy User?  @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, number])
   // getQuotes(): where tenantId [+ status] order by createdAt desc
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
+  @@index([createdById])
 }
 
 // ─── Equipamentos do Cliente ──────────────────────────────────────────────────

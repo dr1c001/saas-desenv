@@ -52,7 +52,7 @@ export async function createQuote(
   _prev: QuoteFormState,
   formData: FormData
 ): Promise<QuoteFormState> {
-  const { tenantId, role } = await getTenant()
+  const { tenantId, role, userId } = await getTenant()
   await requireActiveSubscription(tenantId)
   if (role !== "OWNER" && role !== "ADMIN") return { messageCode: "NO_PERMISSION" }
   const raw = Object.fromEntries(formData.entries())
@@ -72,6 +72,10 @@ export async function createQuote(
       data: {
         number,
         tenantId,
+        // Quem emitiu, para a assinatura CERTA sair no PDF. Sem isto só daria
+        // para carimbar quem está BAIXANDO o documento — e um administrador
+        // baixando o orçamento da Ana sairia com a assinatura dele.
+        createdById: userId,
         clientName,
         clientAddress: clientAddress || null,
         clientContact: clientContact || null,

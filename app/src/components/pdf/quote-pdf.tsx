@@ -55,6 +55,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
+  signatureBloco: { width: 200, alignItems: "center" },
+  // Altura fixa: sem ela, um lado assinado e o outro em branco deixam as
+  // linhas em alturas diferentes e o rodapé torto.
+  signatureEspaco: { height: 46, justifyContent: "flex-end", alignItems: "center" },
+  signatureImagem: { maxHeight: 44, objectFit: "contain" },
   signatureLine: {
     borderTopWidth: 1,
     borderTopColor: "#1a1a1a",
@@ -96,6 +101,10 @@ type Props = {
     status: string
     validUntil: Date | null
     createdAt: Date
+    /** Quem EMITIU o orçamento — `signatureUrl` é a assinatura que a pessoa
+     *  desenhou uma vez em Configurações. Nulo nos orçamentos criados antes de
+     *  o autor passar a ser registrado: saem com a linha para assinar à mão. */
+    createdBy?: { name: string; signatureUrl: string | null } | null
   }
 }
 
@@ -230,9 +239,25 @@ export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAdd
 
         {pix && <PixBloco qr={pix.qr} chave={pix.chave} recebedor={pix.recebedor} locale={locale} />}
 
+        {/* A assinatura de quem EMITIU o orçamento. A do cliente continua
+            sendo linha para assinar à mão: o aceite dele vem pelo portal
+            público, não pelo papel. */}
         <View style={styles.signatureSection}>
           <Text style={styles.signatureLine}>{t("common.clientSignature")}</Text>
-          <Text style={styles.signatureLine}>{t("common.responsibleSignature")}</Text>
+
+          <View style={styles.signatureBloco}>
+            <View style={styles.signatureEspaco}>
+              {quote.createdBy?.signatureUrl && (
+                /* eslint-disable-next-line jsx-a11y/alt-text -- Image do react-pdf não aceita alt */
+                <Image src={quote.createdBy.signatureUrl} style={styles.signatureImagem} />
+              )}
+            </View>
+            <Text style={styles.signatureLine}>
+              {quote.createdBy?.name
+                ? `${t("common.responsibleSignature")} — ${quote.createdBy.name}`
+                : t("common.responsibleSignature")}
+            </Text>
+          </View>
         </View>
       </Page>
     </Document>

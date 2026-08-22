@@ -41,6 +41,9 @@ export async function GET(
   const { id } = await params
   const quote = await prisma.quote.findUnique({
     where: { id, tenantId: dbUser.tenantId },
+    // Quem EMITIU, e não quem está baixando: um administrador baixando o
+    // orçamento da Ana não pode sair com a assinatura dele no papel.
+    include: { createdBy: { select: { name: true, signatureUrl: true } } },
   })
 
   if (!quote) return NextResponse.json({ error: "Not found" }, { status: 404 })
