@@ -1907,6 +1907,14 @@
       "alreadyPaid": "Already paid? You can ignore this — confirmation can take a few hours. If access is still blocked after a day, just reply to this email and we'll sort it out.",
       "support": "Any questions, just reply to this email."
     },
+    "pastDueBlocked": {
+      "subject": "Your ServiçoOS access has been blocked",
+      "heading": "Hello, {name}",
+      "intro": "The subscription payment for <strong>{company}</strong> was not confirmed within 30 days, and access to the system was blocked today.",
+      "deadline": "<strong>The whole team is locked out</strong>, including technicians in the field. As soon as the payment clears, access comes back automatically for everyone — you do not need to ask.",
+      "whatHappens": "Nothing was deleted: your [[osP]], clients, finances and history are all still there, exactly as they were.",
+      "cta": "Pay and restore access"
+    },
     "nps": {
       "subject": "How was your experience with ServiçoOS?",
       "heading": "Hi, {name}! 🙏",

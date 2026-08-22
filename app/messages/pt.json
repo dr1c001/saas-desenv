@@ -1907,6 +1907,14 @@
       "alreadyPaid": "Já pagou? Pode ignorar este aviso — a confirmação pode levar algumas horas para chegar. Se depois de um dia o acesso ainda estiver bloqueado, responda este e-mail que resolvemos.",
       "support": "Qualquer dúvida, é só responder este e-mail."
     },
+    "pastDueBlocked": {
+      "subject": "Seu acesso ao ServiçoOS foi bloqueado",
+      "heading": "Olá, {name}",
+      "intro": "O pagamento da assinatura de <strong>{company}</strong> não foi confirmado em 30 dias, e o acesso ao sistema foi bloqueado hoje.",
+      "deadline": "<strong>Toda a equipe está sem acesso</strong>, inclusive os técnicos em campo. Assim que o pagamento for confirmado, o acesso volta sozinho para todo mundo — não é preciso pedir nada.",
+      "whatHappens": "Nada foi apagado: [[osArtP]] suas [[osP]], clientes, financeiro e histórico continuam guardados exatamente como estavam.",
+      "cta": "Regularizar e voltar a acessar"
+    },
     "nps": {
       "subject": "Como foi sua experiência com o ServiçoOS?",
       "heading": "Olá, {name}! 🙏",

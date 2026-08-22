@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer"
+import { numeroEExtenso } from "@/lib/extenso"
 
 // Contrato de prestação de serviço + tratamento de dados (LGPD), gerado por
 // cliente no momento da assinatura.
@@ -14,8 +15,21 @@ import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer"
 // propôs; não reescrever "pra ficar mais claro" sem nova consulta. Foram
 // mantidas sem alteração, por aprovação expressa do parecer, as cláusulas
 // 5.3 (legítimo interesse) e 5.7 (suboperadores por função).
+//
+// v1.2 (21/08/2026) — a carência da cláusula 4.1 subiu de 5 para 30 dias.
+// A versão sobe porque isto MUDA UMA CLÁUSULA: quem assinou a v1.1 contratou
+// 5 dias. A mudança é FAVORÁVEL à CONTRATANTE (mais prazo antes da suspensão),
+// então não há prejuízo a quem já assinou — mas o prazo declarado no documento
+// dela continua sendo o que ela assinou, e por isso a versão precisa
+// distinguir os dois. PENDENTE de conferência do advogado que emitiu o parecer
+// da v1.0/v1.1.
+//
+// O prazo não está escrito aqui: vem de PAST_DUE_GRACE_DAYS (lib/past-due.ts),
+// que é a MESMA constante que o bloqueio usa. Uma cláusula que promete um
+// prazo diferente do que o sistema aplica é a pior divergência possível neste
+// documento.
 
-export const VERSAO_CONTRATO = "1.1"
+export const VERSAO_CONTRATO = "1.2"
 
 /** Comarca da sede da CONTRATADA, usada na eleição de foro (cláusula 11).
  *  Se a sede mudar, muda aqui — e a versão do contrato sobe junto. */
@@ -181,7 +195,7 @@ export function ContratoPDF({ dados }: { dados: DadosContrato }) {
         <Text style={styles.clausula}>CLÁUSULA 4 — INADIMPLÊNCIA E SUSPENSÃO</Text>
         <Text style={styles.p}>
           4.1. Não confirmado o pagamento na data de vencimento, a CONTRATANTE será notificada por
-          e-mail e manterá o acesso normal por {dados.diasCarencia} ({dados.diasCarencia === 5 ? "cinco" : String(dados.diasCarencia)}) dias corridos.
+          e-mail e manterá o acesso normal por {numeroEExtenso(dados.diasCarencia)} dias corridos.
         </Text>
         <Text style={styles.p}>
           4.2. Decorrido esse prazo sem regularização, o acesso ao sistema será suspenso para todos os

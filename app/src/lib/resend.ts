@@ -1,5 +1,6 @@
 import { Resend } from "resend"
 import { getTranslator } from "@/lib/i18n"
+import { momentoDoAviso, type Momento } from "@/lib/past-due"
 import { destinoDeEmailDeTeste, ehProducao, prefixoDeAssunto } from "@/lib/ambiente"
 
 let resendClient: Resend | null = null
@@ -212,42 +213,54 @@ export async function sendOnboardingDay3Email(to: string, name: string, locale: 
  * tela de acesso expirado. Quem perde acesso sem aviso costuma tratar como
  * defeito do sistema, não como cobrança pendente — e cancela.
  *
- * `diasRestantes` vem de PAST_DUE_GRACE_DAYS (lib/auth.ts), nunca de um
- * número escrito aqui.
+ * `diasRestantes` e o `momento` vêm de lib/past-due.ts, nunca de um número
+ * escrito aqui. O tom morava NESTE arquivo (`diasRestantes <= 2`), separado do
+ * lugar que sabe quantos dias de carência existem — com a carência subindo de
+ * 5 para 30 as duas metades divergiriam em silêncio, e o e-mail continuaria
+ * ficando urgente na véspera de um prazo que não existe mais.
  */
 export async function sendPastDueWarningEmail(
   to: string,
   name: string,
   companyName: string,
   diasRestantes: number,
-  locale: "pt" | "en"
+  locale: "pt" | "en",
+  momento: Momento = momentoDoAviso(diasRestantes)
 ) {
   const t = getTranslator(locale, "emails")
-  // O tom sobe conforme o prazo aperta: o primeiro aviso é um lembrete, o
-  // último avisa que o acesso cai. Mesmo template, urgência diferente.
-  const urgente = diasRestantes <= 2
-  const cor = urgente ? "#dc2626" : "#f59e0b"
+  // Três tons: lembrete, aperto e corte. O do corte é outro texto — dizer
+  // "faltam 0 dias" para quem acabou de perder o acesso é pior que não avisar.
+  const bloqueado = momento === "bloqueio"
+  const cor = momento === "aviso" ? "#f59e0b" : "#dc2626"
+  const chave = bloqueado ? "pastDueBlocked" : "pastDueWarning"
 
   return send({
     from: FROM,
     replyTo: REPLY_TO,
     to,
-    subject: t(urgente ? "pastDueWarning.subjectUrgent" : "pastDueWarning.subject", { days: diasRestantes }),
+    subject: t(
+      (bloqueado
+        ? "pastDueBlocked.subject"
+        : momento === "urgente"
+          ? "pastDueWarning.subjectUrgent"
+          : "pastDueWarning.subject") as "pastDueWarning.subject",
+      { days: diasRestantes }
+    ),
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
-        <h1 style="color:${cor};margin-bottom:8px">${t("pastDueWarning.heading", { name })}</h1>
+        <h1 style="color:${cor};margin-bottom:8px">${t(`${chave}.heading` as "pastDueWarning.heading", { name })}</h1>
         <p style="color:#374151;line-height:1.6">
-          ${t.markup("pastDueWarning.intro", { ...STRONG, company: companyName })}
+          ${t.markup(`${chave}.intro` as "pastDueWarning.intro", { ...STRONG, company: companyName })}
         </p>
         <div style="background:#fef3c7;border-left:4px solid ${cor};padding:12px 16px;margin:20px 0;border-radius:4px">
           <p style="color:#92400e;margin:0;line-height:1.6">
-            ${t.markup("pastDueWarning.deadline", { ...STRONG, days: diasRestantes })}
+            ${t.markup(`${chave}.deadline` as "pastDueWarning.deadline", { ...STRONG, days: diasRestantes })}
           </p>
         </div>
-        <p style="color:#374151;line-height:1.6">${t("pastDueWarning.whatHappens")}</p>
+        <p style="color:#374151;line-height:1.6">${t(`${chave}.whatHappens` as "pastDueWarning.whatHappens")}</p>
         <a href="${APP_URL}/billing"
            style="display:inline-block;margin:24px 0;padding:12px 28px;background:${cor};color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
-          ${t("pastDueWarning.cta")} →
+          ${t(`${chave}.cta` as "pastDueWarning.cta")} →
         </a>
         <p style="color:#6b7280;font-size:13px;line-height:1.6">
           ${t("pastDueWarning.alreadyPaid")}

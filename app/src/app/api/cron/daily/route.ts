@@ -321,7 +321,8 @@ export async function GET(req: NextRequest) {
   // expirado. Quem perde acesso sem aviso trata como defeito do sistema, não
   // como cobrança pendente — e cancela.
   //
-  // Avisos no 1º e no 3º dia de atraso; o corte é no 5º (PAST_DUE_GRACE_DAYS).
+  // Sete avisos ao longo da carencia (dias 1, 3, 10, 15, 20, 25 e 30); o
+  // corte e no 30º. A regua e o corte saem da MESMA constante em lib/past-due.ts.
   try {
     const atrasadas = await prisma.subscription.findMany({
       where: { status: "PAST_DUE", pastDueWarningsSent: { lt: AVISOS_ATRASO.length } },
@@ -341,7 +342,7 @@ export async function GET(req: NextRequest) {
 
     for (const sub of atrasadas) {
       // Regra em lib/past-due.ts, testada lá — aqui só o efeito colateral.
-      const { enviar, total, diasRestantes } = decidirAviso(
+      const { enviar, total, diasRestantes, momento } = decidirAviso(
         diasDeAtraso(sub.currentPeriodEnd, now),
         sub.pastDueWarningsSent
       )
@@ -364,7 +365,10 @@ export async function GET(req: NextRequest) {
           dono.name,
           sub.tenant.name,
           diasRestantes,
-          sub.tenant.locale
+          sub.tenant.locale,
+          // O tom vem da regra, e não de um número decidido no módulo de
+          // e-mail: no dia 30 o texto é de BLOQUEIO, não de "faltam 0 dias".
+          momento
         )
         results.avisosAtraso++
       } catch (err) {
