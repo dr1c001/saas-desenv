@@ -14,7 +14,7 @@ import {
   retratoDaOs,
 } from "@/lib/historico-os-db"
 import { avisarClienteDaOs } from "@/lib/enviar-aviso-cliente"
-import { sendPushToUser } from "@/lib/push"
+import { notificar } from "@/lib/notificar"
 import { retryOnUniqueConflict } from "@/lib/retry"
 import { proximoNumeroDeOs } from "@/lib/os-numero"
 import { filialParaNovo } from "@/lib/filial"
@@ -39,45 +39,6 @@ export type OrderFormState = {
 }
 
 
-
-/**
- * Avisa no celular quem passou a ser responsável pela OS.
- *
- * Uma função só, usada na criação E na reatribuição. Só a criação avisava: se
- * você passasse o serviço do Lucas para o Beto, o Beto não ficava sabendo — e
- * reatribuir é justamente o momento em que alguém precisa ser avisado.
- *
- * Nunca lança nem bloqueia: notificação é acessório, e falhar em avisar não
- * pode derrubar a gravação da OS que gerou o aviso.
- */
-async function avisarResponsavel(
-  tenantId: string,
-  responsavelId: string | null | undefined,
-  autorId: string,
-  titulo: string,
-  chave: "newOrder" | "orderAssigned"
-) {
-  // Sem responsável, ou o próprio autor: ninguém a avisar. Mandar notificação
-  // para quem acabou de clicar o botão é ruído.
-  if (!responsavelId || responsavelId === autorId) return
-
-  try {
-    const subs = await prisma.pushSubscription.findMany({
-      where: { userId: responsavelId, user: { tenantId } },
-      select: { endpoint: true, p256dh: true, auth: true },
-    })
-    if (subs.length === 0) return
-
-    const t = await getTranslations("notifications")
-    await sendPushToUser(subs, {
-      title: t(`${chave}.title` as "newOrder.title"),
-      body: titulo,
-      url: "/service-orders",
-    })
-  } catch (err) {
-    console.error("[push] falha ao avisar o responsável:", err)
-  }
-}
 
 export async function createServiceOrder(
   _prev: OrderFormState,
@@ -173,7 +134,14 @@ export async function createServiceOrder(
   // que aconteceu, nao parte do que esta acontecendo.
   await registrarCriacao(tenantId, criada.id, await autorAtual(userId))
 
-  await avisarResponsavel(tenantId, technicianId, userId, title, "newOrder")
+  await notificar({
+    tenantId,
+    evento: "osAtribuida",
+    corpo: title,
+    url: "/service-orders",
+    autorId: userId,
+    responsavelId: technicianId,
+  })
 
   revalidatePath("/service-orders")
   redirect("/service-orders")
@@ -266,6 +234,20 @@ export async function updateOrderStatus(id: string, status: string) {
   // e sem await no caminho crítico de erro: a função nunca lança, mas ainda
   // assim o aviso é acessório e a OS já está salva.
   await avisarClienteDaOs(id, current.status, status)
+
+  // Mudança de status para o escritório. DONE e INVOICED ficam de fora: a
+  // conclusão tem aviso próprio, e faturar é ato do próprio escritório —
+  // avisar sobre o próprio clique é ruído, e ruído ensina a ignorar o próximo.
+  if (status !== "DONE" && status !== "INVOICED") {
+    await notificar({
+      tenantId,
+      evento: "osStatus",
+      corpo: order.title,
+      url: `/service-orders/${id}`,
+      referencia: id,
+      autorId: userId,
+    })
+  }
 
   revalidatePath("/service-orders")
   revalidatePath(`/service-orders/${id}`)
@@ -383,6 +365,17 @@ export async function completeServiceOrder(
   // (Achado em auditoria, 20/08/2026.)
   await avisarClienteDaOs(id, order.status, status)
 
+  // E avisa o ESCRITÓRIO. Até aqui ninguém era: o técnico fechava o serviço na
+  // rua e quem está no escritório só descobria abrindo o sistema.
+  await notificar({
+    tenantId,
+    evento: "osConcluida",
+    corpo: order.title,
+    url: `/service-orders/${id}`,
+    referencia: id,
+    autorId: userId,
+  })
+
   revalidatePath("/service-orders")
   revalidatePath(`/service-orders/${id}`)
   revalidatePath("/history")
@@ -499,8 +492,17 @@ export async function updateServiceOrder(
 
   // Trocou de mãos: avisa quem recebeu. Comparado com o responsável ANTERIOR —
   // salvar a OS sem mexer no responsável não pode disparar notificação.
+  // Trocou de mãos: avisa quem recebeu. Comparado com o responsável ANTERIOR —
+  // salvar a OS sem mexer no responsável não pode disparar notificação.
   if ((technicianId || null) !== order.technicianId) {
-    await avisarResponsavel(tenantId, technicianId, userId, title, "orderAssigned")
+    await notificar({
+      tenantId,
+      evento: "osAtribuida",
+      corpo: title,
+      url: `/service-orders/${id}`,
+      autorId: userId,
+      responsavelId: technicianId,
+    })
   }
 
   revalidatePath("/service-orders")

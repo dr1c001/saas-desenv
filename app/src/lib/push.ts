@@ -22,6 +22,13 @@ export type PushPayload = {
   body: string
   url?: string
   icon?: string
+  /** Sem som nem vibração. É o ÚNICO controle de som que a web permite —
+   *  escolher o toque não é possível (ver lib/notificacoes.ts). */
+  silent?: boolean
+  /** Fica na tela até ser tocada, em vez de sumir sozinha. */
+  requireInteraction?: boolean
+  /** Notificações com a mesma etiqueta se substituem em vez de empilhar. */
+  tag?: string
 }
 
 export type ResumoDoEnvio = {

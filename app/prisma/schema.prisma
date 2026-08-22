@@ -256,6 +256,20 @@ model User {
   /// A filial da pessoa. NULL = nao esta presa a nenhuma, e ve tudo.
   branchId  String?
 
+  /// Avisos que esta pessoa SILENCIOU. Catalogo em lib/notificacoes.ts.
+  /// Lista vazia = recebe tudo, que e o comportamento de hoje. Guarda os
+  /// silenciados e nao os desejados pelo mesmo motivo do disabledFeatures:
+  /// lista vazia nao pode significar "nao recebe nada".
+  mutedNotifications String[] @default([])
+
+  /// Notificacao sem som nem vibracao para esta pessoa.
+  ///
+  /// E o UNICO controle de som que a web permite. Escolher o TOQUE nao e
+  /// possivel: a propriedade `sound` foi removida da especificacao e nenhum
+  /// navegador implementa — no Android o som vem do canal de notificacao, que
+  /// e do sistema operacional. Quem troca o toque e a pessoa, no aparelho.
+  silentNotifications Boolean @default(false)
+
   /// A assinatura desta pessoa, desenhada uma vez e reutilizada nos documentos
   /// que ela emite: a OS que ela conclui, o orcamento que ela envia, o contrato,
   /// a ordem de compra. PNG embutido (data URI), igual ao logo da empresa — o

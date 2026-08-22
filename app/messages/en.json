@@ -2121,6 +2121,24 @@
     },
     "orderAssigned": {
       "title": "[[osC]] assigned to you"
+    },
+    "osAtribuida": {
+      "title": "[[osC]] for you"
+    },
+    "osDeContrato": {
+      "title": "[[osC]] from contract"
+    },
+    "osConcluida": {
+      "title": "Job completed"
+    },
+    "osStatus": {
+      "title": "[[osC]] status changed"
+    },
+    "orcamentoRespondido": {
+      "title": "Quote answered"
+    },
+    "pagamentoConfirmado": {
+      "title": "Payment confirmed"
     }
   },
   "customFields": {
@@ -2702,5 +2720,23 @@
     "placeholder": "Find a screen or number (1.1)",
     "rotulo": "Find a screen by name or number",
     "semResultado": "Nothing found."
+  },
+  "avisos": {
+    "title": "Mobile alerts",
+    "description": "Choose what you want to receive. Applies to you only.",
+    "salvar": "Save alerts",
+    "salvo": "Saved",
+    "insistente": "stays on screen",
+    "semSom": "Receive silently",
+    "semSomAjuda": "Still arrives, just without sound or vibration.",
+    "sobreOToque": "The notification TONE cannot be chosen here — no browser lets a website change the notification sound. The tone is your device's: to change it, go to Settings → Apps → ServiçoOS (or your browser) → Notifications.",
+    "quando": {
+      "osAtribuida": "When a [[os]] becomes yours.",
+      "osDeContrato": "When the recurring contract creates a [[os]] for you.",
+      "osConcluida": "When someone on the team completes a job.",
+      "osStatus": "When a [[os]] changes status in the field.",
+      "orcamentoRespondido": "When the customer approves or declines a quote.",
+      "pagamentoConfirmado": "When the subscription payment clears."
+    }
   }
 }

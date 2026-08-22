@@ -2,6 +2,7 @@ import { after, NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { sendPaymentConfirmedEmail } from "@/lib/resend"
 import { gerarContrato } from "@/lib/contrato"
+import { notificar } from "@/lib/notificar"
 
 // Espelha REFERRAL_DISCOUNT_PERCENT/NEW_SIGNUP_DISCOUNT_PERCENT em
 // lib/auth.ts e api/referral/join/route.ts — bônus de quem indicou, creditado
@@ -105,6 +106,17 @@ export async function POST(req: NextRequest) {
           data: { subscriptionStatus: "ACTIVE", planId: sub.planId },
         }),
       ])
+
+      // Avisa o escritório no celular. O e-mail de confirmação já ia, mas
+      // e-mail de cobrança é o que mais cai em spam e o que menos se abre —
+      // e a informação aqui é boa: o acesso voltou.
+      await notificar({
+        tenantId: sub.tenantId,
+        evento: "pagamentoConfirmado",
+        corpo: sub.plan.name,
+        url: "/billing",
+        referencia: sub.id,
+      })
 
       // Bônus de quem indicou — melhor esforço, nunca deve derrubar a
       // ativação do tenant que acabou de pagar nem o e-mail de confirmação.

@@ -5,6 +5,8 @@ import { LogoSetting } from "@/components/settings/logo-setting"
 import { ProfileForm } from "@/components/settings/profile-form"
 import { AssinaturaForm } from "@/components/settings/assinatura-form"
 import { minhaAssinatura } from "@/actions/assinatura"
+import { AvisosForm } from "@/components/settings/avisos-form"
+import { minhasPreferencias } from "@/actions/notificacoes"
 import { WhatsAppForm } from "@/components/settings/whatsapp-form"
 import { AvisoClienteForm } from "@/components/settings/aviso-cliente-form"
 import { getAvisoCliente } from "@/actions/aviso-cliente"
@@ -24,6 +26,8 @@ export default async function SettingsPage() {
   const t = await getTranslations("settingsCore")
   const tAss = await getTranslations("assinatura")
   const assinatura = await minhaAssinatura()
+  const tAvisos = await getTranslations("avisos")
+  const avisos = await minhasPreferencias()
 
   return (
     <div className="max-w-2xl space-y-8">
@@ -76,6 +80,18 @@ export default async function SettingsPage() {
           <p className="text-sm text-muted-foreground">{tAss("description")}</p>
         </div>
         <AssinaturaForm atual={assinatura} />
+      </section>
+
+      <Separator />
+
+      {/* Preferência de CADA PESSOA, como a assinatura — por isso fica no
+          Perfil e aparece para todo mundo, técnico incluído. */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">{tAvisos("title")}</h2>
+          <p className="text-sm text-muted-foreground">{tAvisos("description")}</p>
+        </div>
+        <AvisosForm atual={avisos} />
       </section>
 
       {isAdmin && (

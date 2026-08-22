@@ -2121,6 +2121,24 @@
     },
     "orderAssigned": {
       "title": "[[osC]] passada para você"
+    },
+    "osAtribuida": {
+      "title": "[[osC]] para você"
+    },
+    "osDeContrato": {
+      "title": "[[osC]] do contrato"
+    },
+    "osConcluida": {
+      "title": "Serviço concluído"
+    },
+    "osStatus": {
+      "title": "[[osC]] mudou de status"
+    },
+    "orcamentoRespondido": {
+      "title": "Orçamento respondido"
+    },
+    "pagamentoConfirmado": {
+      "title": "Pagamento confirmado"
     }
   },
   "customFields": {
@@ -2702,5 +2720,23 @@
     "placeholder": "Buscar tela ou número (1.1)",
     "rotulo": "Buscar tela por nome ou número",
     "semResultado": "Nada encontrado."
+  },
+  "avisos": {
+    "title": "Avisos no celular",
+    "description": "Escolha o que você quer receber. Vale só para você.",
+    "salvar": "Salvar avisos",
+    "salvo": "Salvo",
+    "insistente": "fica na tela",
+    "semSom": "Receber sem som",
+    "semSomAjuda": "Continua chegando, só não faz barulho nem vibra.",
+    "sobreOToque": "Não é possível escolher o TOQUE por aqui — nenhum navegador permite que um site troque o som da notificação. O toque é o do seu aparelho: para mudar, vá em Configurações → Aplicativos → ServiçoOS (ou o navegador) → Notificações.",
+    "quando": {
+      "osAtribuida": "Quando uma [[os]] passa a ser sua.",
+      "osDeContrato": "Quando o contrato recorrente gera uma [[os]] para você.",
+      "osConcluida": "Quando alguém da equipe conclui um serviço.",
+      "osStatus": "Quando uma [[os]] muda de status em campo.",
+      "orcamentoRespondido": "Quando o cliente aprova ou recusa um orçamento.",
+      "pagamentoConfirmado": "Quando o pagamento da assinatura é confirmado."
+    }
   }
 }

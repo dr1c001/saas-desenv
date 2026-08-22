@@ -11,7 +11,10 @@
 // depois é um projeto à parte, bem maior (as Server Actions são POST, e
 // haveria conflito de edição pra resolver).
 
-const VERSAO = "v2"
+// v3 (22/08/2026): o push passou a repassar silent, requireInteraction e tag.
+// A versao PRECISA subir a cada mudanca aqui — sem isso o navegador segue com
+// o service worker antigo em cache e as opcoes novas sao ignoradas em silencio.
+const VERSAO = "v3"
 const CACHE_SHELL = `servicoos-shell-${VERSAO}`
 const CACHE_PAGINAS = `servicoos-paginas-${VERSAO}`
 const CACHE_ESTATICOS = `servicoos-estaticos-${VERSAO}`
@@ -157,7 +160,16 @@ self.addEventListener("push", (event) => {
       icon: data.icon || "/icon-192.png",
       badge: "/icon-192.png",
       data: { url: data.url || "/" },
-      vibrate: [200, 100, 200],
+      // Sem som nem vibração quando a pessoa pediu silêncio. Não existe opção
+      // de TOQUE: a propriedade `sound` foi removida da especificação e nenhum
+      // navegador implementa — o som vem do canal de notificação do sistema.
+      silent: data.silent === true,
+      vibrate: data.silent === true ? undefined : [200, 100, 200],
+      // Fica na tela até ser tocada, no que exige ação de alguém.
+      requireInteraction: data.requireInteraction === true,
+      // Mesma etiqueta substitui a anterior: dez mudanças de status da mesma
+      // OS viram uma notificação com o estado atual, não dez empilhadas.
+      tag: data.tag,
     })
   )
 })

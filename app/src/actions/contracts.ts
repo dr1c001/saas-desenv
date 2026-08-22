@@ -11,6 +11,7 @@ import {
   type Frequencia,
 } from "@/lib/contrato-recorrente"
 import type { ContractFrequency } from "@/generated/prisma/client"
+import { notificar } from "@/lib/notificar"
 
 export type EstadoContrato = { erro?: string; ok?: boolean }
 
@@ -226,6 +227,17 @@ export async function gerarOsDosContratos(hoje: Date, limite: Date) {
         },
       })
       geradas++
+
+      // Avisa quem vai executar. Sem isto, a OS do contrato nasce de
+      // madrugada e o técnico só descobre abrindo o sistema — que é
+      // justamente o contrário do que gerar com antecedência serve.
+      await notificar({
+        tenantId: c.tenantId,
+        evento: "osDeContrato",
+        corpo: c.title,
+        url: "/service-orders",
+        responsavelId: c.technicianId,
+      })
     }
 
     await prisma.serviceContract.update({
