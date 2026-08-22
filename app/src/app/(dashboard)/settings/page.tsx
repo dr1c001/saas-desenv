@@ -3,6 +3,8 @@ import { getSettings } from "@/actions/settings"
 import { TenantForm } from "@/components/settings/tenant-form"
 import { LogoSetting } from "@/components/settings/logo-setting"
 import { ProfileForm } from "@/components/settings/profile-form"
+import { AssinaturaForm } from "@/components/settings/assinatura-form"
+import { minhaAssinatura } from "@/actions/assinatura"
 import { WhatsAppForm } from "@/components/settings/whatsapp-form"
 import { AvisoClienteForm } from "@/components/settings/aviso-cliente-form"
 import { getAvisoCliente } from "@/actions/aviso-cliente"
@@ -20,6 +22,8 @@ export default async function SettingsPage() {
   const documentos = await getDocumentos()
   const pix = await getPix()
   const t = await getTranslations("settingsCore")
+  const tAss = await getTranslations("assinatura")
+  const assinatura = await minhaAssinatura()
 
   return (
     <div className="max-w-2xl space-y-8">
@@ -59,6 +63,19 @@ export default async function SettingsPage() {
           <p className="text-sm text-muted-foreground">{t("profile.description")}</p>
         </div>
         <ProfileForm user={user} />
+      </section>
+
+      <Separator />
+
+      {/* A assinatura é de CADA PESSOA, não da empresa — por isso fica no
+          Perfil e não em Dados da empresa, e aparece para todo mundo, técnico
+          incluído. É justamente a do técnico que sai na OS que ele conclui. */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">{tAss("title")}</h2>
+          <p className="text-sm text-muted-foreground">{tAss("description")}</p>
+        </div>
+        <AssinaturaForm atual={assinatura} />
       </section>
 
       {isAdmin && (

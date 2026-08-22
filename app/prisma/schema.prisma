@@ -224,6 +224,15 @@ model User {
   phone     String?
   /// A filial da pessoa. NULL = nao esta presa a nenhuma, e ve tudo.
   branchId  String?
+
+  /// A assinatura desta pessoa, desenhada uma vez e reutilizada nos documentos
+  /// que ela emite: a OS que ela conclui, o orcamento que ela envia, o contrato,
+  /// a ordem de compra. PNG embutido (data URI), igual ao logo da empresa — o
+  /// PDF nao busca nada na rede e o reprocessamento no servidor neutraliza
+  /// qualquer payload escondido no desenho. Regra em lib/assinatura.ts.
+  /// NULL = ainda nao desenhou; o documento sai com a linha para assinar a mao,
+  /// como sempre saiu.
+  signatureUrl String? @db.Text
   createdAt DateTime @default(now())
 
   branch            Branch?            @relation(fields: [branchId], references: [id], onDelete: SetNull)

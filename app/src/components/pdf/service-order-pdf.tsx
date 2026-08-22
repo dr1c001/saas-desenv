@@ -83,6 +83,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
+  signatureBloco: { width: 200, alignItems: "center" },
+  // Altura fixa para os dois lados: sem ela, um lado assinado e o outro em
+  // branco deixam as linhas em alturas diferentes e o rodapé torto.
+  signatureEspaco: { height: 46, justifyContent: "flex-end", alignItems: "center" },
+  signatureImagem: { maxHeight: 44, objectFit: "contain" },
   signatureLine: {
     borderTopWidth: 1,
     borderTopColor: "#1a1a1a",
@@ -148,7 +153,13 @@ type Props = {
         zipCode: string | null
       } | null
     }
-    technician: { name: string } | null
+    /** Colhida do cliente final na tela do celular ou pelo portal. Existia no
+     *  banco desde sempre e NUNCA era impressa: o PDF saía com uma linha em
+     *  branco por cima dela. (Achado em 21/08/2026.) */
+    clientSignatureUrl: string | null
+    /** `signatureUrl`: a assinatura que a pessoa desenhou uma vez em
+     *  Configurações. Sai a de QUEM EXECUTOU o serviço. */
+    technician: { name: string; signatureUrl: string | null } | null
     items: OrderItem[]
   }
 }
@@ -346,9 +357,37 @@ export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, com
 
         {pix && <PixBloco qr={pix.qr} chave={pix.chave} recebedor={pix.recebedor} locale={locale} />}
 
+        {/* As duas assinaturas do documento.
+            Um documento de serviço tem dois lados: quem recebeu assina que
+            recebeu, quem fez assina que fez. Até 21/08/2026 os dois lados eram
+            só uma linha em branco — inclusive quando a assinatura do cliente
+            JÁ estava gravada no banco.
+            Quem não tem assinatura gravada continua com a linha para assinar à
+            mão: o documento nunca deixa de sair por causa disto. */}
         <View style={styles.signatureSection}>
-          <Text style={styles.signatureLine}>{t("common.clientSignature")}</Text>
-          <Text style={styles.signatureLine}>{t("common.responsibleSignature")}</Text>
+          <View style={styles.signatureBloco}>
+            <View style={styles.signatureEspaco}>
+              {order.clientSignatureUrl && (
+                /* eslint-disable-next-line jsx-a11y/alt-text -- Image do react-pdf não aceita alt */
+                <Image src={order.clientSignatureUrl} style={styles.signatureImagem} />
+              )}
+            </View>
+            <Text style={styles.signatureLine}>{t("common.clientSignature")}</Text>
+          </View>
+
+          <View style={styles.signatureBloco}>
+            <View style={styles.signatureEspaco}>
+              {order.technician?.signatureUrl && (
+                /* eslint-disable-next-line jsx-a11y/alt-text -- Image do react-pdf não aceita alt */
+                <Image src={order.technician.signatureUrl} style={styles.signatureImagem} />
+              )}
+            </View>
+            <Text style={styles.signatureLine}>
+              {order.technician?.name
+                ? `${t("common.responsibleSignature")} — ${order.technician.name}`
+                : t("common.responsibleSignature")}
+            </Text>
+          </View>
         </View>
       </Page>
     </Document>

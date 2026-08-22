@@ -2618,5 +2618,22 @@
     "filtro": {
       "todas": "Todas as filiais"
     }
+  },
+  "assinatura": {
+    "title": "Minha assinatura",
+    "description": "Desenhe uma vez e ela sai sozinha nos documentos que você emite.",
+    "salvar": "Salvar assinatura",
+    "limpar": "Limpar",
+    "apagar": "Apagar assinatura",
+    "gravada": "Assinatura gravada",
+    "alt": "Sua assinatura",
+    "ondeSai": "Sai na [[os]] que você concluir, no orçamento e no contrato que você enviar, e na ordem de compra que você autorizar. Sem assinatura gravada, o documento continua saindo com a linha para assinar à mão.",
+    "erro": {
+      "vazio": "Desenhe a assinatura antes de salvar.",
+      "formato": "Não consegui ler o desenho. Tente de novo.",
+      "grande": "Arquivo grande demais para uma assinatura. Desenhe no quadro em vez de enviar uma foto.",
+      "pequena": "O traço ficou pequeno demais e sairia como sujeira no documento. Desenhe de novo, maior.",
+      "falhou": "Não consegui salvar agora. Tente de novo."
+    }
   }
 }

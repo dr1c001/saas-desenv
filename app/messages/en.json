@@ -2618,5 +2618,22 @@
     "filtro": {
       "todas": "All branches"
     }
+  },
+  "assinatura": {
+    "title": "My signature",
+    "description": "Draw it once and it goes out on every document you issue.",
+    "salvar": "Save signature",
+    "limpar": "Clear",
+    "apagar": "Delete signature",
+    "gravada": "Signature saved",
+    "alt": "Your signature",
+    "ondeSai": "It appears on the [[os]] you complete, on quotes and contracts you send, and on purchase orders you authorise. With no saved signature, the document still prints the line to sign by hand.",
+    "erro": {
+      "vazio": "Draw your signature before saving.",
+      "formato": "Could not read the drawing. Please try again.",
+      "grande": "That file is too large for a signature. Draw in the box instead of uploading a photo.",
+      "pequena": "The stroke came out too small and would print as a smudge. Draw it again, larger.",
+      "falhou": "Could not save right now. Please try again."
+    }
   }
 }
