@@ -58,7 +58,7 @@ describe("plan — o que cada plano libera", () => {
     expect(limites.maxOsMes).toBe(50)
   })
 
-  it("Pro libera tudo MENOS API e filiais, com limite de 10 usuários e OS ilimitada", async () => {
+  it("Pro libera tudo MENOS API e filiais, com 10 usuários e 200 OS/mês", async () => {
     const { getLimites } = await import("@/lib/plan")
     const { RECURSOS } = await import("@/lib/recursos")
     await seedPlanos()
@@ -73,7 +73,8 @@ describe("plan — o que cada plano libera", () => {
       [...RECURSOS].filter((r) => !exclusivos.includes(r)).sort()
     )
     expect(limites.maxUsuarios).toBe(10)
-    expect(limites.maxOsMes).toBeNull()
+    // Deixou de ser ilimitada em 21/08/2026: o Pro passou a ter teto de 200.
+    expect(limites.maxOsMes).toBe(200)
   })
 
   it("API e filiais são o que separam Pro de Enterprise, e o Pro NÃO tem", async () => {
@@ -260,5 +261,106 @@ describe("plan — requireRecurso", () => {
 
     await expect(requireRecurso(starter.id, "gpsMap")).rejects.toThrow(/planFeature\.gpsMap/)
     await expect(requireRecurso(pro.id, "gpsMap")).resolves.toBeUndefined()
+  })
+})
+
+describe("plan — cota de notas fiscais", () => {
+  it("Starter tem 8 por mês, Pro 70, Enterprise ilimitado", async () => {
+    // Vendido como NÚMERO na tela de planos. Até 21/08/2026 nada no sistema
+    // contava nota emitida — a promessa existia só na vitrine.
+    const { getLimites } = await import("@/lib/plan")
+    await seedPlanos()
+
+    expect((await getLimites((await seedTenant("starter")).id)).maxNfseMes).toBe(8)
+    expect((await getLimites((await seedTenant("pro")).id)).maxNfseMes).toBe(70)
+    expect((await getLimites((await seedTenant("enterprise")).id)).maxNfseMes).toBeNull()
+  })
+
+  it("o Pro deixou de ter OS ilimitada: 200 por mês", async () => {
+    // Mudança de contrato consciente (pedido do dono em 21/08/2026). Fica
+    // travado por teste porque nada quebra visivelmente se voltar a ser null.
+    const { getLimites } = await import("@/lib/plan")
+    await seedPlanos()
+
+    expect((await getLimites((await seedTenant("pro")).id)).maxOsMes).toBe(200)
+  })
+
+  it("bloqueia a emissão quando a cota do mês acabou", async () => {
+    const { requireCotaDeNfse, inicioDoMesDaCota } = await import("@/lib/plan")
+    await seedPlanos()
+    const t = await seedTenant("starter")
+    const c = await testDb.db.client.create({ data: { tenantId: t.id, name: "C" } })
+
+    const dentroDoMes = new Date(inicioDoMesDaCota().getTime() + 3600_000)
+    for (let i = 0; i < 8; i++) {
+      await testDb.db.serviceOrder.create({
+        data: {
+          tenantId: t.id, clientId: c.id, number: i + 1, title: `OS ${i}`,
+          nfseId: `nf-${i}`, nfseIssuedAt: dentroDoMes,
+        },
+      })
+    }
+
+    await expect(requireCotaDeNfse(t.id)).rejects.toThrow(/planLimit\.nfse/)
+  })
+
+  it("nota do mês PASSADO não gasta a cota deste mês", async () => {
+    // Conta por nfseIssuedAt e não pelo createdAt da OS, justamente para a
+    // cota do mês passado não ser gasta neste.
+    const { requireCotaDeNfse, inicioDoMesDaCota } = await import("@/lib/plan")
+    await seedPlanos()
+    const t = await seedTenant("starter")
+    const c = await testDb.db.client.create({ data: { tenantId: t.id, name: "C" } })
+
+    const mesPassado = new Date(inicioDoMesDaCota().getTime() - 86_400_000)
+    for (let i = 0; i < 20; i++) {
+      await testDb.db.serviceOrder.create({
+        data: {
+          tenantId: t.id, clientId: c.id, number: i + 1, title: `OS ${i}`,
+          nfseId: `nf-${i}`, nfseIssuedAt: mesPassado,
+        },
+      })
+    }
+
+    await expect(requireCotaDeNfse(t.id)).resolves.toBeUndefined()
+  })
+
+  it("Enterprise não tem cota de nota", async () => {
+    const { requireCotaDeNfse, inicioDoMesDaCota } = await import("@/lib/plan")
+    await seedPlanos()
+    const t = await seedTenant("enterprise")
+    const c = await testDb.db.client.create({ data: { tenantId: t.id, name: "C" } })
+
+    const agora = new Date(inicioDoMesDaCota().getTime() + 3600_000)
+    for (let i = 0; i < 100; i++) {
+      await testDb.db.serviceOrder.create({
+        data: {
+          tenantId: t.id, clientId: c.id, number: i + 1, title: `OS ${i}`,
+          nfseId: `nf-${i}`, nfseIssuedAt: agora,
+        },
+      })
+    }
+
+    await expect(requireCotaDeNfse(t.id)).resolves.toBeUndefined()
+  })
+
+  it("a cota de uma empresa não conta a nota da outra", async () => {
+    const { requireCotaDeNfse, inicioDoMesDaCota } = await import("@/lib/plan")
+    await seedPlanos()
+    const a = await seedTenant("starter")
+    const b = await seedTenant("starter")
+    const cb = await testDb.db.client.create({ data: { tenantId: b.id, name: "C" } })
+
+    const agora = new Date(inicioDoMesDaCota().getTime() + 3600_000)
+    for (let i = 0; i < 20; i++) {
+      await testDb.db.serviceOrder.create({
+        data: {
+          tenantId: b.id, clientId: cb.id, number: i + 1, title: `OS ${i}`,
+          nfseId: `nf-${i}`, nfseIssuedAt: agora,
+        },
+      })
+    }
+
+    await expect(requireCotaDeNfse(a.id)).resolves.toBeUndefined()
   })
 })

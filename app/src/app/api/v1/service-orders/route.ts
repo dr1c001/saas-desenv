@@ -10,7 +10,7 @@ import {
   paginacao,
 } from "@/lib/api-auth"
 import { errosDeValidacao, ordemApi, ordemEntrada } from "@/lib/api-formato"
-import { getLimites } from "@/lib/plan"
+import { getLimites, inicioDoMesDaCota } from "@/lib/plan"
 import { proximoNumeroDeOs } from "@/lib/os-numero"
 import { retryOnUniqueConflict } from "@/lib/retry"
 
@@ -75,10 +75,11 @@ export async function POST(req: Request) {
   // request que rota de API pode não ter.)
   const { maxOsMes } = await getLimites(tenantId)
   if (maxOsMes !== null) {
-    const agora = new Date()
-    const inicioDoMes = new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), 1))
+    // A janela do mês vem do MESMO lugar que a tela usa (lib/plan.ts). Era
+    // calculada aqui de novo, e em UTC, então a mesma OS podia contar num mês
+    // pela tela e noutro pela API.
     const doMes = await prisma.serviceOrder.count({
-      where: { tenantId, createdAt: { gte: inicioDoMes } },
+      where: { tenantId, createdAt: { gte: inicioDoMesDaCota() } },
     })
     if (doMes >= maxOsMes) {
       return erroApi(

@@ -54,6 +54,7 @@
     "starter": [
       "Up to 3 users",
       "50 jobs per month",
+      "8 tax invoices per month",
       "Quotes and PDF",
       "Automatic receipts",
       "Basic reports",
@@ -62,10 +63,10 @@
     "pro": [
       "Everything in Starter",
       "Up to 10 users",
-      "Unlimited jobs",
-      "Real-time GPS map",
-      "Checklist + Digital signature",
-      "E-invoice issuance (NFS-e)",
+      "200 jobs per month",
+      "70 tax invoices per month",
+      "Live GPS map",
+      "Checklist + digital signature",
       "Advanced reports",
       "Priority support"
     ],
@@ -2012,7 +2013,8 @@
     },
     "planLimit": {
       "users": "Your plan allows up to {max} users and that limit has been reached. Upgrade in Settings → Plan to add more.",
-      "serviceOrders": "Your plan allows {max} [[osP]] per month and that limit has been reached. The quota resets on the 1st, or upgrade in Settings → Plan."
+      "serviceOrders": "Your plan allows {max} [[osP]] per month and that limit has been reached. The quota resets on the 1st, or upgrade in Settings → Plan.",
+      "nfse": "Your plan allows {max} tax invoices per month. Talk to us to increase it."
     },
     "clientNotFound": "Client not found.",
     "technicianNotFound": "Technician not found.",

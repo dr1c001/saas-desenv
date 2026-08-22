@@ -2,6 +2,7 @@ import { cache } from "react"
 import { prisma } from "./prisma"
 import { getTranslations } from "next-intl/server"
 import { RECURSOS, type Recurso } from "./recursos"
+import { brtMidnightUTC, todayInBRT } from "./utils"
 
 // Fonte única do que cada plano libera.
 //
@@ -31,6 +32,10 @@ export function recursosDoPlano(slug: string | null | undefined): Recurso[] {
 export type Limites = {
   maxUsuarios: number | null // null = ilimitado
   maxOsMes: number | null
+  /** Notas fiscais por mês. Vendida como número na tela de planos ("8 notas
+   *  fiscais por mês"), e até 21/08/2026 NADA no sistema contava nota emitida —
+   *  a promessa existia só na vitrine. */
+  maxNfseMes: number | null
   recursos: Recurso[]
 }
 
@@ -46,9 +51,9 @@ const SO_ENTERPRISE: Recurso[] = ["api", "filiais"]
 const SEM_EXCLUSIVOS: Recurso[] = TODOS.filter((r) => !SO_ENTERPRISE.includes(r))
 
 const POR_PLANO: Record<string, Limites> = {
-  starter: { maxUsuarios: 3, maxOsMes: 50, recursos: [] },
-  pro: { maxUsuarios: 10, maxOsMes: null, recursos: SEM_EXCLUSIVOS },
-  enterprise: { maxUsuarios: null, maxOsMes: null, recursos: TODOS },
+  starter: { maxUsuarios: 3, maxOsMes: 50, maxNfseMes: 8, recursos: [] },
+  pro: { maxUsuarios: 10, maxOsMes: 200, maxNfseMes: 70, recursos: SEM_EXCLUSIVOS },
+  enterprise: { maxUsuarios: null, maxOsMes: null, maxNfseMes: null, recursos: TODOS },
 }
 
 // Slug desconhecido (plano novo cadastrado direto no banco) cai no permissivo
@@ -57,7 +62,7 @@ const POR_PLANO: Record<string, Limites> = {
 // causa de um slug que o código não conhece — é muito pior. Tenant sem plano
 // nenhum também cai aqui, e não é brecha: sem assinatura ACTIVE o layout do
 // dashboard já manda pra /expired antes de qualquer coisa.
-const PERMISSIVO: Limites = { maxUsuarios: null, maxOsMes: null, recursos: TODOS }
+const PERMISSIVO: Limites = { maxUsuarios: null, maxOsMes: null, maxNfseMes: null, recursos: TODOS }
 
 // cache() do React: memoriza por requisição. Toda checagem de recurso
 // (temRecurso/requireRecurso) e o getAllowedTabs do menu passam por aqui, e
@@ -107,19 +112,55 @@ export async function requireVagaDeUsuario(tenantId: string): Promise<void> {
   throw new Error(t("planLimit.users", { max: maxUsuarios }))
 }
 
-/** Chamar ANTES de criar uma OS. A cota é por mês corrente, contada pela data
+/**
+ * Quando começa o mês da cota.
+ *
+ * Meia-noite em BRASÍLIA, e não em UTC. O resto do sistema já conta mês em BRT
+ * (dashboard, financeiro, relatórios) e a cota fazia a conta em UTC — uma OS
+ * aberta às 21h30 do dia 31 caía no mês seguinte para a cota e no mês corrente
+ * para o faturamento. A empresa é brasileira e o mês dela é o do calendário
+ * dela.
+ *
+ * Num lugar só porque agora há DUAS cotas mensais (OS e NFS-e), e a rota da
+ * API repetia a conta uma terceira vez.
+ */
+export function inicioDoMesDaCota(): Date {
+  const { year, month } = todayInBRT()
+  return brtMidnightUTC(year, month, 1)
+}
+
+/** Chamar ANTES de criar uma OS. A cota é do mês corrente, contada pela data
  *  de criação — mesma janela que o cliente entende por "50 OS por mês". */
 export async function requireCotaDeOs(tenantId: string): Promise<void> {
   const { maxOsMes } = await getLimites(tenantId)
   if (maxOsMes === null) return
 
-  const agora = new Date()
-  const inicioDoMes = new Date(Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth(), 1))
   const doMes = await prisma.serviceOrder.count({
-    where: { tenantId, createdAt: { gte: inicioDoMes } },
+    where: { tenantId, createdAt: { gte: inicioDoMesDaCota() } },
   })
   if (doMes < maxOsMes) return
 
   const t = await getTranslations("errors")
   throw new Error(t("planLimit.serviceOrders", { max: maxOsMes }))
+}
+
+/**
+ * A cota de notas fiscais do mês.
+ *
+ * Conta por `nfseIssuedAt`, e não pelo `createdAt` da OS: uma OS aberta em
+ * julho e faturada em agosto gasta a cota de AGOSTO, que é o mês em que a nota
+ * saiu. Contar pela criação da OS deixaria a cota do mês passado ser gasta
+ * neste.
+ */
+export async function requireCotaDeNfse(tenantId: string): Promise<void> {
+  const { maxNfseMes } = await getLimites(tenantId)
+  if (maxNfseMes === null) return
+
+  const doMes = await prisma.serviceOrder.count({
+    where: { tenantId, nfseIssuedAt: { gte: inicioDoMesDaCota() } },
+  })
+  if (doMes < maxNfseMes) return
+
+  const t = await getTranslations("errors")
+  throw new Error(t("planLimit.nfse", { max: maxNfseMes }))
 }

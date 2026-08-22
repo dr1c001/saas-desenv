@@ -54,6 +54,7 @@
     "starter": [
       "Até 3 usuários",
       "50 OS por mês",
+      "8 notas fiscais por mês",
       "Orçamentos e PDF",
       "Recibos automáticos",
       "Relatórios básicos",
@@ -62,10 +63,10 @@
     "pro": [
       "Tudo do Starter",
       "Até 10 usuários",
-      "OS ilimitadas",
+      "200 OS por mês",
+      "Emissão de 70 NFS-e por mês",
       "Mapa GPS em tempo real",
       "Checklist + Assinatura digital",
-      "Emissão de NFS-e",
       "Relatórios avançados",
       "Suporte prioritário"
     ],
@@ -2012,7 +2013,8 @@
     },
     "planLimit": {
       "users": "Seu plano permite até {max} usuários e esse limite já foi atingido. Faça upgrade em Configurações → Plano para adicionar mais.",
-      "serviceOrders": "Seu plano permite {max} [[osP]] por mês e esse limite já foi atingido. A cota renova no dia 1º, ou faça upgrade em Configurações → Plano."
+      "serviceOrders": "Seu plano permite {max} [[osP]] por mês e esse limite já foi atingido. A cota renova no dia 1º, ou faça upgrade em Configurações → Plano.",
+      "nfse": "Seu plano permite {max} notas fiscais por mês. Fale com a gente para aumentar."
     },
     "clientNotFound": "Cliente não encontrado.",
     "technicianNotFound": "Técnico não encontrado.",

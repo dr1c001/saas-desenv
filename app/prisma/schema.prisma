@@ -357,6 +357,10 @@ model ServiceOrder {
   scheduledAt        DateTime?
   concludedAt        DateTime?
   nfseId             String?
+  /// Quando a nota saiu. Existe para a COTA MENSAL de NFS-e poder ser contada:
+  /// uma OS aberta em julho e faturada em agosto gasta a cota de AGOSTO, e
+  /// contar pelo createdAt da OS deixaria a cota do mes passado ser gasta neste.
+  nfseIssuedAt       DateTime?
   nfseNumber         String?
   nfseStatus         String?
   nfseUrl            String?
@@ -388,6 +392,8 @@ model ServiceOrder {
 
   @@unique([tenantId, number])
   @@index([tenantId, branchId])
+  // Cota mensal de NFS-e: notas emitidas por esta empresa desde o inicio do mes.
+  @@index([tenantId, nfseIssuedAt])
   // Listagem de OS e "OS ativas" do dashboard.
   @@index([tenantId, createdAt])
   @@index([tenantId, status])

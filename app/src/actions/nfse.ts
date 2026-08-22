@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
-import { requireRecurso } from "@/lib/plan"
+import { requireCotaDeNfse, requireRecurso } from "@/lib/plan"
 import { nfeio } from "@/lib/nfeio"
 import { revalidatePath } from "next/cache"
 import { getTranslations } from "next-intl/server"
@@ -79,6 +79,11 @@ export async function emitNfse(orderId: string) {
   await requireActiveSubscription(tenantId)
   // "Emissão de NFS-e" é vendida a partir do plano Pro.
   await requireRecurso(tenantId, "nfse")
+  // E vendida com NÚMERO: "8 notas fiscais por mês" no Starter, 70 no Pro.
+  // Até 21/08/2026 nada contava nota emitida — a promessa existia só na
+  // vitrine. Barra ANTES de falar com a NFE.io: passar da cota e emitir a nota
+  // mesmo assim seria irreversível (não há cancelamento no produto).
+  await requireCotaDeNfse(tenantId)
 
   const [order, tenant] = await Promise.all([
     prisma.serviceOrder.findUnique({
@@ -141,6 +146,8 @@ export async function emitNfse(orderId: string) {
     where: { id: orderId },
     data: {
       nfseId: invoice.id,
+      // Carimba o momento da emissão: é por aqui que a cota do mês é contada.
+      nfseIssuedAt: new Date(),
       nfseStatus: invoice.flowStatus,
       nfseNumber: invoice.number ?? null,
       nfseUrl: invoice.pdf?.url ?? null,
