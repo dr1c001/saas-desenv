@@ -158,6 +158,7 @@ export type AcaoAdmin =
   | "trocar_plano"
   | "alterar_recursos"
   | "alterar_limites"
+  | "alterar_funcoes"
   | "entrar_na_conta"
   | "sair_da_conta"
   | "adicionar_admin"

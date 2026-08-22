@@ -6,6 +6,7 @@ import { ServiceOrderPDF } from "@/components/pdf/service-order-pdf"
 import { prisma } from "@/lib/prisma"
 import { createClient } from "@/lib/supabase/server"
 import { requireActiveSubscription } from "@/lib/auth"
+import { requireFuncao } from "@/lib/plan"
 import { getTranslator } from "@/lib/i18n"
 import { baixarArquivo } from "@/lib/storage"
 import { caminhoPertenceAoTenant } from "@/lib/foto"
@@ -41,6 +42,8 @@ export async function GET(
   // via HTTP, independente da UI. (Achado em revisão de segurança
   // pré-lançamento, 2026-07-28.)
   await requireActiveSubscription(dbUser.tenantId)
+  // A rota é despachável direto por HTTP: esconder o botão não protege nada.
+  await requireFuncao(dbUser.tenantId, "osPdf")
 
   const { id } = await params
   const order = await prisma.serviceOrder.findUnique({

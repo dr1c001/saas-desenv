@@ -1,0 +1,21 @@
+-- Funcoes DESLIGADAS para uma empresa. Catalogo em lib/funcoes.ts.
+--
+-- Lista de DESLIGADAS, e nao de ligadas, e essa e a decisao inteira:
+--
+--   vazia = tudo funcionando = exatamente o comportamento de hoje.
+--
+-- Nenhuma empresa muda no dia em que a chave passa a existir. E a unica forma
+-- segura de criar interruptor para coisa que JA ESTA EM USO por todo mundo —
+-- uma lista de "ligadas" comecaria vazia e apagaria PDF, historico, portal do
+-- cliente e fila offline de todos os clientes no deploy.
+--
+-- E o oposto de extraFeatures, que lista o que foi CONCEDIDO alem do plano:
+--
+--   extraFeatures    -> recurso nasce desligado, o plano (ou o painel) liga
+--   disabledFeatures -> funcao nasce ligada, o painel desliga
+--
+-- Default '{}' e nao NULL: array vazio e "nada desligado", enquanto NULL exige
+-- que todo lugar que le trate o nulo — e o dia em que um esquecer, a funcao
+-- some para alguem sem ninguem ter pedido.
+
+ALTER TABLE "Tenant" ADD COLUMN "disabledFeatures" TEXT[] NOT NULL DEFAULT '{}';

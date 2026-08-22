@@ -6,6 +6,7 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { checarAcao, filtroDeFilialAtual, getTenant, requireActiveSubscription } from "@/lib/auth"
 import { filialParaNovo } from "@/lib/filial"
+import { temFuncao } from "@/lib/plan"
 import { geocodeAddress } from "@/lib/geocode"
 import { avancarFila } from "@/lib/geocode-fila"
 import { getTranslations } from "next-intl/server"
@@ -94,7 +95,12 @@ export async function createClient(
   const personalizados = await lerCamposPersonalizados(formData)
   if (personalizados.erro) return personalizados.erro
 
-  const coords = await geocodeAddress(address)
+  // Geocodificar CONSOME CRÉDITO PAGO (Geoapify). É por isso que esta função
+  // pode ser desligada por empresa: para quem não usa o mapa, cada endereço
+  // salvo é dinheiro gasto à toa.
+  const coords = (await temFuncao(tenantId, "geocodificacao"))
+    ? await geocodeAddress(address)
+    : null
 
   await prisma.client.create({
     data: {

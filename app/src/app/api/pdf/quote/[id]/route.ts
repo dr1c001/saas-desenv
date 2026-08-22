@@ -6,6 +6,7 @@ import { QuotePDF } from "@/components/pdf/quote-pdf"
 import { prisma } from "@/lib/prisma"
 import { createClient } from "@/lib/supabase/server"
 import { requireActiveSubscription } from "@/lib/auth"
+import { requireFuncao } from "@/lib/plan"
 import { getTranslator } from "@/lib/i18n"
 import { cobrancaPix } from "@/lib/pix"
 import { gerarQr } from "@/lib/qr"
@@ -37,6 +38,7 @@ export async function GET(
   // via HTTP, independente da UI. (Achado em revisão de segurança
   // pré-lançamento, 2026-07-28.)
   await requireActiveSubscription(dbUser.tenantId)
+  await requireFuncao(dbUser.tenantId, "orcamentoPdf")
 
   const { id } = await params
   const quote = await prisma.quote.findUnique({

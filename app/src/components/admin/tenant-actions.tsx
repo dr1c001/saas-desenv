@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { KeyRound, Ban, ArrowLeftRight, LogIn, Loader2, Sparkles, SlidersHorizontal } from "lucide-react"
+import { KeyRound, Ban, ArrowLeftRight, LogIn, Loader2, Sparkles, SlidersHorizontal, ToggleLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -20,7 +20,9 @@ import {
   entrarNaConta,
   alterarRecursosExtras,
   alterarLimitesDaEmpresa,
+  alterarFuncoesDaEmpresa,
 } from "@/actions/admin"
+import { FUNCOES, FUNCOES_COM_CUSTO, type Funcao } from "@/lib/funcoes"
 import { ajusteEscolhido, modoDoLimite, type ModoDoLimite } from "@/lib/limite"
 // De lib/recursos (puro), NUNCA de lib/plan: aquele importa o Prisma, e num
 // componente de cliente isso arrasta o driver do Postgres pro navegador.
@@ -41,6 +43,8 @@ type Props = {
   recursosExtras: Recurso[]
   /** Tetos do PLANO dela, para a tela mostrar o que "herdar" significa hoje. */
   limitesDoPlano: { usuarios: number | null; osMes: number | null; nfseMes: number | null }
+  /** Funções DESLIGADAS para esta empresa. Vazio = tudo funcionando. */
+  funcoesDesligadas: string[]
   /** Ajustes gravados para ESTA empresa. null = herda · 0 = sem limite. */
   ajustes: {
     usuarios: number | null
@@ -66,6 +70,7 @@ export function TenantActions({
   recursosDoPlano,
   recursosExtras,
   limitesDoPlano,
+  funcoesDesligadas,
   ajustes,
   permissoes,
 }: Props) {
@@ -74,10 +79,13 @@ export function TenantActions({
   const tNav = useTranslations("nav")
   const [pendente, startTransition] = useTransition()
   const [aberto, setAberto] = useState<
-    null | "liberar" | "cancelar" | "plano" | "entrar" | "recursos" | "limites"
+    null | "liberar" | "cancelar" | "plano" | "entrar" | "recursos" | "limites" | "funcoes"
   >(null)
   const [planoEscolhido, setPlanoEscolhido] = useState(planId ?? planos[0]?.id ?? "")
   const [extras, setExtras] = useState<Recurso[]>(recursosExtras)
+  // Guarda as DESLIGADAS, igual ao banco: lista vazia é "tudo funcionando".
+  // Guardar as ligadas faria um estado inicial vazio significar "apagar tudo".
+  const [desligadas, setDesligadas] = useState<string[]>(funcoesDesligadas)
 
   // Cada teto guarda MODO e número separados. Juntar os dois num campo só faria
   // "herdar" e "sem limite" caírem no mesmo vazio — e são coisas diferentes:
@@ -305,6 +313,76 @@ export function TenantActions({
               >
                 {pendente && <Loader2 className="size-3.5 mr-1.5 animate-spin" />}
                 {t("featuresConfirm")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {pode("alterarLimites") && (
+        <Dialog open={aberto === "funcoes"} onOpenChange={(o) => setAberto(o ? "funcoes" : null)}>
+          <DialogTrigger render={<Button size="sm" variant="ghost" className="gap-1" />}>
+            <ToggleLeft className="size-3.5" />
+            {t("functions")}
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("functionsTitle")}</DialogTitle>
+              <DialogDescription>
+                {t("functionsDescription", { company: tenantName })}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-1">
+              {FUNCOES.map((fn: Funcao) => {
+                const ligada = !desligadas.includes(fn)
+                const custa = FUNCOES_COM_CUSTO.includes(fn)
+                return (
+                  <label
+                    key={fn}
+                    className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:bg-muted/50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={ligada}
+                      disabled={pendente}
+                      onChange={() =>
+                        setDesligadas((d) =>
+                          ligada ? [...d, fn] : d.filter((x) => x !== fn)
+                        )
+                      }
+                      className="mt-0.5 size-4"
+                    />
+                    <span className="text-sm">
+                      <span className="font-medium">
+                        {t(`functionNames.${fn}` as "functionNames.osPdf")}
+                      </span>
+                      {custa && (
+                        <span className="ml-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-400">
+                          {t("functionCosts")}
+                        </span>
+                      )}
+                      <span className="block text-xs text-muted-foreground">
+                        {t(`functionHints.${fn}` as "functionHints.osPdf")}
+                      </span>
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
+
+            <p className="text-xs text-muted-foreground">{t("functionsHint")}</p>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={fechar} disabled={pendente}>
+                {t("back")}
+              </Button>
+              <Button
+                onClick={() => executar(() => alterarFuncoesDaEmpresa(tenantId, desligadas))}
+                disabled={pendente}
+              >
+                {pendente && <Loader2 className="size-3.5 mr-1.5 animate-spin" />}
+                {t("functionsConfirm")}
               </Button>
             </DialogFooter>
           </DialogContent>

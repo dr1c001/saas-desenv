@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { AlertTriangle, CloudUpload, Loader2 } from "lucide-react"
-import { useFilaOffline } from "@/lib/usar-fila-offline"
+import { definirFilaLigada, useFilaOffline } from "@/lib/usar-fila-offline"
 
 /**
  * O que está aguardando envio.
@@ -14,10 +14,16 @@ import { useFilaOffline } from "@/lib/usar-fila-offline"
  *
  * Some sozinho quando a fila esvazia. Faixa permanente vira paisagem.
  */
-export function FilaOfflineBanner() {
+export function FilaOfflineBanner({ ligada = true }: { ligada?: boolean }) {
+  // Acertado na renderização, e não num efeito: o layout renderiza antes de
+  // qualquer tela, então o sinalizador já está certo quando o primeiro botão
+  // que enfileira aparece na frente do técnico.
+  definirFilaLigada(ligada)
+
   const { pendentes, travadas, sincronizando } = useFilaOffline()
   const t = useTranslations("offline.fila")
 
+  if (!ligada) return null
   if (pendentes === 0 && travadas === 0) return null
 
   // Travada é mais grave e ganha a faixa: aquele trabalho NÃO chegou e não vai

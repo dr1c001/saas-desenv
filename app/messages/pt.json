@@ -1716,7 +1716,37 @@
         },
         "limitPrice": "Mensalidade combinada (R$)",
         "limitPricePlaceholder": "do plano",
-        "limitPriceHint": "Em branco, cobra o preço do plano. Preenchido, vale este valor — é o que fecha o plano customizado."
+        "limitPriceHint": "Em branco, cobra o preço do plano. Preenchido, vale este valor — é o que fecha o plano customizado.",
+        "functions": "Funções",
+        "functionsTitle": "Funções ligadas para esta empresa",
+        "functionsDescription": "Tudo vem ligado. Desmarque o que {company} não contratou.",
+        "functionsConfirm": "Salvar funções",
+        "functionCosts": "custa por uso",
+        "functionsHint": "Desligar não apaga nada: os dados continuam guardados, e religar traz tudo de volta como estava.",
+        "functionNames": {
+          "osPdf": "PDF da ordem de serviço",
+          "osHistorico": "Histórico de alterações da OS",
+          "offline": "Trabalho sem internet",
+          "portalCliente": "Portal de acompanhamento do cliente",
+          "nps": "Pesquisa de satisfação",
+          "geocodificacao": "Endereço no mapa",
+          "orcamentoPdf": "Orçamento em PDF",
+          "orcamentoOnline": "Aprovação do orçamento pelo cliente",
+          "primeirosPassos": "Primeiros passos guiados",
+          "push": "Notificação no celular"
+        },
+        "functionHints": {
+          "osPdf": "Sem isto, a OS não vira documento para imprimir ou mandar ao cliente.",
+          "osHistorico": "A linha do tempo de quem mudou status, valor e responsável.",
+          "offline": "Concluir OS sem sinal. Desligado, o técnico precisa de internet.",
+          "portalCliente": "O link que o cliente final abre para acompanhar o serviço.",
+          "nps": "O e-mail de 0 a 10 enviado ao cliente final 7 dias após a conclusão.",
+          "geocodificacao": "Transforma o endereço em ponto no mapa. Consome crédito pago a cada cliente salvo.",
+          "orcamentoPdf": "Sem isto, o orçamento existe na tela mas não vira documento.",
+          "orcamentoOnline": "O cliente aprova ou recusa pelo link, sem ligar.",
+          "primeirosPassos": "O painel de configuração inicial no Painel.",
+          "push": "Aviso no celular da equipe. Custa por envio."
+        }
       },
       "impersonation": {
         "banner": "Você está vendo o sistema como {company}. Tudo o que fizer aqui vale na conta dela.",
@@ -2063,7 +2093,8 @@
     "defaultCompanyName": "Empresa de {name}",
     "tooManyAttempts": "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
     "inviteLinkUsed": "Este convite já foi usado ou expirou. Se você já criou sua senha, basta entrar abaixo. Se ainda não criou, use \"Esqueci minha senha\" com o e-mail que recebeu o convite — não crie uma empresa nova.",
-    "recoveryLinkUsed": "Este link de recuperação já foi usado ou expirou. Peça um novo em \"Esqueci minha senha\"."
+    "recoveryLinkUsed": "Este link de recuperação já foi usado ou expirou. Peça um novo em \"Esqueci minha senha\".",
+    "funcaoDesligada": "Esta função está desligada para a sua empresa. Fale com o suporte."
   },
   "validation": {
     "nameRequired": "Nome obrigatório",

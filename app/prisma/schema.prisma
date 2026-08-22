@@ -82,6 +82,17 @@ model Tenant {
   ///
   /// Existem porque os planos sao tres e as empresas nao: sempre aparece a que
   /// precisa de 12 usuarios mas nao quer o Enterprise.
+  /// Funcoes DESLIGADAS para esta empresa. Catalogo em lib/funcoes.ts.
+  ///
+  /// Lista de desligadas, e nao de ligadas, de proposito: vazia significa
+  /// "tudo funcionando", que e o comportamento de hoje. Nenhuma empresa muda no
+  /// dia em que a chave passa a existir — e essa e a unica forma segura de
+  /// criar interruptor para coisa que ja esta em uso. Uma lista de "ligadas"
+  /// comecaria vazia e apagaria o sistema inteiro de todo mundo.
+  ///
+  /// Oposto de extraFeatures, que lista o que foi CONCEDIDO alem do plano.
+  disabledFeatures        String[]           @default([])
+
   maxUsersOverride        Int?
   maxOrdersOverride       Int?
   maxNfseOverride         Int?

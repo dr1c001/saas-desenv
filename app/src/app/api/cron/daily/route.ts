@@ -14,6 +14,7 @@ import { ambiente, ehProducao } from "@/lib/ambiente"
 import { gerarOsDosContratos } from "@/actions/contracts"
 import { DIAS_DE_ANTECEDENCIA } from "@/lib/contrato-recorrente"
 import { gravarRetratoDoMes } from "@/lib/snapshot"
+import { temFuncao } from "@/lib/plan"
 
 // O padrão da Vercel (10-15s) não cabe reconciliação da Asaas + e-mails +
 // backfill de geocodificação no mesmo processo.
@@ -234,12 +235,15 @@ export async function GET(req: NextRequest) {
         client: { select: { email: true, name: true } },
         // A pesquisa vai pro cliente final, mas quem "fala" é a empresa: sai no
         // idioma dela (Tenant.locale), igual à OS e ao PDF. (i18n, item 1.)
-        tenant: { select: { locale: true } },
+        tenant: { select: { id: true, locale: true } },
       },
       take: 100,
     })
     for (const os of npsOrders) {
       if (!os.client.email || !os.clientToken) continue
+      // A pesquisa fala com o cliente FINAL da empresa. Quem desligou não quer
+      // que a gente escreva para a base dela.
+      if (!(await temFuncao(os.tenant.id, "nps"))) continue
       try {
         await sendNpsEmail(os.client.email, os.client.name, os.clientToken, os.tenant.locale)
         await prisma.serviceOrder.update({ where: { id: os.id }, data: { npsSentAt: new Date() } })

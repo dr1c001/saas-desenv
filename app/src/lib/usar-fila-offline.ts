@@ -20,9 +20,28 @@ import {
 } from "@/lib/fila-offline"
 import { atualizar, EVENTO_MUDANCA, guardar, listar, remover } from "@/lib/fila-offline-db"
 
+// A fila pode ser DESLIGADA por empresa (lib/funcoes.ts). O interruptor mora
+// aqui, num sinalizador de módulo que o layout acerta uma vez, porque `semRede`
+// já é o portão de TODO lugar que enfileira — barrar aqui desliga a fila
+// inteira sem tocar em nenhum dos botões.
+//
+// Barra na ENTRADA, e não na sincronização: recusar depois de o técnico ter
+// concluído a OS sem sinal perderia o trabalho dele. Desligada, o botão
+// simplesmente exige rede, como era antes de a fila existir.
+let filaLigada = true
+
+export function definirFilaLigada(ligada: boolean) {
+  filaLigada = ligada
+}
+
 /** Há rede agora? `navigator.onLine` mente pra mais (diz online em rede sem
- *  saída), nunca pra menos — então serve pra decidir "com certeza NÃO tem". */
+ *  saída), nunca pra menos — então serve pra decidir "com certeza NÃO tem".
+ *
+ *  Com a fila desligada devolve `false` sempre: quem pergunta usa isto para
+ *  decidir "enfileirar ou ir direto", e a resposta passa a ser sempre "vá
+ *  direto". */
 export function semRede(): boolean {
+  if (!filaLigada) return false
   return typeof navigator !== "undefined" && navigator.onLine === false
 }
 

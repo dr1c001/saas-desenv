@@ -13,6 +13,7 @@ import {
 import { sendTeamInviteEmail } from "@/lib/resend"
 import { ehRecurso, recursosDoPlano } from "@/lib/plan"
 import type { PlatformRole } from "@/generated/prisma/client"
+import { desligadasValidas } from "@/lib/funcoes"
 
 /** Áreas que podem ser atribuídas pela tela. DONO fica de fora de propósito:
  *  é o fundador, definido por variável de ambiente, e não algo que se concede
@@ -184,6 +185,46 @@ export async function alterarRecursosExtras(tenantId: string, recursos: string[]
  * conferir que são inteiros plausíveis antes de gravar, porque Server Action é
  * endereço HTTP e o corpo dela não é confiável.
  */
+/**
+ * Liga e desliga FUNÇÕES para uma empresa.
+ *
+ * Recebe o que fica DESLIGADO, não o que fica ligado — mesma forma do banco, e
+ * pelo mesmo motivo: lista vazia significa "tudo funcionando". Se recebesse as
+ * ligadas, um erro que enviasse lista vazia apagaria o sistema da empresa.
+ */
+export async function alterarFuncoesDaEmpresa(tenantId: string, desligadas: string[]) {
+  const admin = await requireSuperAdmin("alterarLimites")
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { name: true, disabledFeatures: true },
+  })
+  if (!tenant) throw new Error("Empresa não encontrada.")
+
+  // Só o que o código conhece. Sem esta peneira, um valor digitado errado
+  // viraria uma string morta no banco: não desliga nada e ninguém descobre por
+  // que "a função foi desligada e continua aparecendo".
+  const validas = desligadasValidas(desligadas)
+
+  const antes = new Set(tenant.disabledFeatures)
+  const depois = new Set<string>(validas)
+  const desligou = validas.filter((f) => !antes.has(f))
+  const religou = tenant.disabledFeatures.filter((f) => !depois.has(f))
+  if (desligou.length === 0 && religou.length === 0) return
+
+  await prisma.tenant.update({
+    where: { id: tenantId },
+    data: { disabledFeatures: validas },
+  })
+
+  const mudancas = [
+    ...desligou.map((f) => `−${f}`),
+    ...religou.map((f) => `+${f}`),
+  ].join(", ")
+  await registrarAcaoAdmin(admin.email, "alterar_funcoes", tenantId, `${tenant.name}: ${mudancas}`)
+  revalidatePath("/admin")
+}
+
 export async function alterarLimitesDaEmpresa(
   tenantId: string,
   ajustes: {

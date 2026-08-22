@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation"
+import { temFuncao } from "@/lib/plan"
 import { prisma } from "@/lib/prisma"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,6 +40,7 @@ export default async function ClientPortalPage({
       items: true,
       tenant: {
         select: {
+          id: true,
           name: true, phone: true, logoUrl: true, locale: true,
           pixKey: true, pixKeyType: true, pixReceiver: true, pixCity: true,
         },
@@ -49,6 +51,10 @@ export default async function ClientPortalPage({
   })
 
   if (!order) notFound()
+  // Desligado para esta empresa: o link simplesmente não existe, em vez de
+  // abrir uma tela avisando que existe mas está fechada — o cliente FINAL não
+  // tem o que fazer com essa informação, e ela conta o que a empresa contratou.
+  if (!(await temFuncao(order.tenant.id, "portalCliente"))) notFound()
 
   // Portal público: não existe sessão pro src/i18n/request.ts resolver o
   // tenant, então o idioma vem explícito de quem é dono da OS e desce por

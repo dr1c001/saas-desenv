@@ -444,3 +444,91 @@ describe("plan — tetos ajustados por empresa", () => {
     expect((await getLimites(normal.id)).maxUsuarios).toBe(3)
   })
 })
+
+describe("plan — funções desligadas por empresa", () => {
+  it("empresa nova tem TUDO ligado", async () => {
+    // A garantia central: nenhuma empresa muda de comportamento no dia em que
+    // a chave passa a existir. Uma lista de "ligadas" apagaria o sistema de
+    // todo mundo no deploy.
+    const { temFuncao } = await import("@/lib/plan")
+    const { FUNCOES } = await import("@/lib/funcoes")
+    await seedPlanos()
+    const t = await seedTenant("starter")
+
+    for (const f of FUNCOES) {
+      expect(await temFuncao(t.id, f), f).toBe(true)
+    }
+  })
+
+  it("desliga só o que está na lista", async () => {
+    const { temFuncao } = await import("@/lib/plan")
+    await seedPlanos()
+    const t = await seedTenant("starter")
+    await testDb.db.tenant.update({
+      where: { id: t.id },
+      data: { disabledFeatures: ["osPdf", "nps"] },
+    })
+
+    expect(await temFuncao(t.id, "osPdf")).toBe(false)
+    expect(await temFuncao(t.id, "nps")).toBe(false)
+    expect(await temFuncao(t.id, "osHistorico")).toBe(true)
+  })
+
+  it("desligar para uma empresa não afeta a outra", async () => {
+    const { temFuncao } = await import("@/lib/plan")
+    await seedPlanos()
+    const a = await seedTenant("starter")
+    const b = await seedTenant("starter")
+    await testDb.db.tenant.update({
+      where: { id: a.id },
+      data: { disabledFeatures: ["portalCliente"] },
+    })
+
+    expect(await temFuncao(a.id, "portalCliente")).toBe(false)
+    expect(await temFuncao(b.id, "portalCliente")).toBe(true)
+  })
+
+  it("lixo gravado no banco não desliga função nenhuma", async () => {
+    // Valor antigo ou digitado à mão não pode derrubar algo que ninguém pediu
+    // para derrubar.
+    const { temFuncao } = await import("@/lib/plan")
+    const { FUNCOES } = await import("@/lib/funcoes")
+    await seedPlanos()
+    const t = await seedTenant("starter")
+    await testDb.db.tenant.update({
+      where: { id: t.id },
+      data: { disabledFeatures: ["inventado", "osPdfff"] },
+    })
+
+    for (const f of FUNCOES) {
+      expect(await temFuncao(t.id, f), f).toBe(true)
+    }
+  })
+
+  it("função desligada é INDEPENDENTE do recurso de plano", async () => {
+    // Conceitos opostos: recurso nasce desligado e o plano liga; função nasce
+    // ligada e o painel desliga. Desligar uma não pode mexer na outra.
+    const { temFuncao, temRecurso } = await import("@/lib/plan")
+    await seedPlanos()
+    const t = await seedTenant("enterprise")
+    await testDb.db.tenant.update({
+      where: { id: t.id },
+      data: { disabledFeatures: ["osPdf"] },
+    })
+
+    expect(await temFuncao(t.id, "osPdf")).toBe(false)
+    expect(await temRecurso(t.id, "gpsMap")).toBe(true)
+  })
+
+  it("religar traz de volta sem recadastrar nada", async () => {
+    const { temFuncao } = await import("@/lib/plan")
+    await seedPlanos()
+    const t = await seedTenant("starter")
+
+    await testDb.db.tenant.update({ where: { id: t.id }, data: { disabledFeatures: ["offline"] } })
+    expect(await temFuncao(t.id, "offline")).toBe(false)
+
+    await testDb.db.tenant.update({ where: { id: t.id }, data: { disabledFeatures: [] } })
+    expect(await temFuncao(t.id, "offline")).toBe(true)
+  })
+})

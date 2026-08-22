@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { createClient } from "@/lib/supabase/server"
+import { temFuncao } from "@/lib/plan"
 
 // Hosts reais de serviço de push dos navegadores suportados. Sem essa
 // allowlist, qualquer usuário autenticado podia registrar um endpoint
@@ -27,6 +28,18 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  // Notificação custa por envio e nem toda empresa quer. Barrado no CADASTRO
+  // do aparelho: sem inscrição, nada é enviado depois, e não é preciso conferir
+  // a chave em cada disparo.
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { tenantId: true },
+  })
+  if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!(await temFuncao(dbUser.tenantId, "push"))) {
+    return NextResponse.json({ error: "Disabled" }, { status: 403 })
+  }
 
   const { endpoint, keys } = await req.json()
   if (!endpoint || !keys?.p256dh || !keys?.auth) {

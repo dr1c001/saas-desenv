@@ -10,7 +10,7 @@ import { FilaOfflineBanner } from "@/components/layout/fila-offline-banner"
 import { ImpersonationBanner } from "@/components/layout/impersonation-banner"
 import { getTenant, getAllowedTabs, hasActiveSubscription } from "@/lib/auth"
 import { isSuperAdmin } from "@/lib/admin"
-import { temRecurso } from "@/lib/plan"
+import { temFuncao, temRecurso } from "@/lib/plan"
 import { redirect } from "next/navigation"
 import { headers } from "next/headers"
 
@@ -35,9 +35,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const allowedTabs = await getAllowedTabs(tenantId, role)
   const souDono = await isSuperAdmin()
-  const [temApi, temFiliais] = await Promise.all([
+  const [temApi, temFiliais, filaLigada] = await Promise.all([
     temRecurso(tenantId, "api"),
     temRecurso(tenantId, "filiais"),
+    temFuncao(tenantId, "offline"),
   ])
 
   return (
@@ -53,7 +54,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <OfflineBanner />
         {/* O que o tecnico gravou sem sinal e ainda nao chegou ao servidor.
             Some sozinho quando a fila esvazia. */}
-        <FilaOfflineBanner />
+        <FilaOfflineBanner ligada={filaLigada} />
         <Suspense>
           <OverdueAlerts tenantId={tenantId} />
         </Suspense>

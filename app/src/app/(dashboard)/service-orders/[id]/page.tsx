@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator"
 import { DeleteButton } from "@/components/shared/delete-button"
 import { StatusButton } from "@/components/service-orders/status-button"
 import { formatCurrency, formatDate, formatOsNumber } from "@/lib/utils"
+import { temFuncao } from "@/lib/plan"
 
 export default async function ServiceOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -34,7 +35,11 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
   const pode = (acao: Parameters<typeof podeFazer>[2]) => podeFazer(role, permitidas, acao)
   // Quem mudou o que, e quando. E o que resolve discussao sobre valor, status
   // ou responsavel — ate aqui nao havia registro nenhum disso.
-  const eventos = await historicoDaOs(tenantId, id)
+  // Desligado: nem consulta. Buscar a linha do tempo para depois não mostrar
+  // seria trabalho pago em toda abertura de OS.
+  const eventos = (await temFuncao(tenantId, "osHistorico"))
+    ? await historicoDaOs(tenantId, id)
+    : []
 
   const t = await getTranslations("serviceOrdersPages")
   const tCommon = await getTranslations("common")

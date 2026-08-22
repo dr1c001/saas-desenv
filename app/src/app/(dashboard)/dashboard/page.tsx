@@ -10,6 +10,7 @@ import { RevenueChart } from "@/components/dashboard/revenue-chart"
 import { PainelPrimeirosPassos } from "@/components/dashboard/primeiros-passos"
 import { getPrimeirosPassos } from "@/actions/primeiros-passos"
 import { getTranslations } from "next-intl/server"
+import { temFuncao } from "@/lib/plan"
 
 async function getDashboardData(tenantId: string) {
   const now = new Date()
@@ -95,7 +96,9 @@ export default async function DashboardPage() {
     isAdmin ? getMonthlyRevenueChart() : Promise.resolve(null),
     // Só quem administra: o técnico não configura a empresa, e mostrar pra
     // ele uma lista que ele não pode cumprir é ruído puro.
-    isAdmin ? getPrimeirosPassos() : Promise.resolve(null),
+    isAdmin && (await temFuncao(tenantId, "primeirosPassos"))
+      ? getPrimeirosPassos()
+      : Promise.resolve(null),
   ])
 
   const t = await getTranslations("dashboardHome")

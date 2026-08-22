@@ -1716,7 +1716,37 @@
         },
         "limitPrice": "Agreed monthly price (R$)",
         "limitPricePlaceholder": "plan price",
-        "limitPriceHint": "Left blank, the plan price is charged. Filled in, this value applies — it is what completes the custom plan."
+        "limitPriceHint": "Left blank, the plan price is charged. Filled in, this value applies — it is what completes the custom plan.",
+        "functions": "Features",
+        "functionsTitle": "Features enabled for this company",
+        "functionsDescription": "Everything is on by default. Uncheck what {company} did not buy.",
+        "functionsConfirm": "Save features",
+        "functionCosts": "costs per use",
+        "functionsHint": "Turning off deletes nothing: the data stays, and turning it back on restores everything as it was.",
+        "functionNames": {
+          "osPdf": "Service order PDF",
+          "osHistorico": "Service order change history",
+          "offline": "Working without internet",
+          "portalCliente": "Customer tracking portal",
+          "nps": "Satisfaction survey",
+          "geocodificacao": "Address on the map",
+          "orcamentoPdf": "Quote PDF",
+          "orcamentoOnline": "Customer quote approval",
+          "primeirosPassos": "Guided first steps",
+          "push": "Mobile notifications"
+        },
+        "functionHints": {
+          "osPdf": "Without it, the job never becomes a document to print or send.",
+          "osHistorico": "The timeline of who changed status, amount and assignee.",
+          "offline": "Completing jobs with no signal. Off, the technician needs internet.",
+          "portalCliente": "The link the end customer opens to follow the job.",
+          "nps": "The 0-10 email sent to the end customer 7 days after completion.",
+          "geocodificacao": "Turns the address into a map pin. Consumes paid credit per saved client.",
+          "orcamentoPdf": "Without it, the quote exists on screen but never becomes a document.",
+          "orcamentoOnline": "The customer approves or declines by link, without calling.",
+          "primeirosPassos": "The initial setup panel on the Dashboard.",
+          "push": "Alerts on the team's phones. Costs per send."
+        }
       },
       "impersonation": {
         "banner": "You are viewing the system as {company}. Anything you do here applies to their account.",
@@ -2063,7 +2093,8 @@
     "defaultCompanyName": "{name}'s Company",
     "tooManyAttempts": "Too many attempts. Please wait a few minutes and try again.",
     "inviteLinkUsed": "This invite has already been used or has expired. If you already set your password, just sign in below. If you haven't, use \"Forgot my password\" with the email that received the invite — do not create a new company.",
-    "recoveryLinkUsed": "This recovery link has already been used or has expired. Request a new one under \"Forgot my password\"."
+    "recoveryLinkUsed": "This recovery link has already been used or has expired. Request a new one under \"Forgot my password\".",
+    "funcaoDesligada": "This feature is turned off for your company. Contact support."
   },
   "validation": {
     "nameRequired": "Name is required",

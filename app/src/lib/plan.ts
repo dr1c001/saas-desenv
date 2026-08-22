@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server"
 import { RECURSOS, type Recurso } from "./recursos"
 import { brtMidnightUTC, todayInBRT } from "./utils"
 import { limiteEfetivo } from "./limite"
+import { funcaoLigada, type Funcao } from "./funcoes"
 
 // Fonte única do que cada plano libera.
 //
@@ -22,6 +23,8 @@ import { limiteEfetivo } from "./limite"
 // que precisa do banco. Reexportado pra não quebrar quem já importava daqui.
 export type { Recurso } from "./recursos"
 export { RECURSOS, RECURSOS_DE_ABA, ehRecurso } from "./recursos"
+export { FUNCOES, FUNCOES_COM_CUSTO, ehFuncao } from "./funcoes"
+export type { Funcao } from "./funcoes"
 
 const TODOS: Recurso[] = [...RECURSOS]
 
@@ -112,6 +115,35 @@ export const getLimites = cache(async function getLimites(tenantId: string): Pro
       extras.length === 0 ? doPlano.recursos : [...new Set([...doPlano.recursos, ...extras])],
   }
 })
+
+/**
+ * Esta função está ligada para esta empresa?
+ *
+ * O padrão é SIM — o oposto de `temRecurso`, e de propósito. Recurso é o que o
+ * plano VENDE (nasce desligado); função é o que o sistema FAZ (nasce ligada, e
+ * o painel desliga). Ver lib/funcoes.ts.
+ *
+ * Mesmo cache por requisição do getLimites: uma tela que checa três funções
+ * não pode virar três idas ao banco.
+ */
+export const temFuncao = cache(async function temFuncao(
+  tenantId: string,
+  funcao: Funcao
+): Promise<boolean> {
+  const t = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { disabledFeatures: true },
+  })
+  return funcaoLigada(funcao, t?.disabledFeatures ?? [])
+})
+
+/** Barra quando a função foi desligada para esta empresa. Use em toda Action e
+ *  rota que entregue a função — esconder botão não protege endereço HTTP. */
+export async function requireFuncao(tenantId: string, funcao: Funcao): Promise<void> {
+  if (await temFuncao(tenantId, funcao)) return
+  const t = await getTranslations("errors")
+  throw new Error(t("funcaoDesligada"))
+}
 
 export async function temRecurso(tenantId: string, recurso: Recurso): Promise<boolean> {
   return (await getLimites(tenantId)).recursos.includes(recurso)

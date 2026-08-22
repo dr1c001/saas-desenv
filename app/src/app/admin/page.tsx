@@ -291,6 +291,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
                           recursosDoPlano={recursosDoPlano(tenant.plan?.slug)}
                           recursosExtras={tenant.extraFeatures.filter(ehRecurso)}
                           limitesDoPlano={limitesDoPlano(tenant.plan?.slug)}
+                          funcoesDesligadas={tenant.disabledFeatures}
                           ajustes={{
                             usuarios: tenant.maxUsersOverride,
                             osMes: tenant.maxOrdersOverride,

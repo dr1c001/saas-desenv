@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation"
+import { temFuncao } from "@/lib/plan"
 import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -27,6 +28,7 @@ export default async function QuotePortalPage({ params }: { params: Promise<{ to
     include: {
       tenant: {
         select: {
+          id: true,
           name: true, phone: true, locale: true,
           pixKey: true, pixKeyType: true, pixReceiver: true, pixCity: true,
         },
@@ -35,6 +37,7 @@ export default async function QuotePortalPage({ params }: { params: Promise<{ to
   })
 
   if (!quote) notFound()
+  if (!(await temFuncao(quote.tenant.id, "orcamentoOnline"))) notFound()
 
   // Portal público: não existe sessão pro src/i18n/request.ts resolver o
   // tenant, então o idioma vem explícito de quem é dono do orçamento e desce
