@@ -1977,6 +1977,164 @@ caminhos têm. Fica registrado como pendência.
 
 ---
 
+### 7.2.31 Assinaturas nos documentos — 21/08/2026
+
+**Comecou como defeito.** A assinatura do cliente final era colhida na tela do
+celular, gravada em `ServiceOrder.clientSignatureUrl` — e o PDF imprimia duas
+**linhas em branco** para assinar no papel. Em producao, 3 das 11 OS tinham
+assinatura guardada e nenhuma saiu impressa. Nao e que parou de sair: **nunca
+saiu**.
+
+E abriu a pergunta seguinte: e a assinatura de quem EXECUTOU? Documento de
+servico tem dois lados — quem recebeu assina que recebeu, quem fez assina que
+fez. So um dos dois era capturado, e nenhum impresso.
+
+Agora cada pessoa desenha a dela uma vez em Configuracoes > Minha assinatura, e
+ela sai nos documentos que emite. Desenhar, e nao enviar arquivo: assinatura e
+gesto, e quase ninguem tem a propria como imagem no computador.
+
+**Decisoes:**
+
+- A action grava a assinatura de QUEM PEDE, sem parametro de usuario. Aceitar
+  `userId` deixaria trocar a assinatura de outra pessoa — e assinatura trocada
+  e documento assinado por quem nao assinou.
+- **Reprocessa no servidor** (sharp) em vez de gravar o que veio do navegador,
+  mesmo raciocinio do logo.
+- Piso e teto de tamanho **com motivo na recusa**: arquivo grande e foto, traco
+  minusculo e toque acidental e sairia como sujeira no documento do cliente.
+- Quem nao gravou continua com a linha para assinar a mao.
+
+**O orcamento exigiu corrigir algo antes:** o sistema nao registrava quem criou
+um orcamento. Sem o autor, a unica coisa carimbavel seria quem esta BAIXANDO o
+PDF — e um administrador baixando o orcamento da Ana sairia com a assinatura
+dele. `Quote.createdById` passou a existir.
+
+**Duas ficaram de fora por falta de documento, nao de assinatura:** o contrato
+de prestacao recorrente (`ServiceContract`) e a ordem de compra **nao tem PDF
+nenhum**. O unico `contrato-pdf` e o NOSSO com a empresa cliente.
+
+Detalhe de teste: os dois PNGs de exemplo precisam ser diferentes — o react-pdf
+deduplica imagem identica, entao com o mesmo arquivo dos dois lados o teste de
+"as duas entram" mediria nada. Falhou por 2 bytes e mostrou isso.
+
+617 -> 634 testes.
+
+---
+
+### 7.2.32 Carencia de cobranca: 5 -> 30 dias — 21/08/2026
+
+Avisos nos dias 1, 3, 10, 15, 20, 25 e 30; bloqueio no 30. Apertada no comeco
+porque a maioria das falhas de cobranca e boba e se resolve no mesmo dia;
+espacada depois, para nao virar perseguicao a quem ja sabe que deve.
+
+**O ultimo marco coincide com o corte de proposito**, e por isso o e-mail
+daquele dia e outro texto: dizer "restam 0 dias de acesso" para quem acabou de
+perder o acesso e pior que nao avisar.
+
+**Duas fontes da verdade, corrigida:** o tom do e-mail era decidido dentro do
+`resend.ts` (`diasRestantes <= 2`), separado do modulo que sabe quantos dias de
+carencia existem. Com a carencia subindo, as duas metades divergiriam em
+silencio.
+
+**E um defeito que a propria mudanca dispararia.** O contrato juridico declara
+a carencia e escrevia o extenso com `dias === 5 ? "cinco" : String(dias)` — ou
+seja, sabia falar UM numero. Com 30 sairia **"30 (30) dias corridos"**, o
+algarismo repetido no lugar do extenso, num documento assinado. Criado
+`lib/extenso.ts` (0-999); fora da faixa devolve o algarismo, porque extenso
+errado e pior que sem extenso.
+
+**VERSAO_CONTRATO 1.1 -> 1.2, PENDENTE DE ADVOGADO.** Isto muda uma clausula:
+quem assinou a v1.1 contratou 5 dias. A mudanca e favoravel a contratante, mas
+o documento dela declara o que ela assinou.
+
+634 -> 650 testes.
+
+---
+
+### 7.2.33 Planos novos e cota de nota fiscal — 22/08/2026
+
+Starter: 3 usuarios, 50 OS/mes, **8 NFS-e/mes**. Pro: 10 usuarios, **200
+OS/mes**, **70 NFS-e/mes**.
+
+**A cota de nota fiscal nao existia.** A vitrine passaria a vender "8 notas por
+mes" e nada no sistema contava nota emitida — o mesmo defeito que os limites de
+plano tiveram em 10/08. `requireCotaDeNfse` barra ANTES de falar com a NFE.io:
+passar da cota e emitir mesmo assim seria irreversivel, porque nao ha
+cancelamento de nota no produto.
+
+Conta por `nfseIssuedAt`, nao pelo `createdAt` da OS: uma OS aberta em julho e
+faturada em agosto gasta a cota de AGOSTO.
+
+**O Pro deixou de ter OS ilimitada.** E reducao de contrato para quem ja
+assinou; travado por teste para nao se desfazer sozinho.
+
+**A janela do mes virou um lugar so** — era calculada na cota de OS e repetida
+na rota da API, e ia virar uma terceira copia. E mudou de UTC para **Brasilia**:
+o resto do sistema ja conta mes em BRT, e uma OS aberta as 21h30 do dia 31 caia
+no mes seguinte para a cota e no mes corrente para o faturamento.
+
+650 -> 656 testes.
+
+---
+
+### 7.2.34 Plano customizado: tetos, preco e funcoes por empresa — 22/08/2026
+
+Os planos sao tres e as empresas nao. O painel ganhou **Limites** (usuarios,
+OS/mes, NFS-e/mes, mensalidade) e **Funcoes** (dez interruptores).
+
+**Nos tetos, o detalhe que definiu o desenho:** "herdar do plano" e "sem
+limite" sao coisas DIFERENTES, e as duas seriam `null` num campo de numero
+anulavel. Herdar acompanha o plano quando ele mudar; sem limite nao. Por isso
+`0` carrega o sentido de ilimitado — zero usuario nao significa nada como teto
+real — e a tela oferece **tres** opcoes em vez de um campo solto.
+
+**Nas funcoes, a regra e o oposto do resto do sistema, e de proposito:**
+
+| | |
+|---|---|
+| **Recurso** (`lib/recursos.ts`) | o que o PLANO vende. Nasce desligado, o plano liga |
+| **Funcao** (`lib/funcoes.ts`) | o que o sistema FAZ. Nasce **ligada**, o painel desliga |
+
+O banco guarda as DESLIGADAS. Lista vazia = tudo funcionando = comportamento de
+hoje. E a unica forma segura de criar interruptor para coisa ja em uso: uma
+lista de "ligadas" comecaria vazia e apagaria PDF, historico, portal e fila
+offline de todos os clientes no deploy.
+
+**Das 23 funcoes sem trava, 13 ficaram de fora** — e o produto (login), e NOSSO
+(cobranca, backup, monitoramento) ou ja tem dono (`stock`, Contratos). Desligar
+a receita criada ao faturar deixaria OS faturada sem lancamento: livro-caixa
+furado, nao economia. Um teste guarda essa lista.
+
+**Um defeito meu no caminho:** criei `customPriceMonthly`, o painel gravava, a
+auditoria registrava — e `billing.ts` continuava calculando pelo preco do
+plano. A tela mostrava a tabela tambem. Corrigido com `lib/preco.ts`, puro e
+testado, porque e dinheiro saindo da conta de alguem: erro ali nao da erro em
+lugar nenhum, aparece na fatura.
+
+656 -> 715 testes.
+
+---
+
+### 7.2.35 Codigo numerico das telas — 22/08/2026
+
+Ideia de menu de PABX: quem usa todo dia decora "1.1" e chega mais rapido que
+cacando na barra lateral. `1.x` Operacao, `2.x` Clientes, `3.x` Dinheiro,
+`4.x` Estoque, `5.x` Empresa, com terceiro nivel so em Configuracoes.
+
+**Aceita nome tambem**, e isso nao e enfeite: codigo que so funciona se voce
+souber de cor e um atalho para ninguem. Aceita virgula e espaco como separador,
+porque quem digita no teclado numerico erra o ponto.
+
+**Prefixo mostra as opcoes em vez de adivinhar:** "5.4" e um destino E o comeco
+de seis outros.
+
+Renumerar e uma linha em `lib/codigos-abas.ts` — o numero nao esta na rota, nem
+no menu, nem no banco. Numeracao e convencao de quem usa, e convencao muda.
+
+699 -> 715 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`
