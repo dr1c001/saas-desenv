@@ -2118,6 +2118,9 @@
     },
     "newOrder": {
       "title": "Nova Ordem de Serviço"
+    },
+    "orderAssigned": {
+      "title": "[[osC]] passada para você"
     }
   },
   "customFields": {

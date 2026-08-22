@@ -40,6 +40,45 @@ export type OrderFormState = {
 
 
 
+/**
+ * Avisa no celular quem passou a ser responsável pela OS.
+ *
+ * Uma função só, usada na criação E na reatribuição. Só a criação avisava: se
+ * você passasse o serviço do Lucas para o Beto, o Beto não ficava sabendo — e
+ * reatribuir é justamente o momento em que alguém precisa ser avisado.
+ *
+ * Nunca lança nem bloqueia: notificação é acessório, e falhar em avisar não
+ * pode derrubar a gravação da OS que gerou o aviso.
+ */
+async function avisarResponsavel(
+  tenantId: string,
+  responsavelId: string | null | undefined,
+  autorId: string,
+  titulo: string,
+  chave: "newOrder" | "orderAssigned"
+) {
+  // Sem responsável, ou o próprio autor: ninguém a avisar. Mandar notificação
+  // para quem acabou de clicar o botão é ruído.
+  if (!responsavelId || responsavelId === autorId) return
+
+  try {
+    const subs = await prisma.pushSubscription.findMany({
+      where: { userId: responsavelId, user: { tenantId } },
+      select: { endpoint: true, p256dh: true, auth: true },
+    })
+    if (subs.length === 0) return
+
+    const t = await getTranslations("notifications")
+    await sendPushToUser(subs, {
+      title: t(`${chave}.title` as "newOrder.title"),
+      body: titulo,
+      url: "/service-orders",
+    })
+  } catch (err) {
+    console.error("[push] falha ao avisar o responsável:", err)
+  }
+}
+
 export async function createServiceOrder(
   _prev: OrderFormState,
   formData: FormData
@@ -134,24 +173,7 @@ export async function createServiceOrder(
   // que aconteceu, nao parte do que esta acontecendo.
   await registrarCriacao(tenantId, criada.id, await autorAtual(userId))
 
-  // Send push notification to assigned technician
-  if (technicianId && technicianId !== userId) {
-    try {
-      const subs = await prisma.pushSubscription.findMany({
-        where: { userId: technicianId, user: { tenantId } },
-        select: { endpoint: true, p256dh: true, auth: true },
-      })
-      if (subs.length > 0) {
-        await sendPushToUser(subs, {
-          title: (await getTranslations("notifications"))("newOrder.title"),
-          body: title,
-          url: "/service-orders",
-        })
-      }
-    } catch {
-      // Push failure should not block OS creation
-    }
-  }
+  await avisarResponsavel(tenantId, technicianId, userId, title, "newOrder")
 
   revalidatePath("/service-orders")
   redirect("/service-orders")
@@ -398,6 +420,8 @@ export async function updateServiceOrder(
       select: {
         id: true, status: true, scheduledAt: true, totalAmount: true,
         conclusionNote: true, warrantyDays: true,
+        // O id do responsável ANTERIOR, para saber se a OS trocou de mãos.
+        technicianId: true,
         technician: { select: { name: true } },
       },
     }),
@@ -472,6 +496,12 @@ export async function updateServiceOrder(
     }),
     await autorAtual(userId)
   )
+
+  // Trocou de mãos: avisa quem recebeu. Comparado com o responsável ANTERIOR —
+  // salvar a OS sem mexer no responsável não pode disparar notificação.
+  if ((technicianId || null) !== order.technicianId) {
+    await avisarResponsavel(tenantId, technicianId, userId, title, "orderAssigned")
+  }
 
   revalidatePath("/service-orders")
   revalidatePath(`/service-orders/${id}`)

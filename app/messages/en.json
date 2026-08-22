@@ -2118,6 +2118,9 @@
     },
     "newOrder": {
       "title": "New Service Order"
+    },
+    "orderAssigned": {
+      "title": "[[osC]] assigned to you"
     }
   },
   "customFields": {
