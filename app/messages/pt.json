@@ -2554,7 +2554,10 @@
         "cityCodeHelp": "Busque em <link>ibge.gov.br</link>",
         "issRateLabel": "Alíquota ISS (%) *",
         "submit": "Cadastrar empresa no nfe.io"
-      }
+      },
+      "passo1": "Passo 1 de 2",
+      "passo2": "Passo 2 de 2",
+      "certificadoTravado": "Disponível depois de cadastrar a empresa acima. O certificado é instalado NA empresa do emissor, então ela precisa existir primeiro — enviar antes deixaria o arquivo sem onde ser aplicado."
     }
   },
   "settingsCore": {

@@ -6,7 +6,7 @@ import { temRecurso } from "@/lib/plan"
 import { getTranslations } from "next-intl/server"
 import { redirect } from "next/navigation"
 import { buttonVariants } from "@/components/ui/button"
-import { CheckCircle2, Building2, FileText } from "lucide-react"
+import { CheckCircle2, Building2, FileText, Lock } from "lucide-react"
 
 export default async function FiscalSettingsPage() {
   const { tenantId, role } = await getTenant()
@@ -56,6 +56,9 @@ export default async function FiscalSettingsPage() {
         </div>
       ) : (
         <div className="rounded-lg border bg-card p-6 space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {t("passo1")}
+          </p>
           <div className="flex items-center gap-2 font-semibold">
             <Building2 className="size-5" />
             {t("form.title")}
@@ -190,15 +193,21 @@ export default async function FiscalSettingsPage() {
         </div>
       )}
 
-      {/* O certificado só faz sentido depois de a empresa existir no emissor —
-          é nela que ele é instalado. Mostrar antes convidaria a enviar um
-          arquivo que não teria onde ser aplicado. */}
-      {isConfigured && (
-        <section className="space-y-4 border-t pt-8">
-          <div>
-            <h2 className="text-lg font-semibold">{tCert("title")}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{tCert("subtitle")}</p>
-          </div>
+      {/* O certificado continua só FUNCIONANDO depois de a empresa existir no
+          emissor — é nela que ele é instalado. Mas ele agora APARECE desde o
+          começo, travado: escondê-lo por inteiro fazia quem abria a tela não
+          descobrir que este passo existe, e a emissão de nota depende dele.
+          Ver é diferente de poder usar. */}
+      <section className="space-y-4 border-t pt-8">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {t("passo2")}
+          </p>
+          <h2 className="mt-1 text-lg font-semibold">{tCert("title")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{tCert("subtitle")}</p>
+        </div>
+
+        {isConfigured ? (
           <CertificadoForm
             temCertificado={cert.temCertificado}
             nomeArquivo={cert.nomeArquivo}
@@ -206,8 +215,13 @@ export default async function FiscalSettingsPage() {
             diasParaVencer={cert.diasParaVencer}
             cofrePronto={cert.cofrePronto}
           />
-        </section>
-      )}
+        ) : (
+          <div className="flex gap-3 rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
+            <Lock className="mt-0.5 size-4 shrink-0" />
+            <p>{t("certificadoTravado")}</p>
+          </div>
+        )}
+      </section>
     </div>
   )
 }

@@ -2554,7 +2554,10 @@
         "cityCodeHelp": "Look it up at <link>ibge.gov.br</link>",
         "issRateLabel": "ISS tax rate (%) *",
         "submit": "Register company with nfe.io"
-      }
+      },
+      "passo1": "Step 1 of 2",
+      "passo2": "Step 2 of 2",
+      "certificadoTravado": "Available after you register the company above. The certificate is installed ON the issuer's company record, so it has to exist first — uploading before would leave the file with nowhere to go."
     }
   },
   "settingsCore": {
