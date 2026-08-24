@@ -1,6 +1,6 @@
 # Plano de Engenharia — ServiçoOS
 
-> Última atualização: 08/08/2026
+> Última atualização: 24/08/2026
 > Este documento é a referência técnica viva do projeto. Deve ser atualizado sempre que uma decisão de arquitetura importante for tomada.
 
 ---
@@ -43,6 +43,7 @@ Decisão de produto: o trial gratuito de 15 dias foi removido. Cadastro não dá
 | Gráficos | recharts | ^3.8 |
 | PDF | @react-pdf/renderer | ^4.5 |
 | Push notifications | web-push (VAPID) | ^3.6 |
+| Assistente de voz | `@anthropic-ai/sdk` + Web Speech API | ^0.120 |
 | E-mail transacional | Resend | ^6.16 |
 | Monitoramento de erros | Sentry (`@sentry/nextjs`) | — |
 | Pagamentos | Asaas (gateway BR) | API v3 |
@@ -91,6 +92,17 @@ Cliente (navegador/PWA)
 **Prestadores/manutenção interna:** `Provider`, `MaintenanceOrder`, `MaintenanceItem`
 
 **Infra de app:** `PushSubscription`, `UserLocation`
+
+**Relações que valem destaque (24/08/2026):**
+- `Client.parentId` → `Client` — subcliente. Uma administradora contrata, o
+  serviço é feito em cada condomínio. **Um nível só** (ver 7.2.42).
+- `ServiceOrder.payerId` → `Client` — quem paga *aquela* OS. `NULL` = o padrão
+  (contratante quando existe, senão o próprio cliente).
+- `Tenant.tabsConfiguredRoles` / `actionsConfiguredRoles` — quais **cargos** já
+  foram configurados. Substituem os booleanos, que só serviam quando havia um
+  cargo configurável (ver 7.2.39).
+- `Tenant.maxIaOverride` / `iaComandosNoMes` / `iaMesDoContador` — cota da
+  assistente de voz (ver 7.2.38).
 
 ---
 
@@ -2135,6 +2147,243 @@ no menu, nem no banco. Numeracao e convencao de quem usa, e convencao muda.
 
 ---
 
+### 7.2.36 Manual dentro do sistema e barra lateral por codigo — 23/08/2026
+
+A ajuda nao existia. Havia Primeiros Passos (onboarding) e o FAQ da landing
+(pre-venda) — nada que respondesse "o que essa aba faz".
+
+O manual vive em `lib/manual.ts` como **DADO**, com cada verbete amarrado ao
+codigo da tela. Duas consequencias: o botao "?" abre a ajuda ja no ponto certo,
+e um teste confere que nenhuma tela ficou sem explicacao e que nenhum verbete
+descreve tela que nao existe mais. **Manual que envelhece em silencio ensina
+errado com cara de autoridade** — por isso o build quebra em vez de deixar.
+
+A ajuda **nao tem porta**: nenhuma checagem de papel, aba ou plano. O tecnico em
+campo, que tem menos abas liberadas, e quem mais precisa dela.
+
+Na barra lateral: uma busca so (aceita numero E nome), codigos visiveis, e so
+Configuracoes e Sair fixos — o rodape fixo empurrava os dois para fora da tela
+em monitor baixo.
+
+**Dois textos que ficaram para tras do comportamento**, corrigidos junto: a tela
+de "sem conexao" dizia que concluir OS exige conexao, mas a fila offline aceita
+`CONCLUIR_OS` e `MUDAR_STATUS` desde que foi construida — e e justamente o
+tecnico sem sinal que le essa frase e desiste.
+
+`codigoDaTelaAtual` casa pelo caminho **mais longo**: `/settings` e prefixo de
+`/settings/fiscal`, e pegar o primeiro daria a ajuda de Configuracoes para quem
+esta na tela Fiscal.
+
+780 -> 795 testes.
+
+---
+
+### 7.2.37 Assinatura nao salvava: tres defeitos empilhados — 23-24/08/2026
+
+Relatado como "as assinaturas da equipe e proprietario nao esta salvando". Em
+producao: 6 usuarios, ZERO assinaturas.
+
+**Defeito 1 — o canvas nunca teve tamanho.** Um `<canvas>` tem DOIS tamanhos: o
+buffer de desenho (atributos `width`/`height`, 300x150 quando ninguem define) e
+o tamanho exibido (CSS). O quadro recebia so CSS, entao um buffer de 300x150 era
+esticado para preencher a caixa. O traco era gravado em coordenadas da TELA e
+escrito no BUFFER, em outra escala: numa caixa larga o desenho caia FORA do
+buffer. `getTrimmedCanvas()` nao achava pixel, devolvia canvas vazio, e o
+`toDataURL()` disso nao e um PNG. Corrigido em `useQuadroNoTamanhoDaCaixa`.
+
+**Defeito 2 — o piso media a coisa errada.** 200 bytes minimos. Byte nao mede
+tamanho de desenho, mede COMPRESSAO: um traco simples, aparado e sobre fundo
+transparente comprime abaixo disso sendo assinatura legitima. A tela dizia "o
+traco ficou pequeno demais", a pessoa desenhava maior, e continuava recusada —
+porque desenhar maior quase nao muda o tamanho do arquivo. A pergunta agora e
+feita sobre as DIMENSOES, depois de decodificar.
+
+**Defeito 3 — o sharp nao carregava na Vercel.** Depois dos dois primeiros a
+assinatura ainda falhava, agora com "nao consegui salvar agora". O log de
+producao deu a causa: `libvips-cpp.so.8.18.3: cannot open shared object file`.
+Ver o gotcha 19 na secao 9.
+
+**O alcance era maior que o relatado:** o upload de LOGO usa o mesmo sharp e
+estava quebrado do mesmo jeito, sem ninguem ter notado.
+
+Verificacao final em producao: PNG valido, 182x111 px, 5,4 KB. Os 5,4 KB
+confirmam que o piso de 200 bytes era diagnostico errado — assinatura real com
+traco pesa bem mais.
+
+---
+
+### 7.2.38 Assistente de voz com IA, vendida como adicional — 23/08/2026
+
+Comando por voz em toda tela do painel: a pessoa fala, a assistente responde em
+voz e navega, le e escreve no sistema. Quinze ferramentas.
+
+**A decisao que governa o desenho: a IA nao fala com o banco.** Ela chama as
+MESMAS funcoes que a tela chama. Consequencia — o tenant vem da sessao dentro
+da action, a permissao e conferida la (`checarAcao`) e a cota do plano tambem
+(`requireCotaDeOs`). Um tecnico falando com a assistente tem exatamente os
+poderes que teria clicando, e nao ha caminho para escapar disso porque nao
+existe caminho paralelo. Uma camada de IA que falasse direto com o banco teria
+de reimplementar as tres coisas, e cada reimplementacao e uma chance de divergir.
+
+**Confirmacao no irreversivel.** Concluir, faturar, emitir nota e apagar param e
+mostram uma frase em portugues com o numero da OS e o nome do cliente, falada em
+voz alta. A barreira e contra ERRO DE RECONHECIMENTO DE FALA, e nao contra
+usuario mal-intencionado: quem quisesse apagar de proposito chamaria a action
+direto. Ela existe para a pessoa perceber que a assistente ouviu "apaga" quando
+ela disse "acaba".
+
+**Na duvida, nao escolhe.** "Conclui a do Joao" com dois Joaos devolve as opcoes
+para a assistente perguntar. Nome exato vence parcial.
+
+Sem `ANTHROPIC_API_KEY` a assistente diz que nao esta configurada e nao consome
+cota de ninguem. Cache de prompt ligado nas instrucoes e nas ferramentas: sao
+identicas em toda chamada e sao a maior parte da entrada.
+
+**Nao testado de ponta a ponta** — sem chave nao ha como. Verificado: estrutura,
+regras e compilacao. 795 -> 870 testes.
+
+#### Terceira categoria de recurso: ADICIONAL
+
+A assistente e o primeiro recurso do sistema com **CUSTO POR USO**: cada comando
+consome API paga. Todo o resto custa o mesmo tenha a empresa 10 ou 10 mil OS.
+
+Num plano de preco fixo, o cliente que mais fala com ela seria o que menos da
+lucro — e nao ha como prever qual. Por isso `ADICIONAIS` em `lib/recursos.ts`,
+ao lado de "vem no plano" e "so no Enterprise". **Nenhum plano inclui, nem o
+Enterprise**, e ha teste travando isso: sem ele, `TODOS` varreria o adicional
+para dentro do plano mais caro sem ninguem decidir.
+
+Conceder da 500 comandos/mes por padrao, e nao zero: conceder o adicional e a
+pessoa nao conseguir dar um comando pareceria defeito, nao decisao.
+
+---
+
+### 7.2.39 Cargos de verdade — 24/08/2026
+
+O enum tinha tres valores e eles descreviam NIVEL DE ACESSO, nao funcao. Uma
+empresa de servico tem atendimento, financeiro, logistica e gerencia, e todos
+caiam em "tecnico", enxergando a mesma coisa. Agora sao oito.
+
+Isto funcionou sem reescrever permissao porque `TabPermission` e
+`ActionPermission` SEMPRE tiveram chave `(tenantId, role, ...)`: o sistema ja
+sabia guardar permissao por papel, so nunca existiu mais de um configuravel.
+
+**Antes de prometer, foram lidos os 93 lugares que decidem por papel.** O padrao
+em uso e lista de permissao (`se nao e OWNER nem ADMIN, nega`), entao cargo novo
+comeca **negado**. O unico `=== "TECHNICIAN"` que existe rotula "em campo" num
+relatorio e nao decide acesso.
+
+**Dois defeitos que o enum sozinho teria criado**, corrigidos junto:
+
+1. O padrao de quem nunca foi configurado era `DEFAULT_TECHNICIAN_TABS`, fixo.
+   Um financeiro recem-convidado abriria o sistema em ordens de servico, sem ver
+   o financeiro — e a empresa concluiria que o cargo nao funciona, quando
+   faltava so a configuracao que ela nem sabia existir.
+2. "Ja configuraram isto?" era um booleano da empresa inteira. Configurar o
+   TECNICO faria o FINANCEIRO ler "ja configuraram" com zero linhas gravadas:
+   **menu vazio**, sem ninguem ter mexido no cargo dele. Virou lista de cargos,
+   com backfill na migration.
+
+**GERENTE ficou de fora dos administrativos de proposito.** Parece candidato ate
+a primeira empresa que quer um gerente que nao mexe na cobranca. A lista de quem
+manda em tudo tem de ficar curta, porque e a lista de quem ninguem consegue
+restringir depois.
+
+---
+
+### 7.2.40 Paleta azul no modo claro — 24/08/2026
+
+Azul `#0A66C2` como identidade, seguindo a convencao dos ERPs grandes.
+
+**Duas escolhas contrariaram de proposito o que foi pedido**, pelo mesmo motivo
+que motivou o pedido (nao cansar a vista em jornada longa):
+
+- Fundo **nao** e branco puro. `#FFFFFF` e luminancia maxima e e a maior fonte
+  de fadiga numa tela de trabalho. `#F7F9FC` derruba o brilho sem parecer sujo,
+  e faz os cartoes (que SAO brancos) ganharem relevo sem sombra pesada.
+- Texto **nao** e preto puro. `#000` sobre `#FFF` da 21:1, acima do confortavel,
+  e causa halation — as letras parecem vibrar. `#111823` da 16.9:1.
+
+Todos os contrastes foram **calculados, nao estimados**, e conferidos depois no
+navegador comparando em CIELAB o renderizado com o pretendido: bate nos quatro
+pontos medidos.
+
+Os graficos eram CINCO TONS DE CINZA, o que tornava "Receita x Despesa" quase
+ilegivel. Azul e ambar lideram a sequencia — o par que continua separavel para
+daltonismo vermelho-verde.
+
+O modo escuro recebeu o MESMO azul, levantado para `#4D9BEF`. Cor de marca que
+so existe num tema nao e cor de marca.
+
+---
+
+### 7.2.41 Telas do sistema na landing — 24/08/2026
+
+Maquete em HTML, e **nao print**. Print tem um tema (e a pagina acompanha
+claro/escuro do visitante), uma resolucao (borra em tela densa), pesa centenas
+de KB, **congela** (vira propaganda enganosa silenciosa quando a tela real muda)
+e sai de uma conta real com dados de cliente reais.
+
+Os TEXTOS vem das mesmas chaves de traducao que as telas de verdade usam: a
+vitrine fala portugues ou ingles junto com a pagina, e muda junto se o
+vocabulario do produto mudar, em vez de mentir.
+
+**Primeira verificacao visual real desta sequencia** — a landing e publica,
+entao deu para VER em vez de deduzir. Dois defeitos apareceram so no celular: a
+agenda com cinco colunas em 375px deixava o chip com 10px de fonte, e a tabela
+de itens rolava de lado dentro da janela.
+
+A landing ja respeitava tema (o script do layout raiz le a preferencia e cai no
+`prefers-color-scheme`); faltava o CONTROLE — quem chega pela landing ainda nao
+tem conta, e o unico botao de tema morava dentro do painel.
+
+---
+
+### 7.2.42 Subcliente: quem contrata nao e quem recebe — 24/08/2026
+
+Uma administradora fecha contrato, o servico e feito em cada condominio. Vale
+igual para seguradora e segurado, franquia e cada loja, construtora e cada obra.
+
+Ate aqui o sistema respondia com UM campo duas perguntas diferentes, porque elas
+tinham sempre a mesma resposta:
+
+- ONDE o servico acontece? -> `ServiceOrder.clientId`
+- QUEM paga por ele? -> o mesmo `clientId`
+
+**O que faz isto ser mais que um campo novo:** tudo que envolve dinheiro seguia
+o `clientId`. A receita nasce dele, o ranking soma por ele, e — o grave —
+`emitNfse` o usava como TOMADOR da nota. Apontar a OS para o condominio sem
+mexer nesses pontos faria a nota sair contra o CNPJ do condominio, quando o
+contrato e o pagamento sao com a administradora. **Documento fiscal contra
+terceiro, no nome da empresa do cliente, perante a prefeitura — e nao existe
+cancelamento neste produto.**
+
+O ranking soma **por pagador**: sem isso, uma administradora com trinta
+condominios teria o faturamento espalhado entre os trinta, nenhum entraria no
+Top 10, e o cliente que MAIS fatura sumiria do relatorio.
+
+**Quem paga e por OS.** O padrao e o contratante, mas da para cobrar do cliente
+final naquela OS — a administradora paga quase tudo e as vezes o condominio paga
+direto um servico extra, e forcar tudo para o contratante erraria justamente no
+caso excepcional, que e quando alguem repara. O pagador escolhido e validado
+contra a relacao: id de fora cai no padrao, e nao vira nota no CNPJ de um
+terceiro por chamada direta a Server Action.
+
+**Um nivel so.** Subcliente nao pode ter subcliente. Mata o risco de ciclo pela
+raiz — A pai de B, B pai de A, e a busca de quem paga entra em laco — em vez de
+exigir deteccao de laco em toda gravacao.
+
+`ON DELETE SET NULL` no vinculo, e nao `CASCADE`: apagar a administradora nao
+pode levar junto trinta condominios com historico, receita e nota emitida.
+
+Nada muda para quem nao usa: sem contratante, quem paga e o proprio cliente, e o
+seletor nem aparece. 887 -> 905 testes.
+
+**Fora do escopo, e sabido:** contrato recorrente firmado com a administradora
+gerando OS para cada condominio dela. So vale construir com um caso real na mao.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`
@@ -2169,6 +2418,7 @@ Estes pontos custaram tempo real de debug — não repetir os mesmos caminhos:
 16. **Domínio novo adicionado na Vercel não garante emissão automática do certificado SSL em tempo hábil.** Confirmado em 05/08/2026: DNS propagado e correto (`nslookup` batendo com o A record da Vercel) não foi suficiente — o site ficou fora do ar por ~7h, e `vercel certs ls` mostrava zero certificados pro domínio (não "ainda processando", literalmente nunca tentou). Verificação rápida e reaproveitável: `vercel certs ls` — se não aparecer o domínio depois de um tempo razoável, forçar com `vercel certs issue <domínio>` em vez de só esperar.
 17. **`id` duplicado entre dois formulários renderizados na mesma página quebra a associação `label for=`** (o navegador resolve pro primeiro elemento com aquele id — clicar no label do segundo campo foca o campo errado). Achado em `/settings` (`TenantForm` e `ProfileForm` ambos usando `id="name"`/`"document"`/`"phone"`). Ao adicionar um novo formulário numa página que já tem outro, conferir que nenhum `id` colide.
 18. **Env var nova na Vercel não entra em vigor na build já rodando — precisa de um redeploy depois de `vercel env add`.** Confirmado ao configurar o `ASAAS_WEBHOOK_SECRET` pendente (seção 7.1) em 21/07/2026: adicionar a variável via CLI não foi suficiente sozinho, foi preciso rodar `vercel --prod` de novo pra ela ficar disponível no runtime. Verificação simples e reaproveitável pra qualquer secret novo: `POST` na rota que o usa sem o header/valor esperado (deve dar 401/erro) e com o valor certo (deve dar 200) — comparar antes/depois do redeploy.
+19. **Biblioteca nativa carregada por `dlopen` não é rastreada pelo build — e falha SÓ em produção, EM SILÊNCIO.** O `sharp` resolve o binário da plataforma por caminho dinâmico (`@img/sharp-${plataforma}`), e esse binário carrega a `libvips` via `dlopen` do sistema operacional. Nenhum rastreador estático segue `dlopen`, então `@img/sharp-libvips-linux-x64` ficava de fora do pacote da função na Vercel: no Windows do desenvolvedor funcionava, em produção dava `ERR_DLOPEN_FAILED: libvips-cpp.so.8.18.3: cannot open shared object file`. Pior: a exceção era pega por um `catch` e virava "não consegui salvar agora, tente de novo" — o usuário tentou **cinco vezes** antes de reportar, e nem o build, nem o lint, nem os 870 testes, nem o deploy acusaram nada. Atingia a gravação de assinatura E o upload de logo (este quebrado sem ninguém ter notado). Corrigido com `outputFileTracingIncludes` no `next.config.ts`, incluindo **só** os binários `linux-x64` (a pasta `@img` inteira arrastaria Windows e macOS, ~50 MB por função). **Não dá para verificar isto no Windows:** o npm só instala o binário da plataforma local, então o glob não casa nada em dev — tentar instalar os de Linux com `npm install --os=linux --cpu=x64` troca os binários de *todos* os pacotes opcionais e quebra o build local (sumiu o `@parcel/watcher-win32-x64`). Por isso existe `src/lib/__tests__/sharp-empacotado.test.ts`, que confere o que dá para conferir sem deploy: que a config declara os binários, e que **todo arquivo que usa sharp está numa rota listada no rastreamento**. Usar sharp numa rota nova sem lembrar do `next.config` reintroduz o mesmo defeito com a mesma cara silenciosa.
 
 ---
 

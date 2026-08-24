@@ -139,11 +139,11 @@ export const MANUAL: readonly Secao[] = [
       geral(
         "papeis",
         "Quem pode o quê",
-        "Três perfis, do mais amplo ao mais restrito.",
+        "Oito cargos, do mais amplo ao mais restrito. O cargo define o que a pessoa enxerga e o que ela pode fazer.",
         [
           {
             tipo: "tabela",
-            cabecalho: ["Perfil", "Alcance"],
+            cabecalho: ["Cargo", "Alcance"],
             linhas: [
               [
                 "Proprietário",
@@ -153,16 +153,24 @@ export const MANUAL: readonly Secao[] = [
                 "Administrador",
                 "Faz tudo no dia a dia, inclusive definir o que a equipe vê. Não envia certificado digital.",
               ],
-              [
-                "Técnico",
-                "Vê só as abas que um administrador liberou, e dentro delas só as ações liberadas. É o perfil de quem está em campo.",
-              ],
+              ["Gerente", "Toca a operação inteira. Fica de fora só a cobrança da assinatura."],
+              ["Atendimento", "Atende o cliente: abre chamado, agenda, consulta o que já foi feito."],
+              ["Comercial", "Vende: orçamento, cliente, contrato recorrente."],
+              ["Financeiro", "Dinheiro entrando e saindo, mais a nota fiscal."],
+              ["Logística", "Peça, compra e fornecedor."],
+              ["Técnico", "Quem está em campo. É o cargo mais restrito por padrão."],
             ],
           },
           {
             tipo: "p",
             texto:
-              "Quem ajusta isso é você, em *5.4.1 Permissões* — em dois degraus: primeiro quais abas o técnico enxerga, depois quais ações ele executa dentro delas.",
+              "Os seis últimos são *configuráveis*: cada um tem o seu próprio conjunto de abas e ações, ajustado em *5.4.1 Permissões*. Só Proprietário e Administrador ficam de fora, porque não há o que configurar em quem já pode tudo.",
+          },
+          {
+            tipo: "atencao",
+            titulo: "Gerente não manda em tudo",
+            texto:
+              "Parece que deveria, mas ele é configurável como os outros — porque mais cedo ou mais tarde aparece a empresa que quer um gerente que não mexe na cobrança. A lista de quem ninguém consegue restringir depois tem de ficar curta.",
           },
         ]
       ),
@@ -389,6 +397,31 @@ export const MANUAL: readonly Secao[] = [
             titulo: "Reenviar a mesma planilha é seguro",
             texto:
               "Quem já está cadastrado não entra duas vezes. Se a sua planilha é maior que 2.000 linhas, divida em partes e importe uma de cada vez sem medo de duplicar.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "*Contratante — quando quem paga não é quem recebe o serviço.* Uma administradora fecha contrato com você, mas o serviço é feito em cada condomínio dela. Vale igual para seguradora e segurado, franquia e cada loja, construtora e cada obra.",
+          },
+          {
+            tipo: "passos",
+            titulo: "Como montar",
+            itens: [
+              "Cadastre a *contratante* normalmente — a administradora, a seguradora, a franqueadora.",
+              "Cadastre cada *cliente final* e escolha a contratante no campo *Contratante*.",
+              "Ao abrir a OS, escolha o cliente final: é lá que o serviço acontece. Um campo *Cobrar de* aparece, já preenchido com a contratante.",
+            ],
+          },
+          {
+            tipo: "p",
+            texto:
+              "A *nota fiscal sai no CNPJ de quem paga*, e não de onde o serviço foi feito. O documento mostra os dois lados: Contratante e Local do serviço.",
+          },
+          {
+            tipo: "atencao",
+            titulo: "Um nível só, e o extra pode ser cobrado direto",
+            texto:
+              "Subcliente não pode ter subcliente: administradora → condomínio, e para. E quando o cliente final paga direto um serviço extra, é só trocar o Cobrar de naquela OS — a nota acompanha.",
           },
         ]
       ),
@@ -751,16 +784,27 @@ export const MANUAL: readonly Secao[] = [
         "O que o técnico enxerga e o que ele pode fazer — em dois degraus.",
         [
           {
+            tipo: "p",
+            texto:
+              "No topo da tela você escolhe *qual cargo* está configurando. Cada um tem a sua própria configuração — mexer no Técnico não mexe no Financeiro.",
+          },
+          {
             tipo: "lista",
             itens: [
-              "*Abas que o técnico enxerga* — quais telas aparecem no menu dele.",
-              "*O que o técnico pode fazer* — dentro de uma aba liberada, quais ações ele executa.",
+              "*Abas que o cargo enxerga* — quais telas aparecem no menu de quem tem aquele cargo.",
+              "*O que ele pode fazer* — dentro de uma aba liberada, quais ações ele executa.",
             ],
           },
           {
             tipo: "p",
             texto:
-              "Vale para quem tem o papel de técnico; proprietário e administrador fazem tudo. A mudança entra em vigor na próxima vez que a pessoa carregar a página.",
+              "Proprietário e administrador fazem tudo e não aparecem aqui. A mudança entra em vigor na próxima vez que a pessoa carregar a página.",
+          },
+          {
+            tipo: "atencao",
+            titulo: "Cada cargo já vem com um padrão que faz sentido",
+            texto:
+              "Convidar alguém como Financeiro já abre o sistema no Financeiro, sem você configurar nada. O padrão é por cargo, e serve como ponto de partida — ajuste o que quiser a partir dele.",
           },
         ]
       ),
@@ -970,6 +1014,38 @@ export const MANUAL: readonly Secao[] = [
         ]
       ),
       geral(
+        "assistente",
+        "A assistente de voz",
+        "Um botão de microfone em toda tela do painel. Você fala, ela responde em voz e faz o que foi pedido. É um adicional — não vem nos planos.",
+        [
+          {
+            tipo: "lista",
+            titulo: "O que dá para pedir",
+            itens: [
+              "*Abrir telas* — “abre os orçamentos”, “vai pro estoque”, “me leva pro 3.2”.",
+              "*Consultar* — “quais ordens eu tenho hoje”, “histórico do cliente João”, “o que está faltando no estoque”.",
+              "*Registrar* — “inicia a 24”, “cria uma ordem pro Mercado São Jorge”, “adiciona testar pressão no checklist”.",
+            ],
+          },
+          {
+            tipo: "p",
+            texto:
+              "Ela só faz o que *você* poderia fazer clicando. Um técnico sem permissão de concluir não consegue concluir pela voz — a assistente nem oferece.",
+          },
+          {
+            tipo: "atencao",
+            titulo: "O que não se desfaz sempre para e pergunta",
+            texto:
+              "Concluir, faturar, emitir nota e apagar mostram uma frase com o número da OS e o nome do cliente, falada em voz alta, e esperam você confirmar. Reconhecimento de fala erra, e erra mais em obra barulhenta — a confirmação existe para você perceber que ela ouviu “apaga” quando você disse “acaba”.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "Se houver dois clientes com nome parecido, ela *pergunta qual* em vez de escolher. E cada empresa tem uma franquia de comandos por mês, mostrada no topo do painel dela.",
+          },
+        ]
+      ),
+      geral(
         "duvidas",
         "Dúvidas comuns",
         "As perguntas que mais aparecem, com a resposta curta.",
@@ -1007,6 +1083,13 @@ export const MANUAL: readonly Secao[] = [
             titulo: "“A nota fiscal não emite”",
             itens: [
               "Confira, nesta ordem: os dados fiscais estão completos em 3.4? O certificado foi enviado? Ele está dentro da validade? E o seu plano ainda tem nota disponível no mês?",
+            ],
+          },
+          {
+            tipo: "lista",
+            titulo: "“A nota saiu no nome errado”",
+            itens: [
+              "Confira o campo *Cobrar de* na OS. Quando o cliente tem contratante, a nota sai no CNPJ de quem paga — e o padrão é a contratante, não o cliente final.",
             ],
           },
           {

@@ -16,7 +16,8 @@
     "db:ensaio": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --script",
     "backup": "node --env-file=.env scripts/backup.mjs",
     "backup:provar": "node scripts/verificar-backup.mjs",
-    "backup:restaurar": "node --env-file=.env.restore scripts/restore.mjs"
+    "backup:restaurar": "node --env-file=.env.restore scripts/restore.mjs",
+    "manual:publico": "tsc src/lib/manual.ts --outDir .manual-gen --module commonjs --target es2020 --skipLibCheck && node scripts/manual-publico.mjs ./.manual-gen/manual.js manual-servicoos.html"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
