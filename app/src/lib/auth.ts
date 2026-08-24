@@ -11,6 +11,7 @@ import { redirect } from "next/navigation"
 import { sendWelcomeEmail } from "@/lib/resend"
 import { Prisma } from "@/generated/prisma/client"
 import { getTranslations } from "next-intl/server"
+import { abasPadraoDe, ehAdministrativo } from "@/lib/cargos"
 
 // Bônus de indicação pra quem se cadastra com um código válido — antes era
 // dias extra de trial; sem trial (o acesso agora exige assinatura paga),
@@ -261,6 +262,8 @@ export { ALL_TABS, ABAS_POR_RECURSO } from "./abas"
 export type { TabSlug } from "./abas"
 
 // Tabs technician gets by default (admin can change this per-tenant)
+/** @deprecated Use `abasPadraoDe(cargo)`. Mantido porque o valor do técnico não
+ *  pode mudar: toda empresa que já restringiu seus técnicos depende dele. */
 export const DEFAULT_TECHNICIAN_TABS: TabSlug[] = ["dashboard", "service-orders", "schedule"]
 
 export async function getAllowedTabs(tenantId: string, role: string): Promise<TabSlug[]> {
@@ -269,7 +272,7 @@ export async function getAllowedTabs(tenantId: string, role: string): Promise<Ta
     ABAS_POR_RECURSO.filter((a) => !recursos.includes(a.recurso)).map((a) => a.slug)
   )
 
-  if (role === "OWNER" || role === "ADMIN") {
+  if (ehAdministrativo(role)) {
     return ALL_TABS.map((t) => t.slug).filter((s) => !bloqueadas.has(s))
   }
 
@@ -278,15 +281,23 @@ export async function getAllowedTabs(tenantId: string, role: string): Promise<Ta
       where: { tenantId, role: role as never },
       select: { tab: true },
     }),
-    prisma.tenant.findUnique({ where: { id: tenantId }, select: { tabsConfigured: true } }),
+    prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { tabsConfiguredRoles: true },
+    }),
   ])
 
-  // Cai no padrão só quando a empresa NUNCA mexeu nisso. Antes a condição era
-  // apenas `perms.length === 0`, e aí desmarcar as 19 abas na tela gravava zero
-  // linhas — que eram lidas como "usar o padrão" e concediam 3 abas de volta. A
-  // tela prometia acesso nenhum e o código dava três.
-  const nuncaConfigurou = !tenant?.tabsConfigured && perms.length === 0
-  const base = nuncaConfigurou ? DEFAULT_TECHNICIAN_TABS : perms.map((p) => p.tab as TabSlug)
+  // Cai no padrão só quando a empresa NUNCA mexeu NESTE cargo. Antes a condição
+  // era apenas `perms.length === 0`, e aí desmarcar as 19 abas na tela gravava
+  // zero linhas — que eram lidas como "usar o padrão" e concediam 3 abas de
+  // volta. A tela prometia acesso nenhum e o código dava três.
+  //
+  // E é POR CARGO desde que passaram a existir vários: com um marcador único da
+  // empresa, configurar o técnico faria o financeiro ler "já configuraram" com
+  // zero linhas gravadas, e abrir o sistema com menu vazio.
+  const nuncaConfigurou =
+    !(tenant?.tabsConfiguredRoles ?? []).includes(role) && perms.length === 0
+  const base = nuncaConfigurou ? abasPadraoDe(role) : perms.map((p) => p.tab as TabSlug)
   return base.filter((s) => !bloqueadas.has(s))
 }
 
@@ -297,18 +308,21 @@ export async function getAllowedTabs(tenantId: string, role: string): Promise<Ta
  * para confirmar o óbvio custaria uma consulta em todo clique do dono.
  */
 export async function getAcoesPermitidas(tenantId: string, role: string): Promise<readonly Acao[]> {
-  if (role === "OWNER" || role === "ADMIN") return ACOES
+  if (ehAdministrativo(role)) return ACOES
 
   const [perms, tenant] = await Promise.all([
     prisma.actionPermission.findMany({
       where: { tenantId, role: role as never },
       select: { action: true },
     }),
-    prisma.tenant.findUnique({ where: { id: tenantId }, select: { actionsConfigured: true } }),
+    prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { actionsConfiguredRoles: true },
+    }),
   ])
 
   return acoesValendo(
-    tenant?.actionsConfigured ?? false,
+    (tenant?.actionsConfiguredRoles ?? []).includes(role),
     perms.map((p) => p.action).filter(ehAcao)
   )
 }

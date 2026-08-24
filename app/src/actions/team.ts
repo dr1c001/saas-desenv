@@ -10,11 +10,14 @@ import { sendTeamInviteEmail } from "@/lib/resend"
 import { getTranslator } from "@/lib/i18n"
 import { getTranslations } from "next-intl/server"
 import { translateFieldErrors } from "@/lib/validation"
+import { CARGOS_ATRIBUIVEIS } from "@/lib/cargos"
 
 const inviteSchema = z.object({
   name: z.string().min(2, "nameRequired"),
   email: z.string().email("invalidEmail"),
-  role: z.enum(["ADMIN", "TECHNICIAN"]),
+  // Todos os cargos atribuíveis. OWNER fora: é quem criou a conta, e não um
+  // cargo que se distribui.
+  role: z.enum(CARGOS_ATRIBUIVEIS as unknown as [string, ...string[]]),
   document: z.string().optional(),
   phone: z.string().optional(),
   street: z.string().optional(),
@@ -123,8 +126,12 @@ export async function inviteTeamMember(
       // Save user in DB
       await prisma.user.upsert({
         where: { id: data.id },
-        create: { id: data.id, name, email, role, tenantId, document: document || null, phone: phone || null },
-        update: { name, role, tenantId, document: document || null, phone: phone || null },
+        // `as never` na fronteira do Prisma: o zod já validou contra
+        // CARGOS_ATRIBUIVEIS, e o teste em lib/__tests__/cargos.test.ts
+        // garante que aquele catálogo e o enum do banco não divergem. Sem
+        // esse teste, o cast seria uma promessa vazia.
+        create: { id: data.id, name, email, role: role as never, tenantId, document: document || null, phone: phone || null },
+        update: { name, role: role as never, tenantId, document: document || null, phone: phone || null },
       })
       const hasAddress = street || number || city || state || zipCode || complement || district
       if (hasAddress) {
@@ -179,7 +186,7 @@ export async function inviteTeamMember(
   return { message: tt("errors.missingServiceKey") }
 }
 
-export async function updateTeamMemberRole(memberId: string, role: "ADMIN" | "TECHNICIAN") {
+export async function updateTeamMemberRole(memberId: string, role: string) {
   const { tenantId, userId, role: requesterRole } = await getTenant()
   await requireActiveSubscription(tenantId)
   if (requesterRole !== "OWNER" && requesterRole !== "ADMIN") return
@@ -188,7 +195,7 @@ export async function updateTeamMemberRole(memberId: string, role: "ADMIN" | "TE
   // runtime, então sem essa validação um ADMIN podia chamar isso com role
   // "OWNER" e se auto-promover. Também bloqueia mexer no próprio papel ou no
   // de um OWNER. (Achado em revisão de segurança 2026-07-19.)
-  const parsed = z.enum(["ADMIN", "TECHNICIAN"]).safeParse(role)
+  const parsed = z.enum(CARGOS_ATRIBUIVEIS as unknown as [string, ...string[]]).safeParse(role)
   if (!parsed.success) return
   if (memberId === userId) return
 
@@ -197,7 +204,7 @@ export async function updateTeamMemberRole(memberId: string, role: "ADMIN" | "TE
 
   await prisma.user.update({
     where: { id: memberId, tenantId },
-    data: { role: parsed.data },
+    data: { role: parsed.data as never },
   })
   revalidatePath("/team")
 }

@@ -282,6 +282,16 @@
     "rotulo": "Buscar tela por nome ou número",
     "semResultado": "Nada encontrado."
   },
+  "cargos": {
+    "OWNER": "Proprietário",
+    "ADMIN": "Administrador",
+    "GERENTE": "Gerente",
+    "ATENDIMENTO": "Atendimento",
+    "COMERCIAL": "Comercial",
+    "FINANCEIRO": "Financeiro",
+    "LOGISTICA": "Logística",
+    "TECHNICIAN": "Técnico"
+  },
   "certificado": {
     "title": "Certificado digital",
     "subtitle": "O certificado A1 da sua empresa. Sem ele a prefeitura não aceita a nota.",
@@ -502,6 +512,11 @@
     "roles": {
       "OWNER": "Proprietário",
       "ADMIN": "Administrador",
+      "GERENTE": "Gerente",
+      "ATENDIMENTO": "Atendimento",
+      "COMERCIAL": "Comercial",
+      "FINANCEIRO": "Financeiro",
+      "LOGISTICA": "Logística",
       "TECHNICIAN": "Técnico"
     },
     "serviceOrderStatus": {
@@ -2517,7 +2532,9 @@
             "equipamento": "Cadastrar equipamento do cliente"
           }
         }
-      }
+      },
+      "escolhaCargo": "Configurar qual cargo",
+      "configurando": "Mostrando o que o cargo {cargo} enxerga e pode fazer. Cada cargo tem a sua própria configuração."
     },
     "fiscal": {
       "title": "Configuração Fiscal — NFS-e",
@@ -2728,7 +2745,8 @@
         "districtLabel": "Bairro",
         "zipCodeLabel": "CEP",
         "cityLabel": "Cidade",
-        "stateLabel": "Estado (UF)"
+        "stateLabel": "Estado (UF)",
+        "acessoTotal": "acesso total"
       }
     },
     "rowActions": {

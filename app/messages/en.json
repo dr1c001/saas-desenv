@@ -282,6 +282,16 @@
     "rotulo": "Find a screen by name or number",
     "semResultado": "Nothing found."
   },
+  "cargos": {
+    "OWNER": "Owner",
+    "ADMIN": "Administrator",
+    "GERENTE": "Manager",
+    "ATENDIMENTO": "Front desk",
+    "COMERCIAL": "Sales",
+    "FINANCEIRO": "Finance",
+    "LOGISTICA": "Logistics",
+    "TECHNICIAN": "Technician"
+  },
   "certificado": {
     "title": "Digital certificate",
     "subtitle": "Your company's A1 certificate. Without it the city will not accept the invoice.",
@@ -501,7 +511,12 @@
     "genericError": "Something went wrong. Please try again.",
     "roles": {
       "OWNER": "Owner",
-      "ADMIN": "Admin",
+      "ADMIN": "Administrator",
+      "GERENTE": "Manager",
+      "ATENDIMENTO": "Front desk",
+      "COMERCIAL": "Sales",
+      "FINANCEIRO": "Finance",
+      "LOGISTICA": "Logistics",
       "TECHNICIAN": "Technician"
     },
     "serviceOrderStatus": {
@@ -2517,7 +2532,9 @@
             "equipamento": "Create client equipment"
           }
         }
-      }
+      },
+      "escolhaCargo": "Configure which role",
+      "configurando": "Showing what {cargo} can see and do. Each role has its own configuration."
     },
     "fiscal": {
       "title": "Tax Settings — NFS-e",
@@ -2728,7 +2745,8 @@
         "districtLabel": "Neighborhood",
         "zipCodeLabel": "ZIP code",
         "cityLabel": "City",
-        "stateLabel": "State"
+        "stateLabel": "State",
+        "acessoTotal": "full access"
       }
     },
     "rowActions": {

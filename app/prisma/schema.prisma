@@ -70,6 +70,12 @@ model Tenant {
   /// real da permissao por aba: desmarcar as 19 abas concedia 3.
   tabsConfigured          Boolean            @default(false)
   actionsConfigured       Boolean            @default(false)
+  /// QUAIS cargos ja foram configurados. Substitui os booleanos acima, que
+  /// serviam quando so o tecnico era configuravel: com varios cargos, um
+  /// booleano da empresa inteira faria configurar o tecnico deixar o
+  /// financeiro com menu vazio. Regra em lib/cargos.ts.
+  tabsConfiguredRoles     String[]           @default([])
+  actionsConfiguredRoles  String[]           @default([])
 
   /// Tetos ajustados PARA ESTA EMPRESA, por cima do que o plano da.
   ///
@@ -326,6 +332,11 @@ model UserAddress {
 enum UserRole {
   OWNER
   ADMIN
+  GERENTE
+  ATENDIMENTO
+  COMERCIAL
+  FINANCEIRO
+  LOGISTICA
   TECHNICIAN
 }
 

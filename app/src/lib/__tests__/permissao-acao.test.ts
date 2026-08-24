@@ -20,8 +20,20 @@ beforeEach(async () => {
   await testDb.reset()
 })
 
+// "Já configuraram isto?" passou a ser POR CARGO quando os cargos deixaram de
+// ser só três (lib/cargos.ts). O booleano continua no banco para não quebrar
+// leitura antiga, mas quem MANDA é a lista — e a migração fez o backfill de
+// quem já tinha configurado. Aqui os dados são montados na mão, então a lista
+// tem de ser montada também.
 async function empresa(dados: { actionsConfigured?: boolean; tabsConfigured?: boolean } = {}) {
-  return testDb.db.tenant.create({ data: { name: "Empresa", ...dados } })
+  return testDb.db.tenant.create({
+    data: {
+      name: "Empresa",
+      ...dados,
+      ...(dados.actionsConfigured ? { actionsConfiguredRoles: ["TECHNICIAN"] } : {}),
+      ...(dados.tabsConfigured ? { tabsConfiguredRoles: ["TECHNICIAN"] } : {}),
+    },
+  })
 }
 
 describe("ações permitidas ao técnico", () => {

@@ -18,7 +18,7 @@ type Perm = { acao: Acao; allowed: boolean }
  * o Prisma arrastaria o driver do Postgres para o navegador e o build quebraria
  * com "Can't resolve 'dns'", que não diz nada sobre a causa.
  */
-export function AcoesForm({ acoes }: { acoes: Perm[] }) {
+export function AcoesForm({ cargo, acoes }: { cargo: string; acoes: Perm[] }) {
   const t = useTranslations("settingsAdvanced.permissions.acoes")
   const tCommon = useTranslations("common")
   const [perms, setPerms] = useState(acoes)
@@ -33,7 +33,7 @@ export function AcoesForm({ acoes }: { acoes: Perm[] }) {
   function handleSave() {
     const permitidas = perms.filter((p) => p.allowed).map((p) => p.acao)
     startTransition(async () => {
-      await saveAcoes(permitidas)
+      await saveAcoes(cargo, permitidas)
       setSaved(true)
     })
   }

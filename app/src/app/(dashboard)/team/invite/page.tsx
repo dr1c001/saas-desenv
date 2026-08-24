@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
 import { CheckCircle2 } from "lucide-react"
+import { CARGOS_ATRIBUIVEIS } from "@/lib/cargos"
 
 export default function InvitePage() {
   const [state, action, isPending] = useActionState<TeamFormState, FormData>(inviteTeamMember, {})
@@ -62,8 +63,15 @@ export default function InvitePage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ADMIN">{t("form.roleAdminOption", { role: tc("roles.ADMIN") })}</SelectItem>
-                  <SelectItem value="TECHNICIAN">{t("form.roleTechnicianOption", { role: tc("roles.TECHNICIAN") })}</SelectItem>
+                  {/* Montado a partir do catálogo: um cargo novo em
+                      lib/cargos.ts aparece aqui sozinho, sem ninguém
+                      precisar lembrar de mexer nesta tela. */}
+                  {CARGOS_ATRIBUIVEIS.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {tc(`roles.${c}` as "roles.ADMIN")}
+                      {c === "ADMIN" ? ` — ${t("form.acessoTotal")}` : ""}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

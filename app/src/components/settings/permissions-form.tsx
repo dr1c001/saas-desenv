@@ -33,7 +33,15 @@ const NAV_KEY_BY_TAB: Record<string, string> = {
   referral: "referral",
 }
 
-export function PermissionsForm({ permissions }: { permissions: Perm[] }) {
+export function PermissionsForm({
+  cargo,
+  permissions,
+}: {
+  /** Qual cargo esta sendo configurado. Vem da URL, e vai junto ao gravar —
+   *  sem ele o formulario gravaria sempre por cima do tecnico. */
+  cargo: string
+  permissions: Perm[]
+}) {
   const t = useTranslations("settingsAdvanced.permissions")
   const tCommon = useTranslations("common")
   const tNav = useTranslations("nav")
@@ -49,7 +57,7 @@ export function PermissionsForm({ permissions }: { permissions: Perm[] }) {
   function handleSave() {
     const allowed = perms.filter((p) => p.allowed).map((p) => p.tab)
     startTransition(async () => {
-      await savePermissions(allowed)
+      await savePermissions(cargo, allowed)
       setSaved(true)
     })
   }
