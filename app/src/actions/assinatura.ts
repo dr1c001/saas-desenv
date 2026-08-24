@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
-import { comoDataUri, conferirAssinatura, type Recusa } from "@/lib/assinatura"
+import { comoDataUri, conferirAssinatura, dimensaoServe, type Recusa } from "@/lib/assinatura"
 
 export type EstadoAssinatura = { erro?: Recusa | "falhou"; ok?: boolean }
 
@@ -30,7 +30,17 @@ export async function salvarMinhaAssinatura(dataUri: string): Promise<EstadoAssi
     // com outra coisa dentro — mesmo raciocínio do logo da empresa. O tamanho
     // também é normalizado aqui: assinatura enorme desalinha o rodapé do PDF.
     const { default: sharp } = await import("sharp")
-    const png = await sharp(Buffer.from(dataUri.split(",")[1], "base64"))
+    const entrada = sharp(Buffer.from(dataUri.split(",")[1], "base64"))
+
+    // "É grande o suficiente para ser uma assinatura?" é pergunta sobre as
+    // DIMENSÕES, e só dá para responder depois de decodificar. Media-se isto
+    // por bytes antes, e bytes medem compressão: um traço simples e aparado
+    // comprime tanto que assinatura legítima era recusada, e desenhar maior
+    // não resolvia porque quase não muda o tamanho do arquivo.
+    const { width, height } = await entrada.metadata()
+    if (!dimensaoServe(width, height)) return { erro: "pequena" }
+
+    const png = await entrada
       .resize({ width: 600, height: 200, fit: "inside", withoutEnlargement: true })
       // Fundo transparente preservado: a assinatura sai sobre o papel do PDF,
       // não sobre um retângulo branco por cima da linha.

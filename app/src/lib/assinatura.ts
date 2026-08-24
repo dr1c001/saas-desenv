@@ -33,13 +33,34 @@ const PREFIXO = "data:image/png;base64,"
 export const MAX_BYTES = 600 * 1024
 
 /**
- * Piso.
+ * Piso — de ARQUIVO, não de desenho.
  *
- * Um PNG válido e minúsculo é o que sai de um toque acidental no quadro: um
- * ponto, ou uma linha de dois pixels. Gravar isso dá uma assinatura que parece
- * sujeira no documento, e a pessoa só descobre quando o cliente recebe.
+ * Só recusa o que não chega a ser um PNG: qualquer imagem real passa dos 100
+ * bytes só de cabeçalho e paleta.
+ *
+ * O piso ANTERIOR era de 200 bytes e media a coisa errada. Byte não mede
+ * tamanho de desenho, mede COMPRESSÃO — e um traço simples, aparado e sobre
+ * fundo transparente comprime tão bem que uma assinatura perfeitamente válida
+ * ficava abaixo do limite. A pessoa lia "o traço ficou pequeno demais",
+ * desenhava maior, e continuava sendo recusada, porque desenhar maior quase
+ * não muda o tamanho do arquivo.
+ *
+ * "É grande o suficiente para ser uma assinatura?" é pergunta sobre as
+ * DIMENSÕES da imagem, e ela é feita depois de decodificar — ver
+ * `MIN_LARGURA`/`MIN_ALTURA` e o uso em actions/assinatura.ts.
  */
-export const MIN_BYTES = 200
+export const MIN_BYTES = 100
+
+/** Dimensões mínimas do desenho, em pixels, medidas na imagem já decodificada.
+ *  Um traço mais estreito que isto é um toque acidental, e sairia como sujeira
+ *  no documento que vai para o cliente. */
+export const MIN_LARGURA = 24
+export const MIN_ALTURA = 8
+
+/** O desenho tem tamanho de assinatura? */
+export function dimensaoServe(largura?: number, altura?: number): boolean {
+  return (largura ?? 0) >= MIN_LARGURA && (altura ?? 0) >= MIN_ALTURA
+}
 
 export type Recusa = "formato" | "grande" | "pequena"
 

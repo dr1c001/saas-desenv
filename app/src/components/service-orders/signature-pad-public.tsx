@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react"
 import SignatureCanvas from "react-signature-canvas"
+import { useQuadroNoTamanhoDaCaixa } from "@/components/shared/usar-quadro"
 import { CheckCircle2, RotateCcw, PenLine } from "lucide-react"
 import { getTranslator } from "@/lib/i18n"
 
@@ -21,6 +22,10 @@ export function SignaturePadPublic({ orderId, clientToken, existingSignatureUrl,
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // O buffer do canvas segue a caixa. Sem isto o traço é gravado numa escala
+  // diferente da que o dedo enxerga.
+  useQuadroNoTamanhoDaCaixa(sigRef, !saved && !existingSignatureUrl)
 
   async function handleSave() {
     if (!sigRef.current || sigRef.current.isEmpty()) {
@@ -65,7 +70,10 @@ export function SignaturePadPublic({ orderId, clientToken, existingSignatureUrl,
         <SignatureCanvas
           ref={sigRef}
           penColor="black"
-          canvasProps={{ width: 560, height: 160, className: "w-full" }}
+          // Tamanho pelo CSS, e o buffer segue a caixa. O buffer fixo de 560
+          // que ficava aqui era esticado para a largura do celular, e o traço
+          // saía deslocado do dedo.
+          canvasProps={{ className: "w-full h-40 touch-none" }}
         />
       </div>
       {error && <p className="text-xs text-red-500">{error}</p>}

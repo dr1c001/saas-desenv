@@ -7,6 +7,7 @@ import { CheckCircle2, PenLine, RotateCcw, Trash2 } from "lucide-react"
 import { apagarMinhaAssinatura, salvarMinhaAssinatura } from "@/actions/assinatura"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { useQuadroNoTamanhoDaCaixa } from "@/components/shared/usar-quadro"
 
 /**
  * O quadro onde cada pessoa desenha a assinatura dela.
@@ -22,6 +23,10 @@ export function AssinaturaForm({ atual }: { atual: string | null }) {
   const [gravada, setGravada] = useState(atual)
   const [erro, setErro] = useState<string | null>(null)
   const [pendente, iniciar] = useTransition()
+
+  // Sem isto o desenho é gravado num buffer de 300x150 esticado para a
+  // largura da caixa, e o traço cai fora — nada era salvo.
+  useQuadroNoTamanhoDaCaixa(quadro, !gravada)
 
   function salvar() {
     setErro(null)
