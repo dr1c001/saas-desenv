@@ -66,7 +66,7 @@ export function BuscaAbas({
   }
 
   return (
-    <div className="relative px-2 pb-2">
+    <div className="relative">
       <div className="relative">
         <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <input
@@ -92,7 +92,7 @@ export function BuscaAbas({
       {foco && texto.trim() !== "" && (
         <ul
           role="listbox"
-          className="absolute inset-x-2 z-20 mt-1 max-h-72 overflow-y-auto rounded-md border bg-popover p-1 shadow-md"
+          className="absolute inset-x-0 z-20 mt-1 max-h-72 overflow-y-auto rounded-md border bg-popover p-1 shadow-md"
         >
           {achados.length === 0 ? (
             <li className="px-2 py-1.5 text-xs text-muted-foreground">{tb("semResultado")}</li>

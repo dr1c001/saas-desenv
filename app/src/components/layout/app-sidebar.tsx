@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
 import { useTranslations } from "next-intl"
 import {
   LayoutDashboard,
@@ -23,8 +22,6 @@ import {
   ShieldAlert,
   FileText,
   CreditCard,
-  Search,
-  X,
   Gift,
   Landmark,
   ListPlus,
@@ -34,6 +31,7 @@ import {
   CalendarSync,
   Package,
   ShoppingCart,
+  CircleQuestionMark,
 } from "lucide-react"
 import {
   Sidebar,
@@ -50,6 +48,13 @@ import {
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import type { TabSlug } from "@/lib/auth"
+import {
+  codigoDaAba,
+  codigoDaRota,
+  codigoDaTelaAtual,
+  compararCodigo,
+} from "@/lib/codigos-abas"
+import { ancoraDoCodigo } from "@/lib/manual"
 import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { BuscaAbas } from "@/components/layout/busca-abas"
@@ -95,19 +100,46 @@ type Props = {
   temFiliais?: boolean
 }
 
+/** O número da tela, na frente do nome. Fonte monoespaçada e largura fixa para
+ *  os números formarem coluna — é o que deixa a lista escaneável pelo código. */
+function Codigo({ valor }: { valor: string | null }) {
+  if (!valor) return null
+  return (
+    <span className="w-9 shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
+      {valor}
+    </span>
+  )
+}
+
 export function AppSidebar({ allowedTabs, role, isSuperAdmin, temApi, temFiliais }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const t = useTranslations()
   const allowedSet = new Set(allowedTabs)
-  const [search, setSearch] = useState("")
+  const ehAdmin = role === "OWNER" || role === "ADMIN"
 
+  // A ajuda abre no verbete da tela em que a pessoa ESTÁ. Manual que abre no
+  // começo obriga a procurar de novo o que ela já tinha na frente.
+  const codigoAtual = codigoDaTelaAtual(pathname)
+  const ajudaDaqui = codigoAtual ? `/ajuda#${ancoraDoCodigo(codigoAtual)}` : "/ajuda"
+
+  // Ordenado PELO CÓDIGO. Com o número à vista, a ordem antiga (1.6, 2.1, 3.2,
+  // 1.1, 2.2…) faria a numeração parecer aleatória e tiraria o sentido de
+  // mostrá-la. Em ordem, o menu e os atalhos contam a mesma história.
   const visibleItems = NAV_ITEMS.filter((item) => allowedSet.has(item.slug))
-  const filteredItems = search.trim()
-    ? visibleItems.filter((item) =>
-        t(`nav.${item.titleKey}` as "nav.dashboard").toLowerCase().includes(search.toLowerCase())
-      )
-    : visibleItems
+    .map((item) => ({ ...item, codigo: codigoDaAba(item.slug) }))
+    .sort((a, b) => compararCodigo(a.codigo ?? "", b.codigo ?? ""))
+
+  // Telas de administração. Ficavam FIXAS no rodapé, que empurrava Configurações
+  // e Sair para fora da tela em monitor baixo. Agora rolam junto com o resto.
+  const itensAdmin = [
+    isSuperAdmin && { href: "/admin", icon: ShieldAlert, titleKey: "platformAdmin" },
+    ehAdmin && { href: "/settings/permissions", icon: Shield, titleKey: "permissions" },
+    ehAdmin && { href: "/settings/fields", icon: ListPlus, titleKey: "customFields" },
+    ehAdmin && temFiliais && { href: "/settings/filiais", icon: Building2, titleKey: "filiais" },
+    ehAdmin && temApi && { href: "/settings/api", icon: Plug, titleKey: "apiKeys" },
+    ehAdmin && { href: "/settings/vocabulary", icon: Languages, titleKey: "vocabulary" },
+  ].filter(Boolean) as { href: string; icon: React.ElementType; titleKey: string }[]
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -128,135 +160,103 @@ export function AppSidebar({ allowedTabs, role, isSuperAdmin, temApi, temFiliais
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-4 space-y-3">
+      <SidebarHeader className="p-4 pb-0 space-y-3">
         <div className="flex items-center justify-between">
           <span className="font-bold text-lg">ServiçoOS</span>
-          <Badge variant="outline" className="text-xs">
-            {t(`common.roles.${role}` as "common.roles.OWNER")}
-          </Badge>
-        </div>
-        {/* Barra de pesquisa */}
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            placeholder={t("nav.searchPlaceholder")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-md border bg-background px-8 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className="text-xs">
+              {t(`common.roles.${role}` as "common.roles.OWNER")}
+            </Badge>
+            {/* Fica no cabeçalho, e não na lista: ajuda não é uma tela entre
+                outras, é o socorro que precisa estar à mão em qualquer uma. */}
+            <Link
+              href={ajudaDaqui}
+              aria-label={t("ajuda.abrir")}
+              title={t("ajuda.abrir")}
+              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
             >
-              <X className="size-3.5" />
-            </button>
-          )}
+              <CircleQuestionMark className="size-4" />
+            </Link>
+          </div>
         </div>
+        {/* UMA barra de busca. A que existia aqui antes filtrava a lista só pelo
+            nome, e convivia com esta logo abaixo — duas caixas de pesquisa
+            lado a lado, com comportamentos diferentes. Esta atende os dois
+            casos: aceita o número da aba e o nome, com ou sem acento. */}
+        <BuscaAbas abasPermitidas={allowedTabs} ehAdmin={ehAdmin} />
       </SidebarHeader>
-
-      {/* A busca por número ou nome. Fica no topo do conteúdo, e não no
-          cabeçalho, para não competir com o nome da empresa. */}
-      <BuscaAbas
-        abasPermitidas={allowedTabs}
-        ehAdmin={role === "OWNER" || role === "ADMIN"}
-      />
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>
-            {search ? t("nav.resultsCount", { count: filteredItems.length }) : t("nav.menu")}
-          </SidebarGroupLabel>
+          <SidebarGroupLabel>{t("nav.menu")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {filteredItems.length === 0 && (
-                <p className="px-3 py-2 text-xs text-muted-foreground">{t("nav.noResults")}</p>
-              )}
-              {filteredItems.map((item) => (
+              {visibleItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     render={<Link href={item.href} />}
                     isActive={pathname.startsWith(item.href)}
                   >
-                    <item.icon className="size-4" />
-                    <span>{t(`nav.${item.titleKey}` as "nav.dashboard")}</span>
+                    <item.icon className="size-4 shrink-0" />
+                    <Codigo valor={item.codigo} />
+                    <span className="truncate">{t(`nav.${item.titleKey}` as "nav.dashboard")}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {itensAdmin.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>{t("nav.administration")}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {itensAdmin.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      render={<Link href={item.href} />}
+                      isActive={pathname === item.href}
+                    >
+                      <item.icon className="size-4 shrink-0" />
+                      <Codigo valor={codigoDaRota(item.href)} />
+                      <span className="truncate">
+                        {t(`nav.${item.titleKey}` as "nav.dashboard")}
+                      </span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+                {/* Tema é preferência do dispositivo (só de quem está usando),
+                    então fica aqui. Idioma é decisão da empresa inteira e vive
+                    em Configurações, com confirmação — um clique acidental aqui
+                    já deixou a conta de uma cliente em inglês. (Ver 7.2.1.) */}
+                <ThemeToggle />
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
-      <SidebarFooter>
+      {/* Só estas duas ficam fixas: Configurações é para onde se volta quando
+          algo precisa ser ajustado, e Sair não pode depender de rolar até o fim
+          de uma lista de vinte itens. */}
+      <SidebarFooter className="border-t">
         <SidebarMenu>
-          {/* Tema é preferência do dispositivo (só de quem está usando), então
-              fica aqui. Idioma é decisão da empresa inteira e vive em
-              Configurações, com confirmação — um clique acidental aqui já
-              deixou a conta de uma cliente em inglês. (Ver seção 7.2.1.) */}
-          <ThemeToggle />
-          {/* O painel do dono da plataforma existia desde sempre, mas sem link
-              nenhum em lugar nenhum — só se chegava digitando /admin na barra
-              de endereço. (Notado pelo usuário em 10/08/2026.) */}
-          {isSuperAdmin && (
-            <SidebarMenuItem>
-              <SidebarMenuButton render={<Link href="/admin" />}>
-                <ShieldAlert className="size-4" />
-                <span>{t("nav.platformAdmin")}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )}
-          {(role === "OWNER" || role === "ADMIN") && (
-            <SidebarMenuItem>
-              <SidebarMenuButton render={<Link href="/settings/permissions" />}>
-                <Shield className="size-4" />
-                <span>{t("nav.permissions")}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )}
-          {(role === "OWNER" || role === "ADMIN") && (
-            <SidebarMenuItem>
-              <SidebarMenuButton render={<Link href="/settings/fields" />}>
-                <ListPlus className="size-4" />
-                <span>{t("nav.customFields")}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )}
-          {(role === "OWNER" || role === "ADMIN") && temFiliais && (
-            <SidebarMenuItem>
-              <SidebarMenuButton render={<Link href="/settings/filiais" />}>
-                <Building2 className="size-4" />
-                <span>{t("nav.filiais")}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )}
-          {(role === "OWNER" || role === "ADMIN") && temApi && (
-            <SidebarMenuItem>
-              <SidebarMenuButton render={<Link href="/settings/api" />}>
-                <Plug className="size-4" />
-                <span>{t("nav.apiKeys")}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )}
-          {(role === "OWNER" || role === "ADMIN") && (
-            <SidebarMenuItem>
-              <SidebarMenuButton render={<Link href="/settings/vocabulary" />}>
-                <Languages className="size-4" />
-                <span>{t("nav.vocabulary")}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )}
           <SidebarMenuItem>
-            <SidebarMenuButton render={<Link href="/settings" />}>
-              <Settings className="size-4" />
-              <span>{t("nav.settings")}</span>
+            <SidebarMenuButton
+              render={<Link href="/settings" />}
+              isActive={pathname === "/settings"}
+            >
+              <Settings className="size-4 shrink-0" />
+              <Codigo valor={codigoDaRota("/settings")} />
+              <span className="truncate">{t("nav.settings")}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleSignOut}>
-              <LogOut className="size-4" />
-              <span>{t("nav.signOut")}</span>
+              <LogOut className="size-4 shrink-0" />
+              <span className="w-9 shrink-0" aria-hidden />
+              <span className="truncate">{t("nav.signOut")}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

@@ -1,356 +1,79 @@
 {
-  "common": {
-    "save": "Save",
-    "saving": "Saving...",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "edit": "Edit",
-    "view": "View",
-    "actions": "Actions",
-    "create": "Create",
-    "search": "Search",
-    "back": "Back",
-    "loading": "Loading...",
-    "confirm": "Confirm",
-    "close": "Close",
-    "yes": "Yes",
-    "no": "No",
-    "optional": "optional",
-    "required": "required",
-    "noPermission": "You don't have permission.",
-    "notFound": "Not found.",
-    "genericError": "Something went wrong. Please try again.",
-    "roles": {
-      "OWNER": "Owner",
-      "ADMIN": "Admin",
-      "TECHNICIAN": "Technician"
-    },
-    "serviceOrderStatus": {
-      "OPEN": "Open",
-      "IN_PROGRESS": "In progress",
-      "DONE": "Completed",
-      "INVOICED": "Invoiced",
-      "CANCELLED": "Cancelled"
-    },
-    "quoteStatus": {
-      "DRAFT": "Draft",
-      "SENT": "Sent",
-      "APPROVED": "Approved",
-      "REJECTED": "Rejected"
-    },
-    "clientStatus": {
-      "ACTIVE": "Active",
-      "INACTIVE": "Inactive",
-      "DEFAULTER": "Delinquent"
-    },
-    "paymentStatus": {
-      "PENDING": "Pending",
-      "PAID": "Paid",
-      "OVERDUE": "Overdue"
-    },
-    "unassigned": "Unassigned"
+  "ajuda": {
+    "title": "Help",
+    "subtitle": "What each screen does, what you can do there, and the traps that only show up later.",
+    "indice": "Index",
+    "abrir": "Help for this screen",
+    "soEmPortugues": "The manual is only available in Portuguese for now."
   },
-  "planFeatures": {
-    "starter": [
-      "Up to 3 users",
-      "50 jobs per month",
-      "8 tax invoices per month",
-      "Quotes and PDF",
-      "Automatic receipts",
-      "Basic reports",
-      "Email support"
-    ],
-    "pro": [
-      "Everything in Starter",
-      "Up to 10 users",
-      "200 jobs per month",
-      "70 tax invoices per month",
-      "Live GPS map",
-      "Checklist + digital signature",
-      "Advanced reports",
-      "Priority support"
-    ],
-    "enterprise": [
-      "Everything in Pro",
-      "Unlimited users",
-      "Unlimited jobs",
-      "Dedicated onboarding",
-      "Integration API",
-      "Branches (multi-location)",
-      "24h support via WhatsApp"
-    ]
-  },
-  "legal": {
-    "terms": {
-      "metaTitle": "Terms of Use — ServiçoOS",
-      "title": "Terms of Use",
-      "lastUpdated": "Last updated: August 21, 2026",
-      "section1": {
-        "title": "1. Who provides this service",
-        "p1": "ServiçoOS is operated by <strong>ADRIEL WELLINGTON RODRIGUES</strong>, registered under CNPJ No. <strong>53.325.011/0001-08</strong>, hereinafter referred to as “ServiçoOS,” “we,” or “provider.”",
-        "p2": "By creating an account or using the system in any way, you (the “user” or “customer”) agree to these Terms of Use and to our <privacyLink>Privacy Policy</privacyLink>. If you do not agree with any part of them, please do not use the service."
-      },
-      "section2": {
-        "title": "2. What ServiçoOS is",
-        "p1": "ServiçoOS is a management system (SaaS) for service companies, offering, among other features: client management (CRM), quotes, service orders, financial management, scheduling, a real-time technician location map, checklists and digital signatures, electronic service invoice issuance (NFS-e), and WhatsApp integration.",
-        "p2": "The service is provided “as is” and may be updated, modified, or have features added or removed at any time, always seeking to maintain or improve the user experience."
-      },
-      "section3": {
-        "title": "3. Registration and account",
-        "p1": "To use ServiçoOS you must create an account with true, complete, and up-to-date information about yourself and your company. You are responsible for keeping your password confidential and for all activity that occurs on your account.",
-        "p2": "Each account represents a company (“tenant”) and can have multiple users with different permission levels ({owner}, {admin}, {technician}), controlled by the account owner."
-      },
-      "section4": {
-        "title": "4. Subscription and access",
-        "p1": "Access to ServiçoOS features requires an active paid plan. There is no free trial period: a newly created account stays locked until the first payment is confirmed.",
-        "p2": "If the subscription is cancelled or goes unpaid, access to the features is blocked — registered data remains saved and is automatically restored as soon as a plan is subscribed to again. In case of late payment, there is a grace period before the block, shown in the billing area of the system."
-      },
-      "section5": {
-        "title": "5. Plans, payment, and billing",
-        "p1": "The available plans, prices, and included features are shown on the <planosLink>plans</planosLink> page and in the subscription area within the system, and may be adjusted upon prior notice.",
-        "p2": "Payments are processed by a payment partner (gateway) and can be made via bank slip or credit card, on a monthly or annual cycle. ServiçoOS does not store complete credit card data — processing is handled entirely by the payment partner.",
-        "p3": "Billing is recurring and automatic according to the chosen cycle, until the subscription is cancelled. In the event of payment failure or delay, access may be suspended until the situation is resolved."
-      },
-      "section6": {
-        "title": "6. Cancellation and refunds",
-        "p1": "You may cancel your subscription at any time directly through the system's subscription area, with no penalty. Cancellation stops automatic renewal; access to paid features remains available until the end of the period already paid for.",
-        "p2": "Amounts already paid for current periods are not refunded, except where required by law or by ServiçoOS's express commercial decision."
-      },
-      "section7": {
-        "title": "7. Referral program",
-        "p1": "Users can refer ServiçoOS to third parties through an exclusive link. Whoever signs up through a referral receives a discount on their first payment; whoever refers someone receives a discount when the referred person purchases a paid plan. Current percentages are shown in the referral area of the system and may be adjusted at any time, with no retroactive effect on benefits already granted."
-      },
-      "section8": {
-        "title": "8. Your data and your clients' data",
-        "p1": "All content you enter into the system — client records, service orders, financial data, quotes, documents, and attachments — belongs to you or your company. ServiçoOS acts solely as a processor of this data, storing and processing it to enable the system to function, as detailed in our <privacyLink>Privacy Policy</privacyLink>.",
-        "p2": "You are responsible for ensuring that you have an appropriate legal basis and consent to enter third-party data (your clients, technicians, and suppliers) into the system.",
-        "p3": "<strong>Our team's access to your account.</strong> To provide technical support, investigate failures or fix issues you report, authorized members of our team may access your account and view the data it contains. Such access is limited to those purposes and follows these rules:",
-        "i1": "Granted only to authorized staff, by specific role, and revoked immediately upon termination;",
-        "i2": "Every access is recorded in an audit log identifying who accessed it, which company, and the date and time;",
-        "i3": "The support session expires automatically after 1 hour;",
-        "i4": "Our staff are bound by a contractual confidentiality obligation;",
-        "i5": "We do not use your account data for any purpose beyond the requested support or service maintenance.",
-        "p4": "You may request, at any time, the history of support accesses performed on your account, through the contact email listed at the end of these Terms."
-      },
-      "section9": {
-        "title": "9. Acceptable use",
-        "intro": "By using ServiçoOS, you agree not to:",
-        "item1": "Use the system for illegal purposes or in ways that violate third-party rights;",
-        "item2": "Attempt to access data belonging to other companies (tenants) without authorization;",
-        "item3": "Attempt to bypass the system's technical, security, or usage limits;",
-        "item4": "Reverse engineer, copy, or resell the system without authorization;",
-        "item5": "Use the system to send spam or unsolicited communications via WhatsApp/email."
-      },
-      "section10": {
-        "title": "10. Service availability",
-        "p1": "We make reasonable efforts to keep the system available and functioning properly, but we do not guarantee uninterrupted availability (100% uptime). Scheduled maintenance, instability of third-party providers (hosting, database, payment gateway), or force majeure events may cause temporary unavailability."
-      },
-      "section11": {
-        "title": "11. Intellectual property",
-        "p1": "The software, brand, design, and other elements of ServiçoOS are the property of the provider identified in section 1. The user is granted only a non-exclusive, non-transferable, and revocable license to use it, limited to the term of the subscription."
-      },
-      "section12": {
-        "title": "12. Limitation of liability",
-        "p1": "To the fullest extent permitted by law, ServiçoOS is not liable for indirect damages, loss of profits, or loss of data resulting from misuse of the system, failures in the user's internet connection, or unavailability of integrated third-party services (payment gateway, email provider, WhatsApp, invoice issuer).",
-        "p2": "We recommend that users keep their own copies/backups of especially sensitive documents and data, in addition to the backups maintained by ServiçoOS."
-      },
-      "section13": {
-        "title": "13. Termination",
-        "p1": "ServiçoOS may suspend or terminate accounts that violate these Terms of Use, with prior notice when possible. Users may terminate their account at any time by contacting our support channel."
-      },
-      "section14": {
-        "title": "14. Changes to these terms",
-        "p1": "We may update these Terms of Use periodically. Material changes will be communicated by email or notice within the system. Continued use after a change implies agreement with the new terms."
-      },
-      "section15": {
-        "title": "15. Governing law and jurisdiction",
-        "p1": "These Terms are governed by the laws of the Federative Republic of Brazil. The courts of the judicial district of the provider identified in section 1 are elected to settle any disputes arising from these Terms, with waiver of any other, however privileged it may be."
-      },
-      "section16": {
-        "title": "16. Contact",
-        "p1": "Questions about these Terms of Use can be sent to <email>olisuporte1@gmail.com</email>."
-      }
+  "apiKeys": {
+    "title": "Integration API",
+    "subtitle": "Connect ServiçoOS to your website, your ERP, or an automation. Enterprise plan feature.",
+    "nomeLabel": "Key name",
+    "nomePlaceholder": "e.g. Website form",
+    "criarBotao": "Create key",
+    "apareceUmaVez": "Copy it now. This key is shown once — we only store a digest of it, and not even we can show it again.",
+    "copiar": "Copy",
+    "copiada": "Copied",
+    "jaGuardei": "I saved it",
+    "vazio": "No keys created yet.",
+    "revogar": "Revoke",
+    "revogada": "Revoked",
+    "nuncaUsada": "Never used",
+    "ultimoUso": "Last used {data}",
+    "rodape": "A key grants read and write access to your company's data. Treat it like a password: never put it in public code or send it over chat. If in doubt, revoke it and create another.",
+    "erro": {
+      "semPermissao": "Only the owner or an admin can create a key.",
+      "semPlano": "The integration API is an Enterprise plan feature.",
+      "nomeVazio": "Name the key, so you know later where it is being used.",
+      "limite": "You already have 5 active keys. Revoke an unused one before creating another."
     },
-    "privacy": {
-      "metaTitle": "Privacy Policy — ServiçoOS",
-      "title": "Privacy Policy",
-      "lastUpdated": "Last updated: July 20, 2026",
-      "intro": "This Privacy Policy describes how ServiçoOS collects, uses, stores, and protects personal data, in accordance with Brazil's General Data Protection Law (Law No. 13.709/2018 — LGPD).",
-      "section1": {
-        "title": "1. Who is the data controller",
-        "p1": "The controller of the personal data processed by this system is <strong>ADRIEL WELLINGTON RODRIGUES</strong>, registered under CNPJ No. <strong>53.325.011/0001-08</strong>, operator of ServiçoOS."
-      },
-      "section2": {
-        "title": "2. What data we collect",
-        "userDataLabel": "User and company registration data:",
-        "userDataItem1": "Name, email, and password (stored encrypted, never in plain text);",
-        "userDataItem2": "Phone number, CPF/CNPJ, and company address (when provided);",
-        "userDataItem3": "Tax data for invoice issuance (CNPJ, municipal registration number, ISS tax rate).",
-        "systemDataLabel": "Data entered by the user while using the system:",
-        "systemDataItem1": "Client, provider, and technician records (name, contact information, address, ID document);",
-        "systemDataItem2": "Service orders, quotes, attachments, photos, and clients' digital signatures;",
-        "systemDataItem3": "Financial data (revenue, expenses, receipts);",
-        "systemDataItem4": "Geographic location (GPS) of technicians, collected during work hours to display on the service order tracking map;",
-        "systemDataItem5": "Messages and phone number used in the WhatsApp integration, when enabled.",
-        "autoDataLabel": "Data collected automatically:",
-        "autoDataItem1": "Essential session/authentication cookies (we do not use advertising tracking cookies);",
-        "autoDataItem2": "Technical access logs (IP address, date and time, pages accessed), for security and diagnostic purposes."
-      },
-      "section3": {
-        "title": "3. What we use the data for",
-        "intro": "We use the data we collect for the following purposes:",
-        "item1": "Enabling the system and the contracted features to function (contract performance);",
-        "item2": "Authenticating access and protecting accounts against unauthorized use;",
-        "item3": "Processing payments and issuing invoices and charges;",
-        "item4": "Sending operational communications (registration confirmation, billing, trial expiration, team invitations) and, when applicable, satisfaction surveys (NPS);",
-        "item5": "Displaying field technicians' location to the {owner}/{admin} of the contracting company, exclusively while using the system;",
-        "item6": "Complying with legal and regulatory obligations, including tax and accounting requirements;",
-        "item7": "Preventing fraud and ensuring platform security."
-      },
-      "section4": {
-        "title": "4. Who we share data with",
-        "p1": "We do not sell personal data. We share strictly necessary data with service providers (processors) who help us operate ServiçoOS:",
-        "table": {
-          "serviceHeader": "Service",
-          "purposeHeader": "Purpose",
-          "supabase": "User authentication and database",
-          "vercel": "Application hosting",
-          "asaas": "Payment processing (bank slip, credit card)",
-          "nfeio": "Issuance of electronic service invoices (NFS-e)",
-          "resend": "Sending transactional emails",
-          "zapi": "WhatsApp messaging integration (when enabled by the company)"
-        },
-        "p2": "We may also share data when required by law, court order, or to protect the rights, safety, or property of ServiçoOS or third parties."
-      },
-      "section5": {
-        "title": "5. International data transfer",
-        "p1": "Our core infrastructure (database and hosting) is located in data centers in the São Paulo, Brazil region. Some of the processors listed in section 4 are international companies that may process data in other countries as part of their global operations. In such cases, we seek to use processors with data protection practices compatible with the LGPD."
-      },
-      "section6": {
-        "title": "6. How long we keep data",
-        "p1": "We keep data for as long as your account remains active. Tax and financial data may be retained for an additional period to comply with legal obligations (generally 5 years, under Brazilian tax law). After the account is closed and the legal retention periods have elapsed, data is deleted or anonymized."
-      },
-      "section7": {
-        "title": "7. Your rights as a data subject",
-        "intro": "Under Article 18 of the LGPD, you have the right to:",
-        "item1": "Confirmation that processing exists and access to your data;",
-        "item2": "Correction of incomplete, inaccurate, or outdated data;",
-        "item3": "Anonymization, blocking, or deletion of unnecessary data or data processed in noncompliance with the law;",
-        "item4": "Portability of your data to another service provider;",
-        "item5": "Deletion of data processed with your consent (except where legal retention applies);",
-        "item6": "Information about the entities with which your data has been shared;",
-        "item7": "Withdrawal of consent, when applicable;",
-        "item8": "Review of decisions made solely on the basis of automated processing."
-      },
-      "section8": {
-        "title": "8. How to exercise your rights",
-        "p1": "The account owner (Owner profile) can download a copy of all company data at any time, on a self-service basis, under Settings → Export data. For other rights (correction, deletion, withdrawal of consent, clarifications), contact us at <email>olisuporte1@gmail.com</email> — this is also the contact channel for ServiçoOS's data protection officer (DPO). We will respond within a reasonable time, as required by the LGPD."
-      },
-      "section9": {
-        "title": "9. Information security",
-        "p1": "We adopt technical and administrative measures to protect personal data, including encrypted passwords, secure connections (HTTPS/TLS), permission-based access control, and data isolation between different companies (tenants). Despite these efforts, no system is 100% immune to incidents — in the event of a significant security incident, we will notify data subjects and the competent authority as required by the LGPD."
-      },
-      "section10": {
-        "title": "10. Cookies",
-        "p1": "We use only essential cookies, necessary to keep your session authenticated and to ensure the system functions properly. We do not use advertising or social media tracking cookies."
-      },
-      "section11": {
-        "title": "11. Children's data",
-        "p1": "ServiçoOS is a professional/business tool and is not directed at minors. We do not knowingly collect data from children or teenagers."
-      },
-      "section12": {
-        "title": "12. Changes to this policy",
-        "p1": "We may update this Privacy Policy periodically. Material changes will be communicated by email or notice within the system, with the date at the top of this page updated accordingly."
-      },
-      "section13": {
-        "title": "13. Data Protection Officer (DPO)",
-        "p1": "For all matters related to personal data protection, the data protection officer can be contacted at <email>olisuporte1@gmail.com</email>."
-      }
+    "docs": {
+      "title": "How to use",
+      "intro": "Every call needs the key in the header. Responses are JSON, and error objects carry a stable code — read the code, not the text.",
+      "baseUrl": "Base URL",
+      "autenticacao": "Authentication",
+      "endpoints": "Available endpoints",
+      "exemplo": "Example: open a [[os]]",
+      "paginacao": "Pages",
+      "paginacaoTexto": "Use limit (up to 100) and cursor. The response returns next_cursor; when it is null, you have reached the end.",
+      "limite": "Rate limit",
+      "limiteTexto": "120 calls per minute per key. When exceeded, the response is 429 with a Retry-After header telling you how many seconds to wait."
     }
   },
-  "nav": {
-    "dashboard": "Dashboard",
-    "clients": "Clients",
-    "quotes": "Quotes",
-    "serviceOrders": "[[OsP]]",
-    "history": "History",
-    "maintenance": "Internal Maintenance",
-    "providers": "Providers",
-    "receipts": "Receipts",
-    "schedule": "Schedule",
-    "finance": "Finance",
-    "reports": "Reports",
-    "team": "Team",
-    "map": "GPS Map",
-    "billing": "Billing",
-    "referral": "Referral",
-    "fiscal": "Tax Settings",
-    "permissions": "Permissions",
-    "settings": "Settings",
-    "signOut": "Sign out",
-    "searchPlaceholder": "Search tab...",
-    "noResults": "No tab found.",
-    "resultsCount": "Results ({count})",
-    "menu": "Menu",
-    "lightMode": "Light mode",
-    "darkMode": "Dark mode",
-    "platformAdmin": "Platform admin",
-    "customFields": "Custom fields",
-    "vocabulary": "Vocabulary",
-    "contracts": "Contracts",
-    "parts": "Inventory",
-    "purchases": "Purchases",
-    "apiKeys": "Integration API",
-    "filiais": "Branches"
-  },
-  "history": {
-    "list": {
-      "title": "Service History",
-      "subtitle": "Completed, invoiced, and cancelled orders",
-      "searchPlaceholder": "Search by title or client...",
-      "statusFilterPlaceholder": "All",
-      "countRecords": "{count, plural, one {# record} other {# records}}",
-      "emptyNone": "No completed services yet.",
-      "columns": {
-        "number": "No.",
-        "title": "Title",
-        "client": "Client",
-        "responsible": "Assigned to",
-        "total": "Total",
-        "concludedAt": "Completed",
-        "status": "Status"
-      }
+  "assinatura": {
+    "title": "My signature",
+    "description": "Draw it once and it goes out on every document you issue.",
+    "salvar": "Save signature",
+    "limpar": "Clear",
+    "apagar": "Delete signature",
+    "gravada": "Signature saved",
+    "alt": "Your signature",
+    "ondeSai": "It appears on the [[os]] you complete, on quotes and contracts you send, and on purchase orders you authorise. With no saved signature, the document still prints the line to sign by hand.",
+    "erro": {
+      "vazio": "Draw your signature before saving.",
+      "formato": "Could not read the drawing. Please try again.",
+      "grande": "That file is too large for a signature. Draw in the box instead of uploading a photo.",
+      "pequena": "The stroke came out too small and would print as a smudge. Draw it again, larger.",
+      "falhou": "Could not save right now. Please try again."
     }
   },
-  "dashboardHome": {
-    "title": "Dashboard",
-    "stats": {
-      "monthlyRevenue": {
-        "title": "Revenue This Month",
-        "description": "Revenue paid this month",
-        "breakdown": "{paid} in paid revenue + {concluded} in completed [[osP]]"
-      },
-      "openOrders": {
-        "title": "Open [[osP]]",
-        "description": "{open} open · {inProgress} in progress"
-      },
-      "overdueRevenues": {
-        "title": "Overdue Receivables",
-        "description": "Overdue pending revenue"
-      },
-      "activeClients": {
-        "title": "Active Clients",
-        "description": "Total active clients"
-      }
-    },
-    "chart": {
-      "title": "Revenue × Expense (Last 6 Months)",
-      "revenue": "Revenue",
-      "expense": "Expense"
-    },
-    "activeOrders": {
-      "title": "Active [[osP]]",
-      "empty": "No active [[osP]] right now."
+  "assistente": {
+    "titulo": "Assistant",
+    "abrir": "Open the voice assistant",
+    "falar": "Speak",
+    "parar": "Stop",
+    "confirmar": "Confirm",
+    "digitar": "or type here",
+    "restam": "{n} commands this month",
+    "comoUsar": "Tap Speak and say what you need. E.g. “what orders do I have today”, “open stock”, “complete 24”.",
+    "naoOuvi": "I couldn't hear that. Try again, or type it.",
+    "semMicrofone": "This browser doesn't recognise speech. Type the command.",
+    "falhou": "I couldn't answer right now. Try again.",
+    "impedida": {
+      "semRecurso": "The assistant is an add-on and isn't included in your plan. Contact support to enable it.",
+      "semChave": "The assistant isn't configured on the server yet. That's on us — contact support.",
+      "cotaEsgotada": "This month's command allowance is used up. It resets on the 1st, or contact support to raise it."
     }
   },
   "auth": {
@@ -419,6 +142,177 @@
       "confirmPasswordLabel": "Confirm new password",
       "submit": "Save new password",
       "success": "Password updated! Redirecting..."
+    }
+  },
+  "avisoClienteConfig": {
+    "title": "Notify the client automatically",
+    "subtitle": "Automatic message when the job starts and when it ends. Saves the “are you coming today?” call.",
+    "master": "Turn on automatic notices",
+    "masterHint": "Starts off. While it is off, nothing is sent — not by WhatsApp, not by email.",
+    "whenTitle": "At which moments",
+    "when": {
+      "aCaminho": "When the job starts",
+      "aCaminhoHint": "Sent when the order moves to “In progress”.",
+      "concluido": "When the job ends",
+      "concluidoHint": "Sent when the order is completed."
+    },
+    "howTitle": "Through which channel",
+    "how": {
+      "whatsapp": "WhatsApp",
+      "whatsappHint": "Goes to the client's registered WhatsApp or phone.",
+      "whatsappMissing": "Set up the WhatsApp integration above for this channel to work.",
+      "email": "Email",
+      "emailHint": "Only for clients with an email on file."
+    },
+    "consent": "You are responsible for having your clients' consent to receive these messages. The system sends on behalf of your company, using the contacts you registered.",
+    "save": "Save",
+    "saved": "Saved",
+    "errors": {
+      "semPermissao": "You do not have permission to change this."
+    }
+  },
+  "avisos": {
+    "title": "Mobile alerts",
+    "description": "Choose what you want to receive. Applies to you only.",
+    "salvar": "Save alerts",
+    "salvo": "Saved",
+    "insistente": "stays on screen",
+    "semSom": "Receive silently",
+    "semSomAjuda": "Still arrives, just without sound or vibration.",
+    "sobreOToque": "The notification TONE cannot be chosen here — no browser lets a website change the notification sound. The tone is your device's: to change it, go to Settings → Apps → ServiçoOS (or your browser) → Notifications.",
+    "quando": {
+      "osAtribuida": "When a [[os]] becomes yours.",
+      "osDeContrato": "When the recurring contract creates a [[os]] for you.",
+      "osConcluida": "When someone on the team completes a job.",
+      "osStatus": "When a [[os]] changes status in the field.",
+      "orcamentoRespondido": "When the customer approves or declines a quote.",
+      "pagamentoConfirmado": "When the subscription payment clears.",
+      "notaRejeitada": "When the city rejects a tax invoice.",
+      "certificadoVencendo": "When the digital certificate is close to expiring."
+    }
+  },
+  "billingReferral": {
+    "billing": {
+      "title": "Plans & Subscription",
+      "subtitle": "Manage your plan and payment method.",
+      "successMessage": "Subscription created successfully! The invoice has been sent to your email.",
+      "errorPrefix": "Error processing subscription:",
+      "statusTitle": "Subscription status",
+      "subscriptionStatus": {
+        "TRIAL": "No subscription",
+        "PENDING": "Confirming payment",
+        "ACTIVE": "Active",
+        "PAST_DUE": "Payment pending",
+        "CANCELLED": "Cancelled"
+      },
+      "trialHint": "Choose a plan below to start using the system.",
+      "pendingHint": "Waiting for payment confirmation — access is unlocked automatically as soon as it clears.",
+      "currentPlanLabel": "Current plan:",
+      "renewsOnLabel": "Renews on:",
+      "paymentNote": "Payments securely processed via <strong>Asaas</strong>. We accept boleto and credit card. Cancel anytime.",
+      "cancel": {
+        "confirm": "Are you sure you want to cancel your subscription?",
+        "pending": "Cancelling...",
+        "label": "Cancel subscription"
+      },
+      "plans": {
+        "sectionTitle": "Choose your plan",
+        "mostPopular": "Most popular",
+        "perMonth": "/mo",
+        "yearlyNote": "or {price}/year (2 months free)",
+        "referralDiscount": "{percent}% referral discount applied",
+        "currentPlan": "Current plan",
+        "subscribeMonthly": "Subscribe — Monthly",
+        "subscribeYearly": "Subscribe — Yearly (save 2 months)",
+        "agreedPrice": "Price agreed with your company."
+      },
+      "contract": {
+        "download": "Download agreement and data terms (LGPD)"
+      }
+    },
+    "receipts": {
+      "title": "Receipts",
+      "subtitle": "Paid revenue — each row generates a PDF receipt",
+      "searchPlaceholder": "Search by description...",
+      "countLabel": "{count, plural, one {# receipt} other {# receipts}}",
+      "empty": "No receipts available. Paid revenue shows up here.",
+      "columns": {
+        "description": "Description",
+        "amount": "Amount",
+        "dueDate": "Due date",
+        "paidAt": "Paid on",
+        "linkedOrder": "Linked [[osC]]"
+      }
+    },
+    "referral": {
+      "title": "Referral Program",
+      "subtitle": "Refer ServiçoOS to other business owners and earn a discount on your plan.",
+      "steps": [
+        {
+          "title": "Share your link",
+          "desc": "Send your unique referral link to other business owners"
+        },
+        {
+          "title": "They sign up",
+          "desc": "The person you refer gets 10% off their first payment"
+        },
+        {
+          "title": "You earn too",
+          "desc": "For every referral who subscribes, you earn a 20% discount"
+        }
+      ],
+      "linkTitle": "Your referral link",
+      "copyButton": "Copy",
+      "copiedButton": "Copied!",
+      "referralsCount": "<strong>{count}</strong> referrals ({converted} converted)",
+      "discountAvailable": "{percent}% discount available",
+      "footnote": "The discount is credited automatically when someone you referred subscribes to a paid plan, and applied to your next subscription. There's no limit on referrals — the more you refer, the more discount you accumulate (up to 100%)."
+    },
+    "errors": {
+      "subscriptionPending": "You already have a subscription awaiting payment confirmation.",
+      "subscriptionActive": "You already have an active subscription. Cancel it before subscribing to another plan.",
+      "planNotFound": "Plan not found.",
+      "ownerNotFound": "Account owner not found.",
+      "missingDocument": "Fill in your company's tax ID under Settings before subscribing to a plan.",
+      "cancelFailed": "We couldn't cancel right now. Please try again in a moment."
+    }
+  },
+  "buscaAbas": {
+    "placeholder": "Find a screen or number (1.1)",
+    "rotulo": "Find a screen by name or number",
+    "semResultado": "Nothing found."
+  },
+  "certificado": {
+    "title": "Digital certificate",
+    "subtitle": "Your company's A1 certificate. Without it the city will not accept the invoice.",
+    "arquivo": "Certificate file (.pfx or .p12)",
+    "arquivoAjuda": "The same file you use with the tax authority. Up to 200 KB.",
+    "senha": "Certificate password",
+    "senhaAjuda": "Stored encrypted. It never appears on any screen after upload.",
+    "validade": "Valid until (optional)",
+    "validadeAjuda": "Lets us warn you before it expires. An expired certificate stops invoicing, and without a warning nobody finds out until they try.",
+    "enviar": "Upload certificate",
+    "enviado": "Certificate uploaded and installed.",
+    "instalado": "Certificate installed",
+    "valeAte": "Valid until {data}",
+    "venceu": "EXPIRED on {data} — invoicing will fail",
+    "trocar": "Replace certificate",
+    "reenviar": "Resend to issuer",
+    "apagar": "Delete",
+    "comoGuardamos": "The file and password are encrypted in our database, with the key kept outside it. A database breach does not expose your certificate. It is sent to the invoice issuer to authorise issuing on your company's behalf.",
+    "cofreAusente": "The system is not yet set up to store certificates securely (the server encryption key is missing). Contact support — uploading now would store the file unprotected.",
+    "erroDoEmissor": "The issuer refused: {detalhe}",
+    "erro": {
+      "semPermissao": "Only the account owner can upload the certificate.",
+      "cofreAusente": "The server is not set up to store certificates securely. Contact support.",
+      "arquivoAusente": "Choose the certificate file.",
+      "arquivoGrande": "That file is too large for a certificate. Check that it is the .pfx.",
+      "arquivoTipo": "The certificate must be a .pfx or .p12 file.",
+      "senhaAusente": "Enter the certificate password.",
+      "validadeInvalida": "Invalid expiry date.",
+      "falhouGuardar": "Could not store the certificate right now. Please try again.",
+      "semEmpresaFiscal": "Register the company's tax details before uploading the certificate.",
+      "semCertificado": "There is no stored certificate to resend."
     }
   },
   "clients": {
@@ -584,238 +478,744 @@
       }
     }
   },
-  "providers": {
-    "list": {
-      "title": "Service Providers",
-      "newButton": "New provider",
-      "searchPlaceholder": "Search by name or specialty...",
-      "resultsCount": "{count, plural, one {# provider} other {# providers}}",
-      "emptyFiltered": "No providers found.",
-      "emptyState": "No providers registered yet.",
-      "emptyCta": "Register first provider",
-      "deleteButton": "Delete provider",
-      "columns": {
-        "name": "Name",
-        "specialty": "Specialty",
-        "phone": "Phone",
-        "email": "Email",
-        "document": "Document"
-      }
+  "common": {
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "actions": "Actions",
+    "create": "Create",
+    "search": "Search",
+    "back": "Back",
+    "loading": "Loading...",
+    "confirm": "Confirm",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No",
+    "optional": "optional",
+    "required": "required",
+    "noPermission": "You don't have permission.",
+    "notFound": "Not found.",
+    "genericError": "Something went wrong. Please try again.",
+    "roles": {
+      "OWNER": "Owner",
+      "ADMIN": "Admin",
+      "TECHNICIAN": "Technician"
     },
-    "new": {
-      "title": "New Provider"
+    "serviceOrderStatus": {
+      "OPEN": "Open",
+      "IN_PROGRESS": "In progress",
+      "DONE": "Completed",
+      "INVOICED": "Invoiced",
+      "CANCELLED": "Cancelled"
     },
-    "edit": {
-      "title": "Edit Provider"
+    "quoteStatus": {
+      "DRAFT": "Draft",
+      "SENT": "Sent",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
     },
-    "form": {
-      "nameLabel": "Name *",
-      "specialtyLabel": "Specialty",
-      "specialtyPlaceholder": "E.g. Electrical, Plumbing, IT...",
-      "phoneLabel": "Phone",
-      "phonePlaceholder": "(00) 00000-0000",
-      "documentLabel": "CPF / CNPJ",
-      "emailLabel": "Email",
-      "notesLabel": "Notes"
+    "clientStatus": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "DEFAULTER": "Delinquent"
+    },
+    "paymentStatus": {
+      "PENDING": "Pending",
+      "PAID": "Paid",
+      "OVERDUE": "Overdue"
+    },
+    "unassigned": "Unassigned"
+  },
+  "compras": {
+    "title": "Purchase orders",
+    "subtitle": "Purchased parts enter stock when you record the receipt.",
+    "nova": "New purchase",
+    "novaCompra": "New purchase order",
+    "novaAjuda": "Pick the parts and quantities. Stock only changes when the goods arrive.",
+    "fornecedores": "Suppliers",
+    "fornecedoresTitulo": "Suppliers",
+    "fornecedoresAjuda": "Who sells you parts. A separate list from service providers.",
+    "novoFornecedor": "New supplier",
+    "excluirFornecedor": "Delete",
+    "adicionarItem": "Add item",
+    "criar": "Create purchase",
+    "salvar": "Save",
+    "cancelar": "Cancel",
+    "voltar": "Back to purchases",
+    "voltarBotao": "Back",
+    "total": "Total",
+    "vazio": "No purchase orders yet.",
+    "vazioSemPecas": "Register a part in inventory before creating a purchase order.",
+    "pendentes": "{count, plural, one {# purchase awaiting delivery} other {# purchases awaiting delivery}}",
+    "pendentesAjuda": "Open the purchase to record what arrived.",
+    "itensDaCompra": "Items",
+    "observacao": "Notes",
+    "semFornecedor": "No supplier",
+    "previsaoEm": "expected: {data}",
+    "recebidaEm": "Received on {data}",
+    "receber": "Record receipt",
+    "receberAjuda": "Pre-filled with what is missing. Adjust if less arrived.",
+    "receberAviso": "On confirm, the quantities enter stock and the part cost is updated.",
+    "confirmarRecebimento": "Confirm receipt",
+    "tudoRecebido": "All items on this purchase have been received.",
+    "faltamUnidades": "{qtd} {unidade} missing",
+    "cancelarCompra": "Cancel purchase order",
+    "cancelarAviso": "The purchase is marked as cancelled. Only possible before any receipt — once parts have entered, undoing here would leave balance and history disagreeing.",
+    "confirmarCancelamento": "Cancel purchase",
+    "status": {
+      "RASCUNHO": "Draft",
+      "ENVIADA": "Sent",
+      "PARCIAL": "Partial",
+      "RECEBIDA": "Received",
+      "CANCELADA": "Cancelled"
+    },
+    "colunas": {
+      "numero": "Number",
+      "fornecedor": "Supplier",
+      "status": "Status",
+      "itens": "Items",
+      "previsao": "Expected",
+      "total": "Total",
+      "peca": "Part",
+      "pedido": "Ordered",
+      "recebido": "Received",
+      "falta": "Missing",
+      "custoUnit": "Unit cost"
+    },
+    "campos": {
+      "fornecedor": "Supplier",
+      "semFornecedor": "No supplier",
+      "previsao": "Expected delivery",
+      "itens": "Items",
+      "escolhaPeca": "Choose the part",
+      "quantidade": "Qty",
+      "custoUnit": "Cost",
+      "observacao": "Notes",
+      "nomeFornecedor": "Name",
+      "documento": "Tax ID",
+      "telefone": "Phone",
+      "email": "Email"
+    },
+    "erros": {
+      "semPermissao": "You do not have permission for this.",
+      "semItens": "Add at least one item.",
+      "pecaInvalida": "One of the parts does not belong to your company.",
+      "fornecedorInvalido": "Invalid supplier.",
+      "nomeObrigatorio": "Enter the name.",
+      "naoEncontrada": "Purchase not found.",
+      "compraCancelada": "This purchase was cancelled.",
+      "jaRecebida": "This purchase was already fully received.",
+      "nadaARecebeber": "Enter how much arrived for at least one item."
     }
   },
-  "quotes": {
-    "list": {
-      "title": "Quotes",
-      "newButton": "New quote",
-      "searchPlaceholder": "Search by client, description...",
-      "statusFilterPlaceholder": "All statuses",
-      "resultsCount": "{count, plural, one {# quote} other {# quotes}}",
-      "resultsFound": "{count, plural, one {# quote found} other {# quotes found}}",
-      "emptyFiltered": "No quotes found with these filters.",
-      "emptyState": "No quotes registered yet.",
-      "emptyCta": "Create your first quote",
-      "columns": {
-        "number": "Number",
-        "client": "Client",
-        "service": "Service",
-        "amount": "Amount",
-        "validity": "Valid until",
-        "status": "Status"
-      }
+  "contratos": {
+    "title": "Recurring contracts",
+    "subtitle": "Work that repeats. The system opens the service order on its own, on the right date.",
+    "newButton": "New contract",
+    "formTitle": "New recurring contract",
+    "save": "Save contract",
+    "listTitle": "{count, plural, =0 {No contracts} one {# contract} other {# contracts}}",
+    "empty": "No contracts yet.",
+    "emptyHint": "Weekly cleaning, monthly landscaping, IT support, quarterly pest control — set it once and the order shows up on its own, three days before each visit.",
+    "needClient": "Add a client before creating a contract.",
+    "paused": "Paused",
+    "pause": "Pause",
+    "resume": "Resume",
+    "delete": "Delete",
+    "confirmDelete": "Delete this contract? It stops generating new service orders.",
+    "confirmDeleteWithOrders": "Delete this contract? The {count} service orders already generated stay in the system — they are work done. Only new ones stop.",
+    "columns": {
+      "contract": "Contract",
+      "frequency": "Frequency",
+      "next": "Next",
+      "amount": "Amount",
+      "generated": "Orders"
     },
-    "new": {
-      "title": "New Quote"
+    "frequencies": {
+      "WEEKLY": "Weekly",
+      "BIWEEKLY": "Every 2 weeks",
+      "MONTHLY": "Monthly",
+      "BIMONTHLY": "Every 2 months",
+      "QUARTERLY": "Quarterly",
+      "SEMIANNUAL": "Every 6 months",
+      "ANNUAL": "Yearly"
     },
-    "detail": {
-      "editTitle": "Edit Quote {number}",
-      "createdOn": "Created on {date}",
-      "validUntil": "Valid until {date}",
-      "generatePdfButton": "Generate PDF",
-      "clientTitle": "Client",
-      "serviceTitle": "Service",
-      "whatNeedsToBeDone": "What needs to be done",
-      "materialsLabel": "Materials to be used",
-      "valuesTitle": "Amounts and terms",
-      "totalAmountLabel": "Total amount",
-      "notesLabel": "Notes",
-      "actions": {
-        "markSent": "Mark as Sent",
-        "approve": "Approve",
-        "reject": "Reject",
-        "revertToDraft": "Revert to Draft"
-      }
+    "fields": {
+      "client": "Client",
+      "title": "What will be done",
+      "titlePlaceholder": "e.g. Water tank cleaning",
+      "frequency": "How often",
+      "dayOfMonth": "Day of month",
+      "dayOfMonthHint": "In shorter months it falls on the last day — and returns to the chosen day the month after.",
+      "amount": "Amount per visit",
+      "amountHint": "Pre-filled on the generated order; you can adjust it later.",
+      "technician": "Assigned to",
+      "noTechnician": "Decide later",
+      "startsAt": "Starts on",
+      "endsAt": "Ends on",
+      "endsAtHint": "Leave empty for an open-ended contract.",
+      "description": "Notes"
     },
-    "form": {
-      "clientDataTitle": "Client details",
-      "clientNameLabel": "Client name *",
-      "clientNamePlaceholder": "Full name or company name",
-      "clientContactLabel": "Contact (phone / email)",
-      "clientContactPlaceholder": "(11) 99999-9999",
-      "clientAddressLabel": "Address",
-      "clientAddressPlaceholder": "Street, number — City/State",
-      "serviceTitle": "Service",
-      "descriptionLabel": "What needs to be done *",
-      "descriptionPlaceholder": "Describe the service to be performed in detail...",
-      "materialsLabel": "Materials to be used",
-      "materialsPlaceholder": "List the materials, quantities, and specifications...",
-      "valuesTitle": "Amounts and terms",
-      "amountLabel": "Amount to be charged (R$)",
-      "amountPlaceholder": "0,00",
-      "validUntilLabel": "Valid until",
-      "statusLabel": "Status",
-      "notesLabel": "Notes",
-      "notesPlaceholder": "Payment terms, execution deadline, warranty...",
-      "submitCreate": "Create quote",
-      "submitUpdate": "Save changes"
-    },
-    "validation": {
-      "clientNameRequired": "Client name is required",
-      "descriptionRequired": "Service description is required"
+    "errors": {
+      "semPermissao": "You do not have permission to manage contracts.",
+      "dadosInvalidos": "Please check the fields.",
+      "clienteNaoEncontrado": "Client not found.",
+      "tecnicoNaoEncontrado": "Assignee not found.",
+      "fimAntesDoInicio": "The end date cannot be before the start date.",
+      "naoEncontrado": "Contract not found."
     }
   },
-  "serviceOrdersPages": {
+  "customFields": {
+    "title": "Custom fields",
+    "subtitle": "Every trade tracks different things. Create the fields your company needs and they show up in the forms.",
+    "formSectionTitle": "Additional information",
+    "selectPlaceholder": "Select...",
+    "emptyState": "No fields created yet. Use the form below.",
+    "addTitle": "Create field",
+    "addButton": "Create field",
+    "added": "Field created",
+    "remove": "Remove field",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "confirmRemove": "Remove the field “{campo}”? It disappears from everyone's forms. Values already filled in stay stored — recreate the field and they come back.",
+    "limitReached": "You have reached the limit of {max} fields. Remove one before creating another.",
+    "fieldLabel": "Field name",
+    "fieldLabelPlaceholder": "e.g. Square footage, Breed, Serial number",
+    "fieldType": "Type",
+    "fieldOptions": "Options",
+    "fieldOptionsPlaceholder": "Small\nMedium\nLarge",
+    "fieldOptionsHint": "One option per line.",
+    "fieldRequired": "Required",
+    "yes": "Yes",
+    "no": "No",
+    "entities": {
+      "CLIENT": "Client record fields",
+      "SERVICE_ORDER": "Service order fields"
+    },
+    "types": {
+      "TEXT": "Text",
+      "NUMBER": "Number",
+      "DATE": "Date",
+      "SELECT": "Option list",
+      "CHECKBOX": "Yes / No"
+    },
+    "errors": {
+      "semPermissao": "You do not have permission to change these fields. Ask a company administrator.",
+      "entidadeInvalida": "Invalid record type.",
+      "labelCurto": "The field name needs at least 2 characters.",
+      "labelLongo": "The field name can have at most 40 characters.",
+      "tipoInvalido": "Invalid field type.",
+      "semOpcoes": "An option list needs at least one option.",
+      "limiteAtingido": "You have reached the field limit for this record type.",
+      "naoEncontrado": "Field not found.",
+      "obrigatorio": "Please fill in “{campo}”.",
+      "muitoLongo": "The field “{campo}” is over the maximum length.",
+      "numeroInvalido": "The field “{campo}” must be a number.",
+      "dataInvalida": "The field “{campo}” must be a valid date.",
+      "opcaoInvalida": "The option chosen in “{campo}” no longer exists."
+    }
+  },
+  "dashboardHome": {
+    "title": "Dashboard",
+    "stats": {
+      "monthlyRevenue": {
+        "title": "Revenue This Month",
+        "description": "Revenue paid this month",
+        "breakdown": "{paid} in paid revenue + {concluded} in completed [[osP]]"
+      },
+      "openOrders": {
+        "title": "Open [[osP]]",
+        "description": "{open} open · {inProgress} in progress"
+      },
+      "overdueRevenues": {
+        "title": "Overdue Receivables",
+        "description": "Overdue pending revenue"
+      },
+      "activeClients": {
+        "title": "Active Clients",
+        "description": "Total active clients"
+      }
+    },
+    "chart": {
+      "title": "Revenue × Expense (Last 6 Months)",
+      "revenue": "Revenue",
+      "expense": "Expense"
+    },
+    "activeOrders": {
+      "title": "Active [[osP]]",
+      "empty": "No active [[osP]] right now."
+    }
+  },
+  "documentos": {
+    "title": "Terms and warranty on documents",
+    "subtitle": "What gets printed on the service order and quote you hand to the client.",
+    "warranty": {
+      "label": "Default warranty period",
+      "placeholder": "days",
+      "hint": "Counted from job completion. The document shows the exact expiry date. Each order can have its own period.",
+      "presets": {
+        "0": "No warranty",
+        "30": "30 days",
+        "90": "3 months",
+        "180": "6 months",
+        "365": "1 year"
+      }
+    },
+    "orderTerms": {
+      "label": "Terms on the service order",
+      "placeholder": "e.g. The warranty covers workmanship defects and does not cover misuse...",
+      "hint": "Printed on the order PDF, before the signatures."
+    },
+    "quoteTerms": {
+      "label": "Terms on the quote",
+      "placeholder": "e.g. Quote valid for 15 days. Payment: 50% on approval...",
+      "hint": "Printed on the quote PDF, before the signatures."
+    },
+    "legalNotice": "This text is written by you and printed exactly as written. If it carries legal weight in your trade, have a lawyer review it — ServiçoOS only prints it.",
+    "save": "Save",
+    "saved": "Saved",
+    "errors": {
+      "semPermissao": "You do not have permission to change this.",
+      "prazoInvalido": "Invalid period. Use a number of days between 0 and 3650."
+    }
+  },
+  "emails": {
+    "welcome": {
+      "subject": "Welcome to ServiçoOS — choose your plan to get started",
+      "heading": "Welcome, {name}! 🎉",
+      "accountCreated": "Your <strong>ServiçoOS</strong> account was created successfully.",
+      "nextStep": "Just one step left: choose a plan to unlock access to the system.",
+      "cta": "View plans and subscribe",
+      "support": "Questions? Just reply to this email and we'll help you out."
+    },
+    "teamInvite": {
+      "subject": "You've been invited to the {companyName} team — ServiçoOS",
+      "heading": "You've been invited! 🎉",
+      "greeting": "Hi, {name}!",
+      "invitedTo": "You've been invited to join the <strong>{companyName}</strong> team on ServiçoOS.",
+      "instructions": "Click the button below to accept the invitation and create your password.",
+      "cta": "Accept invitation",
+      "ignoreNotice": "If you weren't expecting this invitation, you can safely ignore this email.",
+      "fallbackCompany": "your company"
+    },
+    "paymentConfirmed": {
+      "subject": "Payment confirmed — {planName} plan is active!",
+      "heading": "✅ Payment confirmed!",
+      "planActive": "Hi, {name}! Your <strong>{planName}</strong> plan is now active.",
+      "thanks": "Thank you for subscribing to ServiçoOS!",
+      "cta": "Go to the system",
+      "contractAttached": "We've attached the <strong>service agreement and data processing terms (LGPD)</strong> for your subscription.",
+      "contractHint": "Keep this file. You can download it again at any time from the Billing screen inside the system."
+    },
+    "onboardingDay3": {
+      "subject": "Your company isn't using ServiçoOS yet",
+      "heading": "Hi, {name}! 👋",
+      "notSubscribed": "You created your <strong>ServiçoOS</strong> account 3 days ago, but you haven't chosen a plan yet — so access to the system is still blocked.",
+      "startNow": "Subscribe now and start using it right away:",
+      "step1": "Register a client (or use an existing one)",
+      "step2": "Click <strong>+ New [[osC]]</strong>",
+      "step3": "Fill in the details and save",
+      "step4": "Send the PDF straight to your client 🎉",
+      "cta": "View plans and subscribe",
+      "support": "Need help? Just reply to this email and we'll help you out."
+    },
+    "pastDueWarning": {
+      "subject": "Payment pending — {days, plural, one {# day} other {# days}} of access left",
+      "subjectUrgent": "Heads up: your ServiçoOS access will be blocked in {days, plural, one {# day} other {# days}}",
+      "heading": "Hi {name}",
+      "intro": "We couldn't confirm the subscription payment for <strong>{company}</strong>. It's usually an expired card, a limit, or insufficient funds — common, and normally a one-minute fix.",
+      "deadline": "You have <strong>{days, plural, one {# more day} other {# more days}}</strong> of normal access. After that the system is blocked for <strong>your whole team</strong>, field technicians included.",
+      "whatHappens": "Nothing is deleted: your [[osP]], clients and history stay right where they are. As soon as the payment clears, access comes back automatically for everyone.",
+      "cta": "Update payment",
+      "alreadyPaid": "Already paid? You can ignore this — confirmation can take a few hours. If access is still blocked after a day, just reply to this email and we'll sort it out.",
+      "support": "Any questions, just reply to this email."
+    },
+    "pastDueBlocked": {
+      "subject": "Your ServiçoOS access has been blocked",
+      "heading": "Hello, {name}",
+      "intro": "The subscription payment for <strong>{company}</strong> was not confirmed within 30 days, and access to the system was blocked today.",
+      "deadline": "<strong>The whole team is locked out</strong>, including technicians in the field. As soon as the payment clears, access comes back automatically for everyone — you do not need to ask.",
+      "whatHappens": "Nothing was deleted: your [[osP]], clients, finances and history are all still there, exactly as they were.",
+      "cta": "Pay and restore access"
+    },
+    "nps": {
+      "subject": "How was your experience with ServiçoOS?",
+      "heading": "Hi, {name}! 🙏",
+      "intro": "Your [[os]] was completed in ServiçoOS. We would love your feedback!",
+      "question": "On a scale of 0 to 10, <strong>how likely are you to recommend ServiçoOS</strong> to other business owners?",
+      "scaleHint": "0 = would not recommend · 10 = would definitely recommend",
+      "ignoreNotice": "If you'd rather not answer, just ignore this email."
+    },
+    "passwordReset": {
+      "subject": "Password recovery — ServiçoOS",
+      "heading": "Reset password",
+      "greeting": "Hi, {name}!",
+      "greetingNoName": "Hi there!",
+      "requestReceived": "We received a request to reset the password for your ServiçoOS account.",
+      "cta": "Create new password",
+      "ignoreNotice": "If you didn't request this change, you can safely ignore this email — your current password remains valid. This link expires shortly for security reasons."
+    },
+    "clientNotice": {
+      "subject": "update on your service"
+    }
+  },
+  "errors": {
+    "planFeature": {
+      "gpsMap": "GPS Map is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
+      "nfse": "Invoice (NFS-e) issuing is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
+      "signature": "Customer digital signature is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
+      "checklist": "The execution checklist is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
+      "advancedReports": "Advanced reports are part of the Pro plan. Upgrade in Settings → Plan to unlock them."
+    },
+    "planLimit": {
+      "users": "Your plan allows up to {max} users and that limit has been reached. Upgrade in Settings → Plan to add more.",
+      "serviceOrders": "Your plan allows {max} [[osP]] per month and that limit has been reached. The quota resets on the 1st, or upgrade in Settings → Plan.",
+      "nfse": "Your plan allows {max} tax invoices per month. Talk to us to increase it."
+    },
+    "clientNotFound": "Client not found.",
+    "technicianNotFound": "Technician not found.",
+    "providerNotFound": "Provider not found.",
+    "orderNotFound": "Service order not found.",
+    "quoteNotFound": "Quote not found.",
+    "itemNotFound": "Item not found.",
+    "companyNotFound": "Company not found.",
+    "tenantNotFound": "Company not found.",
+    "invoicedOrderLocked": "An invoiced [[os]] cannot be edited.",
+    "invalidRequest": "Invalid request.",
+    "invalidScore": "Invalid score.",
+    "invalidStatus": "Invalid status.",
+    "invalidType": "Invalid type.",
+    "invalidSignature": "Invalid signature.",
+    "cancelledOrderCannotSign": "A cancelled [[os]] cannot be signed.",
+    "invoicedSignatureLocked": "[[osC]] already invoiced — the signature cannot be changed.",
+    "quoteWithoutPhone": "Quote has no contact phone.",
+    "clientWithoutPhone": "Client has no WhatsApp/phone number.",
+    "configureZapi": "Set up Z-API under Settings → WhatsApp.",
+    "configureFiscal": "Set up your tax details under Settings → Tax.",
+    "nfseAlreadyIssued": "An e-invoice was already issued for this [[os]].",
+    "orderWithoutAmount": "[[osC]] has no amount — add items before issuing an e-invoice.",
+    "invalidLink": "Invalid or expired link.",
+    "duplicateEmailAccount": "An account already exists with the email {email}, linked to another account. Please contact support.",
+    "defaultUserName": "User",
+    "inactiveSubscription": "Inactive subscription. Subscribe to a plan to keep using the system.",
+    "defaultCompanyName": "{name}'s Company",
+    "tooManyAttempts": "Too many attempts. Please wait a few minutes and try again.",
+    "inviteLinkUsed": "This invite has already been used or has expired. If you already set your password, just sign in below. If you haven't, use \"Forgot my password\" with the email that received the invite — do not create a new company.",
+    "recoveryLinkUsed": "This recovery link has already been used or has expired. Request a new one under \"Forgot my password\".",
+    "funcaoDesligada": "This feature is turned off for your company. Contact support."
+  },
+  "estoque": {
+    "title": "Parts inventory",
+    "subtitle": "The balance only changes through movements, never by direct editing — so history and the number on screen never disagree.",
+    "nova": "New part",
+    "novaPeca": "New part",
+    "editarPeca": "Edit part",
+    "formAjuda": "The balance is not edited here: use Move.",
+    "buscar": "Search by name or code...",
+    "vazio": "No parts registered yet.",
+    "vazioBusca": "No parts found.",
+    "inativa": "inactive",
+    "desativar": "Deactivate",
+    "reativar": "Reactivate",
+    "salvar": "Save",
+    "cancelar": "Cancel",
+    "confirmar": "Confirm",
+    "movimentar": "Move stock",
+    "saldoAtual": "current balance: {saldo} {unidade}",
+    "saldoFicara": "Balance will be: {saldo} {unidade}",
+    "ficaraNegativo": "will go negative",
+    "alerta": {
+      "titulo": "{count, plural, one {# part needs attention} other {# parts need attention}}"
+    },
+    "colunas": {
+      "peca": "Part",
+      "saldo": "Balance",
+      "minimo": "Minimum",
+      "custo": "Cost",
+      "venda": "Price",
+      "acoes": "Actions"
+    },
+    "campos": {
+      "nome": "Name",
+      "codigo": "Code",
+      "unidade": "Unit",
+      "custo": "Cost",
+      "venda": "Price",
+      "minimo": "Minimum",
+      "minimoAjuda": "Below the minimum the part is flagged. Zero turns the alert off.",
+      "saldoAviso": "To change the balance use Move — that way the reason is recorded.",
+      "tipo": "Type",
+      "quantidade": "Quantity",
+      "contado": "Counted balance",
+      "motivo": "Reason",
+      "motivoExemplo": "e.g. inventory count",
+      "motivoAjuda": "An adjustment without a reason is indistinguishable from a mistake six months later."
+    },
+    "tipos": {
+      "ENTRADA": "In",
+      "SAIDA": "Out",
+      "AJUSTE": "Adjust"
+    },
+    "tiposAjuda": {
+      "ENTRADA": "Adds to the balance. e.g. a purchase received outside a purchase order.",
+      "SAIDA": "Subtracts from the balance. e.g. a broken or lost part.",
+      "AJUSTE": "SETS the balance. Type what you counted on the shelf — not the difference."
+    },
+    "erros": {
+      "semPermissao": "You do not have permission for this.",
+      "tipoInvalido": "Choose the movement type.",
+      "quantidadeInvalida": "Invalid quantity.",
+      "motivoObrigatorio": "An adjustment requires a reason.",
+      "pecaNaoEncontrada": "Part not found."
+    }
+  },
+  "expired": {
+    "neverSubscribed": {
+      "title": "Subscribe to a plan to get started",
+      "desc": "ServiçoOS has no free trial — choose one of the plans below to unlock access to the system."
+    },
+    "pending": {
+      "title": "Confirming your payment",
+      "desc": "We received your subscription and are waiting for payment confirmation. It usually takes just a moment — as soon as it clears, your access is unlocked automatically."
+    },
+    "cancelled": {
+      "title": "Subscription cancelled",
+      "desc": "Your subscription was cancelled. To restore access, subscribe to a new plan. All your data is still saved."
+    },
+    "pastDue": {
+      "title": "Payment overdue",
+      "desc": "We found a problem with your payment and the grace period has ended. Update your billing details to restore access immediately."
+    },
+    "dataBox": {
+      "title": "What happens to my data?",
+      "item1": "All your data is saved and secure",
+      "item2": "Once payment clears, access is restored immediately",
+      "item3": "No reactivation fee"
+    },
+    "ctaPending": "View subscription status",
+    "ctaDefault": "View plans and subscribe",
+    "helpQuestion": "Questions?",
+    "helpLink": "Talk to us"
+  },
+  "filiais": {
+    "title": "Branches",
+    "subtitle": "Your company with more than one location. Enterprise plan feature.",
+    "nomeLabel": "Branch name",
+    "nomePlaceholder": "e.g. Downtown",
+    "criarBotao": "Create branch",
+    "vazio": "No branches yet. Until there is one, everyone keeps seeing everything.",
+    "contagem": "{pessoas, plural, =0 {nobody} one {# person} other {# people}} · {clientes, plural, =0 {no clients} one {# client} other {# clients}}",
+    "inativa": "Inactive",
+    "desativar": "Deactivate",
+    "reativar": "Reactivate",
+    "desativarNota": "Branches are deactivated, never deleted. Deleting would take with it the link of every client, [[os]] and revenue of that location — and a whole year of per-branch revenue would vanish over a tidy-up click. Deactivated, it disappears from pickers and stops receiving new records; the history stays intact.",
+    "escopo": {
+      "separado": "Separated by branch",
+      "separadoLista": "Clients, [[osP]], schedule, finance and team.",
+      "comum": "Shared across the company",
+      "comumLista": "Stock and parts, suppliers and purchases, quotes, contracts, settings and billing.",
+      "semFilial": "Records with no branch show up for everyone. That is what keeps your current data from disappearing when you create the first branch."
+    },
+    "equipe": {
+      "title": "Who works where",
+      "subtitle": "People assigned to a branch see their location plus whatever belongs to the whole company.",
+      "todas": "Sees everything",
+      "nota": "Owner and admin see every branch regardless of assignment — and can filter to one on screen."
+    },
+    "erro": {
+      "semPermissao": "Only the owner or an admin can manage branches.",
+      "semPlano": "Branches is an Enterprise plan feature.",
+      "nomeVazio": "Give the branch a name.",
+      "naoEncontrada": "Branch not found."
+    },
+    "filtro": {
+      "todas": "All branches"
+    }
+  },
+  "finance": {
     "list": {
-      "title": "[[OsP]]",
-      "newButton": "New [[osC]]",
+      "title": "Finance",
+      "searchPlaceholder": "Search revenue and expenses..."
+    },
+    "kpis": {
+      "monthlyRevenue": {
+        "title": "Revenue This Month",
+        "description": "Payments received this month"
+      },
+      "receivable": {
+        "title": "Receivables",
+        "description": "{count, plural, one {# pending payment} other {# pending payments}}"
+      },
+      "payable": {
+        "title": "Payables",
+        "description": "{count, plural, one {# pending expense} other {# pending expenses}}"
+      }
+    },
+    "receivables": {
+      "title": "Accounts Receivable",
+      "empty": "No receivables registered yet."
+    },
+    "payables": {
+      "title": "Accounts Payable",
+      "empty": "No expenses registered yet.",
+      "recurringBadge": "Recurring"
+    },
+    "columns": {
+      "description": "Description",
+      "dueDate": "Due date",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "payButton": {
+      "label": "Pay"
+    },
+    "expenseCategory": {
+      "FIXED": "Fixed",
+      "VARIABLE": "Variable",
+      "OTHER": "Other"
+    },
+    "expenseDialog": {
+      "newButton": "New expense",
+      "title": "New expense",
+      "descriptionLabel": "Description *",
+      "descriptionPlaceholder": "E.g. Office rent",
+      "amountLabel": "Amount *",
+      "amountPlaceholder": "0.00",
+      "dueDateLabel": "Due date *",
+      "categoryLabel": "Category",
+      "recurringLabel": "Recurring?",
+      "submit": "Save expense"
+    },
+    "reports": {
+      "title": "Reports",
+      "totalLabel": "Total",
+      "periodPicker": {
+        "fromLabel": "From",
+        "toLabel": "To",
+        "apply": "Apply",
+        "applying": "Filtering..."
+      },
+      "dre": {
+        "title": "Simplified P&L",
+        "revenueTitle": "Revenue",
+        "revenueCount": "{count, plural, one {# payment received} other {# payments received}}",
+        "expenseTitle": "Expenses",
+        "expenseCount": "{count, plural, one {# expense paid} other {# expenses paid}}",
+        "resultTitle": "Net Result",
+        "profitInPeriod": "Profit for the period",
+        "lossInPeriod": "Loss for the period"
+      },
+      "osByStatus": {
+        "title": "[[OsP]] by status",
+        "empty": "No [[osP]] in this period."
+      },
+      "topClients": {
+        "title": "Top 10 Clients",
+        "empty": "No data for this period.",
+        "columns": {
+          "client": "Client",
+          "invoiced": "Invoiced"
+        }
+      },
+      "revenueDetail": {
+        "title": "Revenue Received — Details",
+        "empty": "No revenue in this period.",
+        "columns": {
+          "description": "Description",
+          "order": "[[osC]]",
+          "paidAt": "Received on",
+          "amount": "Amount"
+        }
+      },
+      "expenseDetail": {
+        "title": "Expenses Paid — Details",
+        "empty": "No expenses paid in this period.",
+        "columns": {
+          "description": "Description",
+          "category": "Category",
+          "paidAt": "Paid on",
+          "amount": "Amount"
+        }
+      },
+      "advancedOnly": "This analysis is part of the advanced reports, included from the Pro plan up.",
+      "upgradeButton": "See plans",
+      "currentMonthOnly": "Current month — custom periods are a Pro plan feature",
+      "byProfessional": {
+        "title": "Performance by [[TecP]]",
+        "subtitle": "Counts what was COMPLETED in the period. Jobs opened earlier count in the month they finished.",
+        "empty": "Nothing completed in the period.",
+        "unassigned": "Unassigned",
+        "columns": {
+          "professional": "Professional",
+          "done": "Completed",
+          "total": "Amount",
+          "average": "Average ticket",
+          "days": "Days to complete",
+          "rating": "Client rating"
+        },
+        "daysHint": "From opening to completion — includes waiting for parts and for the client's availability, not just working time.",
+        "ratingCount": "{n, plural, one {# response} other {# responses}}",
+        "noRating": "not rated"
+      }
+    }
+  },
+  "fotos": {
+    "title": "Service photos",
+    "add": "Add photo",
+    "sending": "Uploading...",
+    "empty": "No photos yet.",
+    "emptyLocked": "No photos on this order.",
+    "hint": "On a phone, the button opens the camera directly. Photos are shrunk on the device before uploading, so it works on a weak signal.",
+    "remove": "Remove photo",
+    "confirmRemove": "Remove this photo? It is the proof of work done and cannot be recovered.",
+    "unavailable": "unavailable",
+    "close": "Close",
+    "errors": {
+      "arquivoVazio": "Empty file. Pick a photo.",
+      "tipoNaoAceito": "Images only (JPG, PNG or WEBP).",
+      "muitoGrande": "Photo too large even after shrinking. Try another.",
+      "limitePorOs": "This order has reached the photo limit.",
+      "osNaoEncontrada": "Service order not found.",
+      "osFaturada": "An invoiced order does not accept photo changes.",
+      "semPermissao": "You do not have permission to remove photos.",
+      "naoEncontrada": "Photo not found."
+    }
+  },
+  "historicoOs": {
+    "titulo": "Change history",
+    "alguem": "a team member",
+    "vazio": "not set",
+    "dias": "{n, plural, one {# day} other {# days}}",
+    "eventos": {
+      "CRIADA": "The [[os]] was created",
+      "STATUS": "Status changed from <de></de> to <para></para>",
+      "RESPONSAVEL": "Assignee changed from <de></de> to <para></para>",
+      "AGENDAMENTO": "Schedule changed from <de></de> to <para></para>",
+      "VALOR": "Amount changed from <de></de> to <para></para>",
+      "CONCLUSAO": "Completion note edited",
+      "GARANTIA": "Warranty changed from <de></de> to <para></para>"
+    }
+  },
+  "history": {
+    "list": {
+      "title": "Service History",
+      "subtitle": "Completed, invoiced, and cancelled orders",
       "searchPlaceholder": "Search by title or client...",
-      "statusFilterPlaceholder": "All statuses",
-      "statusAll": "All",
-      "countActive": "{count, plural, one {# active order} other {# active orders}}",
-      "countActiveFound": "{count, plural, one {# active order found} other {# active orders found}}",
-      "countFound": "{count, plural, one {# order found} other {# orders found}}",
-      "emptyFiltered": "No [[osP]] match these filters.",
-      "emptyNone": "No [[osP]] created yet.",
-      "createFirst": "Create the first [[os]]",
+      "statusFilterPlaceholder": "All",
+      "countRecords": "{count, plural, one {# record} other {# records}}",
+      "emptyNone": "No completed services yet.",
       "columns": {
         "number": "No.",
         "title": "Title",
         "client": "Client",
         "responsible": "Assigned to",
         "total": "Total",
-        "date": "Date",
+        "concludedAt": "Completed",
         "status": "Status"
       }
-    },
-    "new": {
-      "title": "New Service Order"
-    },
-    "detail": {
-      "clientPortal": "Client portal",
-      "deleteLabel": "Delete [[osC]]",
-      "infoTitle": "Information",
-      "clientLabel": "Client: ",
-      "responsibleLabel": "Assigned to: ",
-      "createdLabel": "Created on: ",
-      "scheduledLabel": "Scheduled for: ",
-      "concludedLabel": "Completed on: ",
-      "problemDescriptionTitle": "Problem description",
-      "servicesPerformedTitle": "Services performed",
-      "checklistTitle": "Execution checklist",
-      "signatureTitle": "Client signature",
-      "itemsTitle": "Items",
-      "noItems": "No items recorded.",
-      "itemColumns": {
-        "description": "Description",
-        "quantity": "Qty.",
-        "unitPrice": "Unit price",
-        "total": "Total"
-      },
-      "actions": {
-        "startService": "Start service",
-        "markDone": "Mark as completed",
-        "markInvoiced": "Mark as invoiced"
-      }
-    },
-    "edit": {
-      "title": "Edit Service Order"
-    }
-  },
-  "serviceOrdersComponents": {
-    "form": {
-      "orderDataTitle": "[[Os]] details",
-      "titleLabel": "Title *",
-      "titlePlaceholder": "E.g. Electrical maintenance",
-      "descriptionLabel": "Description",
-      "editDescriptionLabel": "Problem description",
-      "clientLabel": "Client *",
-      "clientPlaceholder": "Select a client",
-      "technicianLabel": "Assigned technician",
-      "technicianPlaceholder": "Select a technician (optional)",
-      "scheduledLabel": "Schedule",
-      "itemsTitle": "Items / Services",
-      "createPending": "Creating [[osC]]...",
-      "createSubmit": "Create [[osC]]",
-      "editSubmit": "Save changes"
-    },
-    "items": {
-      "addButton": "Add item",
-      "descriptionLabel": "Description",
-      "descriptionPlaceholder": "Service/part description",
-      "quantityLabel": "Qty.",
-      "unitPriceLabel": "Unit price",
-      "totalLabel": "Total:"
-    },
-    "checklist": {
-      "progressLabel": "{done}/{total} items completed",
-      "addPlaceholder": "Add checklist item..."
-    },
-    "concludeDialog": {
-      "trigger": "Complete",
-      "editTrigger": "Edit completion",
-      "title": "Complete Service",
-      "notesLabel": "Description of services performed",
-      "notesPlaceholder": "Describe what was done, parts replaced, procedures...",
-      "itemsLabel": "Items / Charges",
-      "itemDescriptionPlaceholder": "Service or part",
-      "itemUnitPriceLabel": "Unit price (R$)",
-      "concludeError": "Error completing service. Please try again.",
-      "saveNoInvoice": "Save (without invoicing)",
-      "concludeNoInvoice": "Complete (without invoicing)",
-      "saveAndInvoice": "Save and Invoice",
-      "concludeAndInvoice": "Complete and Invoice"
-    },
-    "osActionsRow": {
-      "startButton": "Start"
-    },
-    "statusButton": {
-      "updating": "Updating..."
-    },
-    "whatsappButton": {
-      "label": "WhatsApp",
-      "sending": "Sending...",
-      "sent": "Sent!",
-      "sendError": "Failed to send",
-      "connectionError": "Connection error"
-    },
-    "nfseButton": {
-      "statusEmitted": "issued",
-      "viewLink": "View NFS-e",
-      "confirmEmit": "Issue an e-invoice for this [[os]]?",
-      "emitButton": "Issue NFS-e"
-    },
-    "signaturePad": {
-      "emptyError": "Please sign before saving.",
-      "registered": "Client signature recorded",
-      "altText": "Client signature",
-      "instructions": "Ask the client to sign below to confirm the service was completed.",
-      "clearButton": "Clear",
-      "confirmButton": "Confirm signature"
     }
   },
   "landing": {
@@ -1020,6 +1420,194 @@
       "message": "Hi! I'm interested in ServiçoOS."
     }
   },
+  "legal": {
+    "terms": {
+      "metaTitle": "Terms of Use — ServiçoOS",
+      "title": "Terms of Use",
+      "lastUpdated": "Last updated: August 21, 2026",
+      "section1": {
+        "title": "1. Who provides this service",
+        "p1": "ServiçoOS is operated by <strong>ADRIEL WELLINGTON RODRIGUES</strong>, registered under CNPJ No. <strong>53.325.011/0001-08</strong>, hereinafter referred to as “ServiçoOS,” “we,” or “provider.”",
+        "p2": "By creating an account or using the system in any way, you (the “user” or “customer”) agree to these Terms of Use and to our <privacyLink>Privacy Policy</privacyLink>. If you do not agree with any part of them, please do not use the service."
+      },
+      "section2": {
+        "title": "2. What ServiçoOS is",
+        "p1": "ServiçoOS is a management system (SaaS) for service companies, offering, among other features: client management (CRM), quotes, service orders, financial management, scheduling, a real-time technician location map, checklists and digital signatures, electronic service invoice issuance (NFS-e), and WhatsApp integration.",
+        "p2": "The service is provided “as is” and may be updated, modified, or have features added or removed at any time, always seeking to maintain or improve the user experience."
+      },
+      "section3": {
+        "title": "3. Registration and account",
+        "p1": "To use ServiçoOS you must create an account with true, complete, and up-to-date information about yourself and your company. You are responsible for keeping your password confidential and for all activity that occurs on your account.",
+        "p2": "Each account represents a company (“tenant”) and can have multiple users with different permission levels ({owner}, {admin}, {technician}), controlled by the account owner."
+      },
+      "section4": {
+        "title": "4. Subscription and access",
+        "p1": "Access to ServiçoOS features requires an active paid plan. There is no free trial period: a newly created account stays locked until the first payment is confirmed.",
+        "p2": "If the subscription is cancelled or goes unpaid, access to the features is blocked — registered data remains saved and is automatically restored as soon as a plan is subscribed to again. In case of late payment, there is a grace period before the block, shown in the billing area of the system."
+      },
+      "section5": {
+        "title": "5. Plans, payment, and billing",
+        "p1": "The available plans, prices, and included features are shown on the <planosLink>plans</planosLink> page and in the subscription area within the system, and may be adjusted upon prior notice.",
+        "p2": "Payments are processed by a payment partner (gateway) and can be made via bank slip or credit card, on a monthly or annual cycle. ServiçoOS does not store complete credit card data — processing is handled entirely by the payment partner.",
+        "p3": "Billing is recurring and automatic according to the chosen cycle, until the subscription is cancelled. In the event of payment failure or delay, access may be suspended until the situation is resolved."
+      },
+      "section6": {
+        "title": "6. Cancellation and refunds",
+        "p1": "You may cancel your subscription at any time directly through the system's subscription area, with no penalty. Cancellation stops automatic renewal; access to paid features remains available until the end of the period already paid for.",
+        "p2": "Amounts already paid for current periods are not refunded, except where required by law or by ServiçoOS's express commercial decision."
+      },
+      "section7": {
+        "title": "7. Referral program",
+        "p1": "Users can refer ServiçoOS to third parties through an exclusive link. Whoever signs up through a referral receives a discount on their first payment; whoever refers someone receives a discount when the referred person purchases a paid plan. Current percentages are shown in the referral area of the system and may be adjusted at any time, with no retroactive effect on benefits already granted."
+      },
+      "section8": {
+        "title": "8. Your data and your clients' data",
+        "p1": "All content you enter into the system — client records, service orders, financial data, quotes, documents, and attachments — belongs to you or your company. ServiçoOS acts solely as a processor of this data, storing and processing it to enable the system to function, as detailed in our <privacyLink>Privacy Policy</privacyLink>.",
+        "p2": "You are responsible for ensuring that you have an appropriate legal basis and consent to enter third-party data (your clients, technicians, and suppliers) into the system.",
+        "p3": "<strong>Our team's access to your account.</strong> To provide technical support, investigate failures or fix issues you report, authorized members of our team may access your account and view the data it contains. Such access is limited to those purposes and follows these rules:",
+        "i1": "Granted only to authorized staff, by specific role, and revoked immediately upon termination;",
+        "i2": "Every access is recorded in an audit log identifying who accessed it, which company, and the date and time;",
+        "i3": "The support session expires automatically after 1 hour;",
+        "i4": "Our staff are bound by a contractual confidentiality obligation;",
+        "i5": "We do not use your account data for any purpose beyond the requested support or service maintenance.",
+        "p4": "You may request, at any time, the history of support accesses performed on your account, through the contact email listed at the end of these Terms."
+      },
+      "section9": {
+        "title": "9. Acceptable use",
+        "intro": "By using ServiçoOS, you agree not to:",
+        "item1": "Use the system for illegal purposes or in ways that violate third-party rights;",
+        "item2": "Attempt to access data belonging to other companies (tenants) without authorization;",
+        "item3": "Attempt to bypass the system's technical, security, or usage limits;",
+        "item4": "Reverse engineer, copy, or resell the system without authorization;",
+        "item5": "Use the system to send spam or unsolicited communications via WhatsApp/email."
+      },
+      "section10": {
+        "title": "10. Service availability",
+        "p1": "We make reasonable efforts to keep the system available and functioning properly, but we do not guarantee uninterrupted availability (100% uptime). Scheduled maintenance, instability of third-party providers (hosting, database, payment gateway), or force majeure events may cause temporary unavailability."
+      },
+      "section11": {
+        "title": "11. Intellectual property",
+        "p1": "The software, brand, design, and other elements of ServiçoOS are the property of the provider identified in section 1. The user is granted only a non-exclusive, non-transferable, and revocable license to use it, limited to the term of the subscription."
+      },
+      "section12": {
+        "title": "12. Limitation of liability",
+        "p1": "To the fullest extent permitted by law, ServiçoOS is not liable for indirect damages, loss of profits, or loss of data resulting from misuse of the system, failures in the user's internet connection, or unavailability of integrated third-party services (payment gateway, email provider, WhatsApp, invoice issuer).",
+        "p2": "We recommend that users keep their own copies/backups of especially sensitive documents and data, in addition to the backups maintained by ServiçoOS."
+      },
+      "section13": {
+        "title": "13. Termination",
+        "p1": "ServiçoOS may suspend or terminate accounts that violate these Terms of Use, with prior notice when possible. Users may terminate their account at any time by contacting our support channel."
+      },
+      "section14": {
+        "title": "14. Changes to these terms",
+        "p1": "We may update these Terms of Use periodically. Material changes will be communicated by email or notice within the system. Continued use after a change implies agreement with the new terms."
+      },
+      "section15": {
+        "title": "15. Governing law and jurisdiction",
+        "p1": "These Terms are governed by the laws of the Federative Republic of Brazil. The courts of the judicial district of the provider identified in section 1 are elected to settle any disputes arising from these Terms, with waiver of any other, however privileged it may be."
+      },
+      "section16": {
+        "title": "16. Contact",
+        "p1": "Questions about these Terms of Use can be sent to <email>olisuporte1@gmail.com</email>."
+      }
+    },
+    "privacy": {
+      "metaTitle": "Privacy Policy — ServiçoOS",
+      "title": "Privacy Policy",
+      "lastUpdated": "Last updated: July 20, 2026",
+      "intro": "This Privacy Policy describes how ServiçoOS collects, uses, stores, and protects personal data, in accordance with Brazil's General Data Protection Law (Law No. 13.709/2018 — LGPD).",
+      "section1": {
+        "title": "1. Who is the data controller",
+        "p1": "The controller of the personal data processed by this system is <strong>ADRIEL WELLINGTON RODRIGUES</strong>, registered under CNPJ No. <strong>53.325.011/0001-08</strong>, operator of ServiçoOS."
+      },
+      "section2": {
+        "title": "2. What data we collect",
+        "userDataLabel": "User and company registration data:",
+        "userDataItem1": "Name, email, and password (stored encrypted, never in plain text);",
+        "userDataItem2": "Phone number, CPF/CNPJ, and company address (when provided);",
+        "userDataItem3": "Tax data for invoice issuance (CNPJ, municipal registration number, ISS tax rate).",
+        "systemDataLabel": "Data entered by the user while using the system:",
+        "systemDataItem1": "Client, provider, and technician records (name, contact information, address, ID document);",
+        "systemDataItem2": "Service orders, quotes, attachments, photos, and clients' digital signatures;",
+        "systemDataItem3": "Financial data (revenue, expenses, receipts);",
+        "systemDataItem4": "Geographic location (GPS) of technicians, collected during work hours to display on the service order tracking map;",
+        "systemDataItem5": "Messages and phone number used in the WhatsApp integration, when enabled.",
+        "autoDataLabel": "Data collected automatically:",
+        "autoDataItem1": "Essential session/authentication cookies (we do not use advertising tracking cookies);",
+        "autoDataItem2": "Technical access logs (IP address, date and time, pages accessed), for security and diagnostic purposes."
+      },
+      "section3": {
+        "title": "3. What we use the data for",
+        "intro": "We use the data we collect for the following purposes:",
+        "item1": "Enabling the system and the contracted features to function (contract performance);",
+        "item2": "Authenticating access and protecting accounts against unauthorized use;",
+        "item3": "Processing payments and issuing invoices and charges;",
+        "item4": "Sending operational communications (registration confirmation, billing, trial expiration, team invitations) and, when applicable, satisfaction surveys (NPS);",
+        "item5": "Displaying field technicians' location to the {owner}/{admin} of the contracting company, exclusively while using the system;",
+        "item6": "Complying with legal and regulatory obligations, including tax and accounting requirements;",
+        "item7": "Preventing fraud and ensuring platform security."
+      },
+      "section4": {
+        "title": "4. Who we share data with",
+        "p1": "We do not sell personal data. We share strictly necessary data with service providers (processors) who help us operate ServiçoOS:",
+        "table": {
+          "serviceHeader": "Service",
+          "purposeHeader": "Purpose",
+          "supabase": "User authentication and database",
+          "vercel": "Application hosting",
+          "asaas": "Payment processing (bank slip, credit card)",
+          "nfeio": "Issuance of electronic service invoices (NFS-e)",
+          "resend": "Sending transactional emails",
+          "zapi": "WhatsApp messaging integration (when enabled by the company)"
+        },
+        "p2": "We may also share data when required by law, court order, or to protect the rights, safety, or property of ServiçoOS or third parties."
+      },
+      "section5": {
+        "title": "5. International data transfer",
+        "p1": "Our core infrastructure (database and hosting) is located in data centers in the São Paulo, Brazil region. Some of the processors listed in section 4 are international companies that may process data in other countries as part of their global operations. In such cases, we seek to use processors with data protection practices compatible with the LGPD."
+      },
+      "section6": {
+        "title": "6. How long we keep data",
+        "p1": "We keep data for as long as your account remains active. Tax and financial data may be retained for an additional period to comply with legal obligations (generally 5 years, under Brazilian tax law). After the account is closed and the legal retention periods have elapsed, data is deleted or anonymized."
+      },
+      "section7": {
+        "title": "7. Your rights as a data subject",
+        "intro": "Under Article 18 of the LGPD, you have the right to:",
+        "item1": "Confirmation that processing exists and access to your data;",
+        "item2": "Correction of incomplete, inaccurate, or outdated data;",
+        "item3": "Anonymization, blocking, or deletion of unnecessary data or data processed in noncompliance with the law;",
+        "item4": "Portability of your data to another service provider;",
+        "item5": "Deletion of data processed with your consent (except where legal retention applies);",
+        "item6": "Information about the entities with which your data has been shared;",
+        "item7": "Withdrawal of consent, when applicable;",
+        "item8": "Review of decisions made solely on the basis of automated processing."
+      },
+      "section8": {
+        "title": "8. How to exercise your rights",
+        "p1": "The account owner (Owner profile) can download a copy of all company data at any time, on a self-service basis, under Settings → Export data. For other rights (correction, deletion, withdrawal of consent, clarifications), contact us at <email>olisuporte1@gmail.com</email> — this is also the contact channel for ServiçoOS's data protection officer (DPO). We will respond within a reasonable time, as required by the LGPD."
+      },
+      "section9": {
+        "title": "9. Information security",
+        "p1": "We adopt technical and administrative measures to protect personal data, including encrypted passwords, secure connections (HTTPS/TLS), permission-based access control, and data isolation between different companies (tenants). Despite these efforts, no system is 100% immune to incidents — in the event of a significant security incident, we will notify data subjects and the competent authority as required by the LGPD."
+      },
+      "section10": {
+        "title": "10. Cookies",
+        "p1": "We use only essential cookies, necessary to keep your session authenticated and to ensure the system functions properly. We do not use advertising or social media tracking cookies."
+      },
+      "section11": {
+        "title": "11. Children's data",
+        "p1": "ServiçoOS is a professional/business tool and is not directed at minors. We do not knowingly collect data from children or teenagers."
+      },
+      "section12": {
+        "title": "12. Changes to this policy",
+        "p1": "We may update this Privacy Policy periodically. Material changes will be communicated by email or notice within the system, with the date at the top of this page updated accordingly."
+      },
+      "section13": {
+        "title": "13. Data Protection Officer (DPO)",
+        "p1": "For all matters related to personal data protection, the data protection officer can be contacted at <email>olisuporte1@gmail.com</email>."
+      }
+    }
+  },
   "maintenance": {
     "list": {
       "title": "Internal Maintenance",
@@ -1088,500 +1676,6 @@
     },
     "statusButton": {
       "updating": "Updating..."
-    }
-  },
-  "finance": {
-    "list": {
-      "title": "Finance",
-      "searchPlaceholder": "Search revenue and expenses..."
-    },
-    "kpis": {
-      "monthlyRevenue": {
-        "title": "Revenue This Month",
-        "description": "Payments received this month"
-      },
-      "receivable": {
-        "title": "Receivables",
-        "description": "{count, plural, one {# pending payment} other {# pending payments}}"
-      },
-      "payable": {
-        "title": "Payables",
-        "description": "{count, plural, one {# pending expense} other {# pending expenses}}"
-      }
-    },
-    "receivables": {
-      "title": "Accounts Receivable",
-      "empty": "No receivables registered yet."
-    },
-    "payables": {
-      "title": "Accounts Payable",
-      "empty": "No expenses registered yet.",
-      "recurringBadge": "Recurring"
-    },
-    "columns": {
-      "description": "Description",
-      "dueDate": "Due date",
-      "amount": "Amount",
-      "status": "Status"
-    },
-    "payButton": {
-      "label": "Pay"
-    },
-    "expenseCategory": {
-      "FIXED": "Fixed",
-      "VARIABLE": "Variable",
-      "OTHER": "Other"
-    },
-    "expenseDialog": {
-      "newButton": "New expense",
-      "title": "New expense",
-      "descriptionLabel": "Description *",
-      "descriptionPlaceholder": "E.g. Office rent",
-      "amountLabel": "Amount *",
-      "amountPlaceholder": "0.00",
-      "dueDateLabel": "Due date *",
-      "categoryLabel": "Category",
-      "recurringLabel": "Recurring?",
-      "submit": "Save expense"
-    },
-    "reports": {
-      "title": "Reports",
-      "totalLabel": "Total",
-      "periodPicker": {
-        "fromLabel": "From",
-        "toLabel": "To",
-        "apply": "Apply",
-        "applying": "Filtering..."
-      },
-      "dre": {
-        "title": "Simplified P&L",
-        "revenueTitle": "Revenue",
-        "revenueCount": "{count, plural, one {# payment received} other {# payments received}}",
-        "expenseTitle": "Expenses",
-        "expenseCount": "{count, plural, one {# expense paid} other {# expenses paid}}",
-        "resultTitle": "Net Result",
-        "profitInPeriod": "Profit for the period",
-        "lossInPeriod": "Loss for the period"
-      },
-      "osByStatus": {
-        "title": "[[OsP]] by status",
-        "empty": "No [[osP]] in this period."
-      },
-      "topClients": {
-        "title": "Top 10 Clients",
-        "empty": "No data for this period.",
-        "columns": {
-          "client": "Client",
-          "invoiced": "Invoiced"
-        }
-      },
-      "revenueDetail": {
-        "title": "Revenue Received — Details",
-        "empty": "No revenue in this period.",
-        "columns": {
-          "description": "Description",
-          "order": "[[osC]]",
-          "paidAt": "Received on",
-          "amount": "Amount"
-        }
-      },
-      "expenseDetail": {
-        "title": "Expenses Paid — Details",
-        "empty": "No expenses paid in this period.",
-        "columns": {
-          "description": "Description",
-          "category": "Category",
-          "paidAt": "Paid on",
-          "amount": "Amount"
-        }
-      },
-      "advancedOnly": "This analysis is part of the advanced reports, included from the Pro plan up.",
-      "upgradeButton": "See plans",
-      "currentMonthOnly": "Current month — custom periods are a Pro plan feature",
-      "byProfessional": {
-        "title": "Performance by [[TecP]]",
-        "subtitle": "Counts what was COMPLETED in the period. Jobs opened earlier count in the month they finished.",
-        "empty": "Nothing completed in the period.",
-        "unassigned": "Unassigned",
-        "columns": {
-          "professional": "Professional",
-          "done": "Completed",
-          "total": "Amount",
-          "average": "Average ticket",
-          "days": "Days to complete",
-          "rating": "Client rating"
-        },
-        "daysHint": "From opening to completion — includes waiting for parts and for the client's availability, not just working time.",
-        "ratingCount": "{n, plural, one {# response} other {# responses}}",
-        "noRating": "not rated"
-      }
-    }
-  },
-  "settingsCore": {
-    "title": "Settings",
-    "company": {
-      "title": "Company",
-      "description": "Details that appear on [[osP]] and generated PDFs.",
-      "form": {
-        "nameLabel": "Company name *",
-        "documentLabel": "CNPJ / CPF",
-        "phoneLabel": "Contact phone number(s)",
-        "phonePlaceholder": "(11) 99999-9999",
-        "addressLabel": "Address",
-        "addressPlaceholder": "123 Example St — São Paulo, SP",
-        "websiteLabel": "Website",
-        "websitePlaceholder": "https://yourcompany.com"
-      },
-      "logo": {
-        "title": "Company logo",
-        "hint": "Shows on quote, [[os]] and receipt PDFs. PNG, JPG or WEBP, up to 2 MB.",
-        "alt": "Company logo",
-        "remove": "Remove",
-        "save": "Save logo",
-        "chooseFile": "Pick a file.",
-        "tooLarge": "That image is over 2 MB. Pick a smaller one.",
-        "wrongType": "Use PNG, JPG or WEBP.",
-        "failed": "Couldn't process that image. Try another one.",
-        "saved": "Logo saved."
-      }
-    },
-    "profile": {
-      "title": "My profile",
-      "description": "Your name and sign-in email.",
-      "form": {
-        "nameLabel": "Your name *",
-        "emailLabel": "Email",
-        "emailHint": "Your email cannot be changed here.",
-        "roleLabel": "Role",
-        "documentLabel": "CPF / CNPJ",
-        "phoneLabel": "Phone",
-        "phonePlaceholder": "(11) 99999-9999",
-        "addressTitle": "Address",
-        "streetLabel": "Street / Avenue",
-        "numberLabel": "Number",
-        "complementLabel": "Complement",
-        "districtLabel": "Neighborhood",
-        "zipCodeLabel": "ZIP code",
-        "cityLabel": "City",
-        "stateLabel": "State (2 letters)"
-      }
-    },
-    "whatsapp": {
-      "title": "WhatsApp (Z-API)",
-      "description": "Send [[osP]], quotes, and satisfaction surveys straight to your clients' WhatsApp.",
-      "howToTitle": "How to set up Z-API:",
-      "step1": "Create your account at <strong>z-api.io</strong>",
-      "step2": "Create an instance and scan the QR code with your WhatsApp",
-      "step3": "Copy the <strong>instance ID</strong> and the <strong>Token</strong> below",
-      "instanceLabel": "Z-API Instance ID",
-      "instancePlaceholder": "E.g. 3C5F1D2E...",
-      "tokenLabel": "Z-API Token",
-      "tokenPlaceholder": "Paste your token here",
-      "submit": "Save WhatsApp settings"
-    },
-    "export": {
-      "title": "Export data",
-      "description": "Download a copy of all your company's data (clients, [[osP]], quotes, finances, and team) in a <code>.json</code> file, in line with your right to data portability under Brazil's LGPD (art. 18).",
-      "generating": "Generating file...",
-      "downloadButton": "Download all my data (.json)",
-      "error": "Error exporting data."
-    },
-    "saved": {
-      "tenant": "Company details updated.",
-      "profile": "Profile updated.",
-      "whatsapp": "WhatsApp settings saved."
-    },
-    "language": {
-      "title": "System language",
-      "description": "Sets the language for the whole company — including the emails, PDFs and messages sent to your clients.",
-      "current": "Current language: {language}",
-      "switchTo": "Switch to {language}",
-      "confirmTitle": "Change the language for the whole company?",
-      "confirmBody": "This applies to everyone on your team, and to the emails, PDFs and WhatsApp messages sent to your clients. You can switch back at any time.",
-      "confirm": "Yes, switch to {language}",
-      "cancel": "Cancel",
-      "changing": "Switching..."
-    }
-  },
-  "settingsAdvanced": {
-    "permissions": {
-      "title": "Access Control",
-      "subtitle": "Choose what technicians see in the menu and what they can do.",
-      "saveButton": "Save permissions",
-      "savedMessage": "Saved successfully",
-      "effectNote": "Permission changes take effect the next time the technician loads the page.",
-      "abasTitle": "Tabs the technician sees",
-      "acoes": {
-        "title": "What the technician can do",
-        "subtitle": "One level below tabs: within an allowed tab, which actions they can perform.",
-        "saveButton": "Save actions",
-        "savedMessage": "Saved successfully",
-        "effectNote": "Applies to the technician role. Owner and admin can do everything.",
-        "labels": {
-          "os": {
-            "criar": "Open [[osP]]",
-            "editar": "Edit [[os]] — includes line items and the total AMOUNT",
-            "status": "Change the status",
-            "concluir": "Complete [[os]]",
-            "reagendar": "Reschedule from the calendar",
-            "checklist": "Edit the checklist"
-          },
-          "cliente": {
-            "criar": "Create clients",
-            "equipamento": "Create client equipment"
-          }
-        }
-      }
-    },
-    "fiscal": {
-      "title": "Tax Settings — NFS-e",
-      "subtitle": "Set up your company details to issue electronic service invoices (NFS-e).",
-      "configured": {
-        "title": "Tax profile configured",
-        "cnpjLabel": "CNPJ:",
-        "city": "City: {city} — {state}",
-        "nfeioIdLabel": "nfe.io ID:"
-      },
-      "form": {
-        "title": "Register your company to issue NFS-e",
-        "description": "Fill in your company details. They will be used to issue NFS-e through nfe.io.",
-        "cnpjLabel": "CNPJ *",
-        "cnpjPlaceholder": "00.000.000/0001-00",
-        "municipalTaxNumberLabel": "Municipal Registration",
-        "municipalTaxNumberPlaceholder": "Registration number",
-        "emailLabel": "Company email *",
-        "emailPlaceholder": "contact@company.com",
-        "postalCodeLabel": "ZIP code *",
-        "postalCodePlaceholder": "00000-000",
-        "numberLabel": "Number *",
-        "numberPlaceholder": "123",
-        "streetLabel": "Street *",
-        "streetPlaceholder": "Main Street",
-        "districtLabel": "Neighborhood *",
-        "districtPlaceholder": "Downtown",
-        "stateLabel": "State (2-letter code) *",
-        "statePlaceholder": "SP",
-        "cityLabel": "City *",
-        "cityPlaceholder": "São Paulo",
-        "cityCodeLabel": "City IBGE code *",
-        "cityCodePlaceholder": "3550308",
-        "cityCodeHelp": "Look it up at <link>ibge.gov.br</link>",
-        "issRateLabel": "ISS tax rate (%) *",
-        "submit": "Register company with nfe.io"
-      }
-    }
-  },
-  "team": {
-    "list": {
-      "title": "Team",
-      "subtitle": "Manage your team members and their access",
-      "inviteButton": "Invite member",
-      "countMembers": "{count, plural, one {# member} other {# members}}",
-      "noLocation": "No location",
-      "columns": {
-        "name": "Name",
-        "email": "Email",
-        "role": "Role",
-        "location": "Location",
-        "since": "Member since"
-      }
-    },
-    "invite": {
-      "title": "Invite member",
-      "cardTitle": "New member details",
-      "successTitle": "Invitation sent!",
-      "viewTeam": "View team",
-      "inviteAnother": "Invite another",
-      "submit": "Send invitation",
-      "submitting": "Sending...",
-      "form": {
-        "nameLabel": "Full name",
-        "namePlaceholder": "John Smith",
-        "emailLabel": "Email",
-        "emailPlaceholder": "john@company.com",
-        "roleLabel": "Role",
-        "roleAdminOption": "{role} (full access)",
-        "roleTechnicianOption": "{role} (restricted access)",
-        "documentLabel": "CPF / CNPJ",
-        "documentPlaceholder": "000.000.000-00",
-        "phoneLabel": "Phone",
-        "phonePlaceholder": "(11) 99999-9999",
-        "addressTitle": "Address",
-        "streetLabel": "Street / Avenue",
-        "numberLabel": "Number",
-        "complementLabel": "Complement",
-        "districtLabel": "Neighborhood",
-        "zipCodeLabel": "ZIP code",
-        "cityLabel": "City",
-        "stateLabel": "State"
-      }
-    },
-    "rowActions": {
-      "confirmRemove": "Remove this member from the team?"
-    },
-    "errors": {
-      "emailInYourTeam": "This email already belongs to your team.",
-      "emailInUse": "This email is already in use in the system.",
-      "inviteFailed": "Could not send the invite. Please try again in a moment.",
-      "inviteEmailFailed": "Member added, but the invite email failed. Ask {email} to use \"Forgot my password\" with this email to sign in.",
-      "inviteSent": "Invite sent to {email}",
-      "missingServiceKey": "Set SUPABASE_SERVICE_ROLE_KEY in .env to send invites by email."
-    }
-  },
-  "schedule": {
-    "title": "Schedule",
-    "newOrderButton": "New [[osC]]",
-    "summary": {
-      "countTitle": "{count, plural, =0 {# [[osP]] scheduled this month} one {# [[os]] scheduled this month} other {# [[osP]] scheduled this month}}",
-      "empty": "No [[osP]] scheduled."
-    },
-    "calendar": {
-      "weekdays": [
-        "Sun",
-        "Mon",
-        "Tue",
-        "Wed",
-        "Thu",
-        "Fri",
-        "Sat"
-      ],
-      "months": [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December"
-      ],
-      "eventTooltip": "[[osC]] #{number} — {title}\n{client}",
-      "moreEvents": "+{count} more"
-    },
-    "reagendar": {
-      "mover": "Move [[osC]] #{number}",
-      "mesAnterior": "Previous month",
-      "mesSeguinte": "Next month",
-      "escolhaODia": "Tap the day you want to move it to.",
-      "soltarNoDia": "Move to day {dia}",
-      "movida": "[[osC]] #{number} moved to {data} at {hora}.",
-      "conflito": "{count, plural, one {Heads up: {nome} already has another job at that time.} other {Heads up: {nome} already has # jobs at that time.}}",
-      "motivo": {
-        "concluida": "Already completed. To correct the date, use the edit screen.",
-        "faturada": "Already invoiced. The tax invoice is tied to this date.",
-        "cancelada": "Cancelled. No longer on the schedule.",
-        "naoEncontrada": "[[osC]] not found.",
-        "semAgendamento": "No scheduled date to move.",
-        "dataInvalida": "Invalid date.",
-        "semPermissao": "You do not have permission to reschedule."
-      }
-    }
-  },
-  "billingReferral": {
-    "billing": {
-      "title": "Plans & Subscription",
-      "subtitle": "Manage your plan and payment method.",
-      "successMessage": "Subscription created successfully! The invoice has been sent to your email.",
-      "errorPrefix": "Error processing subscription:",
-      "statusTitle": "Subscription status",
-      "subscriptionStatus": {
-        "TRIAL": "No subscription",
-        "PENDING": "Confirming payment",
-        "ACTIVE": "Active",
-        "PAST_DUE": "Payment pending",
-        "CANCELLED": "Cancelled"
-      },
-      "trialHint": "Choose a plan below to start using the system.",
-      "pendingHint": "Waiting for payment confirmation — access is unlocked automatically as soon as it clears.",
-      "currentPlanLabel": "Current plan:",
-      "renewsOnLabel": "Renews on:",
-      "paymentNote": "Payments securely processed via <strong>Asaas</strong>. We accept boleto and credit card. Cancel anytime.",
-      "cancel": {
-        "confirm": "Are you sure you want to cancel your subscription?",
-        "pending": "Cancelling...",
-        "label": "Cancel subscription"
-      },
-      "plans": {
-        "sectionTitle": "Choose your plan",
-        "mostPopular": "Most popular",
-        "perMonth": "/mo",
-        "yearlyNote": "or {price}/year (2 months free)",
-        "referralDiscount": "{percent}% referral discount applied",
-        "currentPlan": "Current plan",
-        "subscribeMonthly": "Subscribe — Monthly",
-        "subscribeYearly": "Subscribe — Yearly (save 2 months)",
-        "agreedPrice": "Price agreed with your company."
-      },
-      "contract": {
-        "download": "Download agreement and data terms (LGPD)"
-      }
-    },
-    "receipts": {
-      "title": "Receipts",
-      "subtitle": "Paid revenue — each row generates a PDF receipt",
-      "searchPlaceholder": "Search by description...",
-      "countLabel": "{count, plural, one {# receipt} other {# receipts}}",
-      "empty": "No receipts available. Paid revenue shows up here.",
-      "columns": {
-        "description": "Description",
-        "amount": "Amount",
-        "dueDate": "Due date",
-        "paidAt": "Paid on",
-        "linkedOrder": "Linked [[osC]]"
-      }
-    },
-    "referral": {
-      "title": "Referral Program",
-      "subtitle": "Refer ServiçoOS to other business owners and earn a discount on your plan.",
-      "steps": [
-        {
-          "title": "Share your link",
-          "desc": "Send your unique referral link to other business owners"
-        },
-        {
-          "title": "They sign up",
-          "desc": "The person you refer gets 10% off their first payment"
-        },
-        {
-          "title": "You earn too",
-          "desc": "For every referral who subscribes, you earn a 20% discount"
-        }
-      ],
-      "linkTitle": "Your referral link",
-      "copyButton": "Copy",
-      "copiedButton": "Copied!",
-      "referralsCount": "<strong>{count}</strong> referrals ({converted} converted)",
-      "discountAvailable": "{percent}% discount available",
-      "footnote": "The discount is credited automatically when someone you referred subscribes to a paid plan, and applied to your next subscription. There's no limit on referrals — the more you refer, the more discount you accumulate (up to 100%)."
-    },
-    "errors": {
-      "subscriptionPending": "You already have a subscription awaiting payment confirmation.",
-      "subscriptionActive": "You already have an active subscription. Cancel it before subscribing to another plan.",
-      "planNotFound": "Plan not found.",
-      "ownerNotFound": "Account owner not found.",
-      "missingDocument": "Fill in your company's tax ID under Settings before subscribing to a plan.",
-      "cancelFailed": "We couldn't cancel right now. Please try again in a moment."
-    }
-  },
-  "sharedComponents": {
-    "deleteButton": {
-      "confirm": "Are you sure you want to delete this? This action cannot be undone.",
-      "deleting": "Deleting..."
-    },
-    "searchBar": {
-      "placeholder": "Search..."
-    },
-    "statusFilter": {
-      "allPlaceholder": "All"
-    },
-    "overdueAlerts": {
-      "title": "Overdue alerts",
-      "overdueRevenues": "{count, plural, one {# overdue receivable} other {# overdue receivables}}",
-      "overdueExpenses": "{count, plural, one {# overdue expense} other {# overdue expenses}}"
     }
   },
   "mapAdmin": {
@@ -1695,7 +1789,10 @@
           "signature": "Client digital signature",
           "checklist": "Execution checklist",
           "advancedReports": "Advanced reports",
-          "stock": "Inventory and purchasing"
+          "stock": "Inventory and purchasing",
+          "api": "Integration API",
+          "filiais": "Branches",
+          "ia": "Voice assistant"
         },
         "featuresAll": "Enable {count, plural, one {the remaining feature} other {the # remaining features}}",
         "tabsTitle": "Tabs this company sees ({visiveis} of {total})",
@@ -1770,64 +1867,97 @@
       }
     }
   },
-  "portal": {
-    "serviceOrder": {
-      "headerSubtitle": "Track your service order",
-      "responsibleLabel": "Assigned to: {name}",
-      "scheduledLabel": "Scheduled: {date}",
-      "descriptionTitle": "Service description",
-      "servicesPerformedTitle": "Services performed",
-      "items": {
-        "title": "Items and amounts",
-        "description": "Description",
-        "total": "Total"
-      },
-      "signatureTitle": "Service confirmation",
-      "npsTitle": "Rate your experience"
+  "nav": {
+    "administration": "Administration",
+    "apiKeys": "Integration API",
+    "billing": "Billing",
+    "clients": "Clients",
+    "contracts": "Contracts",
+    "customFields": "Custom fields",
+    "darkMode": "Dark mode",
+    "dashboard": "Dashboard",
+    "filiais": "Branches",
+    "finance": "Finance",
+    "fiscal": "Tax Settings",
+    "history": "History",
+    "lightMode": "Light mode",
+    "maintenance": "Internal Maintenance",
+    "map": "GPS Map",
+    "menu": "Menu",
+    "parts": "Inventory",
+    "permissions": "Permissions",
+    "platformAdmin": "Platform admin",
+    "providers": "Providers",
+    "purchases": "Purchases",
+    "quotes": "Quotes",
+    "receipts": "Receipts",
+    "referral": "Referral",
+    "reports": "Reports",
+    "schedule": "Schedule",
+    "serviceOrders": "[[OsP]]",
+    "settings": "Settings",
+    "signOut": "Sign out",
+    "team": "Team",
+    "vocabulary": "Vocabulary"
+  },
+  "notifications": {
+    "quoteApproved": {
+      "title": "Quote approved! 🎉",
+      "body": "{client} approved quote #{number}"
     },
-    "quote": {
-      "headerSubtitle": "Digital quote",
-      "forLabel": "For: {name}",
-      "validUntilLabel": "Valid until: {date}",
-      "descriptionTitle": "Description",
-      "materialsTitle": "Materials",
-      "totalLabel": "Total amount",
-      "approveButton": "Approve quote",
-      "rejectButton": "Reject",
-      "approvedTitle": "Quote approved!",
-      "approvedMessage": "We'll be in touch to schedule the service.",
-      "rejectedTitle": "Quote rejected",
-      "rejectedMessage": "Get in touch with us if you'd like to review the terms.",
-      "responseError": "We couldn't record your response. Please try again."
+    "quoteRejected": {
+      "title": "Quote rejected",
+      "body": "{client} rejected quote #{number}"
     },
-    "nps": {
-      "question": "On a scale of 0 to 10, how likely are you to recommend us?",
-      "promoter": "Promoter 😊",
-      "passive": "Passive 😐",
-      "detractor": "Detractor 😟",
-      "feedbackPlaceholder": "Leave a comment (optional)...",
-      "saveError": "We couldn't save your rating. Please try again.",
-      "submit": "Submit rating",
-      "submitting": "Sending...",
-      "thanks": "Thanks for your feedback! ⭐"
+    "newOrder": {
+      "title": "New Service Order"
     },
-    "signature": {
-      "instructions": "Sign below to confirm the service was completed.",
-      "emptyError": "Please sign before confirming.",
-      "confirmed": "Service confirmed by the client",
-      "altText": "Signature",
-      "clearButton": "Clear",
-      "confirmButton": "Confirm signature"
+    "orderAssigned": {
+      "title": "[[osC]] assigned to you"
     },
-    "pix": {
-      "title": "Pay by PIX",
-      "amount": "Amount",
-      "scan": "Point your bank app's camera at the code",
-      "orCopy": "or copy the code below and paste it into your app",
-      "copy": "Copy code",
-      "copied": "Copied!",
-      "receiver": "Receiver",
-      "openAmount": "The amount is not set in the code — type it in your app."
+    "osAtribuida": {
+      "title": "[[osC]] for you"
+    },
+    "osDeContrato": {
+      "title": "[[osC]] from contract"
+    },
+    "osConcluida": {
+      "title": "Job completed"
+    },
+    "osStatus": {
+      "title": "[[osC]] status changed"
+    },
+    "orcamentoRespondido": {
+      "title": "Quote answered"
+    },
+    "pagamentoConfirmado": {
+      "title": "Payment confirmed"
+    },
+    "notaRejeitada": {
+      "title": "Tax invoice rejected"
+    },
+    "certificadoVencendo": {
+      "title": "Digital certificate expiring"
+    }
+  },
+  "offline": {
+    "title": "No connection",
+    "description": "This screen hasn't been opened on this device yet, so there's no saved copy to show.",
+    "hints": {
+      "visited": "Screens you already opened while online still work.",
+      "writes": "Completing and changing status work offline — they are kept on the device and sent on their own. Creating a new [[os]] needs a connection.",
+      "retry": "Once you're back online, just reload."
+    },
+    "banner": {
+      "title": "No connection.",
+      "description": "You're seeing data saved on this device, which may be out of date. Changes won't be saved until you're back online."
+    },
+    "fila": {
+      "pendentes": "{n, plural, one {# change waiting to be sent} other {# changes waiting to be sent}}",
+      "pendentesAjuda": "Saved on this device. They are sent automatically when the signal returns — you can close the app.",
+      "enviando": "Sending...",
+      "travadas": "{n, plural, one {# change could not be sent} other {# changes could not be sent}}",
+      "travadasAjuda": "Someone probably changed those jobs while you were offline. Check before redoing them."
     }
   },
   "pdf": {
@@ -1905,474 +2035,6 @@
       "receiver": "Receiver"
     }
   },
-  "emails": {
-    "welcome": {
-      "subject": "Welcome to ServiçoOS — choose your plan to get started",
-      "heading": "Welcome, {name}! 🎉",
-      "accountCreated": "Your <strong>ServiçoOS</strong> account was created successfully.",
-      "nextStep": "Just one step left: choose a plan to unlock access to the system.",
-      "cta": "View plans and subscribe",
-      "support": "Questions? Just reply to this email and we'll help you out."
-    },
-    "teamInvite": {
-      "subject": "You've been invited to the {companyName} team — ServiçoOS",
-      "heading": "You've been invited! 🎉",
-      "greeting": "Hi, {name}!",
-      "invitedTo": "You've been invited to join the <strong>{companyName}</strong> team on ServiçoOS.",
-      "instructions": "Click the button below to accept the invitation and create your password.",
-      "cta": "Accept invitation",
-      "ignoreNotice": "If you weren't expecting this invitation, you can safely ignore this email.",
-      "fallbackCompany": "your company"
-    },
-    "paymentConfirmed": {
-      "subject": "Payment confirmed — {planName} plan is active!",
-      "heading": "✅ Payment confirmed!",
-      "planActive": "Hi, {name}! Your <strong>{planName}</strong> plan is now active.",
-      "thanks": "Thank you for subscribing to ServiçoOS!",
-      "cta": "Go to the system",
-      "contractAttached": "We've attached the <strong>service agreement and data processing terms (LGPD)</strong> for your subscription.",
-      "contractHint": "Keep this file. You can download it again at any time from the Billing screen inside the system."
-    },
-    "onboardingDay3": {
-      "subject": "Your company isn't using ServiçoOS yet",
-      "heading": "Hi, {name}! 👋",
-      "notSubscribed": "You created your <strong>ServiçoOS</strong> account 3 days ago, but you haven't chosen a plan yet — so access to the system is still blocked.",
-      "startNow": "Subscribe now and start using it right away:",
-      "step1": "Register a client (or use an existing one)",
-      "step2": "Click <strong>+ New [[osC]]</strong>",
-      "step3": "Fill in the details and save",
-      "step4": "Send the PDF straight to your client 🎉",
-      "cta": "View plans and subscribe",
-      "support": "Need help? Just reply to this email and we'll help you out."
-    },
-    "pastDueWarning": {
-      "subject": "Payment pending — {days, plural, one {# day} other {# days}} of access left",
-      "subjectUrgent": "Heads up: your ServiçoOS access will be blocked in {days, plural, one {# day} other {# days}}",
-      "heading": "Hi {name}",
-      "intro": "We couldn't confirm the subscription payment for <strong>{company}</strong>. It's usually an expired card, a limit, or insufficient funds — common, and normally a one-minute fix.",
-      "deadline": "You have <strong>{days, plural, one {# more day} other {# more days}}</strong> of normal access. After that the system is blocked for <strong>your whole team</strong>, field technicians included.",
-      "whatHappens": "Nothing is deleted: your [[osP]], clients and history stay right where they are. As soon as the payment clears, access comes back automatically for everyone.",
-      "cta": "Update payment",
-      "alreadyPaid": "Already paid? You can ignore this — confirmation can take a few hours. If access is still blocked after a day, just reply to this email and we'll sort it out.",
-      "support": "Any questions, just reply to this email."
-    },
-    "pastDueBlocked": {
-      "subject": "Your ServiçoOS access has been blocked",
-      "heading": "Hello, {name}",
-      "intro": "The subscription payment for <strong>{company}</strong> was not confirmed within 30 days, and access to the system was blocked today.",
-      "deadline": "<strong>The whole team is locked out</strong>, including technicians in the field. As soon as the payment clears, access comes back automatically for everyone — you do not need to ask.",
-      "whatHappens": "Nothing was deleted: your [[osP]], clients, finances and history are all still there, exactly as they were.",
-      "cta": "Pay and restore access"
-    },
-    "nps": {
-      "subject": "How was your experience with ServiçoOS?",
-      "heading": "Hi, {name}! 🙏",
-      "intro": "Your [[os]] was completed in ServiçoOS. We would love your feedback!",
-      "question": "On a scale of 0 to 10, <strong>how likely are you to recommend ServiçoOS</strong> to other business owners?",
-      "scaleHint": "0 = would not recommend · 10 = would definitely recommend",
-      "ignoreNotice": "If you'd rather not answer, just ignore this email."
-    },
-    "passwordReset": {
-      "subject": "Password recovery — ServiçoOS",
-      "heading": "Reset password",
-      "greeting": "Hi, {name}!",
-      "greetingNoName": "Hi there!",
-      "requestReceived": "We received a request to reset the password for your ServiçoOS account.",
-      "cta": "Create new password",
-      "ignoreNotice": "If you didn't request this change, you can safely ignore this email — your current password remains valid. This link expires shortly for security reasons."
-    },
-    "clientNotice": {
-      "subject": "update on your service"
-    }
-  },
-  "offline": {
-    "title": "No connection",
-    "description": "This screen hasn't been opened on this device yet, so there's no saved copy to show.",
-    "hints": {
-      "visited": "Screens you already opened while online still work.",
-      "writes": "Creating or completing [[osP]] needs a connection.",
-      "retry": "Once you're back online, just reload."
-    },
-    "banner": {
-      "title": "No connection.",
-      "description": "You're seeing data saved on this device, which may be out of date. Changes won't be saved until you're back online."
-    },
-    "fila": {
-      "pendentes": "{n, plural, one {# change waiting to be sent} other {# changes waiting to be sent}}",
-      "pendentesAjuda": "Saved on this device. They are sent automatically when the signal returns — you can close the app.",
-      "enviando": "Sending...",
-      "travadas": "{n, plural, one {# change could not be sent} other {# changes could not be sent}}",
-      "travadasAjuda": "Someone probably changed those jobs while you were offline. Check before redoing them."
-    }
-  },
-  "expired": {
-    "neverSubscribed": {
-      "title": "Subscribe to a plan to get started",
-      "desc": "ServiçoOS has no free trial — choose one of the plans below to unlock access to the system."
-    },
-    "pending": {
-      "title": "Confirming your payment",
-      "desc": "We received your subscription and are waiting for payment confirmation. It usually takes just a moment — as soon as it clears, your access is unlocked automatically."
-    },
-    "cancelled": {
-      "title": "Subscription cancelled",
-      "desc": "Your subscription was cancelled. To restore access, subscribe to a new plan. All your data is still saved."
-    },
-    "pastDue": {
-      "title": "Payment overdue",
-      "desc": "We found a problem with your payment and the grace period has ended. Update your billing details to restore access immediately."
-    },
-    "dataBox": {
-      "title": "What happens to my data?",
-      "item1": "All your data is saved and secure",
-      "item2": "Once payment clears, access is restored immediately",
-      "item3": "No reactivation fee"
-    },
-    "ctaPending": "View subscription status",
-    "ctaDefault": "View plans and subscribe",
-    "helpQuestion": "Questions?",
-    "helpLink": "Talk to us"
-  },
-  "whatsapp": {
-    "os": {
-      "intro": "Hello! Your service order has been updated.",
-      "statusLabel": "Status",
-      "trackLink": "Track your [[os]]"
-    },
-    "quote": {
-      "intro": "You received a new quote!",
-      "quoteLabel": "Quote",
-      "amountLabel": "Amount",
-      "viewLink": "View and approve"
-    },
-    "avisoCliente": {
-      "aCaminho": "Hello! This is {empresa}.\n\nWe are on our way for *{titulo}* ({os}).",
-      "concluido": "Hello! This is {empresa}.\n\nThe service *{titulo}* ({os}) has been completed.",
-      "acompanhe": "Follow it here"
-    }
-  },
-  "errors": {
-    "planFeature": {
-      "gpsMap": "GPS Map is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
-      "nfse": "Invoice (NFS-e) issuing is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
-      "signature": "Customer digital signature is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
-      "checklist": "The execution checklist is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
-      "advancedReports": "Advanced reports are part of the Pro plan. Upgrade in Settings → Plan to unlock them."
-    },
-    "planLimit": {
-      "users": "Your plan allows up to {max} users and that limit has been reached. Upgrade in Settings → Plan to add more.",
-      "serviceOrders": "Your plan allows {max} [[osP]] per month and that limit has been reached. The quota resets on the 1st, or upgrade in Settings → Plan.",
-      "nfse": "Your plan allows {max} tax invoices per month. Talk to us to increase it."
-    },
-    "clientNotFound": "Client not found.",
-    "technicianNotFound": "Technician not found.",
-    "providerNotFound": "Provider not found.",
-    "orderNotFound": "Service order not found.",
-    "quoteNotFound": "Quote not found.",
-    "itemNotFound": "Item not found.",
-    "companyNotFound": "Company not found.",
-    "tenantNotFound": "Company not found.",
-    "invoicedOrderLocked": "An invoiced [[os]] cannot be edited.",
-    "invalidRequest": "Invalid request.",
-    "invalidScore": "Invalid score.",
-    "invalidStatus": "Invalid status.",
-    "invalidType": "Invalid type.",
-    "invalidSignature": "Invalid signature.",
-    "cancelledOrderCannotSign": "A cancelled [[os]] cannot be signed.",
-    "invoicedSignatureLocked": "[[osC]] already invoiced — the signature cannot be changed.",
-    "quoteWithoutPhone": "Quote has no contact phone.",
-    "clientWithoutPhone": "Client has no WhatsApp/phone number.",
-    "configureZapi": "Set up Z-API under Settings → WhatsApp.",
-    "configureFiscal": "Set up your tax details under Settings → Tax.",
-    "nfseAlreadyIssued": "An e-invoice was already issued for this [[os]].",
-    "orderWithoutAmount": "[[osC]] has no amount — add items before issuing an e-invoice.",
-    "invalidLink": "Invalid or expired link.",
-    "duplicateEmailAccount": "An account already exists with the email {email}, linked to another account. Please contact support.",
-    "defaultUserName": "User",
-    "inactiveSubscription": "Inactive subscription. Subscribe to a plan to keep using the system.",
-    "defaultCompanyName": "{name}'s Company",
-    "tooManyAttempts": "Too many attempts. Please wait a few minutes and try again.",
-    "inviteLinkUsed": "This invite has already been used or has expired. If you already set your password, just sign in below. If you haven't, use \"Forgot my password\" with the email that received the invite — do not create a new company.",
-    "recoveryLinkUsed": "This recovery link has already been used or has expired. Request a new one under \"Forgot my password\".",
-    "funcaoDesligada": "This feature is turned off for your company. Contact support."
-  },
-  "validation": {
-    "nameRequired": "Name is required",
-    "titleRequired": "Title is required",
-    "clientRequired": "Client is required",
-    "descriptionRequired": "Description is required",
-    "dueDateRequired": "Due date is required",
-    "amountPositive": "Amount must be positive",
-    "invalidEmail": "Invalid email",
-    "invalidUrl": "Invalid URL",
-    "unsafeLogoUrl": "Logo URL not allowed — use https and a public host"
-  },
-  "notifications": {
-    "quoteApproved": {
-      "title": "Quote approved! 🎉",
-      "body": "{client} approved quote #{number}"
-    },
-    "quoteRejected": {
-      "title": "Quote rejected",
-      "body": "{client} rejected quote #{number}"
-    },
-    "newOrder": {
-      "title": "New Service Order"
-    },
-    "orderAssigned": {
-      "title": "[[osC]] assigned to you"
-    },
-    "osAtribuida": {
-      "title": "[[osC]] for you"
-    },
-    "osDeContrato": {
-      "title": "[[osC]] from contract"
-    },
-    "osConcluida": {
-      "title": "Job completed"
-    },
-    "osStatus": {
-      "title": "[[osC]] status changed"
-    },
-    "orcamentoRespondido": {
-      "title": "Quote answered"
-    },
-    "pagamentoConfirmado": {
-      "title": "Payment confirmed"
-    },
-    "notaRejeitada": {
-      "title": "Tax invoice rejected"
-    },
-    "certificadoVencendo": {
-      "title": "Digital certificate expiring"
-    }
-  },
-  "customFields": {
-    "title": "Custom fields",
-    "subtitle": "Every trade tracks different things. Create the fields your company needs and they show up in the forms.",
-    "formSectionTitle": "Additional information",
-    "selectPlaceholder": "Select...",
-    "emptyState": "No fields created yet. Use the form below.",
-    "addTitle": "Create field",
-    "addButton": "Create field",
-    "added": "Field created",
-    "remove": "Remove field",
-    "moveUp": "Move up",
-    "moveDown": "Move down",
-    "confirmRemove": "Remove the field “{campo}”? It disappears from everyone's forms. Values already filled in stay stored — recreate the field and they come back.",
-    "limitReached": "You have reached the limit of {max} fields. Remove one before creating another.",
-    "fieldLabel": "Field name",
-    "fieldLabelPlaceholder": "e.g. Square footage, Breed, Serial number",
-    "fieldType": "Type",
-    "fieldOptions": "Options",
-    "fieldOptionsPlaceholder": "Small\nMedium\nLarge",
-    "fieldOptionsHint": "One option per line.",
-    "fieldRequired": "Required",
-    "yes": "Yes",
-    "no": "No",
-    "entities": {
-      "CLIENT": "Client record fields",
-      "SERVICE_ORDER": "Service order fields"
-    },
-    "types": {
-      "TEXT": "Text",
-      "NUMBER": "Number",
-      "DATE": "Date",
-      "SELECT": "Option list",
-      "CHECKBOX": "Yes / No"
-    },
-    "errors": {
-      "semPermissao": "You do not have permission to change these fields. Ask a company administrator.",
-      "entidadeInvalida": "Invalid record type.",
-      "labelCurto": "The field name needs at least 2 characters.",
-      "labelLongo": "The field name can have at most 40 characters.",
-      "tipoInvalido": "Invalid field type.",
-      "semOpcoes": "An option list needs at least one option.",
-      "limiteAtingido": "You have reached the field limit for this record type.",
-      "naoEncontrado": "Field not found.",
-      "obrigatorio": "Please fill in “{campo}”.",
-      "muitoLongo": "The field “{campo}” is over the maximum length.",
-      "numeroInvalido": "The field “{campo}” must be a number.",
-      "dataInvalida": "The field “{campo}” must be a valid date.",
-      "opcaoInvalida": "The option chosen in “{campo}” no longer exists."
-    }
-  },
-  "vocabulario": {
-    "title": "What you call things",
-    "subtitle": "Every trade uses a different word. Set it here and the whole system speaks the way your company does.",
-    "os": {
-      "title": "What you open for each piece of work",
-      "help": "Shows in the menu, buttons, reports and emails."
-    },
-    "tec": {
-      "title": "Who does the work",
-      "help": "Shows on the map, in your team and in performance reports."
-    },
-    "fields": {
-      "curto": "Short form",
-      "curtoHint": "Used in buttons and columns, where space is tight. e.g. Order, Job.",
-      "singular": "Spelled out (one)",
-      "singularHint": "How it reads inside a sentence. e.g. service order.",
-      "plural": "Spelled out (many)",
-      "pluralHint": "e.g. service orders, jobs.",
-      "genero": "Gender",
-      "generoHint": "Only affects Portuguese, where articles and adjectives must agree.",
-      "feminino": "Feminine",
-      "masculino": "Masculine"
-    },
-    "preview": {
-      "title": "How it will look"
-    },
-    "save": "Save",
-    "saved": "Saved",
-    "restore": "Reset to default",
-    "confirmRestore": "Reset to the system default names? This changes what your whole team sees.",
-    "errors": {
-      "semPermissao": "You do not have permission to change this. Ask a company administrator.",
-      "termoCurto": "Each field needs at least 2 characters.",
-      "termoLongo": "Each field can have at most 30 characters.",
-      "generoInvalido": "Choose feminine or masculine."
-    }
-  },
-  "fotos": {
-    "title": "Service photos",
-    "add": "Add photo",
-    "sending": "Uploading...",
-    "empty": "No photos yet.",
-    "emptyLocked": "No photos on this order.",
-    "hint": "On a phone, the button opens the camera directly. Photos are shrunk on the device before uploading, so it works on a weak signal.",
-    "remove": "Remove photo",
-    "confirmRemove": "Remove this photo? It is the proof of work done and cannot be recovered.",
-    "unavailable": "unavailable",
-    "close": "Close",
-    "errors": {
-      "arquivoVazio": "Empty file. Pick a photo.",
-      "tipoNaoAceito": "Images only (JPG, PNG or WEBP).",
-      "muitoGrande": "Photo too large even after shrinking. Try another.",
-      "limitePorOs": "This order has reached the photo limit.",
-      "osNaoEncontrada": "Service order not found.",
-      "osFaturada": "An invoiced order does not accept photo changes.",
-      "semPermissao": "You do not have permission to remove photos.",
-      "naoEncontrada": "Photo not found."
-    }
-  },
-  "contratos": {
-    "title": "Recurring contracts",
-    "subtitle": "Work that repeats. The system opens the service order on its own, on the right date.",
-    "newButton": "New contract",
-    "formTitle": "New recurring contract",
-    "save": "Save contract",
-    "listTitle": "{count, plural, =0 {No contracts} one {# contract} other {# contracts}}",
-    "empty": "No contracts yet.",
-    "emptyHint": "Weekly cleaning, monthly landscaping, IT support, quarterly pest control — set it once and the order shows up on its own, three days before each visit.",
-    "needClient": "Add a client before creating a contract.",
-    "paused": "Paused",
-    "pause": "Pause",
-    "resume": "Resume",
-    "delete": "Delete",
-    "confirmDelete": "Delete this contract? It stops generating new service orders.",
-    "confirmDeleteWithOrders": "Delete this contract? The {count} service orders already generated stay in the system — they are work done. Only new ones stop.",
-    "columns": {
-      "contract": "Contract",
-      "frequency": "Frequency",
-      "next": "Next",
-      "amount": "Amount",
-      "generated": "Orders"
-    },
-    "frequencies": {
-      "WEEKLY": "Weekly",
-      "BIWEEKLY": "Every 2 weeks",
-      "MONTHLY": "Monthly",
-      "BIMONTHLY": "Every 2 months",
-      "QUARTERLY": "Quarterly",
-      "SEMIANNUAL": "Every 6 months",
-      "ANNUAL": "Yearly"
-    },
-    "fields": {
-      "client": "Client",
-      "title": "What will be done",
-      "titlePlaceholder": "e.g. Water tank cleaning",
-      "frequency": "How often",
-      "dayOfMonth": "Day of month",
-      "dayOfMonthHint": "In shorter months it falls on the last day — and returns to the chosen day the month after.",
-      "amount": "Amount per visit",
-      "amountHint": "Pre-filled on the generated order; you can adjust it later.",
-      "technician": "Assigned to",
-      "noTechnician": "Decide later",
-      "startsAt": "Starts on",
-      "endsAt": "Ends on",
-      "endsAtHint": "Leave empty for an open-ended contract.",
-      "description": "Notes"
-    },
-    "errors": {
-      "semPermissao": "You do not have permission to manage contracts.",
-      "dadosInvalidos": "Please check the fields.",
-      "clienteNaoEncontrado": "Client not found.",
-      "tecnicoNaoEncontrado": "Assignee not found.",
-      "fimAntesDoInicio": "The end date cannot be before the start date.",
-      "naoEncontrado": "Contract not found."
-    }
-  },
-  "avisoClienteConfig": {
-    "title": "Notify the client automatically",
-    "subtitle": "Automatic message when the job starts and when it ends. Saves the “are you coming today?” call.",
-    "master": "Turn on automatic notices",
-    "masterHint": "Starts off. While it is off, nothing is sent — not by WhatsApp, not by email.",
-    "whenTitle": "At which moments",
-    "when": {
-      "aCaminho": "When the job starts",
-      "aCaminhoHint": "Sent when the order moves to “In progress”.",
-      "concluido": "When the job ends",
-      "concluidoHint": "Sent when the order is completed."
-    },
-    "howTitle": "Through which channel",
-    "how": {
-      "whatsapp": "WhatsApp",
-      "whatsappHint": "Goes to the client's registered WhatsApp or phone.",
-      "whatsappMissing": "Set up the WhatsApp integration above for this channel to work.",
-      "email": "Email",
-      "emailHint": "Only for clients with an email on file."
-    },
-    "consent": "You are responsible for having your clients' consent to receive these messages. The system sends on behalf of your company, using the contacts you registered.",
-    "save": "Save",
-    "saved": "Saved",
-    "errors": {
-      "semPermissao": "You do not have permission to change this."
-    }
-  },
-  "documentos": {
-    "title": "Terms and warranty on documents",
-    "subtitle": "What gets printed on the service order and quote you hand to the client.",
-    "warranty": {
-      "label": "Default warranty period",
-      "placeholder": "days",
-      "hint": "Counted from job completion. The document shows the exact expiry date. Each order can have its own period.",
-      "presets": {
-        "0": "No warranty",
-        "30": "30 days",
-        "90": "3 months",
-        "180": "6 months",
-        "365": "1 year"
-      }
-    },
-    "orderTerms": {
-      "label": "Terms on the service order",
-      "placeholder": "e.g. The warranty covers workmanship defects and does not cover misuse...",
-      "hint": "Printed on the order PDF, before the signatures."
-    },
-    "quoteTerms": {
-      "label": "Terms on the quote",
-      "placeholder": "e.g. Quote valid for 15 days. Payment: 50% on approval...",
-      "hint": "Printed on the quote PDF, before the signatures."
-    },
-    "legalNotice": "This text is written by you and printed exactly as written. If it carries legal weight in your trade, have a lawyer review it — ServiçoOS only prints it.",
-    "save": "Save",
-    "saved": "Saved",
-    "errors": {
-      "semPermissao": "You do not have permission to change this.",
-      "prazoInvalido": "Invalid period. Use a number of days between 0 and 3650."
-    }
-  },
   "pix": {
     "title": "Get paid by PIX",
     "subtitle": "The client pays straight into your company's account. The system only prints the code — the money never passes through us, and there is no fee.",
@@ -2418,6 +2080,96 @@
       "cidadeObrigatoria": "Enter the city."
     }
   },
+  "planFeatures": {
+    "starter": [
+      "Up to 3 users",
+      "50 jobs per month",
+      "8 tax invoices per month",
+      "Quotes and PDF",
+      "Automatic receipts",
+      "Basic reports",
+      "Email support"
+    ],
+    "pro": [
+      "Everything in Starter",
+      "Up to 10 users",
+      "200 jobs per month",
+      "70 tax invoices per month",
+      "Live GPS map",
+      "Checklist + digital signature",
+      "Advanced reports",
+      "Priority support"
+    ],
+    "enterprise": [
+      "Everything in Pro",
+      "Unlimited users",
+      "Unlimited jobs",
+      "Dedicated onboarding",
+      "Integration API",
+      "Branches (multi-location)",
+      "24h support via WhatsApp"
+    ]
+  },
+  "portal": {
+    "serviceOrder": {
+      "headerSubtitle": "Track your service order",
+      "responsibleLabel": "Assigned to: {name}",
+      "scheduledLabel": "Scheduled: {date}",
+      "descriptionTitle": "Service description",
+      "servicesPerformedTitle": "Services performed",
+      "items": {
+        "title": "Items and amounts",
+        "description": "Description",
+        "total": "Total"
+      },
+      "signatureTitle": "Service confirmation",
+      "npsTitle": "Rate your experience"
+    },
+    "quote": {
+      "headerSubtitle": "Digital quote",
+      "forLabel": "For: {name}",
+      "validUntilLabel": "Valid until: {date}",
+      "descriptionTitle": "Description",
+      "materialsTitle": "Materials",
+      "totalLabel": "Total amount",
+      "approveButton": "Approve quote",
+      "rejectButton": "Reject",
+      "approvedTitle": "Quote approved!",
+      "approvedMessage": "We'll be in touch to schedule the service.",
+      "rejectedTitle": "Quote rejected",
+      "rejectedMessage": "Get in touch with us if you'd like to review the terms.",
+      "responseError": "We couldn't record your response. Please try again."
+    },
+    "nps": {
+      "question": "On a scale of 0 to 10, how likely are you to recommend us?",
+      "promoter": "Promoter 😊",
+      "passive": "Passive 😐",
+      "detractor": "Detractor 😟",
+      "feedbackPlaceholder": "Leave a comment (optional)...",
+      "saveError": "We couldn't save your rating. Please try again.",
+      "submit": "Submit rating",
+      "submitting": "Sending...",
+      "thanks": "Thanks for your feedback! ⭐"
+    },
+    "signature": {
+      "instructions": "Sign below to confirm the service was completed.",
+      "emptyError": "Please sign before confirming.",
+      "confirmed": "Service confirmed by the client",
+      "altText": "Signature",
+      "clearButton": "Clear",
+      "confirmButton": "Confirm signature"
+    },
+    "pix": {
+      "title": "Pay by PIX",
+      "amount": "Amount",
+      "scan": "Point your bank app's camera at the code",
+      "orCopy": "or copy the code below and paste it into your app",
+      "copy": "Copy code",
+      "copied": "Copied!",
+      "receiver": "Receiver",
+      "openAmount": "The amount is not set in the code — type it in your app."
+    }
+  },
   "primeirosPassos": {
     "title": "First steps",
     "subtitle": "Five minutes now saves rework on every document you send from here on.",
@@ -2450,166 +2202,462 @@
       }
     }
   },
-  "estoque": {
-    "title": "Parts inventory",
-    "subtitle": "The balance only changes through movements, never by direct editing — so history and the number on screen never disagree.",
-    "nova": "New part",
-    "novaPeca": "New part",
-    "editarPeca": "Edit part",
-    "formAjuda": "The balance is not edited here: use Move.",
-    "buscar": "Search by name or code...",
-    "vazio": "No parts registered yet.",
-    "vazioBusca": "No parts found.",
-    "inativa": "inactive",
-    "desativar": "Deactivate",
-    "reativar": "Reactivate",
-    "salvar": "Save",
-    "cancelar": "Cancel",
-    "confirmar": "Confirm",
-    "movimentar": "Move stock",
-    "saldoAtual": "current balance: {saldo} {unidade}",
-    "saldoFicara": "Balance will be: {saldo} {unidade}",
-    "ficaraNegativo": "will go negative",
-    "alerta": {
-      "titulo": "{count, plural, one {# part needs attention} other {# parts need attention}}"
+  "providers": {
+    "list": {
+      "title": "Service Providers",
+      "newButton": "New provider",
+      "searchPlaceholder": "Search by name or specialty...",
+      "resultsCount": "{count, plural, one {# provider} other {# providers}}",
+      "emptyFiltered": "No providers found.",
+      "emptyState": "No providers registered yet.",
+      "emptyCta": "Register first provider",
+      "deleteButton": "Delete provider",
+      "columns": {
+        "name": "Name",
+        "specialty": "Specialty",
+        "phone": "Phone",
+        "email": "Email",
+        "document": "Document"
+      }
     },
-    "colunas": {
-      "peca": "Part",
-      "saldo": "Balance",
-      "minimo": "Minimum",
-      "custo": "Cost",
-      "venda": "Price",
-      "acoes": "Actions"
+    "new": {
+      "title": "New Provider"
     },
-    "campos": {
-      "nome": "Name",
-      "codigo": "Code",
-      "unidade": "Unit",
-      "custo": "Cost",
-      "venda": "Price",
-      "minimo": "Minimum",
-      "minimoAjuda": "Below the minimum the part is flagged. Zero turns the alert off.",
-      "saldoAviso": "To change the balance use Move — that way the reason is recorded.",
-      "tipo": "Type",
-      "quantidade": "Quantity",
-      "contado": "Counted balance",
-      "motivo": "Reason",
-      "motivoExemplo": "e.g. inventory count",
-      "motivoAjuda": "An adjustment without a reason is indistinguishable from a mistake six months later."
+    "edit": {
+      "title": "Edit Provider"
     },
-    "tipos": {
-      "ENTRADA": "In",
-      "SAIDA": "Out",
-      "AJUSTE": "Adjust"
-    },
-    "tiposAjuda": {
-      "ENTRADA": "Adds to the balance. e.g. a purchase received outside a purchase order.",
-      "SAIDA": "Subtracts from the balance. e.g. a broken or lost part.",
-      "AJUSTE": "SETS the balance. Type what you counted on the shelf — not the difference."
-    },
-    "erros": {
-      "semPermissao": "You do not have permission for this.",
-      "tipoInvalido": "Choose the movement type.",
-      "quantidadeInvalida": "Invalid quantity.",
-      "motivoObrigatorio": "An adjustment requires a reason.",
-      "pecaNaoEncontrada": "Part not found."
+    "form": {
+      "nameLabel": "Name *",
+      "specialtyLabel": "Specialty",
+      "specialtyPlaceholder": "E.g. Electrical, Plumbing, IT...",
+      "phoneLabel": "Phone",
+      "phonePlaceholder": "(00) 00000-0000",
+      "documentLabel": "CPF / CNPJ",
+      "emailLabel": "Email",
+      "notesLabel": "Notes"
     }
   },
-  "compras": {
-    "title": "Purchase orders",
-    "subtitle": "Purchased parts enter stock when you record the receipt.",
-    "nova": "New purchase",
-    "novaCompra": "New purchase order",
-    "novaAjuda": "Pick the parts and quantities. Stock only changes when the goods arrive.",
-    "fornecedores": "Suppliers",
-    "fornecedoresTitulo": "Suppliers",
-    "fornecedoresAjuda": "Who sells you parts. A separate list from service providers.",
-    "novoFornecedor": "New supplier",
-    "excluirFornecedor": "Delete",
-    "adicionarItem": "Add item",
-    "criar": "Create purchase",
-    "salvar": "Save",
-    "cancelar": "Cancel",
-    "voltar": "Back to purchases",
-    "voltarBotao": "Back",
-    "total": "Total",
-    "vazio": "No purchase orders yet.",
-    "vazioSemPecas": "Register a part in inventory before creating a purchase order.",
-    "pendentes": "{count, plural, one {# purchase awaiting delivery} other {# purchases awaiting delivery}}",
-    "pendentesAjuda": "Open the purchase to record what arrived.",
-    "itensDaCompra": "Items",
-    "observacao": "Notes",
-    "semFornecedor": "No supplier",
-    "previsaoEm": "expected: {data}",
-    "recebidaEm": "Received on {data}",
-    "receber": "Record receipt",
-    "receberAjuda": "Pre-filled with what is missing. Adjust if less arrived.",
-    "receberAviso": "On confirm, the quantities enter stock and the part cost is updated.",
-    "confirmarRecebimento": "Confirm receipt",
-    "tudoRecebido": "All items on this purchase have been received.",
-    "faltamUnidades": "{qtd} {unidade} missing",
-    "cancelarCompra": "Cancel purchase order",
-    "cancelarAviso": "The purchase is marked as cancelled. Only possible before any receipt — once parts have entered, undoing here would leave balance and history disagreeing.",
-    "confirmarCancelamento": "Cancel purchase",
-    "status": {
-      "RASCUNHO": "Draft",
-      "ENVIADA": "Sent",
-      "PARCIAL": "Partial",
-      "RECEBIDA": "Received",
-      "CANCELADA": "Cancelled"
+  "quotes": {
+    "list": {
+      "title": "Quotes",
+      "newButton": "New quote",
+      "searchPlaceholder": "Search by client, description...",
+      "statusFilterPlaceholder": "All statuses",
+      "resultsCount": "{count, plural, one {# quote} other {# quotes}}",
+      "resultsFound": "{count, plural, one {# quote found} other {# quotes found}}",
+      "emptyFiltered": "No quotes found with these filters.",
+      "emptyState": "No quotes registered yet.",
+      "emptyCta": "Create your first quote",
+      "columns": {
+        "number": "Number",
+        "client": "Client",
+        "service": "Service",
+        "amount": "Amount",
+        "validity": "Valid until",
+        "status": "Status"
+      }
     },
-    "colunas": {
-      "numero": "Number",
-      "fornecedor": "Supplier",
-      "status": "Status",
-      "itens": "Items",
-      "previsao": "Expected",
-      "total": "Total",
-      "peca": "Part",
-      "pedido": "Ordered",
-      "recebido": "Received",
-      "falta": "Missing",
-      "custoUnit": "Unit cost"
+    "new": {
+      "title": "New Quote"
     },
-    "campos": {
-      "fornecedor": "Supplier",
-      "semFornecedor": "No supplier",
-      "previsao": "Expected delivery",
-      "itens": "Items",
-      "escolhaPeca": "Choose the part",
-      "quantidade": "Qty",
-      "custoUnit": "Cost",
-      "observacao": "Notes",
-      "nomeFornecedor": "Name",
-      "documento": "Tax ID",
-      "telefone": "Phone",
-      "email": "Email"
+    "detail": {
+      "editTitle": "Edit Quote {number}",
+      "createdOn": "Created on {date}",
+      "validUntil": "Valid until {date}",
+      "generatePdfButton": "Generate PDF",
+      "clientTitle": "Client",
+      "serviceTitle": "Service",
+      "whatNeedsToBeDone": "What needs to be done",
+      "materialsLabel": "Materials to be used",
+      "valuesTitle": "Amounts and terms",
+      "totalAmountLabel": "Total amount",
+      "notesLabel": "Notes",
+      "actions": {
+        "markSent": "Mark as Sent",
+        "approve": "Approve",
+        "reject": "Reject",
+        "revertToDraft": "Revert to Draft"
+      }
     },
-    "erros": {
-      "semPermissao": "You do not have permission for this.",
-      "semItens": "Add at least one item.",
-      "pecaInvalida": "One of the parts does not belong to your company.",
-      "fornecedorInvalido": "Invalid supplier.",
-      "nomeObrigatorio": "Enter the name.",
-      "naoEncontrada": "Purchase not found.",
-      "compraCancelada": "This purchase was cancelled.",
-      "jaRecebida": "This purchase was already fully received.",
-      "nadaARecebeber": "Enter how much arrived for at least one item."
+    "form": {
+      "clientDataTitle": "Client details",
+      "clientNameLabel": "Client name *",
+      "clientNamePlaceholder": "Full name or company name",
+      "clientContactLabel": "Contact (phone / email)",
+      "clientContactPlaceholder": "(11) 99999-9999",
+      "clientAddressLabel": "Address",
+      "clientAddressPlaceholder": "Street, number — City/State",
+      "serviceTitle": "Service",
+      "descriptionLabel": "What needs to be done *",
+      "descriptionPlaceholder": "Describe the service to be performed in detail...",
+      "materialsLabel": "Materials to be used",
+      "materialsPlaceholder": "List the materials, quantities, and specifications...",
+      "valuesTitle": "Amounts and terms",
+      "amountLabel": "Amount to be charged (R$)",
+      "amountPlaceholder": "0,00",
+      "validUntilLabel": "Valid until",
+      "statusLabel": "Status",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Payment terms, execution deadline, warranty...",
+      "submitCreate": "Create quote",
+      "submitUpdate": "Save changes"
+    },
+    "validation": {
+      "clientNameRequired": "Client name is required",
+      "descriptionRequired": "Service description is required"
     }
   },
-  "historicoOs": {
-    "titulo": "Change history",
-    "alguem": "a team member",
-    "vazio": "not set",
-    "dias": "{n, plural, one {# day} other {# days}}",
-    "eventos": {
-      "CRIADA": "The [[os]] was created",
-      "STATUS": "Status changed from <de></de> to <para></para>",
-      "RESPONSAVEL": "Assignee changed from <de></de> to <para></para>",
-      "AGENDAMENTO": "Schedule changed from <de></de> to <para></para>",
-      "VALOR": "Amount changed from <de></de> to <para></para>",
-      "CONCLUSAO": "Completion note edited",
-      "GARANTIA": "Warranty changed from <de></de> to <para></para>"
+  "schedule": {
+    "title": "Schedule",
+    "newOrderButton": "New [[osC]]",
+    "summary": {
+      "countTitle": "{count, plural, =0 {# [[osP]] scheduled this month} one {# [[os]] scheduled this month} other {# [[osP]] scheduled this month}}",
+      "empty": "No [[osP]] scheduled."
+    },
+    "calendar": {
+      "weekdays": [
+        "Sun",
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat"
+      ],
+      "months": [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ],
+      "eventTooltip": "[[osC]] #{number} — {title}\n{client}",
+      "moreEvents": "+{count} more"
+    },
+    "reagendar": {
+      "mover": "Move [[osC]] #{number}",
+      "mesAnterior": "Previous month",
+      "mesSeguinte": "Next month",
+      "escolhaODia": "Tap the day you want to move it to.",
+      "soltarNoDia": "Move to day {dia}",
+      "movida": "[[osC]] #{number} moved to {data} at {hora}.",
+      "conflito": "{count, plural, one {Heads up: {nome} already has another job at that time.} other {Heads up: {nome} already has # jobs at that time.}}",
+      "motivo": {
+        "concluida": "Already completed. To correct the date, use the edit screen.",
+        "faturada": "Already invoiced. The tax invoice is tied to this date.",
+        "cancelada": "Cancelled. No longer on the schedule.",
+        "naoEncontrada": "[[osC]] not found.",
+        "semAgendamento": "No scheduled date to move.",
+        "dataInvalida": "Invalid date.",
+        "semPermissao": "You do not have permission to reschedule."
+      }
+    }
+  },
+  "serviceOrdersComponents": {
+    "form": {
+      "orderDataTitle": "[[Os]] details",
+      "titleLabel": "Title *",
+      "titlePlaceholder": "E.g. Electrical maintenance",
+      "descriptionLabel": "Description",
+      "editDescriptionLabel": "Problem description",
+      "clientLabel": "Client *",
+      "clientPlaceholder": "Select a client",
+      "technicianLabel": "Assigned technician",
+      "technicianPlaceholder": "Select a technician (optional)",
+      "scheduledLabel": "Schedule",
+      "itemsTitle": "Items / Services",
+      "createPending": "Creating [[osC]]...",
+      "createSubmit": "Create [[osC]]",
+      "editSubmit": "Save changes"
+    },
+    "items": {
+      "addButton": "Add item",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Service/part description",
+      "quantityLabel": "Qty.",
+      "unitPriceLabel": "Unit price",
+      "totalLabel": "Total:"
+    },
+    "checklist": {
+      "progressLabel": "{done}/{total} items completed",
+      "addPlaceholder": "Add checklist item..."
+    },
+    "concludeDialog": {
+      "trigger": "Complete",
+      "editTrigger": "Edit completion",
+      "title": "Complete Service",
+      "notesLabel": "Description of services performed",
+      "notesPlaceholder": "Describe what was done, parts replaced, procedures...",
+      "itemsLabel": "Items / Charges",
+      "itemDescriptionPlaceholder": "Service or part",
+      "itemUnitPriceLabel": "Unit price (R$)",
+      "concludeError": "Error completing service. Please try again.",
+      "saveNoInvoice": "Save (without invoicing)",
+      "concludeNoInvoice": "Complete (without invoicing)",
+      "saveAndInvoice": "Save and Invoice",
+      "concludeAndInvoice": "Complete and Invoice"
+    },
+    "osActionsRow": {
+      "startButton": "Start"
+    },
+    "statusButton": {
+      "updating": "Updating..."
+    },
+    "whatsappButton": {
+      "label": "WhatsApp",
+      "sending": "Sending...",
+      "sent": "Sent!",
+      "sendError": "Failed to send",
+      "connectionError": "Connection error"
+    },
+    "nfseButton": {
+      "statusEmitted": "issued",
+      "viewLink": "View NFS-e",
+      "confirmEmit": "Issue an e-invoice for this [[os]]?",
+      "emitButton": "Issue NFS-e"
+    },
+    "signaturePad": {
+      "emptyError": "Please sign before saving.",
+      "registered": "Client signature recorded",
+      "altText": "Client signature",
+      "instructions": "Ask the client to sign below to confirm the service was completed.",
+      "clearButton": "Clear",
+      "confirmButton": "Confirm signature"
+    }
+  },
+  "serviceOrdersPages": {
+    "list": {
+      "title": "[[OsP]]",
+      "newButton": "New [[osC]]",
+      "searchPlaceholder": "Search by title or client...",
+      "statusFilterPlaceholder": "All statuses",
+      "statusAll": "All",
+      "countActive": "{count, plural, one {# active order} other {# active orders}}",
+      "countActiveFound": "{count, plural, one {# active order found} other {# active orders found}}",
+      "countFound": "{count, plural, one {# order found} other {# orders found}}",
+      "emptyFiltered": "No [[osP]] match these filters.",
+      "emptyNone": "No [[osP]] created yet.",
+      "createFirst": "Create the first [[os]]",
+      "columns": {
+        "number": "No.",
+        "title": "Title",
+        "client": "Client",
+        "responsible": "Assigned to",
+        "total": "Total",
+        "date": "Date",
+        "status": "Status"
+      }
+    },
+    "new": {
+      "title": "New Service Order"
+    },
+    "detail": {
+      "clientPortal": "Client portal",
+      "deleteLabel": "Delete [[osC]]",
+      "infoTitle": "Information",
+      "clientLabel": "Client: ",
+      "responsibleLabel": "Assigned to: ",
+      "createdLabel": "Created on: ",
+      "scheduledLabel": "Scheduled for: ",
+      "concludedLabel": "Completed on: ",
+      "problemDescriptionTitle": "Problem description",
+      "servicesPerformedTitle": "Services performed",
+      "checklistTitle": "Execution checklist",
+      "signatureTitle": "Client signature",
+      "itemsTitle": "Items",
+      "noItems": "No items recorded.",
+      "itemColumns": {
+        "description": "Description",
+        "quantity": "Qty.",
+        "unitPrice": "Unit price",
+        "total": "Total"
+      },
+      "actions": {
+        "startService": "Start service",
+        "markDone": "Mark as completed",
+        "markInvoiced": "Mark as invoiced"
+      }
+    },
+    "edit": {
+      "title": "Edit Service Order"
+    }
+  },
+  "settingsAdvanced": {
+    "permissions": {
+      "title": "Access Control",
+      "subtitle": "Choose what technicians see in the menu and what they can do.",
+      "saveButton": "Save permissions",
+      "savedMessage": "Saved successfully",
+      "effectNote": "Permission changes take effect the next time the technician loads the page.",
+      "abasTitle": "Tabs the technician sees",
+      "acoes": {
+        "title": "What the technician can do",
+        "subtitle": "One level below tabs: within an allowed tab, which actions they can perform.",
+        "saveButton": "Save actions",
+        "savedMessage": "Saved successfully",
+        "effectNote": "Applies to the technician role. Owner and admin can do everything.",
+        "labels": {
+          "os": {
+            "criar": "Open [[osP]]",
+            "editar": "Edit [[os]] — includes line items and the total AMOUNT",
+            "status": "Change the status",
+            "concluir": "Complete [[os]]",
+            "reagendar": "Reschedule from the calendar",
+            "checklist": "Edit the checklist"
+          },
+          "cliente": {
+            "criar": "Create clients",
+            "equipamento": "Create client equipment"
+          }
+        }
+      }
+    },
+    "fiscal": {
+      "title": "Tax Settings — NFS-e",
+      "subtitle": "Set up your company details to issue electronic service invoices (NFS-e).",
+      "configured": {
+        "title": "Tax profile configured",
+        "cnpjLabel": "CNPJ:",
+        "city": "City: {city} — {state}",
+        "nfeioIdLabel": "nfe.io ID:"
+      },
+      "form": {
+        "title": "Register your company to issue NFS-e",
+        "description": "Fill in your company details. They will be used to issue NFS-e through nfe.io.",
+        "cnpjLabel": "CNPJ *",
+        "cnpjPlaceholder": "00.000.000/0001-00",
+        "municipalTaxNumberLabel": "Municipal Registration",
+        "municipalTaxNumberPlaceholder": "Registration number",
+        "emailLabel": "Company email *",
+        "emailPlaceholder": "contact@company.com",
+        "postalCodeLabel": "ZIP code *",
+        "postalCodePlaceholder": "00000-000",
+        "numberLabel": "Number *",
+        "numberPlaceholder": "123",
+        "streetLabel": "Street *",
+        "streetPlaceholder": "Main Street",
+        "districtLabel": "Neighborhood *",
+        "districtPlaceholder": "Downtown",
+        "stateLabel": "State (2-letter code) *",
+        "statePlaceholder": "SP",
+        "cityLabel": "City *",
+        "cityPlaceholder": "São Paulo",
+        "cityCodeLabel": "City IBGE code *",
+        "cityCodePlaceholder": "3550308",
+        "cityCodeHelp": "Look it up at <link>ibge.gov.br</link>",
+        "issRateLabel": "ISS tax rate (%) *",
+        "submit": "Register company with nfe.io"
+      }
+    }
+  },
+  "settingsCore": {
+    "title": "Settings",
+    "company": {
+      "title": "Company",
+      "description": "Details that appear on [[osP]] and generated PDFs.",
+      "form": {
+        "nameLabel": "Company name *",
+        "documentLabel": "CNPJ / CPF",
+        "phoneLabel": "Contact phone number(s)",
+        "phonePlaceholder": "(11) 99999-9999",
+        "addressLabel": "Address",
+        "addressPlaceholder": "123 Example St — São Paulo, SP",
+        "websiteLabel": "Website",
+        "websitePlaceholder": "https://yourcompany.com"
+      },
+      "logo": {
+        "title": "Company logo",
+        "hint": "Shows on quote, [[os]] and receipt PDFs. PNG, JPG or WEBP, up to 2 MB.",
+        "alt": "Company logo",
+        "remove": "Remove",
+        "save": "Save logo",
+        "chooseFile": "Pick a file.",
+        "tooLarge": "That image is over 2 MB. Pick a smaller one.",
+        "wrongType": "Use PNG, JPG or WEBP.",
+        "failed": "Couldn't process that image. Try another one.",
+        "saved": "Logo saved."
+      }
+    },
+    "profile": {
+      "title": "My profile",
+      "description": "Your name and sign-in email.",
+      "form": {
+        "nameLabel": "Your name *",
+        "emailLabel": "Email",
+        "emailHint": "Your email cannot be changed here.",
+        "roleLabel": "Role",
+        "documentLabel": "CPF / CNPJ",
+        "phoneLabel": "Phone",
+        "phonePlaceholder": "(11) 99999-9999",
+        "addressTitle": "Address",
+        "streetLabel": "Street / Avenue",
+        "numberLabel": "Number",
+        "complementLabel": "Complement",
+        "districtLabel": "Neighborhood",
+        "zipCodeLabel": "ZIP code",
+        "cityLabel": "City",
+        "stateLabel": "State (2 letters)"
+      }
+    },
+    "whatsapp": {
+      "title": "WhatsApp (Z-API)",
+      "description": "Send [[osP]], quotes, and satisfaction surveys straight to your clients' WhatsApp.",
+      "howToTitle": "How to set up Z-API:",
+      "step1": "Create your account at <strong>z-api.io</strong>",
+      "step2": "Create an instance and scan the QR code with your WhatsApp",
+      "step3": "Copy the <strong>instance ID</strong> and the <strong>Token</strong> below",
+      "instanceLabel": "Z-API Instance ID",
+      "instancePlaceholder": "E.g. 3C5F1D2E...",
+      "tokenLabel": "Z-API Token",
+      "tokenPlaceholder": "Paste your token here",
+      "submit": "Save WhatsApp settings"
+    },
+    "export": {
+      "title": "Export data",
+      "description": "Download a copy of all your company's data (clients, [[osP]], quotes, finances, and team) in a <code>.json</code> file, in line with your right to data portability under Brazil's LGPD (art. 18).",
+      "generating": "Generating file...",
+      "downloadButton": "Download all my data (.json)",
+      "error": "Error exporting data."
+    },
+    "saved": {
+      "tenant": "Company details updated.",
+      "profile": "Profile updated.",
+      "whatsapp": "WhatsApp settings saved."
+    },
+    "language": {
+      "title": "System language",
+      "description": "Sets the language for the whole company — including the emails, PDFs and messages sent to your clients.",
+      "current": "Current language: {language}",
+      "switchTo": "Switch to {language}",
+      "confirmTitle": "Change the language for the whole company?",
+      "confirmBody": "This applies to everyone on your team, and to the emails, PDFs and WhatsApp messages sent to your clients. You can switch back at any time.",
+      "confirm": "Yes, switch to {language}",
+      "cancel": "Cancel",
+      "changing": "Switching..."
+    }
+  },
+  "sharedComponents": {
+    "deleteButton": {
+      "confirm": "Are you sure you want to delete this? This action cannot be undone.",
+      "deleting": "Deleting..."
+    },
+    "searchBar": {
+      "placeholder": "Search..."
+    },
+    "statusFilter": {
+      "allPlaceholder": "All"
+    },
+    "overdueAlerts": {
+      "title": "Overdue alerts",
+      "overdueRevenues": "{count, plural, one {# overdue receivable} other {# overdue receivables}}",
+      "overdueExpenses": "{count, plural, one {# overdue expense} other {# overdue expenses}}"
     }
   },
   "status": {
@@ -2635,149 +2683,127 @@
     },
     "contato": "Something odd and nothing here explains it? Write to"
   },
-  "apiKeys": {
-    "title": "Integration API",
-    "subtitle": "Connect ServiçoOS to your website, your ERP, or an automation. Enterprise plan feature.",
-    "nomeLabel": "Key name",
-    "nomePlaceholder": "e.g. Website form",
-    "criarBotao": "Create key",
-    "apareceUmaVez": "Copy it now. This key is shown once — we only store a digest of it, and not even we can show it again.",
-    "copiar": "Copy",
-    "copiada": "Copied",
-    "jaGuardei": "I saved it",
-    "vazio": "No keys created yet.",
-    "revogar": "Revoke",
-    "revogada": "Revoked",
-    "nuncaUsada": "Never used",
-    "ultimoUso": "Last used {data}",
-    "rodape": "A key grants read and write access to your company's data. Treat it like a password: never put it in public code or send it over chat. If in doubt, revoke it and create another.",
-    "erro": {
-      "semPermissao": "Only the owner or an admin can create a key.",
-      "semPlano": "The integration API is an Enterprise plan feature.",
-      "nomeVazio": "Name the key, so you know later where it is being used.",
-      "limite": "You already have 5 active keys. Revoke an unused one before creating another."
+  "team": {
+    "list": {
+      "title": "Team",
+      "subtitle": "Manage your team members and their access",
+      "inviteButton": "Invite member",
+      "countMembers": "{count, plural, one {# member} other {# members}}",
+      "noLocation": "No location",
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "location": "Location",
+        "since": "Member since"
+      }
     },
-    "docs": {
-      "title": "How to use",
-      "intro": "Every call needs the key in the header. Responses are JSON, and error objects carry a stable code — read the code, not the text.",
-      "baseUrl": "Base URL",
-      "autenticacao": "Authentication",
-      "endpoints": "Available endpoints",
-      "exemplo": "Example: open a [[os]]",
-      "paginacao": "Pages",
-      "paginacaoTexto": "Use limit (up to 100) and cursor. The response returns next_cursor; when it is null, you have reached the end.",
-      "limite": "Rate limit",
-      "limiteTexto": "120 calls per minute per key. When exceeded, the response is 429 with a Retry-After header telling you how many seconds to wait."
+    "invite": {
+      "title": "Invite member",
+      "cardTitle": "New member details",
+      "successTitle": "Invitation sent!",
+      "viewTeam": "View team",
+      "inviteAnother": "Invite another",
+      "submit": "Send invitation",
+      "submitting": "Sending...",
+      "form": {
+        "nameLabel": "Full name",
+        "namePlaceholder": "John Smith",
+        "emailLabel": "Email",
+        "emailPlaceholder": "john@company.com",
+        "roleLabel": "Role",
+        "roleAdminOption": "{role} (full access)",
+        "roleTechnicianOption": "{role} (restricted access)",
+        "documentLabel": "CPF / CNPJ",
+        "documentPlaceholder": "000.000.000-00",
+        "phoneLabel": "Phone",
+        "phonePlaceholder": "(11) 99999-9999",
+        "addressTitle": "Address",
+        "streetLabel": "Street / Avenue",
+        "numberLabel": "Number",
+        "complementLabel": "Complement",
+        "districtLabel": "Neighborhood",
+        "zipCodeLabel": "ZIP code",
+        "cityLabel": "City",
+        "stateLabel": "State"
+      }
+    },
+    "rowActions": {
+      "confirmRemove": "Remove this member from the team?"
+    },
+    "errors": {
+      "emailInYourTeam": "This email already belongs to your team.",
+      "emailInUse": "This email is already in use in the system.",
+      "inviteFailed": "Could not send the invite. Please try again in a moment.",
+      "inviteEmailFailed": "Member added, but the invite email failed. Ask {email} to use \"Forgot my password\" with this email to sign in.",
+      "inviteSent": "Invite sent to {email}",
+      "missingServiceKey": "Set SUPABASE_SERVICE_ROLE_KEY in .env to send invites by email."
     }
   },
-  "filiais": {
-    "title": "Branches",
-    "subtitle": "Your company with more than one location. Enterprise plan feature.",
-    "nomeLabel": "Branch name",
-    "nomePlaceholder": "e.g. Downtown",
-    "criarBotao": "Create branch",
-    "vazio": "No branches yet. Until there is one, everyone keeps seeing everything.",
-    "contagem": "{pessoas, plural, =0 {nobody} one {# person} other {# people}} · {clientes, plural, =0 {no clients} one {# client} other {# clients}}",
-    "inativa": "Inactive",
-    "desativar": "Deactivate",
-    "reativar": "Reactivate",
-    "desativarNota": "Branches are deactivated, never deleted. Deleting would take with it the link of every client, [[os]] and revenue of that location — and a whole year of per-branch revenue would vanish over a tidy-up click. Deactivated, it disappears from pickers and stops receiving new records; the history stays intact.",
-    "escopo": {
-      "separado": "Separated by branch",
-      "separadoLista": "Clients, [[osP]], schedule, finance and team.",
-      "comum": "Shared across the company",
-      "comumLista": "Stock and parts, suppliers and purchases, quotes, contracts, settings and billing.",
-      "semFilial": "Records with no branch show up for everyone. That is what keeps your current data from disappearing when you create the first branch."
+  "validation": {
+    "nameRequired": "Name is required",
+    "titleRequired": "Title is required",
+    "clientRequired": "Client is required",
+    "descriptionRequired": "Description is required",
+    "dueDateRequired": "Due date is required",
+    "amountPositive": "Amount must be positive",
+    "invalidEmail": "Invalid email",
+    "invalidUrl": "Invalid URL",
+    "unsafeLogoUrl": "Logo URL not allowed — use https and a public host"
+  },
+  "vocabulario": {
+    "title": "What you call things",
+    "subtitle": "Every trade uses a different word. Set it here and the whole system speaks the way your company does.",
+    "os": {
+      "title": "What you open for each piece of work",
+      "help": "Shows in the menu, buttons, reports and emails."
     },
-    "equipe": {
-      "title": "Who works where",
-      "subtitle": "People assigned to a branch see their location plus whatever belongs to the whole company.",
-      "todas": "Sees everything",
-      "nota": "Owner and admin see every branch regardless of assignment — and can filter to one on screen."
+    "tec": {
+      "title": "Who does the work",
+      "help": "Shows on the map, in your team and in performance reports."
     },
-    "erro": {
-      "semPermissao": "Only the owner or an admin can manage branches.",
-      "semPlano": "Branches is an Enterprise plan feature.",
-      "nomeVazio": "Give the branch a name.",
-      "naoEncontrada": "Branch not found."
+    "fields": {
+      "curto": "Short form",
+      "curtoHint": "Used in buttons and columns, where space is tight. e.g. Order, Job.",
+      "singular": "Spelled out (one)",
+      "singularHint": "How it reads inside a sentence. e.g. service order.",
+      "plural": "Spelled out (many)",
+      "pluralHint": "e.g. service orders, jobs.",
+      "genero": "Gender",
+      "generoHint": "Only affects Portuguese, where articles and adjectives must agree.",
+      "feminino": "Feminine",
+      "masculino": "Masculine"
     },
-    "filtro": {
-      "todas": "All branches"
+    "preview": {
+      "title": "How it will look"
+    },
+    "save": "Save",
+    "saved": "Saved",
+    "restore": "Reset to default",
+    "confirmRestore": "Reset to the system default names? This changes what your whole team sees.",
+    "errors": {
+      "semPermissao": "You do not have permission to change this. Ask a company administrator.",
+      "termoCurto": "Each field needs at least 2 characters.",
+      "termoLongo": "Each field can have at most 30 characters.",
+      "generoInvalido": "Choose feminine or masculine."
     }
   },
-  "assinatura": {
-    "title": "My signature",
-    "description": "Draw it once and it goes out on every document you issue.",
-    "salvar": "Save signature",
-    "limpar": "Clear",
-    "apagar": "Delete signature",
-    "gravada": "Signature saved",
-    "alt": "Your signature",
-    "ondeSai": "It appears on the [[os]] you complete, on quotes and contracts you send, and on purchase orders you authorise. With no saved signature, the document still prints the line to sign by hand.",
-    "erro": {
-      "vazio": "Draw your signature before saving.",
-      "formato": "Could not read the drawing. Please try again.",
-      "grande": "That file is too large for a signature. Draw in the box instead of uploading a photo.",
-      "pequena": "The stroke came out too small and would print as a smudge. Draw it again, larger.",
-      "falhou": "Could not save right now. Please try again."
-    }
-  },
-  "buscaAbas": {
-    "placeholder": "Find a screen or number (1.1)",
-    "rotulo": "Find a screen by name or number",
-    "semResultado": "Nothing found."
-  },
-  "avisos": {
-    "title": "Mobile alerts",
-    "description": "Choose what you want to receive. Applies to you only.",
-    "salvar": "Save alerts",
-    "salvo": "Saved",
-    "insistente": "stays on screen",
-    "semSom": "Receive silently",
-    "semSomAjuda": "Still arrives, just without sound or vibration.",
-    "sobreOToque": "The notification TONE cannot be chosen here — no browser lets a website change the notification sound. The tone is your device's: to change it, go to Settings → Apps → ServiçoOS (or your browser) → Notifications.",
-    "quando": {
-      "osAtribuida": "When a [[os]] becomes yours.",
-      "osDeContrato": "When the recurring contract creates a [[os]] for you.",
-      "osConcluida": "When someone on the team completes a job.",
-      "osStatus": "When a [[os]] changes status in the field.",
-      "orcamentoRespondido": "When the customer approves or declines a quote.",
-      "pagamentoConfirmado": "When the subscription payment clears.",
-      "notaRejeitada": "When the city rejects a tax invoice.",
-      "certificadoVencendo": "When the digital certificate is close to expiring."
-    }
-  },
-  "certificado": {
-    "title": "Digital certificate",
-    "subtitle": "Your company's A1 certificate. Without it the city will not accept the invoice.",
-    "arquivo": "Certificate file (.pfx or .p12)",
-    "arquivoAjuda": "The same file you use with the tax authority. Up to 200 KB.",
-    "senha": "Certificate password",
-    "senhaAjuda": "Stored encrypted. It never appears on any screen after upload.",
-    "validade": "Valid until (optional)",
-    "validadeAjuda": "Lets us warn you before it expires. An expired certificate stops invoicing, and without a warning nobody finds out until they try.",
-    "enviar": "Upload certificate",
-    "enviado": "Certificate uploaded and installed.",
-    "instalado": "Certificate installed",
-    "valeAte": "Valid until {data}",
-    "venceu": "EXPIRED on {data} — invoicing will fail",
-    "trocar": "Replace certificate",
-    "reenviar": "Resend to issuer",
-    "apagar": "Delete",
-    "comoGuardamos": "The file and password are encrypted in our database, with the key kept outside it. A database breach does not expose your certificate. It is sent to the invoice issuer to authorise issuing on your company's behalf.",
-    "cofreAusente": "The system is not yet set up to store certificates securely (the server encryption key is missing). Contact support — uploading now would store the file unprotected.",
-    "erroDoEmissor": "The issuer refused: {detalhe}",
-    "erro": {
-      "semPermissao": "Only the account owner can upload the certificate.",
-      "cofreAusente": "The server is not set up to store certificates securely. Contact support.",
-      "arquivoAusente": "Choose the certificate file.",
-      "arquivoGrande": "That file is too large for a certificate. Check that it is the .pfx.",
-      "arquivoTipo": "The certificate must be a .pfx or .p12 file.",
-      "senhaAusente": "Enter the certificate password.",
-      "validadeInvalida": "Invalid expiry date.",
-      "falhouGuardar": "Could not store the certificate right now. Please try again.",
-      "semEmpresaFiscal": "Register the company's tax details before uploading the certificate.",
-      "semCertificado": "There is no stored certificate to resend."
+  "whatsapp": {
+    "os": {
+      "intro": "Hello! Your service order has been updated.",
+      "statusLabel": "Status",
+      "trackLink": "Track your [[os]]"
+    },
+    "quote": {
+      "intro": "You received a new quote!",
+      "quoteLabel": "Quote",
+      "amountLabel": "Amount",
+      "viewLink": "View and approve"
+    },
+    "avisoCliente": {
+      "aCaminho": "Hello! This is {empresa}.\n\nWe are on our way for *{titulo}* ({os}).",
+      "concluido": "Hello! This is {empresa}.\n\nThe service *{titulo}* ({os}) has been completed.",
+      "acompanhe": "Follow it here"
     }
   }
 }

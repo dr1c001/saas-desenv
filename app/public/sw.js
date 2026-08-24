@@ -5,11 +5,11 @@
 // telefone do cliente. Antes, sem rede, o navegador mostrava a tela de "sem
 // internet" e o aplicativo era simplesmente inútil.
 //
-// O que ESTÁ coberto: o app abre offline, e toda página que o técnico já
-// visitou com sinal continua abrindo. O que NÃO está: gravar offline. Criar
-// ou concluir OS ainda exige conexão — fila de escrita com sincronização
-// depois é um projeto à parte, bem maior (as Server Actions são POST, e
-// haveria conflito de edição pra resolver).
+// O que ESTÁ coberto: o app abre offline, toda página que o técnico já visitou
+// com sinal continua abrindo, e CONCLUIR ou MUDAR O STATUS de uma OS funciona
+// sem rede — vai para a fila em IndexedDB (lib/fila-offline.ts) e sobe sozinho
+// quando o sinal volta. O que NÃO está: criar OS nova offline, que precisaria
+// gerar número e conferir limite de plano no servidor.
 
 // v3 (22/08/2026): o push passou a repassar silent, requireInteraction e tag.
 // A versao PRECISA subir a cada mudanca aqui — sem isso o navegador segue com

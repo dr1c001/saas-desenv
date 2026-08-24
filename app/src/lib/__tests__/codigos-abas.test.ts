@@ -1,7 +1,13 @@
+import { existsSync } from "node:fs"
+import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { ALL_TABS } from "@/lib/abas"
 import {
   abasInvalidas,
+  codigoDaAba,
+  codigoDaTelaAtual,
+  codigoDaRota,
+  compararCodigo,
   destinosPermitidos,
   destinosPorCodigo,
   DESTINOS,
@@ -36,10 +42,71 @@ describe("o catálogo de códigos", () => {
     expect(semCodigo).toEqual([])
   })
 
+  it("toda rota do catálogo EXISTE de verdade", () => {
+    // O teste que faltava. "Toda aba tem um código" passava mesmo com o código
+    // 3.4 apontando para /fiscal — uma rota que nunca existiu, porque a tela
+    // mora em /settings/fiscal. O atalho levava a um 404, e nada acusava.
+    const semTela = DESTINOS.filter(
+      (d) => !existsSync(join(process.cwd(), "src/app/(dashboard)", d.rota, "page.tsx"))
+    ).map((d) => `${d.codigo} → ${d.rota}`)
+    expect(semTela).toEqual([])
+  })
+
   it("todo código tem formato de número separado por ponto", () => {
     for (const d of DESTINOS) {
       expect(d.codigo, d.rota).toMatch(/^\d+(\.\d+)*$/)
     }
+  })
+})
+
+describe("o número na frente do nome, na barra lateral", () => {
+  it("acha o código de toda aba do menu", () => {
+    // A barra lateral busca por ABA, não por rota: href escrito diferente da
+    // rota do catálogo faria o número sumir da tela sem nada acusar.
+    for (const t of ALL_TABS) expect(codigoDaAba(t.slug), t.slug).not.toBeNull()
+  })
+
+  it("acha o código das telas de configuração, que não têm aba", () => {
+    expect(codigoDaRota("/settings")).toBe("5.4")
+    expect(codigoDaRota("/settings/permissions")).toBe("5.4.1")
+    expect(codigoDaRota("/nao-existe")).toBeNull()
+  })
+
+  it("ordena por número, e não por texto", () => {
+    // "1.10" antes de "1.2" é o que a ordem alfabética faria — e o menu é
+    // ordenado por este código.
+    expect(compararCodigo("1.2", "1.10")).toBeLessThan(0)
+    expect(compararCodigo("2.1", "1.9")).toBeGreaterThan(0)
+    expect(compararCodigo("5.4", "5.4.1")).toBeLessThan(0)
+    expect(compararCodigo("1.1", "1.1")).toBe(0)
+  })
+
+  it("põe o menu inteiro em ordem crescente", () => {
+    const ordenado = [...DESTINOS].sort((a, b) => compararCodigo(a.codigo, b.codigo))
+    expect(ordenado[0].codigo).toBe("1.1")
+    expect(ordenado.at(-1)!.codigo).toBe("5.4.5")
+  })
+})
+
+describe("o código da tela aberta agora", () => {
+  it("pega o caminho MAIS LONGO, não o primeiro que serve", () => {
+    // /settings é prefixo de /settings/fiscal. Pegar o primeiro daria a ajuda
+    // de Configurações para quem está na tela Fiscal.
+    expect(codigoDaTelaAtual("/settings/fiscal")).toBe("3.4")
+    expect(codigoDaTelaAtual("/settings/permissions")).toBe("5.4.1")
+    expect(codigoDaTelaAtual("/settings")).toBe("5.4")
+  })
+
+  it("uma tela de detalhe cai na lista dela", () => {
+    expect(codigoDaTelaAtual("/service-orders/42")).toBe("1.1")
+    expect(codigoDaTelaAtual("/clients/9/edit")).toBe("2.1")
+  })
+
+  it("não confunde rota parecida", () => {
+    // /parts não pode casar com /partscheck, nem /client com /clients.
+    expect(codigoDaTelaAtual("/partsxyz")).toBeNull()
+    expect(codigoDaTelaAtual("/ajuda")).toBeNull()
+    expect(codigoDaTelaAtual("/")).toBeNull()
   })
 })
 
