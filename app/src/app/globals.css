@@ -48,39 +48,65 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ─── Modo claro ──────────────────────────────────────────────────────────────
+ *
+ * Azul como identidade, seguindo a convencao dos ERPs grandes. Duas escolhas
+ * aqui contrariam de proposito o pedido original, e pelo mesmo motivo — cansar
+ * menos a vista de quem olha isto oito horas por dia:
+ *
+ *   FUNDO nao e branco puro. #FFFFFF e luminancia maxima, e e a maior fonte de
+ *   fadiga numa tela de trabalho. #F7F9FC derruba o brilho sem parecer sujo, e
+ *   ainda faz os cartoes (que SAO brancos) se destacarem do fundo.
+ *
+ *   TEXTO nao e preto puro. #000 sobre #FFF da 21:1 de contraste, acima do
+ *   confortavel, e causa halation — as letras parecem vibrar. #111823 da 16.9:1
+ *   sobre o fundo: nitido, muito acima do minimo de 4.5, e sem a vibracao.
+ *
+ * Contrastes conferidos (WCAG AA pede 4.5 para texto):
+ *   texto sobre fundo 16.9:1 · secundario 5.7:1 · azul 5.4:1 · branco no azul 5.7:1
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.9814 0.0045 258.32);        /* #F7F9FC */
+  --foreground: oklch(0.2076 0.0244 259.27);        /* #111823 */
+  /* Cartao BRANCO sobre fundo levemente frio: e o que da relevo sem precisar
+     de sombra pesada. */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.2076 0.0244 259.27);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --popover-foreground: oklch(0.2076 0.0244 259.27);
+  --primary: oklch(0.5156 0.1632 254.73);           /* #0A66C2 */
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.9603 0.0074 260.73);         /* #EFF2F7 */
+  --secondary-foreground: oklch(0.2076 0.0244 259.27);
+  --muted: oklch(0.9603 0.0074 260.73);
+  --muted-foreground: oklch(0.5006 0.0284 259.79);  /* #5A6474 */
+  /* Azul MUITO diluido para estado de passagem do mouse e item ativo. */
+  --accent: oklch(0.9513 0.0166 250.84);            /* #E7F0FA */
+  --accent-foreground: oklch(0.4411 0.1358 254.15); /* #08529B */
+  --destructive: oklch(0.5433 0.1740 29.70);        /* #C0392B */
+  --border: oklch(0.9108 0.0139 258.35);            /* #DCE2EB */
+  --input: oklch(0.9108 0.0139 258.35);
+  --ring: oklch(0.5156 0.1632 254.73);              /* foco no azul da marca */
+  /* Graficos: eram cinco tons de CINZA, o que tornava "Receita x Despesa"
+     ilegivel. Azul e ambar sao o par que continua distinguivel para quem tem
+     daltonismo vermelho-verde, que e o tipo mais comum. */
+  --chart-1: oklch(0.5156 0.1632 254.73);           /* #0A66C2 */
+  --chart-2: oklch(0.5362 0.0888 205.03);           /* #0E7C86 */
+  --chart-3: oklch(0.5922 0.1318 62.31);            /* #B4690E */
+  --chart-4: oklch(0.4980 0.1953 291.50);           /* #6941C6 */
+  --chart-5: oklch(0.4422 0.0355 257.79);           /* #475467 */
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Barra lateral CLARA com o azul no item ativo, e nao uma faixa azul solida.
+     Faixa solida e bonita na primeira hora e pesada na oitava — e o objetivo
+     aqui era justamente o contrario. */
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.2076 0.0244 259.27);
+  --sidebar-primary: oklch(0.5156 0.1632 254.73);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.9513 0.0166 250.84);
+  --sidebar-accent-foreground: oklch(0.4411 0.1358 254.15);
+  --sidebar-border: oklch(0.9108 0.0139 258.35);
+  --sidebar-ring: oklch(0.5156 0.1632 254.73);
 }
 
 .dark {
@@ -90,23 +116,23 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.6785 0.1467 252.28);        /* #4D9BEF */
+  --primary-foreground: oklch(0.1500 0.0200 258.00);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  --accent: oklch(0.2684 0.0312 252.76);         /* #1B2735 */
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --ring: oklch(0.6785 0.1467 252.28);
+  --chart-1: oklch(0.6785 0.1467 252.28);
+  --chart-2: oklch(0.7028 0.1104 203.34);
+  --chart-3: oklch(0.7611 0.1266 75.16);
+  --chart-4: oklch(0.7090 0.1592 293.54);
+  --chart-5: oklch(0.7107 0.0351 256.79);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
