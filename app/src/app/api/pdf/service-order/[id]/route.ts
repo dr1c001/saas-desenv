@@ -15,6 +15,7 @@ import { cobrancaPix } from "@/lib/pix"
 import { gerarQr } from "@/lib/qr"
 import { formatDate, formatOsNumber } from "@/lib/utils"
 import React, { type ReactElement, type JSXElementConstructor } from "react"
+import { quemPaga } from "@/lib/subcliente"
 
 export async function GET(
   _request: NextRequest,
@@ -49,7 +50,15 @@ export async function GET(
   const order = await prisma.serviceOrder.findUnique({
     where: { id, tenantId: dbUser.tenantId },
     include: {
-      client: { include: { address: true } },
+      client: {
+        include: {
+          address: true,
+          // O contratante, quando o servico foi feito para o cliente final
+          // dele. Sai impresso no documento junto com o local do servico.
+          parent: { select: { name: true, document: true } },
+        },
+      },
+      payer: { select: { name: true, document: true } },
       technician: true,
       items: true,
     },
@@ -104,7 +113,19 @@ export async function GET(
 
   const buildElement = (logoUrl: string | null) => {
     return React.createElement(ServiceOrderPDF, {
-      order,
+      order: {
+        ...order,
+        // So aparece quando ha DOIS lados de verdade. Se quem paga e o proprio
+        // cliente da OS, o documento nao ganha uma linha "Contratante" que
+        // repetiria o nome logo abaixo.
+        contratante:
+          order.client.parentId && quemPaga(
+            { id: order.clientId, parentId: order.client.parentId },
+            order.payerId
+          ) !== order.clientId
+            ? (order.payer ?? order.client.parent)
+            : null,
+      },
       companyName: dbUser.tenant.name,
       logoUrl,
       companyPhone: dbUser.tenant.phone,

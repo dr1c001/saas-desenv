@@ -140,6 +140,9 @@ type Props = {
     createdAt: Date
     scheduledAt: Date | null
     concludedAt: Date | null
+    /** O CONTRATANTE, quando o servico foi feito para o cliente final dele.
+     *  Presente so nesse caso — documento de cliente direto nao muda em nada. */
+    contratante?: { name: string; document: string | null } | null
     client: {
       name: string
       document: string | null
@@ -255,13 +258,35 @@ export function ServiceOrderPDF({ order, companyName, logoUrl, companyPhone, com
           )}
         </View>
 
-        {/* Cliente */}
+        {/* Cliente.
+            Quando ha CONTRATANTE, o documento passa a mostrar os dois lados:
+            quem contratou e onde o servico foi feito. Sem isso, o condominio
+            recebe um papel que nao explica por que a administradora aparece na
+            nota, e a administradora recebe um papel que nao diz onde o servico
+            aconteceu. */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("common.clientTitle")}</Text>
-          <View style={styles.row}>
-            <Text style={styles.label}>{t("common.nameLabel")}</Text>
-            <Text style={[styles.value, { fontFamily: "Helvetica-Bold" }]}>{order.client.name}</Text>
-          </View>
+          {order.contratante && (
+            <>
+              <View style={styles.row}>
+                <Text style={styles.label}>{t("serviceOrder.contratanteLabel")}</Text>
+                <Text style={[styles.value, { fontFamily: "Helvetica-Bold" }]}>
+                  {order.contratante.name}
+                  {order.contratante.document ? ` — ${order.contratante.document}` : ""}
+                </Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>{t("serviceOrder.localLabel")}</Text>
+                <Text style={styles.value}>{order.client.name}</Text>
+              </View>
+            </>
+          )}
+          {!order.contratante && (
+            <View style={styles.row}>
+              <Text style={styles.label}>{t("common.nameLabel")}</Text>
+              <Text style={[styles.value, { fontFamily: "Helvetica-Bold" }]}>{order.client.name}</Text>
+            </View>
+          )}
           {order.client.document && (
             <View style={styles.row}>
               <Text style={styles.label}>{t("serviceOrder.documentLabel")}</Text>

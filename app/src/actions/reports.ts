@@ -6,6 +6,7 @@ import { brtMidnightUTC, todayInBRT } from "@/lib/utils"
 import { temRecurso } from "@/lib/plan"
 import { agruparPorProfissional } from "@/lib/relatorio-profissional"
 import { getTranslations } from "next-intl/server"
+import { quemPaga, somarPorPagador } from "@/lib/subcliente"
 
 export async function getReportData(from: string, to: string) {
   const { tenantId, role } = await getTenant()
@@ -66,12 +67,15 @@ export async function getReportData(from: string, to: string) {
       select: {
         id: true,
         name: true,
+        // O contratante vem junto: o ranking soma por QUEM PAGA, e nao por
+        // onde o servico aconteceu. Ver o porque logo abaixo, em `ranked`.
+        parentId: true,
         serviceOrders: {
           where: {
             status: "INVOICED",
             revenues: { some: { status: "PAID", paidAt: { gte: start, lt: end } } },
           },
-          select: { totalAmount: true },
+          select: { totalAmount: true, payerId: true },
         },
       },
     }),
@@ -122,12 +126,27 @@ export async function getReportData(from: string, to: string) {
     tCommon("unassigned")
   )
 
-  const ranked = topClients
-    .map((c) => ({
-      name: c.name,
-      total: c.serviceOrders.reduce((s, o) => s + Number(o.totalAmount), 0),
-    }))
-    .filter((c) => c.total > 0)
+  // O ranking soma por QUEM PAGA, e nao por cliente da OS.
+  //
+  // Sem isto, uma administradora com trinta condominios teria o faturamento
+  // dela espalhado entre os trinta: nenhum entra no Top 10, e o cliente que
+  // MAIS fatura some do relatorio inteiro. Quem nao trabalha com subcliente
+  // nao ve diferenca nenhuma — sem contratante, quem paga e o proprio cliente.
+  const nomePorId = new Map(topClients.map((c) => [c.id, c.name]))
+  const porPagador = somarPorPagador(
+    topClients.flatMap((c) =>
+      c.serviceOrders.map((o) => ({
+        pagador: quemPaga({ id: c.id, parentId: c.parentId }, o.payerId),
+        valor: Number(o.totalAmount),
+      }))
+    ),
+    (o) => o.pagador,
+    (o) => o.valor
+  )
+
+  const ranked = [...porPagador.entries()]
+    .map(([id, total]) => ({ name: nomePorId.get(id) ?? "", total }))
+    .filter((c) => c.total > 0 && c.name !== "")
     .sort((a, b) => b.total - a.total)
     .slice(0, 10)
 

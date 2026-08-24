@@ -21,6 +21,7 @@ import {
 } from "@/lib/importar-clientes"
 import { getCustomFields } from "@/actions/custom-fields"
 import { lerValoresDoFormulario, nomeDoInput } from "@/lib/custom-fields"
+import { podeSerContratante, type RecusaDeVinculo } from "@/lib/subcliente"
 
 const clientSchema = z.object({
   name: z.string().min(2, "nameRequired"),
@@ -36,7 +37,67 @@ const clientSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   zipCode: z.string().optional(),
+  // O contratante, quando este cliente e subcliente de alguem. String vazia
+  // = sem contratante, que e o que o <select> manda quando ninguem escolhe.
+  parentId: z.string().optional(),
 })
+
+/**
+ * O contratante escolhido pode ser contratante DESTE cliente?
+ *
+ * Precisa do banco: a regra de um nivel depende de saber se o contratante ja e
+ * subcliente de alguem, e se este cliente ja tem subclientes. Devolve o id
+ * validado, ou `null` quando nao ha vinculo, ou a RECUSA para a tela explicar.
+ */
+async function conferirContratante(
+  tenantId: string,
+  clienteId: string | null,
+  escolhido: string | undefined
+): Promise<{ id: string | null } | { recusa: RecusaDeVinculo }> {
+  if (!escolhido) return { id: null }
+
+  // Do mesmo tenant, sempre: o id vem do navegador, e sem este filtro daria
+  // para pendurar um cliente na carteira de outra empresa.
+  const contratante = await prisma.client.findFirst({
+    where: { id: escolhido, tenantId },
+    select: { id: true, parentId: true },
+  })
+  if (!contratante) return { id: null }
+
+  const temSubclientes = clienteId
+    ? (await prisma.client.count({ where: { tenantId, parentId: clienteId } })) > 0
+    : false
+
+  const recusa = podeSerContratante(
+    { id: clienteId ?? "novo", parentId: null, temSubclientes },
+    contratante
+  )
+  return recusa ? { recusa } : { id: contratante.id }
+}
+
+/**
+ * Quem pode ser escolhido como contratante.
+ *
+ * Só quem NÃO é subcliente de ninguém, pela regra de um nível — e nunca o
+ * próprio cliente sendo editado. Oferecer na tela o que a gravação vai recusar
+ * é pior que não oferecer: a pessoa escolhe, salva, e leva um erro que parece
+ * defeito do sistema.
+ */
+export async function listarPossiveisContratantes(
+  excluirId?: string | null
+): Promise<{ id: string; name: string }[]> {
+  const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
+  return prisma.client.findMany({
+    where: {
+      tenantId,
+      parentId: null,
+      ...(excluirId ? { id: { not: excluirId } } : {}),
+    },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  })
+}
 
 export type ClientFormState = {
   errors?: Record<string, string[]>
@@ -90,10 +151,17 @@ export async function createClient(
     return { errors: await translateFieldErrors(parsed.error.flatten().fieldErrors) }
   }
 
-  const { name, document, email, phone, whatsapp, status, ...address } = parsed.data
+  // parentId sai do destructure de proposito: o que sobra vira o ENDERECO, e
+  // deixa-lo passar gravaria 'contratante' como se fosse rua.
+  const { name, document, email, phone, whatsapp, status, parentId, ...address } = parsed.data
 
   const personalizados = await lerCamposPersonalizados(formData)
   if (personalizados.erro) return personalizados.erro
+
+  const vinculo = await conferirContratante(tenantId, null, parentId)
+  if ("recusa" in vinculo) {
+    return { message: (await getTranslations("clients.form"))(`contratanteErro.${vinculo.recusa}`) }
+  }
 
   // Geocodificar CONSOME CRÉDITO PAGO (Geoapify). É por isso que esta função
   // pode ser desligada por empresa: para quem não usa o mapa, cada endereço
@@ -113,6 +181,7 @@ export async function createClient(
       phone: phone || null,
       whatsapp: whatsapp || null,
       status,
+      parentId: vinculo.id,
       customValues: personalizados.valores,
       tenantId,
       address: {
@@ -156,10 +225,17 @@ export async function updateClient(
     return { errors: await translateFieldErrors(parsed.error.flatten().fieldErrors) }
   }
 
-  const { name, document, email, phone, whatsapp, status, ...address } = parsed.data
+  // parentId sai do destructure de proposito: o que sobra vira o ENDERECO, e
+  // deixa-lo passar gravaria 'contratante' como se fosse rua.
+  const { name, document, email, phone, whatsapp, status, parentId, ...address } = parsed.data
 
   const personalizados = await lerCamposPersonalizados(formData)
   if (personalizados.erro) return personalizados.erro
+
+  const vinculo = await conferirContratante(tenantId, id, parentId)
+  if ("recusa" in vinculo) {
+    return { message: (await getTranslations("clients.form"))(`contratanteErro.${vinculo.recusa}`) }
+  }
 
   // Só geocodifica se o endereço realmente mudou.
   //
@@ -190,6 +266,7 @@ export async function updateClient(
   await prisma.client.update({
     where: { id, tenantId },
     data: {
+      parentId: vinculo.id,
       name,
       document: document || null,
       email: email || null,
@@ -264,7 +341,13 @@ export async function getClients(filters?: { q?: string; status?: string; filial
           }
         : {}),
     },
-    include: { address: true, _count: { select: { serviceOrders: true } } },
+    include: {
+      address: true,
+      // O contratante vem junto porque a lista de clientes alimenta tambem o
+      // formulario de OS, que precisa saber se ha escolha de pagador a fazer.
+      parent: { select: { id: true, name: true } },
+      _count: { select: { serviceOrders: true, subclientes: true } },
+    },
     orderBy: { createdAt: "desc" },
   })
 }

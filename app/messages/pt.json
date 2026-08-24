@@ -343,7 +343,9 @@
         "serviceOrders": "[[osC]]",
         "status": "Status"
       },
-      "importButton": "Importar planilha"
+      "importButton": "Importar planilha",
+      "subclienteDe": "Contratante: {nome}",
+      "temSubclientes": "{n, plural, one {# subcliente} other {# subclientes}}"
     },
     "new": {
       "title": "Novo cliente"
@@ -387,7 +389,15 @@
       "cityLabel": "Cidade",
       "stateLabel": "Estado",
       "submitCreate": "Criar cliente",
-      "submitUpdate": "Salvar alterações"
+      "submitUpdate": "Salvar alterações",
+      "contratanteLabel": "Contratante",
+      "contratantePlaceholder": "Nenhum — cliente direto",
+      "contratanteHint": "Use quando quem contrata é uma empresa e o serviço é feito para o cliente final dela. A nota fiscal sai no CNPJ de quem paga.",
+      "contratanteErro": {
+        "sequeEleMesmo": "Um cliente não pode ser contratante dele mesmo.",
+        "contratanteJaEhSubcliente": "Esse cliente já é subcliente de outro. O sistema aceita um nível só: contratante e cliente final.",
+        "jaEhContratante": "Este cliente já tem subclientes, então não pode virar subcliente de outro."
+      }
     },
     "equipment": {
       "title": "Equipamentos",
@@ -2037,7 +2047,9 @@
       "photosTitle": "Fotos do serviço",
       "termsTitle": "Termos e condições",
       "warrantyTitle": "Garantia",
-      "warrantyUntil": "válida até {data}"
+      "warrantyUntil": "válida até {data}",
+      "contratanteLabel": "Contratante:",
+      "localLabel": "Local do serviço:"
     },
     "receipt": {
       "docTitle": "RECIBO",
@@ -2407,7 +2419,9 @@
       "itemsTitle": "Itens / Serviços",
       "createPending": "Criando [[osC]]...",
       "createSubmit": "Criar [[osC]]",
-      "editSubmit": "Salvar alterações"
+      "editSubmit": "Salvar alterações",
+      "payerLabel": "Cobrar de",
+      "payerHint": "Quem recebe a cobrança e sai como tomador na nota fiscal. O serviço continua registrado no cliente escolhido acima."
     },
     "items": {
       "addButton": "Adicionar item",
@@ -2515,7 +2529,10 @@
         "startService": "Iniciar atendimento",
         "markDone": "Marcar como concluída",
         "markInvoiced": "Marcar como faturada"
-      }
+      },
+      "contratanteLabel": "Contratante: ",
+      "localLabel": "Local do serviço: ",
+      "cobrancaNoLocal": "cobrança no cliente final"
     },
     "edit": {
       "title": "Editar Ordem de Serviço"

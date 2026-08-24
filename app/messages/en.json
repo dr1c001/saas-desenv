@@ -343,7 +343,9 @@
         "serviceOrders": "[[osC]]",
         "status": "Status"
       },
-      "importButton": "Import spreadsheet"
+      "importButton": "Import spreadsheet",
+      "subclienteDe": "Contracted by: {nome}",
+      "temSubclientes": "{n, plural, one {# sub-client} other {# sub-clients}}"
     },
     "new": {
       "title": "New client"
@@ -387,7 +389,15 @@
       "cityLabel": "City",
       "stateLabel": "State",
       "submitCreate": "Create client",
-      "submitUpdate": "Save changes"
+      "submitUpdate": "Save changes",
+      "contratanteLabel": "Contracting company",
+      "contratantePlaceholder": "None — direct client",
+      "contratanteHint": "Use this when a company hires you and the work is done for their own end client. The invoice is issued to whoever pays.",
+      "contratanteErro": {
+        "sequeEleMesmo": "A client cannot be their own contracting company.",
+        "contratanteJaEhSubcliente": "That client is already a sub-client of someone else. The system allows one level only.",
+        "jaEhContratante": "This client already has sub-clients, so it cannot become one."
+      }
     },
     "equipment": {
       "title": "Equipment",
@@ -2037,7 +2047,9 @@
       "photosTitle": "Service photos",
       "termsTitle": "Terms and conditions",
       "warrantyTitle": "Warranty",
-      "warrantyUntil": "valid until {data}"
+      "warrantyUntil": "valid until {data}",
+      "contratanteLabel": "Contracted by:",
+      "localLabel": "Service location:"
     },
     "receipt": {
       "docTitle": "RECEIPT",
@@ -2407,7 +2419,9 @@
       "itemsTitle": "Items / Services",
       "createPending": "Creating [[osC]]...",
       "createSubmit": "Create [[osC]]",
-      "editSubmit": "Save changes"
+      "editSubmit": "Save changes",
+      "payerLabel": "Bill to",
+      "payerHint": "Who gets billed and appears as the payer on the invoice. The work stays recorded against the client selected above."
     },
     "items": {
       "addButton": "Add item",
@@ -2515,7 +2529,10 @@
         "startService": "Start service",
         "markDone": "Mark as completed",
         "markInvoiced": "Mark as invoiced"
-      }
+      },
+      "contratanteLabel": "Contracted by: ",
+      "localLabel": "Service location: ",
+      "cobrancaNoLocal": "billed to the end client"
     },
     "edit": {
       "title": "Edit Service Order"

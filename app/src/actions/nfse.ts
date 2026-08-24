@@ -6,6 +6,7 @@ import { requireCotaDeNfse, requireRecurso } from "@/lib/plan"
 import { nfeio } from "@/lib/nfeio"
 import { revalidatePath } from "next/cache"
 import { getTranslations } from "next-intl/server"
+import { quemPaga } from "@/lib/subcliente"
 
 export async function registerFiscalCompany(formData: FormData) {
   const { tenantId, role } = await getTenant()
@@ -89,7 +90,8 @@ export async function emitNfse(orderId: string) {
     prisma.serviceOrder.findUnique({
       where: { id: orderId, tenantId },
       include: {
-        client: { include: { address: true } },
+        client: { include: { address: true, parent: { include: { address: true } } } },
+        payer: { include: { address: true } },
         items: true,
       },
     }),
@@ -109,17 +111,39 @@ export async function emitNfse(orderId: string) {
       ? order.items.map((i) => i.description).join("; ")
       : order.title
 
+  // ─── O TOMADOR DA NOTA É QUEM PAGA, e nem sempre é o cliente da OS ────
+  //
+  // Quando o serviço é feito para o cliente final de uma contratante — uma
+  // administradora que fecha contrato e o serviço acontece em cada condomínio —
+  // o `clientId` da OS é o CONDOMÍNIO, que é onde o trabalho aconteceu. Mas a
+  // nota tem de sair contra quem tem o contrato e paga.
+  //
+  // Emitir contra o CNPJ errado não é detalhe de tela: é documento fiscal
+  // contra terceiro, no nome da empresa do cliente, perante a prefeitura — e
+  // não existe cancelamento neste produto.
+  //
+  // `quemPaga` resolve: o pagador escolhido naquela OS quando é válido, senão
+  // o contratante, senão o próprio cliente. Regra e testes em lib/subcliente.ts.
+  const idDoPagador = quemPaga(
+    { id: order.clientId, parentId: order.client.parentId },
+    order.payerId
+  )
+  const pagador =
+    idDoPagador === order.clientId
+      ? order.client
+      : (order.payer ?? order.client.parent ?? order.client)
+
   // Mesmo motivo do cnpj em registerFiscalCompany acima — o documento do
   // cliente (CNPJ, se for pessoa jurídica) pode vir com letras a partir de
   // 01/08/2026. CPF continua só numérico, então isso não afeta esse caso.
-  const clientDoc = order.client.document?.replace(/[^A-Za-z0-9]/g, "").toUpperCase() || undefined
-  const addr = order.client.address
+  const clientDoc = pagador.document?.replace(/[^A-Za-z0-9]/g, "").toUpperCase() || undefined
+  const addr = pagador.address
 
   const invoice = await nfeio.emitNfse(tenant.nfeioCompanyId, {
     borrower: {
       federalTaxNumber: clientDoc,
-      name: order.client.name,
-      email: order.client.email ?? undefined,
+      name: pagador.name,
+      email: pagador.email ?? undefined,
       address: addr
         ? {
             country: "BRA",

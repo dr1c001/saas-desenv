@@ -21,6 +21,7 @@ import { filialParaNovo } from "@/lib/filial"
 import { requireCotaDeOs } from "@/lib/plan"
 import { getTranslations } from "next-intl/server"
 import { translateFieldErrors } from "@/lib/validation"
+import { quemPaga } from "@/lib/subcliente"
 
 const orderSchema = z.object({
   title: z.string().min(2, "titleRequired"),
@@ -31,6 +32,9 @@ const orderSchema = z.object({
     .enum(["OPEN", "IN_PROGRESS", "DONE", "INVOICED", "CANCELLED"])
     .default("OPEN"),
   scheduledAt: z.string().optional(),
+  /** Quem paga por esta OS. Validado contra o cliente em lib/subcliente.ts:
+   *  so o proprio cliente ou o contratante dele. */
+  payerId: z.string().optional(),
 })
 
 export type OrderFormState = {
@@ -63,7 +67,7 @@ export async function createServiceOrder(
     return { errors: await translateFieldErrors(parsed.error.flatten().fieldErrors) }
   }
 
-  const { title, description, clientId, technicianId, status, scheduledAt } = parsed.data
+  const { title, description, clientId, technicianId, status, scheduledAt, payerId } = parsed.data
 
   // clientId/technicianId vêm do formulário sem checagem — sem validar que
   // pertencem ao próprio tenant, dava pra linkar a OS a um Client/User de
@@ -74,10 +78,17 @@ export async function createServiceOrder(
     // branchId: a OS herda a filial do CLIENTE, e não de quem digitou. Um
     // atendente da matriz abrindo OS para cliente da filial não muda de quem é
     // aquele cliente. Ver lib/filial.ts.
-    select: { id: true, branchId: true },
+    select: { id: true, branchId: true, parentId: true },
   })
   const te = await getTranslations("errors")
   if (!client) return { message: te("clientNotFound") }
+
+  // Quem paga: o escolhido quando é válido, senão o padrão. `quemPaga` recusa
+  // id de fora da relação — sem isso, uma chamada direta à Server Action (que
+  // é endereço HTTP) emitiria nota no CNPJ de um terceiro. Grava `null` no
+  // caso comum, para a OS continuar seguindo o cadastro se ele mudar depois.
+  const pagador = quemPaga({ id: client.id, parentId: client.parentId }, payerId)
+  const pagadorGravado = pagador === (client.parentId ?? client.id) ? null : pagador
 
   if (technicianId) {
     const technician = await prisma.user.findUnique({ where: { id: technicianId, tenantId }, select: { id: true } })
@@ -105,6 +116,7 @@ export async function createServiceOrder(
         title,
         description: description || null,
         clientId,
+        payerId: pagadorGravado,
         tenantId,
         branchId: filialParaNovo(client.branchId, branchId),
         technicianId: technicianId || userId,
@@ -567,7 +579,10 @@ export async function getServiceOrder(id: string) {
   return prisma.serviceOrder.findUnique({
     where: { id, tenantId },
     include: {
-      client: true,
+      // O contratante e o pagador vem junto: a tela mostra os dois lados
+      // quando o servico foi feito para o cliente final de uma contratante.
+      client: { include: { parent: { select: { id: true, name: true } } } },
+      payer: { select: { id: true, name: true } },
       technician: true,
       items: true,
       attachments: true,

@@ -21,6 +21,7 @@ type Client = {
   email: string | null
   phone: string | null
   status: string
+  parentId?: string | null
   customValues?: unknown
   address?: {
     street: string | null
@@ -33,9 +34,18 @@ type Client = {
   } | null
 }
 
-type Props = { client?: Client; camposPersonalizados?: DefinicaoCampo[] }
+/** Os clientes que PODEM ser contratante: os que nao sao subclientes de
+ *  ninguem, menos o proprio cliente sendo editado. A lista chega pronta da
+ *  pagina — filtrar no navegador exigiria trazer a carteira inteira. */
+type Contratante = { id: string; name: string }
 
-export function ClientForm({ client, camposPersonalizados = [] }: Props) {
+type Props = {
+  client?: Client
+  camposPersonalizados?: DefinicaoCampo[]
+  contratantes?: Contratante[]
+}
+
+export function ClientForm({ client, camposPersonalizados = [], contratantes = [] }: Props) {
   const t = useTranslations("clients")
   const tc = useTranslations("common")
 
@@ -95,6 +105,29 @@ export function ClientForm({ client, camposPersonalizados = [] }: Props) {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Só aparece quando há para quem apontar. Um seletor vazio numa
+              empresa que não trabalha com contratante seria uma pergunta sem
+              resposta possível, no meio do cadastro mais usado do sistema. */}
+          {contratantes.length > 0 && (
+            <div className="space-y-1.5">
+              <Label htmlFor="parentId">{t("form.contratanteLabel")}</Label>
+              <Select name="parentId" defaultValue={client?.parentId ?? ""}>
+                <SelectTrigger id="parentId">
+                  <SelectValue placeholder={t("form.contratantePlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">{t("form.contratantePlaceholder")}</SelectItem>
+                  {contratantes.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{t("form.contratanteHint")}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

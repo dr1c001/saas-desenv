@@ -355,10 +355,24 @@ model Client {
   tenantId     String
   /// NULL = cliente da empresa toda, visivel em todas as filiais.
   branchId     String?
+  /// O CONTRATANTE deste cliente, quando ele e subcliente de alguem.
+  ///
+  /// Caso: administradora fecha contrato, servico e feito em cada condominio.
+  /// NULL = cliente normal, que e o caso de todos os que ja existem.
+  ///
+  /// UM NIVEL SO: subcliente nao pode ter subcliente. Isso mata o risco de
+  /// ciclo pela raiz, em vez de exigir deteccao de laco em toda gravacao.
+  /// Regra em lib/subcliente.ts.
+  parentId     String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
   branch        Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  /// SetNull, e nao Cascade: apagar a administradora nao pode levar junto
+  /// trinta condominios com historico, receita e nota emitida.
+  parent        Client?           @relation("Subclientes", fields: [parentId], references: [id], onDelete: SetNull)
+  subclientes   Client[]          @relation("Subclientes")
+  ordensComoPagador ServiceOrder[] @relation("OsPagador")
   address       Address?
   tenant        Tenant            @relation(fields: [tenantId], references: [id])
   serviceOrders ServiceOrder[]
@@ -369,6 +383,7 @@ model Client {
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
   @@index([tenantId, branchId])
+  @@index([tenantId, parentId])
 }
 
 enum ClientStatus {
@@ -417,6 +432,11 @@ model ServiceOrder {
   status             ServiceStatus @default(OPEN)
   totalAmount        Decimal       @default(0) @db.Decimal(12, 2)
   clientId           String
+  /// Quem PAGA por esta OS. NULL = o padrao (contratante quando existe, senao
+  /// o proprio cliente). Existe porque a administradora paga quase tudo, mas
+  /// as vezes o cliente final paga direto um servico extra. Regra em
+  /// lib/subcliente.ts.
+  payerId            String?
   tenantId           String
   /// Herdada do CLIENTE, e nao de quem digitou: o cliente e da unidade que o
   /// atende, e um atendente da matriz abrindo OS pra cliente da filial nao
@@ -457,6 +477,7 @@ model ServiceOrder {
 
   branch         Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
   client         Client           @relation(fields: [clientId], references: [id])
+  payer          Client?          @relation("OsPagador", fields: [payerId], references: [id], onDelete: SetNull)
   tenant         Tenant           @relation(fields: [tenantId], references: [id])
   technician     User?            @relation(fields: [technicianId], references: [id])
   items          ServiceItem[]

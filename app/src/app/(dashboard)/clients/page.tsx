@@ -116,6 +116,19 @@ export default async function ClientsPage({ searchParams }: { searchParams: Sear
                       <Link href={`/clients/${c.id}`} className="font-medium hover:underline">
                         {c.name}
                       </Link>
+                      {/* O contratante aparece EMBAIXO do nome, e nao numa
+                          coluna: uma administradora com trinta condominios
+                          deixaria a coluna vazia em todo o resto da carteira. */}
+                      {c.parent && (
+                        <p className="text-xs text-muted-foreground">
+                          {t("list.subclienteDe", { nome: c.parent.name })}
+                        </p>
+                      )}
+                      {c._count.subclientes > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {t("list.temSubclientes", { n: c._count.subclientes })}
+                        </p>
+                      )}
                       {c.email && <p className="text-xs text-muted-foreground">{c.email}</p>}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{c.document || "—"}</TableCell>

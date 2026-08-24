@@ -27,7 +27,16 @@ export default async function NewServiceOrderPage({
   return (
     <div className="max-w-3xl space-y-6">
       <h1 className="text-2xl font-bold">{t("new.title")}</h1>
-      <ServiceOrderForm clients={clients} teamMembers={teamMembers} defaultClientId={clientId} />
+      <ServiceOrderForm
+        clients={clients.map((c) => ({
+          id: c.id,
+          name: c.name,
+          parentId: c.parentId,
+          parentName: c.parent?.name ?? null,
+        }))}
+        teamMembers={teamMembers}
+        defaultClientId={clientId}
+      />
     </div>
   )
 }

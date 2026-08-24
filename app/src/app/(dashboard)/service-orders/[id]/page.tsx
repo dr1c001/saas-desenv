@@ -122,11 +122,32 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p>
-              <span className="text-muted-foreground">{t("detail.clientLabel")}</span>
+              <span className="text-muted-foreground">
+                {os.client.parent ? t("detail.localLabel") : t("detail.clientLabel")}
+              </span>
               <Link href={`/clients/${os.clientId}`} className="hover:underline font-medium">
                 {os.client.name}
               </Link>
             </p>
+            {/* Quem CONTRATOU, quando e diferente de onde o servico aconteceu.
+                Sem esta linha, a tela nao explica por que a nota vai sair no
+                nome de outra empresa. */}
+            {os.client.parent && (
+              <p>
+                <span className="text-muted-foreground">{t("detail.contratanteLabel")}</span>
+                <Link
+                  href={`/clients/${os.client.parent.id}`}
+                  className="font-medium hover:underline"
+                >
+                  {os.payer?.name ?? os.client.parent.name}
+                </Link>
+                {os.payer && os.payer.id === os.clientId && (
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    ({t("detail.cobrancaNoLocal")})
+                  </span>
+                )}
+              </p>
+            )}
             {os.technician && (
               <p><span className="text-muted-foreground">{t("detail.responsibleLabel")}</span>{os.technician.name}</p>
             )}

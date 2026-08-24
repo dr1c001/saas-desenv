@@ -15,7 +15,13 @@ import Link from "next/link"
 import { Plus, Trash2 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 
-type Client = { id: string; name: string }
+type Client = {
+  id: string
+  name: string
+  /** O contratante, quando este cliente e subcliente de alguem. */
+  parentId?: string | null
+  parentName?: string | null
+}
 type TeamMember = { id: string; name: string; role: string }
 type Item = { description: string; quantity: number; unitPrice: number }
 
@@ -31,6 +37,13 @@ export function ServiceOrderForm({ clients, teamMembers = [], defaultClientId }:
   const [items, setItems] = useState<Item[]>([
     { description: "", quantity: 1, unitPrice: 0 },
   ])
+
+  // O cliente escolhido vira ESTADO porque a pergunta seguinte depende dele:
+  // so quem tem contratante precisa decidir quem paga. Sem isto o seletor de
+  // pagador teria de aparecer sempre, e a maioria das empresas nunca usa
+  // subcliente.
+  const [clienteId, setClienteId] = useState(defaultClientId ?? "")
+  const escolhido = clients.find((c) => c.id === clienteId)
 
   const total = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0)
 
@@ -80,7 +93,7 @@ export function ServiceOrderForm({ clients, teamMembers = [], defaultClientId }:
 
           <div className="space-y-1.5">
             <Label htmlFor="clientId">{t("form.clientLabel")}</Label>
-            <Select name="clientId" defaultValue={defaultClientId}>
+            <Select name="clientId" value={clienteId} onValueChange={(v) => setClienteId(v ?? "")}>
               <SelectTrigger id="clientId">
                 <SelectValue placeholder={t("form.clientPlaceholder")} />
               </SelectTrigger>
@@ -94,6 +107,26 @@ export function ServiceOrderForm({ clients, teamMembers = [], defaultClientId }:
             </Select>
             {state.errors?.clientId && <p className="text-sm text-destructive">{state.errors.clientId[0]}</p>}
           </div>
+
+          {/* So aparece quando ha escolha real a fazer: o cliente escolhido tem
+              contratante. A administradora paga quase tudo, mas as vezes o
+              cliente final paga direto um servico extra — e e nesse caso
+              excepcional que a nota sairia no CNPJ errado. */}
+          {escolhido?.parentId && (
+            <div className="space-y-1.5">
+              <Label htmlFor="payerId">{t("form.payerLabel")}</Label>
+              <Select name="payerId" defaultValue={escolhido.parentId}>
+                <SelectTrigger id="payerId">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={escolhido.parentId}>{escolhido.parentName}</SelectItem>
+                  <SelectItem value={escolhido.id}>{escolhido.name}</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{t("form.payerHint")}</p>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="technicianId">{t("form.technicianLabel")}</Label>
