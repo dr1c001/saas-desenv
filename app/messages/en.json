@@ -1433,6 +1433,23 @@
     "whatsapp": {
       "ariaLabel": "Chat on WhatsApp",
       "message": "Hi! I'm interested in ServiçoOS."
+    },
+    "telas": {
+      "title": "See inside the system",
+      "subtitle": "The screens your team uses every day — from the call coming in to the invoice going out.",
+      "os": {
+        "title": "The service order, start to finish",
+        "desc": "Client, assignee, scheduling, execution checklist, parts and labour. All in one place, and the PDF comes out ready to hand over."
+      },
+      "agenda": {
+        "title": "The whole week on one screen",
+        "desc": "Drag to reschedule. The system warns you if the technician already has another job at that time — before you confirm, not after the complaint."
+      },
+      "financeiro": {
+        "title": "What came in, what's still coming",
+        "desc": "An invoiced order becomes revenue on its own. You see what landed, what's pending and what's overdue, with no side spreadsheet."
+      },
+      "aviso": "System screens with sample data. Names and figures are fictitious."
     }
   },
   "legal": {

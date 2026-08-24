@@ -7,6 +7,8 @@ import {
   FileText, Users, Zap, Shield, ArrowRight, CreditCard,
   X, MessageCircle, ChevronDown, Wrench, Receipt,
 } from "lucide-react"
+import { BotaoTema } from "@/components/landing/botao-tema"
+import { TelasDoSistema } from "@/components/landing/telas-do-sistema"
 
 // Ícones alinhados 1:1 (mesma ordem) com landing.features.items em messages/*.json
 const featureIcons = [
@@ -75,6 +77,10 @@ export default async function LandingPage() {
             <Link href="#planos" className="text-sm text-muted-foreground hover:text-foreground hidden sm:block">{t("nav.plans")}</Link>
             <Link href="#faq" className="text-sm text-muted-foreground hover:text-foreground hidden sm:block">{t("nav.faq")}</Link>
             <PublicLanguageToggle />
+            {/* Ao lado do idioma: as duas sao preferencia de quem VISITA, e nao
+                conteudo da pagina. O tema ja funcionava aqui pelo script do
+                layout raiz — faltava o controle. */}
+            <BotaoTema />
             <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">{t("nav.login")}</Link>
             <Link
               href="/register"
@@ -148,6 +154,8 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      <TelasDoSistema />
 
       {/* Pain points → Solution */}
       <section className="bg-muted/40 py-20">

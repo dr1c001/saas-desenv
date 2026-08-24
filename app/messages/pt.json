@@ -1433,6 +1433,23 @@
     "whatsapp": {
       "ariaLabel": "Falar pelo WhatsApp",
       "message": "Olá! Tenho interesse no ServiçoOS."
+    },
+    "telas": {
+      "title": "Veja o sistema por dentro",
+      "subtitle": "As telas que a sua equipe usa todo dia — do chamado que entra à conta que fecha.",
+      "os": {
+        "title": "A ordem de serviço, do começo ao fim",
+        "desc": "Cliente, responsável, agendamento, checklist de execução, peças e mão de obra. Tudo num lugar só, e o PDF sai pronto para entregar ao cliente."
+      },
+      "agenda": {
+        "title": "A semana inteira numa tela",
+        "desc": "Arraste para remarcar. O sistema avisa se o técnico já tem outro serviço naquele horário — antes de confirmar, não depois da reclamação."
+      },
+      "financeiro": {
+        "title": "Quanto entrou, quanto falta entrar",
+        "desc": "A OS faturada vira receita sozinha. Você vê o que já caiu, o que está pendente e o que venceu, sem planilha paralela."
+      },
+      "aviso": "Telas do sistema com dados de exemplo. Nomes e valores são fictícios."
     }
   },
   "legal": {
