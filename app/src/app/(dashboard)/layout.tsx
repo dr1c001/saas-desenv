@@ -12,6 +12,7 @@ import { getTenant, getAllowedTabs, hasActiveSubscription } from "@/lib/auth"
 import { isSuperAdmin } from "@/lib/admin"
 import { temFuncao, temRecurso } from "@/lib/plan"
 import { redirect } from "next/navigation"
+import { Assistente } from "@/components/ia/assistente"
 import { headers } from "next/headers"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -60,6 +61,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </Suspense>
         <div className="flex-1 p-6">{children}</div>
       </main>
+      {/* A assistente de voz. Ela mesma decide se aparece: sem o adicional
+          contratado, não desenha nada. */}
+      <Assistente />
       {/* Client-side services (service worker + push + GPS) */}
       <ServiceWorkerRegistrar />
       <PushSubscriber />

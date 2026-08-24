@@ -1,7 +1,7 @@
 import { cache } from "react"
 import { prisma } from "./prisma"
 import { getTranslations } from "next-intl/server"
-import { RECURSOS, type Recurso } from "./recursos"
+import { ADICIONAIS, RECURSOS, type Recurso } from "./recursos"
 import { brtMidnightUTC, todayInBRT } from "./utils"
 import { limiteEfetivo } from "./limite"
 import { funcaoLigada, type Funcao } from "./funcoes"
@@ -22,11 +22,15 @@ import { funcaoLigada, type Funcao } from "./funcoes"
 // de cliente pode importar de lá sem arrastar o Prisma junto. Aqui fica só o
 // que precisa do banco. Reexportado pra não quebrar quem já importava daqui.
 export type { Recurso } from "./recursos"
-export { RECURSOS, RECURSOS_DE_ABA, ehRecurso } from "./recursos"
+export { ADICIONAIS, IA_COMANDOS_PADRAO, RECURSOS, RECURSOS_DE_ABA, ehRecurso } from "./recursos"
 export { FUNCOES, FUNCOES_COM_CUSTO, ehFuncao } from "./funcoes"
 export type { Funcao } from "./funcoes"
 
-const TODOS: Recurso[] = [...RECURSOS]
+// TODOS exclui os ADICIONAIS: eles são vendidos à parte, e "tudo" nunca deve
+// varrê-los para dentro de um plano por acidente. O Enterprise recebe TODOS —
+// se os adicionais entrassem aqui, a assistente de voz, que custa por uso,
+// passaria a vir de graça no plano mais caro sem ninguém ter decidido isso.
+const TODOS: Recurso[] = RECURSOS.filter((r) => !ADICIONAIS.includes(r))
 
 /** O que um plano libera, sem ir ao banco. Usado pela tela do painel. */
 export function recursosDoPlano(slug: string | null | undefined): Recurso[] {

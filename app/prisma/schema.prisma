@@ -97,6 +97,18 @@ model Tenant {
   maxOrdersOverride       Int?
   maxNfseOverride         Int?
 
+  /// Franquia mensal de comandos da assistente de voz.
+  ///
+  /// NULL herda IA_COMANDOS_PADRAO (lib/recursos.ts), e nao um teto de plano:
+  /// a assistente e ADICIONAL, nenhum plano a inclui. Sem esse padrao,
+  /// conceder o adicional daria "liberado, com zero comandos".
+  maxIaOverride           Int?
+  /// Quantos comandos ja foram gastos no mes corrente.
+  iaComandosNoMes         Int                @default(0)
+  /// AAAA-MM (fuso de Brasilia) a que o contador se refere. Texto, e nao data:
+  /// comparar "2026-08" com "2026-08" nao tem fuso para errar.
+  iaMesDoContador         String?
+
   /// Mensalidade combinada com esta empresa, quando difere da do plano.
   /// NULL = cobra o preco do plano. Serve ao plano customizado: recursos e
   /// tetos proprios pedem preco proprio.

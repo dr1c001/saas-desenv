@@ -60,17 +60,20 @@ describe("plan — o que cada plano libera", () => {
 
   it("Pro libera tudo MENOS API e filiais, com 10 usuários e 200 OS/mês", async () => {
     const { getLimites } = await import("@/lib/plan")
-    const { RECURSOS } = await import("@/lib/recursos")
+    const { ADICIONAIS, RECURSOS } = await import("@/lib/recursos")
     await seedPlanos()
     const t = await seedTenant("pro")
 
     const limites = await getLimites(t.id)
     // Derivado do catálogo, e não escrito à mão: assim um recurso novo cai
     // automaticamente no Pro (que é a regra) e só os exclusivos do Enterprise
-    // precisam ser lembrados aqui.
+    // precisam ser lembrados aqui. Os ADICIONAIS saem por serem vendidos à
+    // parte — nenhum plano os inclui.
     const exclusivos = ["api", "filiais"]
     expect([...limites.recursos].sort()).toEqual(
-      [...RECURSOS].filter((r) => !exclusivos.includes(r)).sort()
+      [...RECURSOS]
+        .filter((r) => !exclusivos.includes(r) && !ADICIONAIS.includes(r))
+        .sort()
     )
     expect(limites.maxUsuarios).toBe(10)
     // Deixou de ser ilimitada em 21/08/2026: o Pro passou a ter teto de 200.
@@ -99,13 +102,18 @@ describe("plan — o que cada plano libera", () => {
     await seedPlanos()
     const t = await seedTenant("enterprise")
 
-    const { RECURSOS } = await import("@/lib/recursos")
+    const { ADICIONAIS, RECURSOS } = await import("@/lib/recursos")
     const limites = await getLimites(t.id)
     // Comparado com o catálogo inteiro, e não com um número fixo: assim
     // "Enterprise tem tudo" continua sendo verificado de verdade quando um
     // recurso novo entra, em vez de o teste quebrar pedindo que se troque o 5
     // por 6 sem ninguém pensar em qual plano deveria recebê-lo.
-    expect([...limites.recursos].sort()).toEqual([...RECURSOS].sort())
+    // Tudo, MENOS o que é vendido à parte. O Enterprise é o plano mais caro, e
+    // por isso o lugar onde um adicional com custo por uso entraria de graça
+    // sem ninguém perceber.
+    expect([...limites.recursos].sort()).toEqual(
+      [...RECURSOS].filter((r) => !ADICIONAIS.includes(r)).sort()
+    )
     expect(limites.maxUsuarios).toBeNull()
     expect(limites.maxOsMes).toBeNull()
   })
@@ -530,5 +538,39 @@ describe("plan — funções desligadas por empresa", () => {
 
     await testDb.db.tenant.update({ where: { id: t.id }, data: { disabledFeatures: [] } })
     expect(await temFuncao(t.id, "offline")).toBe(true)
+  })
+})
+
+describe("o adicional é vendido à parte", () => {
+  it("NENHUM plano inclui a assistente de voz", async () => {
+    // A trava comercial. A IA custa por uso: cada comando consome API paga.
+    // Embutida num plano de preço fixo, o cliente que mais fala com ela vira o
+    // que menos dá lucro — e não dá para prever qual vai ser.
+    const { recursosDoPlano } = await import("@/lib/plan")
+    for (const slug of ["starter", "pro", "enterprise"]) {
+      expect(recursosDoPlano(slug), slug).not.toContain("ia")
+    }
+  })
+
+  it("nem o plano desconhecido, que é permissivo, dá adicional de graça", async () => {
+    // Slug desconhecido cai no permissivo de propósito. Permissivo com coisa
+    // que custa por uso seria uma conta aberta para um plano mal cadastrado.
+    const { recursosDoPlano } = await import("@/lib/plan")
+    const { ADICIONAIS } = await import("@/lib/recursos")
+    for (const adicional of ADICIONAIS) {
+      expect(recursosDoPlano("plano-que-nao-existe")).not.toContain(adicional)
+    }
+  })
+
+  it("a franquia padrão não é zero", async () => {
+    // Conceder o adicional e a pessoa não conseguir dar um comando sequer seria
+    // o pior resultado possível: parece defeito, e não decisão.
+    const { IA_COMANDOS_PADRAO } = await import("@/lib/recursos")
+    expect(IA_COMANDOS_PADRAO).toBeGreaterThan(0)
+  })
+
+  it("todo adicional é um recurso de verdade", async () => {
+    const { ADICIONAIS, RECURSOS } = await import("@/lib/recursos")
+    for (const a of ADICIONAIS) expect(RECURSOS).toContain(a)
   })
 })

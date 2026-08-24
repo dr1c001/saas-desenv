@@ -18,6 +18,7 @@ export type Recurso =
   | "stock"           // Estoque de peças e ordens de compra
   | "api"             // API de integração — SÓ Enterprise (ver lib/plan.ts)
   | "filiais"         // Mais de uma unidade — SÓ Enterprise (ver lib/plan.ts)
+  | "ia"              // Assistente de voz — ADICIONAL, nenhum plano inclui
 
 /** Todos os recursos que existem. Fonte única — a tela do painel monta a partir daqui. */
 export const RECURSOS: readonly Recurso[] = [
@@ -29,7 +30,29 @@ export const RECURSOS: readonly Recurso[] = [
   "stock",
   "api",
   "filiais",
+  "ia",
 ]
+
+/**
+ * Vendidos À PARTE. Nenhum plano inclui — só a concessão individual libera.
+ *
+ * É uma terceira categoria, ao lado de "vem no plano" e "só no Enterprise", e
+ * existe porque a assistente de voz tem CUSTO POR USO: cada comando consome
+ * API paga. Embutir isso num plano de preço fixo faria o cliente que mais fala
+ * com ela ser o que menos dá lucro — e não há como prever qual vai ser.
+ *
+ * O teste que guarda isto está em __tests__/plan.test.ts: nenhum plano pode
+ * passar a incluir um adicional sem alguém decidir explicitamente.
+ */
+export const ADICIONAIS: readonly Recurso[] = ["ia"]
+
+/** Franquia mensal de comandos quando o adicional é concedido e a empresa não
+ *  tem teto próprio.
+ *
+ *  Existe para conceder o adicional nunca resultar em "liberado, com zero
+ *  comandos" — que é o que aconteceria se a franquia herdasse de um plano que
+ *  não inclui o recurso. */
+export const IA_COMANDOS_PADRAO = 500
 
 /**
  * Quais recursos desbloqueiam uma ABA do menu (ver ABAS_POR_RECURSO em
