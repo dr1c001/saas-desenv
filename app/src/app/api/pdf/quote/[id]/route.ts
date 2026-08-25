@@ -11,6 +11,8 @@ import { getTranslator } from "@/lib/i18n"
 import { cobrancaPix } from "@/lib/pix"
 import { gerarQr } from "@/lib/qr"
 import React, { type ReactElement, type JSXElementConstructor } from "react"
+import { baixarArquivo } from "@/lib/storage"
+import { caminhoPertenceAoTenant } from "@/lib/foto"
 
 export async function GET(
   _request: NextRequest,
@@ -73,6 +75,24 @@ export async function GET(
     ? { qr: gerarQr(cobranca.codigo), chave: cobranca.chave, recebedor: cobranca.recebedor }
     : null
 
+  // As fotos do orcamento, como data URI. Teto de 6, igual ao da OS: o PDF e
+  // para ler e imprimir, e vinte fotos viram um arquivo que ninguem abre no
+  // celular.
+  const anexos = await prisma.attachment.findMany({
+    where: { quoteId: id, quote: { tenantId: dbUser.tenantId } },
+    orderBy: { createdAt: "asc" },
+    select: { url: true },
+    take: 6,
+  })
+  const fotos: string[] = []
+  for (const a of anexos) {
+    if (!caminhoPertenceAoTenant(a.url, dbUser.tenantId)) continue
+    // Falha de download nao derruba o PDF inteiro: o orcamento sai sem aquela
+    // foto, que e melhor que sair erro no lugar do documento.
+    const conteudo = await baixarArquivo(a.url).catch(() => null)
+    if (conteudo) fotos.push(`data:image/jpeg;base64,${conteudo.toString("base64")}`)
+  }
+
   const buildElement = (logoUrl: string | null) => {
     return React.createElement(QuotePDF, {
       quote,
@@ -84,6 +104,7 @@ export async function GET(
       locale,
       termos: dbUser.tenant.quoteTerms,
       pix,
+      fotos,
     }) as unknown as ReactElement<DocumentProps, JSXElementConstructor<DocumentProps>>
   }
 

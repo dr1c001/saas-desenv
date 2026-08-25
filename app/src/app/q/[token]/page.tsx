@@ -10,6 +10,8 @@ import { getTranslator } from "@/lib/i18n"
 import { cobrancaPix } from "@/lib/pix"
 import { gerarQr } from "@/lib/qr"
 import { QrCode } from "lucide-react"
+import { linkTemporario } from "@/lib/storage"
+import { caminhoPertenceAoTenant } from "@/lib/foto"
 
 // Só a cor do badge — os rótulos dos 4 status vêm de common.quoteStatus,
 // compartilhados com o resto do app.
@@ -33,11 +35,29 @@ export default async function QuotePortalPage({ params }: { params: Promise<{ to
           pixKey: true, pixKeyType: true, pixReceiver: true, pixCity: true,
         },
       },
+      // As fotos do que sera feito. E AQUI que elas mais trabalham: esta e a
+      // pagina que o cliente abre para decidir se aprova.
+      fotos: { orderBy: { createdAt: "asc" }, select: { id: true, url: true }, take: 6 },
     },
   })
 
   if (!quote) notFound()
   if (!(await temFuncao(quote.tenant.id, "orcamentoOnline"))) notFound()
+
+  // Links temporarios para as fotos. Gerados AQUI, no servidor, e nao guardados
+  // no banco: o armazenamento e privado, e um link permanente num orcamento
+  // encaminhado por WhatsApp seria acesso eterno ao arquivo por quem quer que
+  // recebesse a mensagem.
+  //
+  // Falha ao gerar nao derruba a pagina: o orcamento aparece sem aquela foto,
+  // que e melhor que erro no lugar do documento que o cliente foi ler.
+  const links = (
+    await Promise.all(
+      quote.fotos
+        .filter((f) => caminhoPertenceAoTenant(f.url, quote.tenant.id))
+        .map(async (f) => ({ id: f.id, link: await linkTemporario(f.url).catch(() => null) }))
+    )
+  ).filter((f): f is { id: string; link: string } => f.link !== null)
 
   // Portal público: não existe sessão pro src/i18n/request.ts resolver o
   // tenant, então o idioma vem explícito de quem é dono do orçamento e desce
@@ -106,6 +126,34 @@ export default async function QuotePortalPage({ params }: { params: Promise<{ to
           <Card>
             <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">{t("quote.materialsTitle")}</CardTitle></CardHeader>
             <CardContent><p className="text-sm whitespace-pre-wrap">{quote.materials}</p></CardContent>
+          </Card>
+        )}
+
+        {/* As fotos vem ANTES do total, e nao depois.
+            A pergunta se forma nesta ordem na cabeca de quem le: o que e, como
+            esta, quanto custa. Foto depois do preco chega tarde — a pessoa ja
+            decidiu se achou caro. */}
+        {links.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t("quote.photosTitle")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {links.map((l) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={l.id}
+                    src={l.link}
+                    alt=""
+                    loading="lazy"
+                    className="aspect-video w-full rounded-md border object-cover"
+                  />
+                ))}
+              </div>
+            </CardContent>
           </Card>
         )}
 

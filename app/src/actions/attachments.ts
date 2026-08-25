@@ -7,7 +7,7 @@ import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import {
   caminhoDaFoto,
   caminhoPertenceAoTenant,
-  MAX_FOTOS_POR_OS,
+  MAX_FOTOS,
   validarFoto,
 } from "@/lib/foto"
 import { apagarArquivo, enviarArquivo, linkTemporario } from "@/lib/storage"
@@ -103,7 +103,107 @@ export async function getFotosDaOs(orderId: string): Promise<FotoExibicao[]> {
     where: { orderId, order: { tenantId } },
     orderBy: { createdAt: "asc" },
     select: { id: true, url: true },
-    take: MAX_FOTOS_POR_OS,
+    take: MAX_FOTOS,
+  })
+
+  return Promise.all(
+    fotos.map(async (f) => ({
+      id: f.id,
+      link: caminhoPertenceAoTenant(f.url, tenantId) ? await linkTemporario(f.url) : null,
+    }))
+  )
+}
+
+// ─── Fotos do ORCAMENTO ──────────────────────────────────────────────────────
+//
+// Mesma tabela, mesmo armazenamento, mesma validacao e mesmo teto das fotos da
+// OS. O que muda e o dono — e o CHECK no banco garante que cada foto tem
+// exatamente um.
+//
+// E no orcamento que a foto mais trabalha: e o documento que o cliente le para
+// DECIDIR. Mostrar o cano estourado responde sozinho "por que custa isso".
+
+/**
+ * Confere que o orcamento e mesmo da empresa de quem esta pedindo.
+ *
+ * Mesmo motivo do `osDoTenant`: Server Action e endpoint HTTP, e o id chega do
+ * formulario. Sem isto, alguem anexaria foto no orcamento de outra empresa —
+ * ou pior, leria as de la.
+ */
+async function orcamentoDoTenant(quoteId: string, tenantId: string) {
+  return prisma.quote.findFirst({
+    where: { id: quoteId, tenantId },
+    select: { id: true, status: true },
+  })
+}
+
+export async function enviarFotoDoOrcamento(
+  _prev: EstadoFoto,
+  formData: FormData
+): Promise<EstadoFoto> {
+  const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
+
+  const quoteId = String(formData.get("quoteId") ?? "")
+  const arquivo = formData.get("foto")
+  if (!(arquivo instanceof File)) return { erro: "arquivoVazio" }
+
+  const orcamento = await orcamentoDoTenant(quoteId, tenantId)
+  if (!orcamento) return { erro: "orcamentoNaoEncontrado" }
+
+  // Orcamento ja respondido pelo cliente nao muda mais: as fotos fazem parte
+  // do que ele viu para decidir, e trocar depois mudaria o documento que
+  // sustenta a resposta dele.
+  if (orcamento.status === "APPROVED" || orcamento.status === "REJECTED") {
+    return { erro: "orcamentoRespondido" }
+  }
+
+  const jaTem = await prisma.attachment.count({ where: { quoteId } })
+  const problema = validarFoto({ type: arquivo.type, size: arquivo.size }, jaTem)
+  if (problema) return { erro: problema }
+
+  const fotoId = randomUUID()
+  const caminho = caminhoDaFoto(tenantId, quoteId, fotoId, arquivo.type)
+
+  await enviarArquivo(caminho, Buffer.from(await arquivo.arrayBuffer()), arquivo.type)
+
+  // So grava a linha DEPOIS do upload dar certo, pelo mesmo motivo da OS:
+  // linha sem arquivo vira foto quebrada que ninguem consegue remover.
+  await prisma.attachment.create({
+    data: { id: fotoId, quoteId, url: caminho, name: arquivo.name.slice(0, 120) },
+  })
+
+  revalidatePath(`/quotes/${quoteId}`)
+  return { ok: true }
+}
+
+export async function apagarFotoDoOrcamento(fotoId: string): Promise<EstadoFoto> {
+  const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
+
+  const foto = await prisma.attachment.findFirst({
+    where: { id: fotoId, quote: { tenantId } },
+    select: { id: true, url: true, quoteId: true },
+  })
+  if (!foto || !foto.quoteId) return { erro: "naoEncontrada" }
+
+  // Apaga o arquivo ANTES da linha: se a ordem fosse a inversa e o
+  // armazenamento falhasse, sobraria arquivo pago sem nada apontando para ele.
+  await apagarArquivo(foto.url)
+  await prisma.attachment.delete({ where: { id: fotoId } })
+
+  revalidatePath(`/quotes/${foto.quoteId}`)
+  return { ok: true }
+}
+
+export async function getFotosDoOrcamento(quoteId: string): Promise<FotoExibicao[]> {
+  const { tenantId } = await getTenant()
+
+  const fotos = await prisma.attachment.findMany({
+    where: { quoteId, quote: { tenantId } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, url: true },
+    take: MAX_FOTOS,
   })
 
   return Promise.all(

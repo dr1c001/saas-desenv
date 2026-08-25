@@ -1203,11 +1203,13 @@
       "arquivoVazio": "Arquivo vazio. Escolha uma foto.",
       "tipoNaoAceito": "Só aceitamos imagem (JPG, PNG ou WEBP).",
       "muitoGrande": "Foto grande demais mesmo depois de reduzida. Tente outra.",
-      "limitePorOs": "Esta OS já atingiu o limite de fotos.",
+      "limitePorOs": "Limite de 10 fotos atingido. Remova alguma antes de enviar outra.",
       "osNaoEncontrada": "Ordem de serviço não encontrada.",
       "osFaturada": "OS já faturada não aceita alteração nas fotos.",
       "semPermissao": "Você não tem permissão para remover fotos.",
-      "naoEncontrada": "Foto não encontrada."
+      "naoEncontrada": "Foto não encontrada.",
+      "orcamentoNaoEncontrado": "Orçamento não encontrado.",
+      "orcamentoRespondido": "O cliente já respondeu este orçamento. As fotos fazem parte do que ele viu para decidir, então não mudam mais."
     }
   },
   "historicoOs": {
@@ -2037,7 +2039,8 @@
       "notesTitle": "Observações",
       "totalAmount": "VALOR TOTAL",
       "fileNamePrefix": "Orcamento",
-      "termsTitle": "Termos e condições"
+      "termsTitle": "Termos e condições",
+      "photosTitle": "Fotos do serviço"
     },
     "serviceOrder": {
       "docTitle": "Ordem de Serviço",
@@ -2197,7 +2200,8 @@
       "approvedMessage": "Entraremos em contato para agendar o serviço.",
       "rejectedTitle": "Orçamento recusado",
       "rejectedMessage": "Entre em contato conosco se quiser revisar as condições.",
-      "responseError": "Não conseguimos registrar sua resposta. Tente novamente."
+      "responseError": "Não conseguimos registrar sua resposta. Tente novamente.",
+      "photosTitle": "Fotos do serviço"
     },
     "nps": {
       "question": "De 0 a 10, qual a probabilidade de você nos recomendar?",

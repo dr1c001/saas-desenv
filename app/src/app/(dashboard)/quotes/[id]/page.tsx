@@ -8,6 +8,8 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Pencil, Trash2, CheckCircle2, XCircle, Send, RotateCcw, FileDown } from "lucide-react"
+import { OrcamentoFotos } from "@/components/quotes/orcamento-fotos"
+import { getFotosDoOrcamento } from "@/actions/attachments"
 
 const statusVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   DRAFT: "outline",
@@ -35,6 +37,7 @@ export default async function QuoteDetailPage({ params, searchParams }: Props) {
   const { id } = await params
   const { edit } = await searchParams
   const quote = await getQuote(id)
+  const fotos = await getFotosDoOrcamento(id)
   if (!quote) notFound()
 
   const t = await getTranslations("quotes")
@@ -166,6 +169,17 @@ export default async function QuoteDetailPage({ params, searchParams }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {/* As fotos do que sera feito.
+          Ficam entre o SERVICO e os VALORES de proposito: e a ordem em que a
+          pergunta se forma na cabeca de quem le — o que e, como esta, quanto
+          custa. Foto depois do preco chega tarde. */}
+      <OrcamentoFotos
+        quoteId={quote.id}
+        fotos={fotos}
+        podeApagar
+        bloqueado={quote.status === "APPROVED" || quote.status === "REJECTED"}
+      />
 
       {/* Valores */}
       <Card>

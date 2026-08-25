@@ -1203,11 +1203,13 @@
       "arquivoVazio": "Empty file. Pick a photo.",
       "tipoNaoAceito": "Images only (JPG, PNG or WEBP).",
       "muitoGrande": "Photo too large even after shrinking. Try another.",
-      "limitePorOs": "This order has reached the photo limit.",
+      "limitePorOs": "Limit of 10 photos reached. Remove one before adding another.",
       "osNaoEncontrada": "Service order not found.",
       "osFaturada": "An invoiced order does not accept photo changes.",
       "semPermissao": "You do not have permission to remove photos.",
-      "naoEncontrada": "Photo not found."
+      "naoEncontrada": "Photo not found.",
+      "orcamentoNaoEncontrado": "Quote not found.",
+      "orcamentoRespondido": "The client already answered this quote. The photos are part of what they saw when deciding, so they can't change now."
     }
   },
   "historicoOs": {
@@ -2037,7 +2039,8 @@
       "notesTitle": "Notes",
       "totalAmount": "TOTAL AMOUNT",
       "fileNamePrefix": "Quote",
-      "termsTitle": "Terms and conditions"
+      "termsTitle": "Terms and conditions",
+      "photosTitle": "Service photos"
     },
     "serviceOrder": {
       "docTitle": "Service Order",
@@ -2197,7 +2200,8 @@
       "approvedMessage": "We'll be in touch to schedule the service.",
       "rejectedTitle": "Quote rejected",
       "rejectedMessage": "Get in touch with us if you'd like to review the terms.",
-      "responseError": "We couldn't record your response. Please try again."
+      "responseError": "We couldn't record your response. Please try again.",
+      "photosTitle": "Service photos"
     },
     "nps": {
       "question": "On a scale of 0 to 10, how likely are you to recommend us?",

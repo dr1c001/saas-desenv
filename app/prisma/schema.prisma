@@ -548,10 +548,18 @@ model Attachment {
   id        String   @id @default(cuid())
   url       String
   name      String
-  orderId   String
+  /// O dono da foto: uma OS OU um orcamento, nunca os dois e nunca nenhum.
+  ///
+  /// A obrigatoriedade virou um CHECK no banco (Attachment_um_dono_so), porque
+  /// o Prisma nao sabe expressar "exatamente um destes". Sem ele, "opcional dos
+  /// dois lados" viraria foto orfa: linha que nao aparece em tela alguma, ocupa
+  /// armazenamento e ninguem consegue apagar pela interface.
+  orderId   String?
+  quoteId   String?
   createdAt DateTime @default(now())
 
-  order ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order ServiceOrder? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  quote Quote?        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
 }
@@ -718,6 +726,9 @@ model Quote {
 
   tenant    Tenant @relation(fields: [tenantId], references: [id])
   createdBy User?  @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  /// Fotos do que sera feito. E no orcamento que a foto mais trabalha: e o
+  /// documento que o cliente le para DECIDIR.
+  fotos     Attachment[]
 
   @@unique([tenantId, number])
   // getQuotes(): where tenantId [+ status] order by createdAt desc

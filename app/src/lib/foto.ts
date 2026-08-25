@@ -20,9 +20,14 @@ export const TIPOS_ACEITOS = ["image/jpeg", "image/png", "image/webp"] as const
  *  aqui é folga larga pra caso raro, não o tamanho esperado. */
 export const MAX_BYTES = 5 * 1024 * 1024
 
-/** Teto por OS. Não é limite técnico — é o que impede uma OS com 200 fotos
- *  tornar a página inútil e o armazenamento imprevisível. */
-export const MAX_FOTOS_POR_OS = 10
+/** Teto por REGISTRO — vale para uma OS e para um orçamento. Não é limite
+ *  técnico: é o que impede um registro com 200 fotos tornar a página inútil e
+ *  o armazenamento imprevisível. */
+export const MAX_FOTOS = 10
+
+/** @deprecated Use `MAX_FOTOS`. Mantido porque a foto deixou de ser exclusiva
+ *  da OS em 25/08/2026 e o nome antigo passou a mentir. */
+export const MAX_FOTOS_POR_OS = MAX_FOTOS
 
 export type MotivoRecusa =
   | "tipoNaoAceito"
@@ -33,14 +38,15 @@ export type MotivoRecusa =
 /**
  * Decide se um arquivo pode entrar.
  *
- * `jaTem` é quantas fotos a OS já possui — a checagem de limite mora aqui e
- * não no banco pra que a mensagem de recusa seja a mesma em qualquer chamador.
+ * `jaTem` é quantas fotos o registro já possui — OS ou orçamento. A checagem
+ * de limite mora aqui, e não no banco, para a mensagem de recusa ser a mesma
+ * em qualquer chamador.
  */
 export function validarFoto(
   arquivo: { type: string; size: number },
   jaTem: number
 ): MotivoRecusa | null {
-  if (jaTem >= MAX_FOTOS_POR_OS) return "limitePorOs"
+  if (jaTem >= MAX_FOTOS) return "limitePorOs"
   if (arquivo.size === 0) return "arquivoVazio"
   if (!(TIPOS_ACEITOS as readonly string[]).includes(arquivo.type)) return "tipoNaoAceito"
   if (arquivo.size > MAX_BYTES) return "muitoGrande"
@@ -63,11 +69,13 @@ export function extensaoDe(tipo: string): string {
  */
 export function caminhoDaFoto(
   tenantId: string,
-  orderId: string,
+  /** O dono da foto: uma OS ou um orçamento. O nome era `orderId` e passou a
+   *  mentir quando o orçamento também ganhou fotos. */
+  donoId: string,
   fotoId: string,
   tipo: string
 ): string {
-  return `${tenantId}/${orderId}/${fotoId}.${extensaoDe(tipo)}`
+  return `${tenantId}/${donoId}/${fotoId}.${extensaoDe(tipo)}`
 }
 
 /**

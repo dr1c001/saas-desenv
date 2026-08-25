@@ -84,6 +84,10 @@ type Props = {
   termos?: string | null
   /** Cobranca por PIX. Ausente quando a empresa nao configurou chave. */
   pix?: { qr: Qr; chave: string; recebedor: string } | null
+  /** Fotos do que sera feito, ja como data URI. E o documento que o cliente le
+   *  para DECIDIR: a foto do cano estourado responde sozinha "por que custa
+   *  isso". */
+  fotos?: string[]
   companyName: string
   logoUrl?: string | null
   companyPhone?: string | null
@@ -123,7 +127,7 @@ function quoteNum(number: number, createdAt: Date | string) {
   return `ORC${year}${String(number).padStart(4, "0")}`
 }
 
-export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAddress, companyWebsite, locale , termos, pix }: Props) {
+export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAddress, companyWebsite, locale, termos, pix, fotos = [] }: Props) {
   // PDFs são gerados via renderToBuffer, fora do request context do Next.js —
   // o locale vem explícito por prop (ver lib/i18n.ts).
   const t = getTranslator(locale, "pdf")
@@ -210,6 +214,22 @@ export function QuotePDF({ quote, companyName, logoUrl, companyPhone, companyAdd
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t("quote.materialsTitle")}</Text>
             <Text style={{ color: "#555" }}>{quote.materials}</Text>
+          </View>
+        )}
+
+        {/* As fotos vem ANTES do total, e nao depois.
+            A pergunta se forma nesta ordem na cabeca de quem le: o que e, como
+            esta, quanto custa. Foto depois do preco chega tarde — a pessoa ja
+            decidiu se achou caro. */}
+        {fotos.length > 0 && (
+          <View style={styles.section} wrap={false}>
+            <Text style={styles.sectionTitle}>{t("quote.photosTitle")}</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+              {fotos.map((src, i) => (
+                /* eslint-disable-next-line jsx-a11y/alt-text -- Image do react-pdf não aceita alt */
+                <Image key={i} src={src} style={{ width: 150, height: 110, objectFit: "cover" }} />
+              ))}
+            </View>
           </View>
         )}
 
