@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { TrendingUp, TrendingDown, DollarSign, Lock } from "lucide-react"
+import { TrendingUp, TrendingDown, DollarSign, Lock, FileDown } from "lucide-react"
 import { PeriodPicker } from "@/components/reports/period-picker"
 
 type SearchParams = Promise<{ from?: string; to?: string }>
@@ -59,7 +59,20 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <h1 className="text-2xl font-bold">{t("reports.title")}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold">{t("reports.title")}</h1>
+          {/* O periodo vai no endereco: o PDF sai do MESMO periodo que a tela
+              esta mostrando. Um botao que gerasse "o mes corrente" enquanto a
+              tela mostra o trimestre entregaria um arquivo que nao confere com
+              o que a pessoa acabou de ler. */}
+          <a
+            href={`/api/pdf/relatorio?from=${encodeURIComponent(data.periodo.from)}&to=${encodeURIComponent(data.periodo.to)}`}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted"
+          >
+            <FileDown className="size-4" />
+            {t("reports.baixarPdf")}
+          </a>
+        </div>
         {/* Período personalizado faz parte dos "relatórios avançados"
             (Pro+). No básico o servidor força o mês corrente — esconder o
             seletor aqui evita oferecer um controle que não teria efeito. */}

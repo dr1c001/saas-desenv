@@ -1184,7 +1184,8 @@
         "daysHint": "From opening to completion — includes waiting for parts and for the client's availability, not just working time.",
         "ratingCount": "{n, plural, one {# response} other {# responses}}",
         "noRating": "not rated"
-      }
+      },
+      "baixarPdf": "Download PDF"
     }
   },
   "fotos": {

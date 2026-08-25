@@ -1184,7 +1184,8 @@
         "daysHint": "Da abertura até a conclusão — inclui espera por peça e por horário do cliente, não só o tempo de trabalho.",
         "ratingCount": "{n, plural, one {# resposta} other {# respostas}}",
         "noRating": "sem avaliação"
-      }
+      },
+      "baixarPdf": "Baixar PDF"
     }
   },
   "fotos": {
