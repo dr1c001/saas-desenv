@@ -49,12 +49,16 @@ export type Permissao =
   | "alterarLimites"
   | "entrarNaConta"
   | "gerenciarEquipe"
+  // Apagar um cadastro abandonado. SO DO DONO, e de proposito: e a unica acao
+  // do painel que destroi dado em vez de mexer em acesso, nao tem desfazer, e
+  // nao ha motivo operacional para financeiro ou comercial precisarem dela.
+  | "apagarEmpresa"
 
 const PERMISSOES: Record<PlatformRole, Permissao[]> = {
   DONO: [
     "verPainel", "verFinanceiro", "gerarRelatorio", "liberarAcesso",
     "cancelarAcesso", "trocarPlano", "concederRecurso", "alterarLimites",
-    "entrarNaConta", "gerenciarEquipe",
+    "entrarNaConta", "gerenciarEquipe", "apagarEmpresa",
   ],
   FINANCEIRO: ["verPainel", "verFinanceiro", "gerarRelatorio", "liberarAcesso", "cancelarAcesso", "trocarPlano", "concederRecurso", "alterarLimites"],
   COMERCIAL: ["verPainel", "verFinanceiro", "gerarRelatorio", "trocarPlano", "concederRecurso", "alterarLimites"],
@@ -162,6 +166,9 @@ export type AcaoAdmin =
   | "entrar_na_conta"
   | "sair_da_conta"
   | "adicionar_admin"
+  // O registro fica DEPOIS de o tenant sumir, entao o detalhe guarda o nome e
+  // os numeros — e a unica memoria que resta de que aquela empresa existiu.
+  | "apagar_empresa"
   | "alterar_papel_admin"
   | "desativar_admin"
   | "remover_admin"

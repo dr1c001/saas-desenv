@@ -14,6 +14,11 @@ import { sendTeamInviteEmail } from "@/lib/resend"
 import { ehRecurso, recursosDoPlano } from "@/lib/plan"
 import type { PlatformRole } from "@/generated/prisma/client"
 import { desligadasValidas } from "@/lib/funcoes"
+import {
+  porQueNaoApagar,
+  type MotivoParaNaoApagar,
+  type RetratoDaEmpresa,
+} from "@/lib/descarte"
 
 /** Áreas que podem ser atribuídas pela tela. DONO fica de fora de propósito:
  *  é o fundador, definido por variável de ambiente, e não algo que se concede
@@ -24,6 +29,100 @@ const PAPEIS_VALIDOS: PlatformRole[] = ["FINANCEIRO", "COMERCIAL", "LOGISTICO", 
 // de empresas clientes. TODAS começam por requireSuperAdmin() — a checagem do
 // app/admin/layout.tsx não protege nenhuma delas, porque Server Action tem ID
 // próprio e é despachável direto, sem passar por layout algum.
+
+/**
+ * Retrato de uma empresa, para decidir se ela pode ser apagada.
+ *
+ * Numeros, e nao registros: a pergunta e "tem alguma coisa aqui dentro?", e
+ * trazer as listas so para contar seria caro a toa na tela do painel.
+ */
+export async function retratoParaDescarte(tenantId: string): Promise<RetratoDaEmpresa | null> {
+  await requireSuperAdmin("apagarEmpresa")
+  const t = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: {
+      id: true,
+      name: true,
+      subscriptionStatus: true,
+      createdAt: true,
+      _count: {
+        select: {
+          users: true,
+          clients: true,
+          orders: true,
+          revenues: true,
+          quotes: true,
+          subscriptions: true,
+        },
+      },
+    },
+  })
+  if (!t) return null
+  return {
+    id: t.id,
+    nome: t.name,
+    situacao: t.subscriptionStatus,
+    // Qualquer Subscription registrada significa que ela chegou a assinar em
+    // algum momento — mesmo que tenha cancelado depois.
+    jaAssinou: t._count.subscriptions > 0,
+    criadaEm: t.createdAt,
+    usuarios: t._count.users,
+    clientes: t._count.clients,
+    ordens: t._count.orders,
+    receitas: t._count.revenues,
+    orcamentos: t._count.quotes,
+  }
+}
+
+/**
+ * Apaga um cadastro que nunca virou nada.
+ *
+ * A operacao mais destrutiva do sistema. Por isso ela:
+ *
+ *  1. exige super admin, como toda action deste arquivo;
+ *  2. RECONFERE a regra no servidor, com o retrato lido AGORA. A tela ja
+ *     esconde o botao, mas Server Action tem ID proprio e e despachavel
+ *     direto — e entre a tela carregar e o clique acontecer, a empresa pode
+ *     ter assinado;
+ *  3. apaga so o que a regra permite: uma empresa que passa esta praticamente
+ *     vazia, entao sao os usuarios e o proprio tenant. NADA de apagar filho
+ *     para contornar o RESTRICT — as dezessete tabelas com RESTRICT sao rede
+ *     de seguranca, e contorna-las seria desfazer a protecao para usar a
+ *     ferramenta que ela protege;
+ *  4. registra no log do painel antes de sumir com o registro, porque depois
+ *     nao ha de onde tirar o nome.
+ */
+export async function apagarEmpresaAbandonada(
+  tenantId: string
+): Promise<{ ok: true } | { erro: MotivoParaNaoApagar | "naoEncontrada" }> {
+  const admin = await requireSuperAdmin("apagarEmpresa")
+
+  const retrato = await retratoParaDescarte(tenantId)
+  if (!retrato) return { erro: "naoEncontrada" }
+
+  const motivo = porQueNaoApagar(retrato)
+  if (motivo) return { erro: motivo }
+
+  // Antes de apagar: depois nao ha de onde tirar o nome.
+  await registrarAcaoAdmin(
+    admin.email,
+    "apagar_empresa",
+    tenantId,
+    `${retrato.nome}: ${retrato.situacao}, ${retrato.usuarios} usuário(s), criada em ${retrato.criadaEm.toISOString().slice(0, 10)}`
+  )
+
+  await prisma.$transaction([
+    // UserAddress cai por cascata do User; as tabelas com CASCADE em Tenant
+    // (permissoes, chaves de API, filiais, campos, certificado) caem com o
+    // tenant. Se sobrar qualquer outra coisa, o RESTRICT recusa a transacao
+    // inteira — que e exatamente o comportamento desejado.
+    prisma.user.deleteMany({ where: { tenantId } }),
+    prisma.tenant.delete({ where: { id: tenantId } }),
+  ])
+
+  revalidatePath("/admin")
+  return { ok: true }
+}
 
 /**
  * Destrava uma empresa que pagou mas ficou presa em PENDING.

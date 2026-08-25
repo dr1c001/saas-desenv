@@ -1885,6 +1885,20 @@
           "orcamentoOnline": "O cliente aprova ou recusa pelo link, sem ligar.",
           "primeirosPassos": "O painel de configuração inicial no Painel.",
           "push": "Aviso no celular da equipe. Custa por envio."
+        },
+        "apagar": "Apagar",
+        "apagarTitle": "Apagar cadastro abandonado",
+        "apagarDescription": "Vai apagar {company} do sistema. Serve para cadastro que nunca virou nada — quem criou a conta e não deu continuidade.",
+        "apagarConferindo": "Conferindo se esta empresa pode ser apagada...",
+        "apagarVaiJunto": "O que será apagado:",
+        "apagarOCadastro": "o cadastro da empresa",
+        "apagarSemVolta": "Não há como desfazer, e não há lixeira.",
+        "apagarConfirm": "Apagar definitivamente",
+        "apagarMotivo": {
+          "assinaturaViva": "Esta empresa tem assinatura viva (ativa, aguardando confirmação ou em atraso). Não dá para apagar — cancele a assinatura primeiro, e mesmo assim ela continuará protegida por já ter sido cliente.",
+          "jaFoiCliente": "Esta empresa já foi cliente pagante em algum momento. O registro dela tem valor contábil e fiscal, mesmo cancelada.",
+          "temDados": "Esta empresa tem trabalho registrado dentro — clientes, ordens de serviço, receitas ou orçamentos. Só é possível apagar cadastro vazio.",
+          "recenteDemais": "Cadastro recente demais. Pode ser alguém no meio do processo agora — espere pelo menos 7 dias desde a criação."
         }
       },
       "impersonation": {

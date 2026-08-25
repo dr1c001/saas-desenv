@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { KeyRound, Ban, ArrowLeftRight, LogIn, Loader2, Sparkles, SlidersHorizontal, ToggleLeft } from "lucide-react"
+import { KeyRound, Ban, ArrowLeftRight, LogIn, Loader2, Sparkles, SlidersHorizontal, ToggleLeft, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -21,6 +21,8 @@ import {
   alterarRecursosExtras,
   alterarLimitesDaEmpresa,
   alterarFuncoesDaEmpresa,
+  apagarEmpresaAbandonada,
+  retratoParaDescarte,
 } from "@/actions/admin"
 import { FUNCOES, FUNCOES_COM_CUSTO, type Funcao } from "@/lib/funcoes"
 import { ajusteEscolhido, modoDoLimite, type ModoDoLimite } from "@/lib/limite"
@@ -28,6 +30,7 @@ import { ajusteEscolhido, modoDoLimite, type ModoDoLimite } from "@/lib/limite"
 // componente de cliente isso arrasta o driver do Postgres pro navegador.
 import { RECURSOS, RECURSOS_DE_ABA, type Recurso } from "@/lib/recursos"
 import { ALL_TABS, abasVisiveis } from "@/lib/abas"
+import { oQueVaiJunto, porQueNaoApagar, type RetratoDaEmpresa } from "@/lib/descarte"
 
 type Plano = { id: string; name: string }
 
@@ -79,8 +82,11 @@ export function TenantActions({
   const tNav = useTranslations("nav")
   const [pendente, startTransition] = useTransition()
   const [aberto, setAberto] = useState<
-    null | "liberar" | "cancelar" | "plano" | "entrar" | "recursos" | "limites" | "funcoes"
+    null | "liberar" | "cancelar" | "plano" | "entrar" | "recursos" | "limites" | "funcoes" | "apagar"
   >(null)
+  // `null` = ainda nao perguntamos ao servidor. Diferente de "pode apagar": e
+  // o que mantem o botao desligado enquanto a resposta nao chega.
+  const [retrato, setRetrato] = useState<RetratoDaEmpresa | null>(null)
   const [planoEscolhido, setPlanoEscolhido] = useState(planId ?? planos[0]?.id ?? "")
   const [extras, setExtras] = useState<Recurso[]>(recursosExtras)
   // Guarda as DESLIGADAS, igual ao banco: lista vazia é "tudo funcionando".
@@ -234,7 +240,12 @@ export function TenantActions({
               </button>
             )}
 
-            <div className="space-y-1">
+            {/* Rola dentro da propria caixa, e nao empurrando a janela: com
+                nove recursos a lista ja passa da altura util numa tela de
+                notebook, e o botao de salvar ficava fora do alcance. O teto em
+                vh acompanha a tela em vez de fixar uma altura que erra nas
+                duas pontas. */}
+            <div className="max-h-[45vh] space-y-1 overflow-y-auto pr-1">
               {RECURSOS.map((r) => {
                 const doPlano = noPlano.has(r)
                 const marcado = doPlano || extras.includes(r)
@@ -505,6 +516,74 @@ export function TenantActions({
         pendente={pendente}
         onConfirmar={() => executar(() => entrarNaConta(tenantId))}
       />
+      )}
+
+      {/* Apagar um cadastro abandonado.
+          A UNICA acao deste painel que destroi dado em vez de mexer em acesso.
+          Por isso o botao so existe para quem tem a permissao propria (so o
+          dono), e o dialogo NAO oferece confirmar antes de perguntar ao
+          servidor se aquela empresa pode mesmo ser apagada — a tela pode estar
+          velha, e entre carregar e clicar a empresa pode ter assinado. */}
+      {pode("apagarEmpresa") && (
+        <Dialog
+          open={aberto === "apagar"}
+          onOpenChange={(o) => {
+            setAberto(o ? "apagar" : null)
+            if (o) {
+              setRetrato(null)
+              retratoParaDescarte(tenantId).then(setRetrato).catch(() => setRetrato(null))
+            }
+          }}
+        >
+          <DialogTrigger render={<Button size="sm" variant="ghost" className="gap-1 text-destructive" />}>
+            <Trash2 className="size-3.5" />
+            {t("apagar")}
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("apagarTitle")}</DialogTitle>
+              <DialogDescription>{t("apagarDescription", { company: tenantName })}</DialogDescription>
+            </DialogHeader>
+
+            {retrato === null ? (
+              <p className="text-sm text-muted-foreground">
+                <Loader2 className="mr-1.5 inline size-3.5 animate-spin" />
+                {t("apagarConferindo")}
+              </p>
+            ) : porQueNaoApagar(retrato) ? (
+              <div className="rounded-md border-l-2 border-amber-500 bg-amber-500/10 px-4 py-3 text-sm">
+                {t(`apagarMotivo.${porQueNaoApagar(retrato)}` as "apagarMotivo.temDados")}
+              </div>
+            ) : (
+              <div className="space-y-2 text-sm">
+                <p>{t("apagarVaiJunto")}</p>
+                <ul className="list-disc pl-5 text-muted-foreground">
+                  {oQueVaiJunto(retrato).map((x) => (
+                    <li key={x}>{x}</li>
+                  ))}
+                  <li>{t("apagarOCadastro")}</li>
+                </ul>
+                <p className="font-medium text-destructive">{t("apagarSemVolta")}</p>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAberto(null)} disabled={pendente}>
+                {t("back")}
+              </Button>
+              <Button
+                variant="destructive"
+                // Desabilitado enquanto nao se sabe, e nao "habilitado ate
+                // provar o contrario": o custo de errar aqui nao tem desfazer.
+                disabled={pendente || retrato === null || porQueNaoApagar(retrato) !== null}
+                onClick={() => executar(() => apagarEmpresaAbandonada(tenantId))}
+              >
+                {pendente && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
+                {t("apagarConfirm")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )

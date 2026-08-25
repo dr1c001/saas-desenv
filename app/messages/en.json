@@ -1885,6 +1885,20 @@
           "orcamentoOnline": "The customer approves or declines by link, without calling.",
           "primeirosPassos": "The initial setup panel on the Dashboard.",
           "push": "Alerts on the team's phones. Costs per send."
+        },
+        "apagar": "Delete",
+        "apagarTitle": "Delete abandoned signup",
+        "apagarDescription": "This will delete {company} from the system. It is meant for a signup that never became anything — someone created the account and never continued.",
+        "apagarConferindo": "Checking whether this company can be deleted...",
+        "apagarVaiJunto": "What will be deleted:",
+        "apagarOCadastro": "the company record",
+        "apagarSemVolta": "There is no undo, and no bin.",
+        "apagarConfirm": "Delete permanently",
+        "apagarMotivo": {
+          "assinaturaViva": "This company has a live subscription (active, awaiting confirmation, or overdue). It cannot be deleted — cancel the subscription first, and even then it stays protected for having been a customer.",
+          "jaFoiCliente": "This company was a paying customer at some point. Its record has accounting and tax value, even cancelled.",
+          "temDados": "This company has work recorded inside it — clients, service orders, revenue or quotes. Only an empty signup can be deleted.",
+          "recenteDemais": "Signup is too recent. Someone may be mid-process right now — wait at least 7 days from creation."
         }
       },
       "impersonation": {
