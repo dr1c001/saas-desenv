@@ -1027,7 +1027,7 @@
   },
   "filiais": {
     "title": "Filiais",
-    "subtitle": "Sua empresa com mais de uma unidade. Recurso do plano Enterprise.",
+    "subtitle": "Sua empresa com mais de uma unidade. É um adicional — pode ser contratado em qualquer plano.",
     "nomeLabel": "Nome da filial",
     "nomePlaceholder": "Ex.: Unidade Centro",
     "criarBotao": "Criar filial",
@@ -1052,7 +1052,7 @@
     },
     "erro": {
       "semPermissao": "Só o dono ou um administrador pode mexer nas filiais.",
-      "semPlano": "Filiais é um recurso do plano Enterprise.",
+      "semPlano": "Filiais é um adicional e não está incluído no seu plano. Fale com o suporte para contratar.",
       "nomeVazio": "Dê um nome à filial.",
       "naoEncontrada": "Filial não encontrada."
     },

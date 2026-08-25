@@ -1027,7 +1027,7 @@
   },
   "filiais": {
     "title": "Branches",
-    "subtitle": "Your company with more than one location. Enterprise plan feature.",
+    "subtitle": "Your company with more than one location. It's an add-on — available on any plan.",
     "nomeLabel": "Branch name",
     "nomePlaceholder": "e.g. Downtown",
     "criarBotao": "Create branch",
@@ -1052,7 +1052,7 @@
     },
     "erro": {
       "semPermissao": "Only the owner or an admin can manage branches.",
-      "semPlano": "Branches is an Enterprise plan feature.",
+      "semPlano": "Branches is an add-on and isn't included in your plan. Contact support to enable it.",
       "nomeVazio": "Give the branch a name.",
       "naoEncontrada": "Branch not found."
     },

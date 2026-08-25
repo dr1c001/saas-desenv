@@ -96,7 +96,8 @@ type Props = {
    *  mostrar e mandar para a tela de planos ao clicar é propaganda disfarçada
    *  de funcionalidade. */
   temApi?: boolean
-  /** Filiais também é recurso do Enterprise. Mesmo motivo do temApi. */
+  /** Filiais é ADICIONAL desde 25/08/2026 — vendido à parte, em qualquer
+   *  plano. O link some para quem não contratou, mesmo motivo do temApi. */
   temFiliais?: boolean
 }
 

@@ -58,7 +58,7 @@ describe("plan — o que cada plano libera", () => {
     expect(limites.maxOsMes).toBe(50)
   })
 
-  it("Pro libera tudo MENOS API e filiais, com 10 usuários e 200 OS/mês", async () => {
+  it("Pro libera tudo MENOS a API, com 10 usuários e 200 OS/mês", async () => {
     const { getLimites } = await import("@/lib/plan")
     const { ADICIONAIS, RECURSOS } = await import("@/lib/recursos")
     await seedPlanos()
@@ -69,7 +69,7 @@ describe("plan — o que cada plano libera", () => {
     // automaticamente no Pro (que é a regra) e só os exclusivos do Enterprise
     // precisam ser lembrados aqui. Os ADICIONAIS saem por serem vendidos à
     // parte — nenhum plano os inclui.
-    const exclusivos = ["api", "filiais"]
+    const exclusivos = ["api"]
     expect([...limites.recursos].sort()).toEqual(
       [...RECURSOS]
         .filter((r) => !exclusivos.includes(r) && !ADICIONAIS.includes(r))
@@ -80,21 +80,31 @@ describe("plan — o que cada plano libera", () => {
     expect(limites.maxOsMes).toBe(200)
   })
 
-  it("API e filiais são o que separam Pro de Enterprise, e o Pro NÃO tem", async () => {
-    // São as duas únicas coisas exclusivas do Enterprise. Se esta linha cair, o
-    // plano de R$ 397 passa a não ter nada que o de R$ 97 não tenha — e ninguém
-    // percebe, porque nada quebra visivelmente.
+  it("a API é o que separa Pro de Enterprise, e o Pro NÃO tem", async () => {
+    // A ÚNICA coisa exclusiva do Enterprise desde 25/08/2026, quando filiais
+    // virou adicional. Se esta linha cair, o plano de R$ 397 passa a não ter
+    // nada que o de R$ 97 não tenha — e ninguém percebe, porque nada quebra
+    // visivelmente.
     const { temRecurso } = await import("@/lib/plan")
     await seedPlanos()
     const pro = (await seedTenant("pro")).id
     const ent = (await seedTenant("enterprise")).id
     const sta = (await seedTenant("starter")).id
 
-    for (const exclusivo of ["api", "filiais"] as const) {
-      expect(await temRecurso(pro, exclusivo), `pro/${exclusivo}`).toBe(false)
-      expect(await temRecurso(sta, exclusivo), `starter/${exclusivo}`).toBe(false)
-      expect(await temRecurso(ent, exclusivo), `enterprise/${exclusivo}`).toBe(true)
-    }
+    expect(await temRecurso(pro, "api"), "pro").toBe(false)
+    expect(await temRecurso(sta, "api"), "starter").toBe(false)
+    expect(await temRecurso(ent, "api"), "enterprise").toBe(true)
+  })
+
+  it("o Enterprise ainda tem ALGUMA coisa exclusiva", async () => {
+    // A trava que importa depois de mover filiais para fora: se um dia o
+    // último exclusivo sair também, o plano mais caro fica sem nada além de
+    // quantidade — e isso precisa ser uma DECISÃO, não um efeito colateral.
+    const { recursosDoPlano } = await import("@/lib/plan")
+    const soDoEnterprise = recursosDoPlano("enterprise").filter(
+      (r) => !recursosDoPlano("pro").includes(r)
+    )
+    expect(soDoEnterprise.length).toBeGreaterThan(0)
   })
 
   it("Enterprise libera tudo, sem limite de usuário nem de OS", async () => {
@@ -538,6 +548,63 @@ describe("plan — funções desligadas por empresa", () => {
 
     await testDb.db.tenant.update({ where: { id: t.id }, data: { disabledFeatures: [] } })
     expect(await temFuncao(t.id, "offline")).toBe(true)
+  })
+})
+
+describe("conceder um ADICIONAL a mao funciona de verdade", () => {
+  it("a assistente de voz concedida no painel VALE", async () => {
+    // O defeito que isto tranca, e que existiu de verdade: o filtro dos
+    // recursos concedidos validava contra TODOS — o que os PLANOS podem
+    // incluir — e adicional e justamente o que nenhum plano inclui. Resultado:
+    // o painel gravava, e getLimites descartava em silencio. O cliente pagava
+    // pelo adicional e nao recebia nada.
+    await seedPlanos()
+    const t = await seedTenant("starter", ["ia"])
+    const { temRecurso } = await import("@/lib/plan")
+    expect(await temRecurso(t.id, "ia")).toBe(true)
+  })
+
+  it("filiais concedida a mao tambem vale, agora que virou adicional", async () => {
+    await seedPlanos()
+    const t = await seedTenant("starter", ["filiais"])
+    const { temRecurso } = await import("@/lib/plan")
+    expect(await temRecurso(t.id, "filiais")).toBe(true)
+  })
+
+  it("TODO adicional pode ser concedido a mao", async () => {
+    // Generico de proposito: um adicional novo entra no catalogo e este teste
+    // ja o cobre, sem ninguem lembrar de acrescentar caso.
+    await seedPlanos()
+    const { ADICIONAIS } = await import("@/lib/recursos")
+    const { temRecurso } = await import("@/lib/plan")
+    for (const a of ADICIONAIS) {
+      const t = await seedTenant("starter", [a])
+      expect(await temRecurso(t.id, a), a).toBe(true)
+    }
+  })
+
+  it("lixo no campo continua sendo ignorado", async () => {
+    // Afrouxar o filtro nao pode virar "aceita qualquer coisa".
+    await seedPlanos()
+    const t = await seedTenant("starter", ["recurso-que-nao-existe"])
+    const { getLimites } = await import("@/lib/plan")
+    expect((await getLimites(t.id)).recursos).toEqual([])
+  })
+})
+
+describe("filiais deixou de ser exclusiva do Enterprise", () => {
+  it("NENHUM plano inclui filiais, nem o Enterprise", async () => {
+    const { recursosDoPlano } = await import("@/lib/plan")
+    for (const slug of ["starter", "pro", "enterprise"]) {
+      expect(recursosDoPlano(slug), slug).not.toContain("filiais")
+    }
+  })
+
+  it("a API continua sendo exclusiva do Enterprise", async () => {
+    // O outro lado: mover filiais nao pode ter levado a API junto.
+    const { recursosDoPlano } = await import("@/lib/plan")
+    expect(recursosDoPlano("enterprise")).toContain("api")
+    expect(recursosDoPlano("pro")).not.toContain("api")
   })
 })
 

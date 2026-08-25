@@ -58,14 +58,19 @@ export type Limites = {
   recursos: Recurso[]
 }
 
-// O que separa os dois planos pagos de cima. Fora destes, Pro e Enterprise
-// diferem só em quantidade (usuários ilimitados) e atendimento — e sem nenhum
-// recurso exclusivo, o Enterprise não tem o que oferecer a quem já cabe nos 10
-// usuários do Pro.
+// O que separa os dois planos pagos de cima. Fora disto, Pro e Enterprise
+// diferem só em quantidade (usuários ilimitados) e atendimento.
 //
-// Os dois são de empresa que cresceu: quem integra com ERP e quem tem mais de
-// uma unidade. É a mesma pessoa.
-const SO_ENTERPRISE: Recurso[] = ["api", "filiais"]
+// Era uma dupla — API e filiais. FILIAIS saiu em 25/08/2026 e virou ADICIONAL,
+// pelo mesmo motivo da assistente de voz: é recurso de uma minoria com
+// necessidade específica, e prender atrás do plano mais caro obriga quem só
+// quer duas unidades a pagar por usuários ilimitados e atendimento que não
+// pediu. Vendido à parte, ele alcança também quem está no Starter.
+//
+// Ninguém usava filiais quando a mudança foi feita (conferido em produção), e
+// quem já tinha a concessão avulsa continua com ela — extraFeatures é somado
+// por cima do plano, e não substituído.
+const SO_ENTERPRISE: Recurso[] = ["api"]
 
 const SEM_EXCLUSIVOS: Recurso[] = TODOS.filter((r) => !SO_ENTERPRISE.includes(r))
 
@@ -104,8 +109,14 @@ export const getLimites = cache(async function getLimites(tenantId: string): Pro
 
   // Recursos concedidos individualmente somam com os do plano (ver o comentário
   // de extraFeatures em schema.prisma).
+  //
+  // Validado contra RECURSOS — tudo que EXISTE — e não contra TODOS, que é o
+  // que os planos podem incluir. A diferença tem consequência: conceder à mão
+  // é exatamente o mecanismo de liberar o que NENHUM plano inclui, e filtrar
+  // por "o que os planos incluem" descartaria os ADICIONAIS em silêncio.
+  // Aconteceu: a assistente de voz era gravada no painel e nunca valia.
   const extras = (tenant?.extraFeatures ?? []).filter((f): f is Recurso =>
-    TODOS.includes(f as Recurso)
+    (RECURSOS as readonly string[]).includes(f)
   )
 
   // E os TETOS ajustados para esta empresa por cima do plano. `null` herda,
