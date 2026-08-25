@@ -1,4 +1,17 @@
 {
+  "adicionais": {
+    "title": "Adicionais",
+    "subtitle": "Recursos que não vêm nos planos e podem ser contratados à parte, em qualquer plano.",
+    "verDetalhes": "ver detalhes",
+    "porMes": "/mês",
+    "sobConsulta": "Preço sob consulta",
+    "falarComAGente": "Falar com a gente",
+    "comoContratar": "A contratação é feita com a nossa equipe: a gente libera na sua conta e ajusta a mensalidade. Cancele quando quiser.",
+    "descricao": {
+      "filiais": "Sua empresa com mais de uma unidade. Cada filial tem os próprios clientes, ordens de serviço, agenda, financeiro e equipe — e estoque, orçamentos e configurações continuam sendo da empresa toda. Quem trabalha numa unidade vê a dela e o que é comum.",
+      "ia": "Assistente de voz em toda tela do sistema. Quem está em campo fala e ela faz: abre a agenda, consulta o histórico do cliente, registra o andamento, conclui o serviço. O que não se desfaz — concluir, faturar, emitir nota — sempre para e pede confirmação em voz alta antes."
+    }
+  },
   "ajuda": {
     "title": "Ajuda",
     "subtitle": "O que cada tela faz, o que dá para fazer nela, e as armadilhas que só aparecem depois.",

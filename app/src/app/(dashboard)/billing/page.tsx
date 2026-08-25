@@ -7,6 +7,8 @@ import Link from "next/link"
 import { getTranslations } from "next-intl/server"
 import { CancelSubscriptionButton } from "@/components/billing/cancel-button"
 import { precoCheio, precoCobrado } from "@/lib/preco"
+import { Adicionais } from "@/components/shared/adicionais"
+import { linkWhatsappSuporte } from "@/lib/utils"
 
 const STATUS_COLOR: Record<string, string> = {
   TRIAL: "bg-yellow-500",
@@ -31,6 +33,7 @@ const PLAN_FEATURE_SLUGS = ["starter", "pro", "enterprise"]
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ success?: string; error?: string }> }) {
   const { success, error } = await searchParams
   const t = await getTranslations("billingReferral.billing")
+  const tAd = await getTranslations("adicionais")
   const tf = await getTranslations("planFeatures")
   const [billing, plans] = await Promise.all([getBillingStatus(), getPlans()])
 
@@ -251,6 +254,14 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           })}
         </div>
       </div>
+
+      {/* Os adicionais vem DEPOIS dos planos: a pessoa precisa primeiro
+          escolher o plano, e so entao pensar no que falta. Antes, competiriam
+          com a decisao principal. */}
+      <Adicionais
+        mostrarPreco
+        linkContato={linkWhatsappSuporte(process.env.SUPPORT_WHATSAPP, tAd("falarComAGente"))}
+      />
 
       <p className="text-xs text-muted-foreground">
         {t.rich("paymentNote", { strong: (chunks) => <strong>{chunks}</strong> })}

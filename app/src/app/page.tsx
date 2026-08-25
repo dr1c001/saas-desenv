@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 import { BotaoTema } from "@/components/landing/botao-tema"
 import { TelasDoSistema } from "@/components/landing/telas-do-sistema"
+import { Adicionais } from "@/components/shared/adicionais"
 
 // Ícones alinhados 1:1 (mesma ordem) com landing.features.items em messages/*.json
 const featureIcons = [
@@ -311,6 +312,14 @@ export default async function LandingPage() {
       </section>
 
       {/* FAQ */}
+      {/* Adicionais na vitrine, SEM preco.
+          Decisao do dono: na landing o objetivo e a pessoa saber que existe e
+          conversar. Preco de adicional ao lado do preco do plano rouba a
+          atencao da decisao principal, que e escolher o plano. */}
+      <section className="mx-auto max-w-4xl px-4 pb-20">
+        <Adicionais mostrarPreco={false} linkContato={suporteWhatsapp} />
+      </section>
+
       <section id="faq" className="py-20 mx-auto max-w-3xl px-4">
         <h2 className="text-3xl font-bold text-center mb-12">{t("faq.title")}</h2>
         <div className="space-y-4">

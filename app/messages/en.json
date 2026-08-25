@@ -1,4 +1,17 @@
 {
+  "adicionais": {
+    "title": "Add-ons",
+    "subtitle": "Features that don't come with the plans and can be added separately, on any plan.",
+    "verDetalhes": "see details",
+    "porMes": "/month",
+    "sobConsulta": "Price on request",
+    "falarComAGente": "Talk to us",
+    "comoContratar": "Add-ons are arranged with our team: we enable it on your account and adjust the monthly fee. Cancel any time.",
+    "descricao": {
+      "filiais": "Your company with more than one location. Each branch has its own clients, service orders, schedule, finances and team — while stock, quotes and settings stay company-wide. People assigned to a branch see theirs plus what's shared.",
+      "ia": "A voice assistant on every screen. People in the field speak and it acts: opens the schedule, looks up a client's history, records progress, completes the job. Anything that can't be undone — completing, invoicing, issuing an invoice — always stops and asks out loud first."
+    }
+  },
   "ajuda": {
     "title": "Help",
     "subtitle": "What each screen does, what you can do there, and the traps that only show up later.",
