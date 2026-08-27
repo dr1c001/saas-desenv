@@ -10,6 +10,8 @@ import { minhasPreferencias } from "@/actions/notificacoes"
 import { WhatsAppForm } from "@/components/settings/whatsapp-form"
 import { AvisoClienteForm } from "@/components/settings/aviso-cliente-form"
 import { getAvisoCliente } from "@/actions/aviso-cliente"
+import { ReguaCobrancaForm } from "@/components/settings/regua-cobranca-form"
+import { getReguaCobranca } from "@/actions/regua-cobranca"
 import { DocumentosForm } from "@/components/settings/documentos-form"
 import { getDocumentos } from "@/actions/documentos"
 import { PixForm } from "@/components/settings/pix-form"
@@ -21,6 +23,7 @@ import { Separator } from "@/components/ui/separator"
 export default async function SettingsPage() {
   const { tenant, user, isAdmin, isOwner } = await getSettings()
   const aviso = await getAvisoCliente()
+  const regua = await getReguaCobranca()
   const documentos = await getDocumentos()
   const pix = await getPix()
   const t = await getTranslations("settingsCore")
@@ -118,6 +121,15 @@ export default async function SettingsPage() {
 
       {isAdmin && (
         <AvisoClienteForm atual={aviso.config} whatsappConfigurado={aviso.whatsappConfigurado} />
+      )}
+
+      {/* Logo abaixo do aviso ao cliente: são os dois recursos que mandam
+          mensagem automática para o cliente final, e quem procura um procura
+          o outro. Também é o par que a tela precisa deixar claro que são
+          consentimentos separados — avisar que o técnico está a caminho não é
+          cobrar uma conta atrasada. */}
+      {isAdmin && (
+        <ReguaCobrancaForm atual={regua.config} whatsappConfigurado={regua.whatsappConfigurado} />
       )}
 
       {/* Cobrança por PIX. Fica perto dos documentos porque é onde o código

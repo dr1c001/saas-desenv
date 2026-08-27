@@ -153,6 +153,13 @@ model Tenant {
   /// que o sistema toma por ela.
   clientNotifications Json? @db.JsonB
 
+  /// Regua de cobranca das contas a receber DA EMPRESA. Formato em
+  /// lib/regua-cobranca.ts. Nasce NULL pela mesma razao acima, e em coluna
+  /// SEPARADA de propósito: avisar que o tecnico esta a caminho e cobrar uma
+  /// conta atrasada sao dois consentimentos diferentes, e num JSON so ligar
+  /// um ligaria o outro.
+  dunningConfig Json? @db.JsonB
+
   /// Termos que a empresa escreve e que saem impressos nos documentos.
   /// Garantia, condicoes, prazo, foro — o que ela achar necessario pro
   /// ramo dela. Separados porque garantia (OS) e validade/pagamento
@@ -578,6 +585,12 @@ model Revenue {
   /// Herdada da OS que gerou a receita.
   branchId    String?
   createdAt   DateTime      @default(now())
+
+  /// Quantos degraus da regua de cobranca ja passaram para esta conta.
+  /// Contador, e nao "data do ultimo aviso": o cron roda uma vez por dia e
+  /// pode falhar num dia — contando degraus, o dia perdido se recupera
+  /// sozinho. Regra e escada em lib/regua-cobranca.ts.
+  remindersSent Int @default(0)
 
   branch Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
   tenant Tenant        @relation(fields: [tenantId], references: [id])

@@ -2890,6 +2890,49 @@
       "aCaminho": "Hello! This is {empresa}.\n\nWe are on our way for *{titulo}* ({os}).",
       "concluido": "Hello! This is {empresa}.\n\nThe service *{titulo}* ({os}) has been completed.",
       "acompanhe": "Follow it here"
+    },
+    "reguaCobranca": {
+      "lembrete": "Hello! This is {empresa}.\n\nJust a reminder that *{descricao}* — {valor} — is due on {vencimento}.",
+      "venceu": "Hello! This is {empresa}.\n\n*{descricao}* — {valor} — was due on {vencimento} and is still open.",
+      "insistente": "Hello! This is {empresa}.\n\n*{descricao}* — {valor} — has been open since {vencimento}.",
+      "final": "Hello! This is {empresa}.\n\n*{descricao}* — {valor} — is still open since {vencimento}. Please get in touch so we can settle it.",
+      "desconsidere": "If you have already paid, please disregard this message.",
+      "detalhes": "Details",
+      "assunto": {
+        "lembrete": "Payment due soon — {empresa}",
+        "venceu": "Payment overdue — {empresa}",
+        "insistente": "Outstanding balance — {empresa}",
+        "final": "Outstanding balance — {empresa}"
+      }
+    }
+  },
+  "reguaCobrancaConfig": {
+    "title": "Payment reminders",
+    "subtitle": "Reminds the client before the due date and follows up after it, automatically. The invoice nobody chases is the invoice nobody pays.",
+    "master": "Turn on payment reminders",
+    "masterHint": "Starts off. While it is off, nothing is sent — neither by WhatsApp nor by email.",
+    "whenTitle": "When",
+    "when": {
+      "lembrarAntes": "Remind before the due date",
+      "lembrarAntesHint": "One message 3 days before it is due. This is the one that prevents most late payments — the best collection is the one you never need.",
+      "cobrarDepois": "Follow up after the due date",
+      "cobrarDepoisHint": "The day after it is due, then at 7, 15 and 30 days. After 30 the system stops: from there the account needs a person."
+    },
+    "howTitle": "Channels",
+    "how": {
+      "whatsapp": "WhatsApp",
+      "whatsappHint": "Sent to the client's registered WhatsApp or phone number.",
+      "whatsappMissing": "Set up the WhatsApp integration above for this channel to work.",
+      "email": "Email",
+      "emailHint": "Only for clients with a registered email."
+    },
+    "minimoTitle": "Minimum amount",
+    "minimoHint": "Below this amount, nothing is sent. Leave it at zero to chase any amount.",
+    "consent": "You are responsible for having your clients' consent to receive these messages. The system sends them on your company's behalf, using the contacts you registered, and every message tells the client to disregard it if they have already paid.",
+    "save": "Save",
+    "saved": "Saved",
+    "errors": {
+      "semPermissao": "You do not have permission to change this."
     }
   }
 }

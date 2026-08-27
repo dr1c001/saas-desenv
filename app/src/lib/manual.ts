@@ -756,6 +756,7 @@ export const MANUAL: readonly Secao[] = [
               "*Termos e garantia* — o prazo padrão de garantia e os textos que saem impressos na OS e no orçamento, antes das assinaturas.",
               "*Receber por PIX* — tipo de chave, chave, nome do recebedor e cidade. O QR code passa a sair nos documentos.",
               "*Avisar o cliente automaticamente* — mensagem quando o serviço começa e quando termina, por WhatsApp e/ou e-mail. Começa desligado.",
+              "*Régua de cobrança* — lembra o cliente 3 dias antes de vencer e cobra depois de vencido, sozinho. Começa desligada.",
               "*WhatsApp (Z-API)* — ID da instância e token, obtidos criando uma conta na Z-API e lendo o QR code com o seu WhatsApp.",
               "*Idioma* — vale para toda a empresa, inclusive os e-mails, PDFs e mensagens que vão para os seus clientes. Pede confirmação.",
               "*Exportar dados* — baixa tudo num arquivo .json, pelo seu direito de portabilidade.",
@@ -775,6 +776,42 @@ export const MANUAL: readonly Secao[] = [
             titulo: "Confira a chave PIX com calma",
             texto:
               "Se a chave estiver errada, o pagamento do seu cliente vai para outra pessoa, e o sistema não tem como desfazer isso. O dinheiro cai direto na conta da sua empresa — não passa pelo ServiçoOS, e não há taxa.",
+          },
+          {
+            tipo: "passos",
+            titulo: "Régua de cobrança, passo a passo",
+            itens: [
+              "Ligue a chave *Ligar a régua de cobrança*. Enquanto ela estiver desligada, nada sai.",
+              "Escolha se quer *lembrar antes de vencer*, *cobrar depois de vencido*, ou os dois.",
+              "Escolha por onde: WhatsApp, e-mail, ou ambos.",
+              "Se quiser, informe um *valor mínimo* — abaixo dele o sistema não cobra.",
+            ],
+          },
+          {
+            tipo: "p",
+            texto:
+              "As mensagens saem uma vez por dia, por volta das 9h da manhã. O cliente recebe *no máximo cinco*: uma 3 dias antes do vencimento, e depois no dia seguinte ao vencimento e aos 7, 15 e 30 dias. Passados os 30, o sistema para de cobrar sozinho — daí em diante a conta precisa de você.",
+          },
+          {
+            tipo: "lista",
+            titulo: "O que ela nunca faz",
+            itens: [
+              "Cobrar uma conta que já foi paga.",
+              "Mandar mais de uma mensagem por dia para a mesma conta, mesmo que vários prazos tenham passado de uma vez.",
+              "Cobrar quem apenas recebeu o serviço: a mensagem vai para *quem paga*. Se o cliente tem um contratante, é o contratante que recebe.",
+              "Cobrar receita lançada à mão, sem OS — não há a quem cobrar.",
+            ],
+          },
+          {
+            tipo: "p",
+            texto:
+              "Se você *renegociar* e mudar a data de vencimento, a régua recomeça sozinha a partir da data nova. Não precisa mexer em nada.",
+          },
+          {
+            tipo: "atencao",
+            titulo: "Você precisa do consentimento do seu cliente",
+            texto:
+              "As mensagens saem em nome da sua empresa, para os contatos que você cadastrou — e quem responde por mensagem indesejada é você, não o ServiçoOS. Toda mensagem avisa o cliente para desconsiderar caso já tenha pago, porque a baixa de pagamento costuma atrasar alguns dias.",
           },
         ]
       ),

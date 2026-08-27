@@ -2890,6 +2890,49 @@
       "aCaminho": "Olá! Aqui é da {empresa}.\n\nEstamos a caminho para o serviço *{titulo}* ({os}).",
       "concluido": "Olá! Aqui é da {empresa}.\n\nO serviço *{titulo}* ({os}) foi concluído.",
       "acompanhe": "Acompanhe por aqui"
+    },
+    "reguaCobranca": {
+      "lembrete": "Olá! Aqui é da {empresa}.\n\nLembrando que *{descricao}* — {valor} — vence em {vencimento}.",
+      "venceu": "Olá! Aqui é da {empresa}.\n\n*{descricao}* — {valor} — venceu em {vencimento} e consta em aberto.",
+      "insistente": "Olá! Aqui é da {empresa}.\n\n*{descricao}* — {valor} — está em aberto desde {vencimento}.",
+      "final": "Olá! Aqui é da {empresa}.\n\n*{descricao}* — {valor} — continua em aberto desde {vencimento}. Pedimos que entre em contato para regularizar.",
+      "desconsidere": "Se você já efetuou o pagamento, por favor desconsidere esta mensagem.",
+      "detalhes": "Detalhes",
+      "assunto": {
+        "lembrete": "Lembrete de vencimento — {empresa}",
+        "venceu": "Conta vencida — {empresa}",
+        "insistente": "Conta em aberto — {empresa}",
+        "final": "Conta em aberto — {empresa}"
+      }
+    }
+  },
+  "reguaCobrancaConfig": {
+    "title": "Régua de cobrança",
+    "subtitle": "Lembra o cliente antes de vencer e cobra depois de vencido, sozinho. A conta que ninguém cobra é a conta que ninguém paga.",
+    "master": "Ligar a régua de cobrança",
+    "masterHint": "Começa desligada. Enquanto estiver assim, nenhuma mensagem sai — nem por WhatsApp, nem por e-mail.",
+    "whenTitle": "Quando",
+    "when": {
+      "lembrarAntes": "Lembrar antes de vencer",
+      "lembrarAntesHint": "Uma mensagem 3 dias antes do vencimento. É a que mais evita atraso — cobrança que não precisa acontecer é a melhor cobrança.",
+      "cobrarDepois": "Cobrar depois de vencido",
+      "cobrarDepoisHint": "No dia seguinte ao vencimento e depois aos 7, 15 e 30 dias. Passados os 30, o sistema para: daí em diante a conta precisa de uma pessoa."
+    },
+    "howTitle": "Por onde",
+    "how": {
+      "whatsapp": "WhatsApp",
+      "whatsappHint": "Vai para o WhatsApp ou telefone do cliente cadastrado.",
+      "whatsappMissing": "Configure a integração do WhatsApp acima para este canal funcionar.",
+      "email": "E-mail",
+      "emailHint": "Só para clientes com e-mail cadastrado."
+    },
+    "minimoTitle": "Valor mínimo",
+    "minimoHint": "Abaixo deste valor, o sistema não cobra. Deixe em zero para cobrar qualquer valor.",
+    "consent": "Você é responsável por ter o consentimento dos seus clientes para receber estas mensagens. O sistema envia em nome da sua empresa, com os contatos que você cadastrou, e toda mensagem avisa para desconsiderar em caso de pagamento já feito.",
+    "save": "Salvar",
+    "saved": "Salvo",
+    "errors": {
+      "semPermissao": "Você não tem permissão para alterar isso."
     }
   }
 }

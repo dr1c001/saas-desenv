@@ -332,18 +332,20 @@ export async function sendPasswordResetEmail(to: string, name: string, resetUrl:
  * exatamente a mesma coisa — divergir entre canais confunde quem recebe os
  * dois.
  */
-export async function sendClientNoticeEmail(
-  to: string,
-  companyName: string,
-  texto: string,
-  locale: "pt" | "en"
-) {
-  const t = getTranslator(locale, "emails")
+/**
+ * E-mail que sai EM NOME DA EMPRESA para o cliente final dela.
+ *
+ * O corpo é sempre o mesmo — nome da empresa e um texto já montado —, e o que
+ * muda entre os usos é o assunto. Extraído quando a régua de cobrança passou a
+ * precisar de um assunto por tom: duplicar o HTML duplicaria junto o escape de
+ * `& < >`, que é a única coisa aqui que, esquecida, vira defeito de verdade.
+ */
+function emailEmNomeDaEmpresa(to: string, companyName: string, subject: string, texto: string) {
   return send({
     from: FROM,
     replyTo: REPLY_TO,
     to,
-    subject: `${companyName} — ${t("clientNotice.subject")}`,
+    subject,
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
         <h2 style="margin:0 0 16px">${companyName}</h2>
@@ -353,6 +355,30 @@ export async function sendClientNoticeEmail(
           .replace(/>/g, "&gt;")}</p>
       </div>`,
   })
+}
+
+export async function sendClientNoticeEmail(
+  to: string,
+  companyName: string,
+  texto: string,
+  locale: "pt" | "en"
+) {
+  const t = getTranslator(locale, "emails")
+  return emailEmNomeDaEmpresa(to, companyName, `${companyName} — ${t("clientNotice.subject")}`, texto)
+}
+
+/**
+ * Cobrança da régua. Assunto vem pronto porque ele MUDA COM O TOM: "lembrete
+ * de vencimento" e "conta em aberto" não podem chegar com o mesmo título na
+ * caixa de entrada — é justamente no assunto que o cliente decide se abre.
+ */
+export async function sendDunningEmail(
+  to: string,
+  companyName: string,
+  subject: string,
+  texto: string
+) {
+  return emailEmNomeDaEmpresa(to, companyName, subject, texto)
 }
 
 /**

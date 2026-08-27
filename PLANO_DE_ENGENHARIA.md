@@ -2384,6 +2384,72 @@ gerando OS para cada condominio dela. So vale construir com um caso real na mao.
 
 ---
 
+### 7.2.43 Regua de cobranca das contas a receber — 27/08/2026
+
+Lembra o cliente 3 dias ANTES de vencer, e cobra depois: no dia seguinte ao
+vencimento e aos 7, 15 e 30 dias. Passados os 30, cala.
+
+**Reuso, e nao construcao.** O motor ja existia e ja rodava em producao — em
+`lib/past-due.ts`, cobrando a INADIMPLENCIA DA PROPRIA PLATAFORMA. A regua
+aponta a mesma mecanica para as contas a receber do cliente.
+
+**Uma escada so, com degraus negativos.** Sao dois comportamentos ("vence em 3
+dias" e "venceu ha 15") e a tentacao e modelar dois, cada um com seu contador —
+dois estados para sincronizar e a pergunta chata de se o lembrete que nao saiu
+deve sair depois do vencimento. Um degrau e um numero de dias EM RELACAO ao
+vencimento: `[-3, 1, 7, 15, 30]`. Um contador so, e a ordem sai de graca.
+
+**Conta degraus, nao compara datas.** O cron roda uma vez por dia e pode falhar
+num dia. Com a regra "hoje e exatamente o 7o dia?", o degrau perdido nunca mais
+volta — a conta pula do 1o para o 15o e ninguem percebe, porque a falha e
+silenciosa. Contando quantos degraus ja venceram contra quantos ja sairam, o dia
+perdido se recupera sozinho.
+
+**Um degrau por dia, nunca a pilha.** Cron fora do ar por 20 dias, ou carteira
+antiga com o contador em zero no dia em que a empresa liga o recurso: manda o
+degrau mais recente e so ele. Quatro cobrancas no mesmo minuto e pior que tres a
+menos.
+
+**O contador conta POSICAO na regua, e nao mensagens enviadas.** O defeito sutil
+que isso evita: com `lembrarAntes` desligado, um contador de mensagens ficaria em
+zero no vencimento — e ai o degrau 1 seria "o primeiro", o 7 "o segundo", e a
+regua andaria deslocada ate o fim, com o tom errado em cada etapa.
+
+**Renegociacao se resolve sozinha.** Vencimento empurrado para frente faz o
+calendario andar para tras em relacao ao contador; a regua percebe e recomeca.
+Ninguem precisa lembrar de zerar nada ao editar a data.
+
+**Cobra QUEM PAGA, e nao quem recebeu o servico** — via `quemPaga` de
+`lib/subcliente.ts` (7.2.42). Cobrar o condominio quando a administradora tem a
+fatura constrange o cliente final e nao chega em quem deve.
+
+**Nasce DESLIGADA.** E a unica automacao do sistema que manda mensagem de
+COBRANCA, em nome da empresa, para o celular de terceiros. Toda mensagem carrega
+"se voce ja efetuou o pagamento, desconsidere" — baixa de pagamento atrasa, e
+acusar de caloteiro quem pagou em dia e o erro que o cliente nao esquece.
+
+**Um defeito real pego pelo teste dia-a-dia:** a primeira versao devolvia
+`total: 0` em todo caminho que nao enviava. Quem gravasse o contador sem condicao
+o ZERAVA — e a regua recomecava do primeiro degrau todo dia depois de ter
+terminado, cobrando o mesmo cliente para sempre. O contrato passou a ser "grave
+`total` sempre", que e bem mais dificil de errar que "grave so quando enviar".
+
+Teto de 200 mensagens por execucao: o cron tem `maxDuration = 60` dividido com a
+reconciliacao da Asaas e a fila de geocodificacao, e uma empresa com 800 contas
+vencidas derrubaria as etapas seguintes. O que sobra nao se perde — o contador
+nao anda para quem nao foi processado.
+
+Migration `20260827000001_regua_de_cobranca`: `Tenant.dunningConfig` (JSONB,
+nulo) e `Revenue.remindersSent` (int, default 0, CHECK >= 0). Coluna separada de
+`clientNotifications` de proposito: avisar que o tecnico esta a caminho e cobrar
+uma conta atrasada sao dois consentimentos diferentes, e num JSON so ligar um
+ligaria o outro. 1005 -> 1023 testes.
+
+**Sem trava de plano, por ora.** Nenhum recurso existente cobria a regua, e
+transformar isso em diferencial de plano e decisao de preco, nao de engenharia.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

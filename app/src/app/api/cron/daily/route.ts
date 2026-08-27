@@ -17,6 +17,7 @@ import { gravarRetratoDoMes } from "@/lib/snapshot"
 import { temFuncao } from "@/lib/plan"
 import { conciliarNotasPendentes } from "@/lib/nfse-conciliar"
 import { notificar } from "@/lib/notificar"
+import { cobrarVencidas } from "@/lib/cobrar-vencidas"
 
 // O padrão da Vercel (10-15s) não cabe reconciliação da Asaas + e-mails +
 // backfill de geocodificação no mesmo processo.
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
     .create({ data: { name: "daily" }, select: { id: true } })
     .catch(() => null)
 
-  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, retrato: "", errors: 0 }
+  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, cobrancasEnviadas: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, retrato: "", errors: 0 }
 
   // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
   // Em 07/08/2026 uma cliente pagou e ficou sem acesso por ~1 dia: os webhooks
@@ -436,6 +437,24 @@ export async function GET(req: NextRequest) {
     results.errors++
   }
 
+  // ── Régua de cobrança das contas a receber das empresas ──────────────────
+  // Lembra o cliente antes de vencer e cobra depois de vencido, sozinho. Só
+  // para quem LIGOU: manda mensagem de cobrança, em nome da empresa, para o
+  // celular de terceiros.
+  //
+  // A regra (quantos degraus, qual tom, quando calar) está em
+  // lib/regua-cobranca.ts, pura e testada. O efeito colateral está em
+  // lib/cobrar-vencidas.ts, que nunca lança — os erros voltam contados para
+  // somarem ao total desta execução.
+  try {
+    const regua = await cobrarVencidas(now)
+    results.cobrancasEnviadas = regua.enviadas
+    results.errors += regua.erros
+  } catch (err) {
+    console.error("[régua de cobrança] falhou:", err)
+    results.errors++
+  }
+
   // ── Retrato mensal do negócio ────────────────────────────────────────────
   // Sempre a mesma linha do mês corrente: meses passados congelam com o último
   // valor real que tiveram, e o mês atual fica fresco. Sem job de virada de
@@ -459,7 +478,7 @@ export async function GET(req: NextRequest) {
         data: {
           finishedAt: new Date(),
           ok: semErro,
-          detail: `${results.errors} erro(s); nps ${results.nps}, contratos ${results.contratos}, geocodificados ${results.geocoded}`,
+          detail: `${results.errors} erro(s); nps ${results.nps}, contratos ${results.contratos}, geocodificados ${results.geocoded}, cobrancas ${results.cobrancasEnviadas}`,
         },
       })
       .catch((e) => console.error("[cron] falha ao registrar execucao:", e))
