@@ -906,7 +906,12 @@
       "nfse": "Invoice (NFS-e) issuing is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
       "signature": "Customer digital signature is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
       "checklist": "The execution checklist is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
-      "advancedReports": "Advanced reports are part of the Pro plan. Upgrade in Settings → Plan to unlock them."
+      "advancedReports": "Advanced reports are part of the Pro plan. Upgrade in Settings → Plan to unlock them.",
+      "stock": "Inventory and purchase orders are part of the Pro plan. Upgrade in Settings → Plan to unlock them.",
+      "reguaCobranca": "Payment reminders are part of the Pro plan. Upgrade in Settings → Plan to unlock them.",
+      "api": "The integration API is part of the Enterprise plan. Upgrade in Settings → Plan to unlock it.",
+      "filiais": "Branches is an add-on, sold separately from any plan. Get in touch to unlock it.",
+      "ia": "The voice assistant is an add-on, sold separately from any plan. Get in touch to unlock it."
     },
     "planLimit": {
       "users": "Your plan allows up to {max} users and that limit has been reached. Upgrade in Settings → Plan to add more.",
@@ -1848,6 +1853,7 @@
           "checklist": "Execution checklist",
           "advancedReports": "Advanced reports",
           "stock": "Inventory and purchasing",
+          "reguaCobranca": "Payment reminders",
           "api": "Integration API",
           "filiais": "Branches",
           "ia": "Voice assistant"
@@ -2173,6 +2179,7 @@
       "Live GPS map",
       "Checklist + digital signature",
       "Advanced reports",
+      "Automatic payment reminders",
       "Priority support"
     ],
     "enterprise": [
@@ -2933,6 +2940,8 @@
     "saved": "Saved",
     "errors": {
       "semPermissao": "You do not have permission to change this."
-    }
+    },
+    "bloqueado": "Payment reminders are part of the Pro plan. The system reminds your client before the due date and follows up after it, on its own — nobody has to watch the overdue list.",
+    "verPlanos": "See plans"
   }
 }

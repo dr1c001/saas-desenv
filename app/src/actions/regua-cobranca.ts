@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { requireRecurso, temRecurso } from "@/lib/plan"
 import { lerRegua, type ConfigRegua } from "@/lib/regua-cobranca"
 
 export type EstadoRegua = { erro?: string; ok?: boolean }
@@ -10,15 +11,21 @@ export type EstadoRegua = { erro?: string; ok?: boolean }
 export async function getReguaCobranca(): Promise<{
   config: ConfigRegua
   whatsappConfigurado: boolean
+  /** O plano inclui? A tela mostra o bloco travado quando não. */
+  liberado: boolean
 }> {
   const { tenantId } = await getTenant()
-  const t = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    select: { dunningConfig: true, zapiInstance: true, zapiToken: true },
-  })
+  const [t, liberado] = await Promise.all([
+    prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { dunningConfig: true, zapiInstance: true, zapiToken: true },
+    }),
+    temRecurso(tenantId, "reguaCobranca"),
+  ])
   return {
     config: lerRegua(t?.dunningConfig),
     whatsappConfigurado: Boolean(t?.zapiInstance && t?.zapiToken),
+    liberado,
   }
 }
 
@@ -32,6 +39,10 @@ export async function salvarReguaCobranca(
   // celular dos clientes dela. Quem responde por isso é o dono — não quem
   // está em campo, nem quem só lança as contas.
   if (role !== "OWNER" && role !== "ADMIN") return { erro: "semPermissao" }
+  // A trava do PLANO. Esconder o bloco na tela não protege nada: toda export
+  // de um arquivo "use server" é um endereço HTTP que o cliente do Starter
+  // pode chamar direto. Esta linha é a que vale.
+  await requireRecurso(tenantId, "reguaCobranca")
 
   const marcado = (nome: string) => formData.get(nome) === "on"
 

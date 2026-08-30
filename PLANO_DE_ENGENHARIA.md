@@ -2445,8 +2445,60 @@ nulo) e `Revenue.remindersSent` (int, default 0, CHECK >= 0). Coluna separada de
 uma conta atrasada sao dois consentimentos diferentes, e num JSON so ligar um
 ligaria o outro. 1005 -> 1023 testes.
 
-**Sem trava de plano, por ora.** Nenhum recurso existente cobria a regua, e
-transformar isso em diferencial de plano e decisao de preco, nao de engenharia.
+**Trava de plano: Pro para cima** (decidida em 30/08/2026, ver 7.2.44).
+
+---
+
+### 7.2.44 Trava de plano da regua, e dois furos achados no caminho — 30/08/2026
+
+A regua nasceu sem trava. O dono pediu: cada plano entrega so o que promete, e o
+painel do admin continua liberando por cliente.
+
+**A trava saiu de graca, porque `TODOS` e DERIVADO.** `TODOS = RECURSOS -
+ADICIONAIS`, `SEM_EXCLUSIVOS = TODOS - SO_ENTERPRISE`, e o Starter tem a lista
+literal `[]`. Acrescentar `reguaCobranca` a `RECURSOS` ja o coloca no Pro e no
+Enterprise e o deixa fora do Starter — **nenhuma linha de `POR_PLANO` mudou**. E
+o painel do admin monta as caixas com `RECURSOS.map(...)`, entao a concessao
+individual apareceu sozinha.
+
+**Tres pontos de trava, e o que cada um cobre:**
+
+1. `actions/regua-cobranca.ts` — `requireRecurso`. E a que VALE: toda export de
+   arquivo `"use server"` e endereco HTTP despachavel, e esconder o bloco na
+   tela nao protege nada.
+2. `lib/cobrar-vencidas.ts` — `temRecurso` a cada execucao do cron. Cobre o caso
+   que uma trava so na tela deixaria aberto: **a empresa liga no Pro e desce
+   para o Starter**. A config fica gravada com `ativo: true`, e o cron seguiria
+   cobrando para sempre — entregando de graca o recurso que motivou o upgrade,
+   justamente para quem desistiu dele. `temRecurso` e nao `requireRecurso`
+   porque aquele usa `getTranslations`, que exige contexto de requisicao.
+3. A tela mostra o bloco TRAVADO, e nao escondido. Recurso que ninguem ve nao
+   faz ninguem subir de plano.
+
+**Furo 1, achado no caminho: quatro recursos sem mensagem de bloqueio.**
+`requireRecurso` monta a chave como `planFeature.${recurso}`, e
+`errors.planFeature` tinha 5 das 9 entradas. `actions/estoque.ts` chama
+`requireRecurso(tenantId, "stock")` em SEIS lugares — o cliente do Starter que
+tentasse abrir estoque nao recebia "faz parte do Pro", recebia erro de traducao.
+Faltavam `stock`, `api`, `filiais` e `ia`. Corrigido nos dois idiomas, e
+`__tests__/travas-de-plano.test.ts` agora obriga toda entrada de `RECURSOS` a ter
+mensagem de bloqueio e nome no painel. Confirmado por mutacao: removendo
+`planFeature.stock`, o teste falha.
+
+**Furo 2, NAO corrigido, e precisa de decisao do dono: o Starter e vendido com
+"8 notas fiscais por mes" e nao entrega nenhuma.** `POR_PLANO.starter` tem
+`maxNfseMes: 8` mas `recursos: []`, e `actions/nfse.ts:19` chama
+`requireRecurso(tenantId, "nfse")`. Quem assina o Starter por causa daquela linha
+nao emite uma unica nota. Os dois consertos possiveis custam dinheiro em
+direcoes opostas (dar `nfse` ao Starter, ou tirar a promessa da vitrine), entao
+fica registrado aqui em vez de escolhido no codigo.
+
+O `vitrine-x-plano.test.ts` nao pegou isso porque so compara planos contra
+ADICIONAIS. A licao: falta um teste que compare a vitrine contra os RECURSOS DO
+PLANO, item a item — e ele precisa de um mapa texto-de-venda -> recurso, que
+hoje nao existe.
+
+1033 -> 1051 testes.
 
 ---
 

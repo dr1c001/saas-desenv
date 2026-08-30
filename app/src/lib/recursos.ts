@@ -16,6 +16,7 @@ export type Recurso =
   | "checklist"       // Checklist de execução
   | "advancedReports" // Período personalizado, ranking de clientes, detalhamento
   | "stock"           // Estoque de peças e ordens de compra
+  | "reguaCobranca"   // Lembrete antes de vencer + cobrança automática depois
   | "api"             // API de integração — SÓ Enterprise (ver lib/plan.ts)
   | "filiais"         // Mais de uma unidade — ADICIONAL (ver lib/plan.ts)
   | "ia"              // Assistente de voz — ADICIONAL, nenhum plano inclui
@@ -28,6 +29,10 @@ export const RECURSOS: readonly Recurso[] = [
   "checklist",
   "advancedReports",
   "stock",
+  // Entra aqui e, por ser derivado, cai sozinho no Pro e no Enterprise e fica
+  // FORA do Starter — `TODOS` é `RECURSOS` menos `ADICIONAIS`, e o Starter tem
+  // a lista literal vazia. Nenhuma linha de POR_PLANO precisou mudar.
+  "reguaCobranca",
   "api",
   "filiais",
   "ia",

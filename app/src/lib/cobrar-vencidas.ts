@@ -4,6 +4,7 @@ import { getTranslator } from "@/lib/i18n"
 import { sendWhatsApp } from "@/lib/whatsapp"
 import { sendDunningEmail } from "@/lib/resend"
 import { hasActiveSubscription } from "@/lib/auth"
+import { temRecurso } from "@/lib/plan"
 import { quemPaga } from "@/lib/subcliente"
 import {
   canaisDaCobranca,
@@ -78,6 +79,19 @@ export async function cobrarVencidas(agora: Date): Promise<ResultadoDaRegua> {
       const config = lerRegua(empresa.dunningConfig)
       if (!config.ativo) continue
       if (!(await hasActiveSubscription(empresa.id))) continue
+
+      // A trava do plano, checada A CADA EXECUÇÃO e não só na hora de salvar.
+      //
+      // O caso que obriga isso: a empresa liga a régua no Pro e depois desce
+      // para o Starter. A configuração continua gravada com `ativo: true`, e
+      // uma trava que morasse só na tela de salvar deixaria o cron seguir
+      // cobrando para sempre — entregando de graça o recurso que motivou o
+      // upgrade, justamente para quem desistiu dele.
+      //
+      // `temRecurso` e não `requireRecurso`: aquele usa getTranslations, que
+      // precisa de contexto de requisição, e aqui é cron. E não é erro — é
+      // um plano que não inclui, então passa em silêncio.
+      if (!(await temRecurso(empresa.id, "reguaCobranca"))) continue
 
       const contas = await prisma.revenue.findMany({
         where: {

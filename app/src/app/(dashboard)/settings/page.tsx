@@ -129,7 +129,11 @@ export default async function SettingsPage() {
           consentimentos separados — avisar que o técnico está a caminho não é
           cobrar uma conta atrasada. */}
       {isAdmin && (
-        <ReguaCobrancaForm atual={regua.config} whatsappConfigurado={regua.whatsappConfigurado} />
+        <ReguaCobrancaForm
+          atual={regua.config}
+          whatsappConfigurado={regua.whatsappConfigurado}
+          liberado={regua.liberado}
+        />
       )}
 
       {/* Cobrança por PIX. Fica perto dos documentos porque é onde o código

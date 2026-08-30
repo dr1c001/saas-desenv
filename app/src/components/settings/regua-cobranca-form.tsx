@@ -1,9 +1,10 @@
 "use client"
 
 import { useActionState, useState } from "react"
+import Link from "next/link"
 import { useTranslations } from "next-intl"
-import { Loader2, Save } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Loader2, Lock, Save } from "lucide-react"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,9 +14,12 @@ import { DEGRAUS_DA_REGUA, type ConfigRegua } from "@/lib/regua-cobranca"
 export function ReguaCobrancaForm({
   atual,
   whatsappConfigurado,
+  liberado,
 }: {
   atual: ConfigRegua
   whatsappConfigurado: boolean
+  /** O plano inclui a régua? Falso mostra o bloco travado. */
+  liberado: boolean
 }) {
   const t = useTranslations("reguaCobrancaConfig")
   const [estado, formAction, salvando] = useActionState<EstadoRegua, FormData>(
@@ -23,6 +27,30 @@ export function ReguaCobrancaForm({
     {}
   )
   const [ativo, setAtivo] = useState(atual.ativo)
+
+  // Travado aparece, e não some. Esconder faria o cliente do Starter nunca
+  // descobrir que o recurso existe — e recurso que ninguém vê não faz ninguém
+  // subir de plano. A trava que vale está na Server Action; isto é vitrine.
+  if (!liberado) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Lock className="size-4 text-muted-foreground" />
+            {t("title")}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Escada />
+          <p className="text-sm text-muted-foreground">{t("bloqueado")}</p>
+          <Link href="/billing" className={buttonVariants({ variant: "outline", size: "sm" })}>
+            {t("verPlanos")}
+          </Link>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card>

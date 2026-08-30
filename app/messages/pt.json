@@ -906,7 +906,12 @@
       "nfse": "A emissão de NFS-e faz parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
       "signature": "A assinatura digital do cliente faz parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
       "checklist": "O checklist de execução faz parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
-      "advancedReports": "Os relatórios avançados fazem parte do plano Pro. Faça upgrade em Configurações → Plano para liberar."
+      "advancedReports": "Os relatórios avançados fazem parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
+      "stock": "O estoque de peças e as ordens de compra fazem parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
+      "reguaCobranca": "A régua de cobrança faz parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
+      "api": "A API de integração faz parte do plano Enterprise. Faça upgrade em Configurações → Plano para liberar.",
+      "filiais": "Filiais é um adicional, contratado à parte de qualquer plano. Fale com a gente para liberar.",
+      "ia": "A assistente de voz é um adicional, contratado à parte de qualquer plano. Fale com a gente para liberar."
     },
     "planLimit": {
       "users": "Seu plano permite até {max} usuários e esse limite já foi atingido. Faça upgrade em Configurações → Plano para adicionar mais.",
@@ -1848,6 +1853,7 @@
           "checklist": "Checklist de execução",
           "advancedReports": "Relatórios avançados",
           "stock": "Estoque e compras",
+          "reguaCobranca": "Régua de cobrança",
           "api": "API de integração",
           "filiais": "Filiais",
           "ia": "Assistente de voz"
@@ -2173,6 +2179,7 @@
       "Mapa GPS em tempo real",
       "Checklist + Assinatura digital",
       "Relatórios avançados",
+      "Régua de cobrança automática",
       "Suporte prioritário"
     ],
     "enterprise": [
@@ -2933,6 +2940,8 @@
     "saved": "Salvo",
     "errors": {
       "semPermissao": "Você não tem permissão para alterar isso."
-    }
+    },
+    "bloqueado": "A régua de cobrança faz parte do plano Pro. Com ela, o sistema lembra o seu cliente antes de vencer e cobra depois de vencido, sozinho — sem ninguém precisar olhar a lista de contas atrasadas.",
+    "verPlanos": "Ver planos"
   }
 }

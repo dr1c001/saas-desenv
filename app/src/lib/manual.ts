@@ -756,7 +756,7 @@ export const MANUAL: readonly Secao[] = [
               "*Termos e garantia* — o prazo padrão de garantia e os textos que saem impressos na OS e no orçamento, antes das assinaturas.",
               "*Receber por PIX* — tipo de chave, chave, nome do recebedor e cidade. O QR code passa a sair nos documentos.",
               "*Avisar o cliente automaticamente* — mensagem quando o serviço começa e quando termina, por WhatsApp e/ou e-mail. Começa desligado.",
-              "*Régua de cobrança* — lembra o cliente 3 dias antes de vencer e cobra depois de vencido, sozinho. Começa desligada.",
+              "*Régua de cobrança* — lembra o cliente 3 dias antes de vencer e cobra depois de vencido, sozinho. Começa desligada, e entra a partir do Pro.",
               "*WhatsApp (Z-API)* — ID da instância e token, obtidos criando uma conta na Z-API e lendo o QR code com o seu WhatsApp.",
               "*Idioma* — vale para toda a empresa, inclusive os e-mails, PDFs e mensagens que vão para os seus clientes. Pede confirmação.",
               "*Exportar dados* — baixa tudo num arquivo .json, pelo seu direito de portabilidade.",
@@ -790,7 +790,7 @@ export const MANUAL: readonly Secao[] = [
           {
             tipo: "p",
             texto:
-              "As mensagens saem uma vez por dia, por volta das 9h da manhã. O cliente recebe *no máximo cinco*: uma 3 dias antes do vencimento, e depois no dia seguinte ao vencimento e aos 7, 15 e 30 dias. Passados os 30, o sistema para de cobrar sozinho — daí em diante a conta precisa de você.",
+              "A régua entra a partir do plano Pro. As mensagens saem uma vez por dia, por volta das 9h da manhã. O cliente recebe *no máximo cinco*: uma 3 dias antes do vencimento, e depois no dia seguinte ao vencimento e aos 7, 15 e 30 dias. Passados os 30, o sistema para de cobrar sozinho — daí em diante a conta precisa de você.",
           },
           {
             tipo: "lista",

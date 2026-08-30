@@ -365,6 +365,73 @@ describe("os canais", () => {
   })
 })
 
+describe("a trava de plano, no cron", () => {
+  // O furo que uma trava só na tela de salvar deixaria aberto: a empresa liga
+  // a régua no Pro e depois desce para o Starter. A configuração continua
+  // gravada com `ativo: true`, e sem checagem no cron ele seguiria cobrando
+  // para sempre — entregando de graça justamente o recurso que motivou o
+  // upgrade, para quem desistiu dele.
+
+  async function empresaNoPlano(slug: string) {
+    const plano = await testDb.db.plan.upsert({
+      where: { slug },
+      update: {},
+      create: { slug, name: slug, priceMonthly: 0, priceYearly: 0, maxUsers: 3, features: [] },
+    })
+    return testDb.db.tenant.create({
+      data: {
+        name: `Empresa ${slug}`,
+        planId: plano.id,
+        dunningConfig: { ...REGUA_PADRAO, ativo: true },
+        subscriptionStatus: "ACTIVE",
+        zapiInstance: "inst",
+        zapiToken: "tok",
+      },
+    })
+  }
+
+  it("o Starter NÃO cobra, mesmo com a régua ligada e gravada", async () => {
+    const empresa = await empresaNoPlano("starter")
+    const { receita } = await contaDe(empresa.id, { diasAtras: 7 })
+
+    const r = await rodar(HOJE)
+
+    expect(r.enviadas).toBe(0)
+    expect(mockWhats).not.toHaveBeenCalled()
+    // E o contador NÃO anda: se andasse, subir para o Pro depois entregaria
+    // uma conta com degraus já gastos e o cliente nunca receberia o aviso.
+    expect((await releu(receita.id))!.remindersSent).toBe(0)
+  })
+
+  it("o Pro cobra", async () => {
+    const empresa = await empresaNoPlano("pro")
+    await contaDe(empresa.id, { diasAtras: 7 })
+
+    expect((await rodar(HOJE)).enviadas).toBe(1)
+  })
+
+  it("o Enterprise cobra", async () => {
+    const empresa = await empresaNoPlano("enterprise")
+    await contaDe(empresa.id, { diasAtras: 7 })
+
+    expect((await rodar(HOJE)).enviadas).toBe(1)
+  })
+
+  it("concessão individual no painel do admin libera o Starter", async () => {
+    // O que o dono pediu: poder liberar para um cliente específico sem mudar o
+    // plano dele. `extraFeatures` soma por cima — é o mesmo mecanismo do
+    // adicional, e precisa valer aqui também.
+    const empresa = await empresaNoPlano("starter")
+    await testDb.db.tenant.update({
+      where: { id: empresa.id },
+      data: { extraFeatures: ["reguaCobranca"] },
+    })
+    await contaDe(empresa.id, { diasAtras: 7 })
+
+    expect((await rodar(HOJE)).enviadas).toBe(1)
+  })
+})
+
 describe("uma empresa não cobra pela outra", () => {
   it("a régua de uma não alcança as contas da outra", async () => {
     // Isolamento entre tenants no caminho novo. A consulta filtra por
