@@ -75,7 +75,19 @@ const SO_ENTERPRISE: Recurso[] = ["api"]
 const SEM_EXCLUSIVOS: Recurso[] = TODOS.filter((r) => !SO_ENTERPRISE.includes(r))
 
 const POR_PLANO: Record<string, Limites> = {
-  starter: { maxUsuarios: 3, maxOsMes: 50, maxNfseMes: 8, recursos: [] },
+  // O Starter emite NOTA, e é de propósito (30/08/2026).
+  //
+  // Ele era vendido com "8 notas fiscais por mês" desde sempre, tinha a cota
+  // gravada aqui (`maxNfseMes: 8`) — e `recursos: []`. Como actions/nfse.ts
+  // chama `requireRecurso(tenantId, "nfse")`, quem assinava o Starter POR
+  // CAUSA daquela linha não emitia uma única nota. A promessa existia na
+  // vitrine e a trava a desmentia em silêncio.
+  //
+  // A correção foi entregar, e não apagar a promessa: emitir nota é o que faz
+  // a pequena empresa sair da planilha, e é o argumento mais forte do plano de
+  // entrada. Os três planos passam a emitir; o que os separa é a COTA — 8, 70
+  // e ilimitado —, que já era o desenho de `maxNfseMes`.
+  starter: { maxUsuarios: 3, maxOsMes: 50, maxNfseMes: 8, recursos: ["nfse"] },
   pro: { maxUsuarios: 10, maxOsMes: 200, maxNfseMes: 70, recursos: SEM_EXCLUSIVOS },
   enterprise: { maxUsuarios: null, maxOsMes: null, maxNfseMes: null, recursos: TODOS },
 }

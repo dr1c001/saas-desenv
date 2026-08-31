@@ -263,8 +263,23 @@ function SidebarTrigger({
       data-sidebar="trigger"
       data-slot="sidebar-trigger"
       variant="ghost"
-      size="icon-sm"
-      className={cn(className)}
+      size="icon"
+      // Alvo de toque de 44px no CELULAR, e o tamanho antigo no desktop.
+      //
+      // Era `size-7` — 28px — nos dois. No mouse isso funciona porque o cursor
+      // é preciso; no polegar, não: 44px é o mínimo recomendado (WCAG 2.5.5,
+      // e a mesma medida que Apple e Google publicam), e este é o único botão
+      // que abre o menu inteiro no celular. Errar o toque nele é ficar preso
+      // na tela em que se está.
+      //
+      // O ícone cresce junto: um ícone de 16px dentro de um botão de 44px
+      // parece defeito, e não dá o retorno visual de que a área toda é
+      // clicável.
+      className={cn(
+        "size-11 [&_svg:not([class*='size-'])]:size-6",
+        "md:size-8 md:[&_svg:not([class*='size-'])]:size-4",
+        className
+      )}
       onClick={(event) => {
         onClick?.(event)
         toggleSidebar()

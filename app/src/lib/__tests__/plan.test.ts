@@ -47,13 +47,18 @@ async function seedTenant(slug: string | null, extraFeatures: string[] = []) {
 }
 
 describe("plan — o que cada plano libera", () => {
-  it("Starter não libera nenhum recurso pago", async () => {
+  it("Starter libera NFS-e, e só", async () => {
+    // Era `[]` ate 30/08/2026. Mudou porque o plano SEMPRE foi vendido com "8
+    // notas fiscais por mes" e sempre teve a cota — so a trava de recurso
+    // impedia a emissao, e quem assinava por causa daquela linha nao emitia
+    // nenhuma. Os tres planos emitem; o que os separa e a COTA.
     const { getLimites } = await import("@/lib/plan")
     await seedPlanos()
     const t = await seedTenant("starter")
 
     const limites = await getLimites(t.id)
-    expect(limites.recursos).toEqual([])
+    expect(limites.recursos).toEqual(["nfse"])
+    expect(limites.maxNfseMes).toBe(8)
     expect(limites.maxUsuarios).toBe(3)
     expect(limites.maxOsMes).toBe(50)
   })
@@ -131,12 +136,13 @@ describe("plan — o que cada plano libera", () => {
   it("Starter NÃO ganha recurso novo por descuido", async () => {
     // O contraponto do teste acima: se alguém adicionar um recurso ao catálogo
     // e ele vazar pro Starter, a diferença entre R$ 97 e R$ 397 evapora em
-    // silêncio. Aqui a lista vazia é a afirmação.
+    // silêncio. A lista EXATA é a afirmação — `toEqual` e não `toContain`, pra
+    // um recurso a mais fazer este teste falhar.
     const { getLimites } = await import("@/lib/plan")
     await seedPlanos()
     const t = await seedTenant("starter")
 
-    expect((await getLimites(t.id)).recursos).toEqual([])
+    expect((await getLimites(t.id)).recursos).toEqual(["nfse"])
   })
 
   it("extraFeatures soma ao plano sem alterar os limites numéricos", async () => {
@@ -156,7 +162,8 @@ describe("plan — o que cada plano libera", () => {
     await seedPlanos()
     const t = await seedTenant("starter", ["signature", "lixo-digitado-errado"])
 
-    expect((await getLimites(t.id)).recursos).toEqual(["signature"])
+    // "nfse" vem do plano; "signature" da concessao; o lixo cai fora.
+    expect((await getLimites(t.id)).recursos.sort()).toEqual(["nfse", "signature"])
   })
 })
 
@@ -588,7 +595,8 @@ describe("conceder um ADICIONAL a mao funciona de verdade", () => {
     await seedPlanos()
     const t = await seedTenant("starter", ["recurso-que-nao-existe"])
     const { getLimites } = await import("@/lib/plan")
-    expect((await getLimites(t.id)).recursos).toEqual([])
+    // Sobra exatamente o que o plano da, e nada do lixo.
+    expect((await getLimites(t.id)).recursos).toEqual(["nfse"])
   })
 })
 

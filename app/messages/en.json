@@ -903,7 +903,7 @@
   "errors": {
     "planFeature": {
       "gpsMap": "GPS Map is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
-      "nfse": "Invoice (NFS-e) issuing is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
+      "nfse": "Invoice (NFS-e) issuing is not enabled for your company. Get in touch to unlock it.",
       "signature": "Customer digital signature is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
       "checklist": "The execution checklist is part of the Pro plan. Upgrade in Settings → Plan to unlock it.",
       "advancedReports": "Advanced reports are part of the Pro plan. Upgrade in Settings → Plan to unlock them.",
@@ -1976,7 +1976,8 @@
     "settings": "Settings",
     "signOut": "Sign out",
     "team": "Team",
-    "vocabulary": "Vocabulary"
+    "vocabulary": "Vocabulary",
+    "fecharMenu": "Close menu"
   },
   "notifications": {
     "quoteApproved": {

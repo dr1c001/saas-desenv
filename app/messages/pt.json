@@ -903,7 +903,7 @@
   "errors": {
     "planFeature": {
       "gpsMap": "O Mapa GPS faz parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
-      "nfse": "A emissão de NFS-e faz parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
+      "nfse": "A emissão de NFS-e não está liberada para a sua empresa. Fale com a gente para liberar.",
       "signature": "A assinatura digital do cliente faz parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
       "checklist": "O checklist de execução faz parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
       "advancedReports": "Os relatórios avançados fazem parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
@@ -1976,7 +1976,8 @@
     "settings": "Configurações",
     "signOut": "Sair",
     "team": "Equipe",
-    "vocabulary": "Vocabulário"
+    "vocabulary": "Vocabulário",
+    "fecharMenu": "Fechar menu"
   },
   "notifications": {
     "quoteApproved": {

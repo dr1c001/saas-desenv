@@ -2485,13 +2485,13 @@ Faltavam `stock`, `api`, `filiais` e `ia`. Corrigido nos dois idiomas, e
 mensagem de bloqueio e nome no painel. Confirmado por mutacao: removendo
 `planFeature.stock`, o teste falha.
 
-**Furo 2, NAO corrigido, e precisa de decisao do dono: o Starter e vendido com
-"8 notas fiscais por mes" e nao entrega nenhuma.** `POR_PLANO.starter` tem
+**Furo 2 — RESOLVIDO em 7.2.45, entregando: o Starter era vendido com
+"8 notas fiscais por mes" e nao entregava nenhuma.** `POR_PLANO.starter` tinha
 `maxNfseMes: 8` mas `recursos: []`, e `actions/nfse.ts:19` chama
-`requireRecurso(tenantId, "nfse")`. Quem assina o Starter por causa daquela linha
-nao emite uma unica nota. Os dois consertos possiveis custam dinheiro em
-direcoes opostas (dar `nfse` ao Starter, ou tirar a promessa da vitrine), entao
-fica registrado aqui em vez de escolhido no codigo.
+`requireRecurso(tenantId, "nfse")`. Quem assinava o Starter por causa daquela
+linha nao emitia uma unica nota. Os dois consertos possiveis custam dinheiro em
+direcoes opostas (dar `nfse` ao Starter, ou tirar a promessa da vitrine). O dono
+escolheu ENTREGAR — ver 7.2.45.
 
 O `vitrine-x-plano.test.ts` nao pegou isso porque so compara planos contra
 ADICIONAIS. A licao: falta um teste que compare a vitrine contra os RECURSOS DO
@@ -2499,6 +2499,81 @@ PLANO, item a item — e ele precisa de um mapa texto-de-venda -> recurso, que
 hoje nao existe.
 
 1033 -> 1051 testes.
+
+---
+
+### 7.2.45 O Starter passa a emitir nota, e o menu do celular passa a fechar — 30/08/2026
+
+**O Starter emite NFS-e.** `POR_PLANO.starter` foi de `recursos: []` para
+`["nfse"]`. Ele SEMPRE foi vendido com "8 notas fiscais por mes" e SEMPRE teve a
+cota gravada (`maxNfseMes: 8`) — so a trava de recurso impedia a emissao, e
+`actions/nfse.ts:19` chama `requireRecurso(tenantId, "nfse")`. Quem assinava o
+plano de entrada por causa daquela linha nao emitia uma unica nota.
+
+Dos dois consertos possiveis, o dono escolheu entregar em vez de apagar a
+promessa: emitir nota e o que tira a pequena empresa da planilha, e e o
+argumento mais forte do plano de entrada. **Os tres planos passam a emitir; o
+que os separa e a COTA — 8, 70 e ilimitado**, que ja era o desenho de
+`maxNfseMes`. A trava certa aqui sempre foi a de QUANTIDADE
+(`requireCotaDeNfse`, com mensagem propria que cita o numero), e nao a de
+recurso.
+
+Efeito colateral desejado: `nfse` e RECURSO_DE_ABA, entao o Starter ganha junto
+a aba Fiscal — sem ela nao havia onde cadastrar o certificado digital, e o
+recurso seria liberado sem caminho para usar.
+
+Quatro testes de `plan.test.ts` afirmavam `recursos: []` para o Starter e
+falharam, que e exatamente o que se espera deles. A intencao continua: a lista e
+comparada com `toEqual` e nao `toContain`, para um recurso a mais nunca
+escorregar para dentro do plano mais barato sem alguem decidir.
+
+**A mensagem `planFeature.nfse` virou inalcancavel** — nenhum plano fica sem o
+recurso. Foi reescrita para nao prometer a faixa errada, em vez de deixar um
+texto que diz "faz parte do plano Pro" para um recurso que o Starter tem.
+
+---
+
+**O menu do celular: tres defeitos, um deles invisivel no desktop.**
+
+*1. O botao tinha 28px.* `SidebarTrigger` usava `size="icon-sm"` (`size-7`) nos
+dois tamanhos de tela. No mouse funciona porque o cursor e preciso; no polegar,
+nao — 44px e o minimo recomendado (WCAG 2.5.5, e a mesma medida que Apple e
+Google publicam). E este e o UNICO botao que abre o menu inteiro no celular:
+errar o toque nele e ficar preso na tela em que se esta. Agora `size-11` (44px)
+no celular e `size-8` no desktop, com o icone crescendo junto — icone de 16px
+dentro de botao de 44px parece defeito e nao indica que a area toda e clicavel.
+
+*2. Nao havia como fechar o menu.* O `Sheet` traz um "X" de fabrica, e
+`ui/sidebar.tsx` o esconde com `[&>button]:hidden`. A unica saida era tocar fora
+da gaveta — que ninguem adivinha, e que num menu de vinte itens quase sempre
+erra e abre a aba de baixo. Entrou uma seta de voltar no cabecalho do menu,
+ANTES do nome, com os mesmos 44px, e `md:hidden` porque no desktop o menu nao e
+gaveta e nao se fecha.
+
+*3. O menu nao fechava ao navegar — e "so em algumas abas", que era a parte
+enganosa.* Nada chamava `setOpenMobile(false)`. Quem tocasse numa aba via a
+pagina trocar ATRAS da gaveta e continuava olhando para o menu, sem saber se o
+toque funcionou. **Fechavam sozinhas apenas as abas que saem deste layout** (o
+painel do dono, por exemplo), porque ai o `SidebarProvider` desmonta junto e o
+estado se perde — o que explica por que umas fechavam e outras nao, sem padrao
+aparente. Um sintoma que so aparece no celular, num subconjunto das abas, e por
+um motivo que nao tem nada a ver com as abas.
+
+A correcao reage ao `pathname`, e nao ao clique: cobre de uma vez os links do
+menu, os da administracao, o rodape, a ajuda e a busca de abas — inclusive os
+que ainda nao existem. O `onClick` foi somado nos links so para o caso em que o
+`pathname` NAO muda: tocar na aba em que ja se esta, que e justamente quando a
+pessoa nao ve nada acontecer.
+
+**Verificacao do que nao da para ver.** As telas do menu vivem atras do login,
+entao a conferencia visual ficou com o dono. O que deu para provar por maquina:
+as quatro utilidades novas existem no CSS compilado — `.size-11` resolve para
+`calc(var(--spacing) * 11)` com `--spacing: .25rem`, ou seja 44px exatos, e
+`.md\:size-8`, `.md\:hidden` e o seletor do icone estao dentro do
+`@media (min-width: 48rem)`. Sem essa conferencia, uma classe que o Tailwind nao
+gerasse deixaria o botao pequeno em silencio, sem erro de build.
+
+1051 -> 1052 testes.
 
 ---
 

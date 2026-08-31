@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { ADICIONAIS, RECURSOS, type Recurso } from "@/lib/recursos"
-import { recursosDoPlano } from "@/lib/plan"
+import { limitesDoPlano, recursosDoPlano } from "@/lib/plan"
 
 // A trava de plano só serve se ela TRAVAR e se ela SOUBER EXPLICAR.
 //
@@ -56,12 +56,28 @@ describe("todo recurso sabe se explicar", () => {
 })
 
 describe("cada plano entrega exatamente a sua faixa", () => {
-  it("o Starter não inclui NENHUM recurso pago", () => {
+  it("o Starter inclui NFS-e, e só isso", () => {
     // A regra que o dono pediu com todas as letras: "o Starter o cliente vai
-    // usar somente o que está no Starter". Hoje isso significa lista vazia —
-    // e se um dia deixar de significar, que seja por decisão, não por um
-    // recurso novo escorregando para dentro do plano mais barato.
-    expect(recursosDoPlano("starter")).toEqual([])
+    // usar somente o que está no Starter". A lista é exata de propósito — um
+    // recurso novo não pode escorregar para dentro do plano mais barato sem
+    // alguém decidir isso.
+    //
+    // `nfse` está aqui desde 30/08/2026: o plano já era VENDIDO com "8 notas
+    // fiscais por mês" e já tinha a cota, mas a trava impedia a emissão. Ver o
+    // comentário em POR_PLANO.
+    expect(recursosDoPlano("starter")).toEqual(["nfse"])
+  })
+
+  it("emitir nota é de TODOS os planos; o que muda é a cota", () => {
+    // A trava certa aqui é a de QUANTIDADE, não a de recurso. Se `nfse` sair
+    // de algum plano, o texto de venda daquele plano passa a mentir de novo —
+    // foi exatamente esse o defeito.
+    for (const plano of PLANOS) {
+      expect(recursosDoPlano(plano), plano).toContain("nfse")
+    }
+    expect(limitesDoPlano("starter").nfseMes).toBe(8)
+    expect(limitesDoPlano("pro").nfseMes).toBe(70)
+    expect(limitesDoPlano("enterprise").nfseMes).toBeNull() // ilimitado
   })
 
   it("o Pro inclui tudo, menos o que é só do Enterprise e os adicionais", () => {

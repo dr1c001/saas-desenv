@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import {
@@ -32,6 +33,7 @@ import {
   Package,
   ShoppingCart,
   CircleQuestionMark,
+  ArrowLeft,
 } from "lucide-react"
 import {
   Sidebar,
@@ -44,6 +46,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -116,6 +119,32 @@ export function AppSidebar({ allowedTabs, role, isSuperAdmin, temApi, temFiliais
   const pathname = usePathname()
   const router = useRouter()
   const t = useTranslations()
+  const { isMobile, setOpenMobile } = useSidebar()
+
+  // FECHA O MENU AO NAVEGAR — no celular.
+  //
+  // No desktop o menu é uma coluna fixa e continuar aberto é o certo. No
+  // celular ele é uma gaveta por cima da tela, e nada a fechava: quem tocasse
+  // numa aba via a página trocar ATRÁS da gaveta e continuava olhando para o
+  // menu, sem entender se o toque funcionou. A única saída era tocar fora.
+  //
+  // Fechavam sozinhas só as abas que saem deste layout (o painel do dono, por
+  // exemplo), porque aí o provedor do menu desmonta junto — o que explica por
+  // que umas fechavam e outras não, sem padrão aparente.
+  //
+  // Reagir ao `pathname` cobre TODOS os caminhos de uma vez: os links do menu,
+  // os da administração, o rodapé, a ajuda e a busca de abas — inclusive os
+  // que ainda não existem.
+  useEffect(() => {
+    if (isMobile) setOpenMobile(false)
+  }, [pathname, isMobile, setOpenMobile])
+
+  /** Para o toque na aba em que já se está: o `pathname` não muda, então o
+   *  efeito acima não dispara, e sem isto o menu ficaria aberto justamente no
+   *  caso em que a pessoa não vê nada acontecer. */
+  const fecharNoMobile = () => {
+    if (isMobile) setOpenMobile(false)
+  }
   const allowedSet = new Set(allowedTabs)
   const ehAdmin = role === "OWNER" || role === "ADMIN"
 
@@ -163,7 +192,25 @@ export function AppSidebar({ allowedTabs, role, isSuperAdmin, temApi, temFiliais
     <Sidebar>
       <SidebarHeader className="p-4 pb-0 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="font-bold text-lg">ServiçoOS</span>
+          <div className="flex items-center gap-1">
+            {/* A saída do menu, no celular.
+                O painel esconde o "X" que o Sheet traz de fábrica
+                (`[&>button]:hidden` em ui/sidebar.tsx), então até aqui a única
+                forma de fechar era tocar fora da gaveta — que ninguém adivinha
+                e que, num menu de vinte itens, quase sempre erra e abre a aba
+                de baixo. A seta fica ANTES do nome, onde se procura voltar.
+                Some no desktop, onde o menu não é gaveta e não se fecha. */}
+            <button
+              type="button"
+              onClick={fecharNoMobile}
+              aria-label={t("nav.fecharMenu")}
+              title={t("nav.fecharMenu")}
+              className="-ml-2 flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
+            >
+              <ArrowLeft className="size-6" />
+            </button>
+            <span className="font-bold text-lg">ServiçoOS</span>
+          </div>
           <div className="flex items-center gap-1.5">
             <Badge variant="outline" className="text-xs">
               {t(`common.roles.${role}` as "common.roles.OWNER")}
@@ -172,6 +219,7 @@ export function AppSidebar({ allowedTabs, role, isSuperAdmin, temApi, temFiliais
                 outras, é o socorro que precisa estar à mão em qualquer uma. */}
             <Link
               href={ajudaDaqui}
+              onClick={fecharNoMobile}
               aria-label={t("ajuda.abrir")}
               title={t("ajuda.abrir")}
               className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -197,6 +245,7 @@ export function AppSidebar({ allowedTabs, role, isSuperAdmin, temApi, temFiliais
                   <SidebarMenuButton
                     render={<Link href={item.href} />}
                     isActive={pathname.startsWith(item.href)}
+                    onClick={fecharNoMobile}
                   >
                     <item.icon className="size-4 shrink-0" />
                     <Codigo valor={item.codigo} />
@@ -218,6 +267,7 @@ export function AppSidebar({ allowedTabs, role, isSuperAdmin, temApi, temFiliais
                     <SidebarMenuButton
                       render={<Link href={item.href} />}
                       isActive={pathname === item.href}
+                      onClick={fecharNoMobile}
                     >
                       <item.icon className="size-4 shrink-0" />
                       <Codigo valor={codigoDaRota(item.href)} />
@@ -247,6 +297,7 @@ export function AppSidebar({ allowedTabs, role, isSuperAdmin, temApi, temFiliais
             <SidebarMenuButton
               render={<Link href="/settings" />}
               isActive={pathname === "/settings"}
+              onClick={fecharNoMobile}
             >
               <Settings className="size-4 shrink-0" />
               <Codigo valor={codigoDaRota("/settings")} />
