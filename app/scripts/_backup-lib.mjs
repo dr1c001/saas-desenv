@@ -141,3 +141,22 @@ export function selectDeColunas(colunas) {
     )
     .join(", ")
 }
+
+/**
+ * Quais pastas de backup descartar, mantendo as `manter` mais recentes.
+ *
+ * Função PURA, e separada do script, porque ela APAGA: a decisão de "quais
+ * somem" precisa ser testável sem um disco por perto. Um erro de sinal aqui
+ * apagaria os recentes e guardaria os velhos, e só se descobriria no dia em
+ * que o backup fosse preciso.
+ *
+ * Só considera pasta com nome de carimbo de tempo (2026-09-01T...): o que mais
+ * estiver na pasta — um log, um backup renomeado à mão para "bom-nao-apagar" —
+ * fica onde está.
+ */
+export function pastasParaDescartar(nomes, manter) {
+  const doBackup = nomes
+    .filter((n) => /^\d{4}-\d{2}-\d{2}T/.test(n))
+    .sort()
+  return doBackup.slice(0, Math.max(0, doBackup.length - manter))
+}

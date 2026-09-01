@@ -7,6 +7,13 @@
 // se conferir — sem ela, uma carga que perdeu metade das linhas termina sem
 // barulho nenhum.
 //
+// Cobre TRES coisas, e as duas ultimas moram fora do schema `public`:
+//   - as tabelas do sistema;
+//   - as CONTAS DE LOGIN (schema `auth` do Supabase) — sem elas, restaurar
+//     devolvia todos os dados e ninguem conseguia entrar;
+//   - os ARQUIVOS do Storage (as fotos) — sem eles, todo registro de foto
+//     apontava para um arquivo inexistente.
+//
 // Por que não pg_dump: ele não está instalado em toda máquina, e a versão do
 // cliente precisa casar com a do servidor (o Supabase roda Postgres 15/17 e o
 // pg_dump 14 local recusa). Este script depende só do `pg`, que o projeto já
@@ -20,7 +27,8 @@
 import fs from "node:fs"
 import path from "node:path"
 import pg from "pg"
-import { ordemDeCarga, paraJson, selectDeColunas } from "./_backup-lib.mjs"
+import { ordemDeCarga, pastasParaDescartar, paraJson, selectDeColunas } from "./_backup-lib.mjs"
+import { salvarArquivos, salvarContasDeLogin } from "./_backup-extras.mjs"
 
 const LOTE = 1000
 
@@ -31,8 +39,9 @@ async function main() {
     process.exit(1)
   }
 
+  const comSenha = process.argv.includes("--com-senha")
   const destino =
-    process.argv[2] ??
+    process.argv.find((a, i) => i >= 2 && !a.startsWith("--")) ??
     path.join("backups", new Date().toISOString().replace(/[:.]/g, "-"))
   fs.mkdirSync(destino, { recursive: true })
 
@@ -102,11 +111,25 @@ async function main() {
     console.log(`  ${tabela}: ${total}`)
   }
 
+  // ─── O que mora fora do schema `public` ──────────────────────────────────
+  // As contas de login e as fotos. Ver _backup-extras.mjs para o porquê de
+  // cada uma, e por que a senha fica de fora por padrão.
+  const contas = await salvarContasDeLogin(c, destino, { comSenha })
+  console.log(
+    `  contas de login: ${contas.total}` + (comSenha ? " (com hash de senha)" : " (sem senha)")
+  )
+
+  const arquivos = await salvarArquivos(destino)
+  if (arquivos.pulado) console.log(`  arquivos: PULADO — ${arquivos.pulado}`)
+  else console.log(`  arquivos: ${arquivos.total} (${Math.round(arquivos.bytes / 1024)} KB)`)
+
   const manifesto = {
     geradoEm: new Date().toISOString(),
     migration: migrations[0]?.migration_name ?? null,
     linhas,
     ordem,
+    contasDeLogin: contas,
+    arquivos,
   }
   fs.writeFileSync(
     path.join(destino, "manifest.json"),
@@ -120,8 +143,37 @@ async function main() {
   console.log(`\nBackup em ${destino}`)
   console.log(`${ordem.length} tabelas, ${totalLinhas} linhas, schema ${manifesto.migration}`)
   console.log(
+    `${contas.total} contas de login` +
+      (arquivos.pulado ? "" : `, ${arquivos.total} arquivos (${Math.round(arquivos.bytes / 1024)} KB)`)
+  )
+  // ─── Descarte dos antigos ────────────────────────────────────────────────
+  //
+  // Backup automático sem descarte enche o disco — e, aqui, enche o OneDrive,
+  // que sincroniza esta pasta.
+  //
+  // Guarda os MANTER mais recentes, e não só o último. A razão é dano que se
+  // descobre tarde: um apagamento por engano na segunda só aparece na sexta, e
+  // a essa altura um backup único já teria copiado a ausência por cima da
+  // única cópia boa. Com uma execução por semana, isto é dois meses de volta.
+  const MANTER = 8
+  const raizBackups = path.dirname(path.resolve(destino))
+  try {
+    const pastas = fs
+      .readdirSync(raizBackups, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+    for (const velha of pastasParaDescartar(pastas, MANTER)) {
+      fs.rmSync(path.join(raizBackups, velha), { recursive: true, force: true })
+      console.log(`  descartado: ${velha}`)
+    }
+  } catch (e) {
+    // Falha ao limpar não pode invalidar um backup que já deu certo.
+    console.warn(`  (não consegui descartar os antigos: ${e.message})`)
+  }
+
+  console.log(
     "\nEste backup ainda NÃO foi provado. Prove com:\n" +
-      `  node --env-file=.env.restore scripts/restore.mjs ${destino}`
+      `  npm run backup:provar -- ${destino}`
   )
 }
 

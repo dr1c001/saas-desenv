@@ -2827,6 +2827,66 @@ com o mesmo `onChange`.
 
 ---
 
+### 7.2.50 O backup cobria menos do que parecia — 01/09/2026
+
+Auditoria do backup a pedido do dono. A ferramenta era boa e o resultado era
+pior do que ela sugeria.
+
+**O que estava certo.** O script le a lista de tabelas do CATALOGO do banco, e
+nao de lista escrita a mao — que e como uma tabela nova fica de fora sem ninguem
+notar. Grava manifesto com contagem por tabela. E o verificador sobe um Postgres
+descartavel em memoria (pglite), carrega o backup e confere linha a linha: prova
+que restaura sem banco de ensaio, sem credencial e sem risco.
+
+**O que estava errado.**
+
+*O unico backup era de 19/08 — treze dias.* Nenhuma automacao: nem no cron, nem
+no CI. Backup manual e backup esquecido. (14 linhas novas desde entao; pouco
+porque o negocio e pequeno, e exatamente o que se perderia.)
+
+*Duas lacunas de cobertura*, porque o script le so `schemaname = 'public'`:
+
+1. **As 9 contas de login.** O Supabase Auth vive no schema `auth`. Restaurar
+   devolvia clientes, OS, orcamentos e financeiro — e NINGUEM conseguia entrar.
+2. **As 9 fotos (1,1 MB) do Storage.** Sao arquivos, nao linhas. Os registros
+   `Attachment` voltariam apontando para arquivos inexistentes, e a foto E a
+   prova do servico prestado.
+
+**A senha fica de fora, por decisao.** Guardar o hash faria a restauracao ser
+transparente. O custo e hash de senha em disco — e, neste projeto, a pasta de
+backup fica dentro do OneDrive, ou seja, sincronizada para a nuvem. Sem o hash a
+recuperacao continua completa: as contas voltam com o MESMO id (conferido:
+`User.id` == `auth.users.id` nos 6 usuarios) e cada pessoa entra pelo "esqueci
+minha senha". Um e-mail a mais no pior dia do ano custa menos que hash vazado num
+dia comum. Quem quiser a outra troca roda com `--com-senha`.
+
+**O verificador passou a mentir menos.** Ele imprimia "PROVADO" falando so das
+tabelas. Agora confere tambem que o arquivo de contas tem a contagem do
+manifesto e que os arquivos existem em disco — e a palavra "provado" so aparece
+depois de tudo conferido. Backup anterior a hoje sai como INCOMPLETO, com saida
+1, em vez de passar.
+
+**Descarte, com teste.** Automatizar exigiu descartar antigos, senao a pasta
+cresce para sempre dentro do OneDrive. Guarda os 8 mais recentes — e nao so o
+ultimo, porque dano que se descobre tarde (apagamento na segunda, notado na
+sexta) sobrescreveria a unica copia boa.
+
+A regra virou funcao PURA em `_backup-lib.mjs` e ganhou teste proprio: e a unica
+parte deste sistema que destroi o que deveria proteger. Um erro de sinal apagaria
+os recentes e guardaria os velhos, e so se descobriria no dia em que o backup
+fosse preciso. Confirmado por mutacao: trocando por `slice(-manter)`, 6 dos 9
+testes falham.
+
+**A distincao que nao pode se perder.** O dono perguntou se o backup podia virar
+um botao para o cliente. NAO: `scripts/backup.mjs` contem os dados de TODAS as
+empresas. O que existe para o cliente e `actions/data-export.ts`, filtrado por
+`tenantId` em toda consulta, ja disponivel em Configuracoes. Sao coisas
+diferentes com nomes parecidos, e confundi-las seria vazamento entre inquilinos.
+
+1120 -> 1129 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`
