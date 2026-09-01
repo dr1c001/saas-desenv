@@ -3014,5 +3014,50 @@
     "meta": "See ServiçoOS in action with the jobs, checklist and figures of a {ramo} company. No sign-up, no card.",
     "ogChamada": "Quotes, work orders, field crew and finances in one system. See it working, no sign-up.",
     "ogSemRamo": "No more work orders in WhatsApp and spreadsheets"
+  },
+  "estoqueLocais": {
+    "titulo": "Stock locations",
+    "subtitulo": "Where each part sits. A technician's van is a warehouse on wheels — without this, “4 in stock” doesn't say which side of town.",
+    "novo": "New location",
+    "editar": "Edit",
+    "nome": "Name",
+    "tipo": "Type",
+    "tipos": {
+      "ALMOXARIFADO": "Warehouse",
+      "VEICULO": "Vehicle"
+    },
+    "responsavel": "Assigned technician",
+    "semResponsavel": "Unassigned",
+    "ativar": "Activate",
+    "desativar": "Deactivate",
+    "inativo": "Inactive",
+    "pecasDentro": "{n} parts",
+    "vazio": "empty",
+    "semLocais": "No locations yet. The warehouse is created automatically on the first movement.",
+    "ondeEsta": "Where it is",
+    "semSaldo": "This part is not in any location.",
+    "transferir": "Transfer",
+    "transferirTitulo": "Transfer between locations",
+    "de": "From",
+    "para": "To",
+    "quantidade": "Quantity",
+    "disponivel": "Available: {q}",
+    "confirmar": "Transfer",
+    "salvar": "Save",
+    "cancelar": "Cancel",
+    "errors": {
+      "semPermissao": "You do not have permission to change locations.",
+      "nomeObrigatorio": "Give the location a name.",
+      "tipoInvalido": "Invalid location type.",
+      "pessoaInvalida": "Technician not found in this company.",
+      "nomeRepetido": "A location with that name already exists.",
+      "naoEncontrado": "Location not found.",
+      "localComPeca": "This location still holds parts. Transfer them out before deactivating — otherwise the balance disappears from view without leaving stock.",
+      "mesmoLocal": "Source and destination are the same location.",
+      "quantidadeInvalida": "Enter a quantity greater than zero.",
+      "saldoInsuficiente": "The source does not have that quantity.",
+      "localInativo": "Invalid or deactivated location.",
+      "pecaNaoEncontrada": "Part not found."
+    }
   }
 }

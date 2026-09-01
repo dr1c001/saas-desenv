@@ -2887,6 +2887,74 @@ diferentes com nomes parecidos, e confundi-las seria vazamento entre inquilinos.
 
 ---
 
+### 7.2.51 Estoque por LOCAL — 01/09/2026
+
+Ate aqui o saldo era um numero so por peca. "Tem 4 no estoque" nao responde a
+pergunta que o dono de uma empresa de campo realmente faz: *onde*. A van de cada
+tecnico e um almoxarifado que anda, e a peca pode estar do outro lado da cidade.
+
+E a lacuna mais especifica deste ramo — sistema generico de estoque trata o
+deposito como um ponto so, o que serve a loja e nao serve a quem trabalha na rua.
+
+**A trava de plano saiu de graca.** O dono pediu "so Pro e Enterprise", e o
+estoque JA e Pro+ (`POR_PLANO`: o Starter tem so `nfse`). Locais vivem dentro do
+estoque, entao herdam a trava. Criar um recurso separado faria o Pro ter estoque
+e nao ter onde guarda-lo — isso nao seria um plano, seria um defeito.
+
+**`Part.stock` continua sendo o TOTAL.** Ele ja e lido pelo alerta de minimo,
+pela listagem, pela escolha na OS e pelos relatorios; troca-lo por uma soma seria
+refazer meia duzia de telas para chegar no mesmo numero. Ao lado dele entra
+`StockBalance` (saldo por peca por local), escrito na MESMA transacao. Manter
+total e parcelas convida os dois a divergirem em silencio — por isso todo teste
+de banco termina conferindo `Part.stock === soma dos StockBalance`.
+
+**Transferencia e um PAR de movimentos**, e nao um tipo novo: `balanceAfter`
+passou a ser o saldo DAQUELE local, e uma linha so nao guarda dois saldos. Saida
+na origem, entrada no destino, ligadas por `transferId`, na mesma transacao.
+
+**O defeito sutil que quase entrou.** No AJUSTE a quantidade e o saldo CONTADO,
+nao a diferenca. Se o total fosse recalculado com `saldoApos` (como era antes),
+contar 3 numa van faria o TOTAL DA EMPRESA virar 3 — apagando as 10 do
+almoxarifado sem nenhum movimento que explicasse. O total passou a acompanhar
+pela VARIACAO. Confirmado por mutacao: voltando a `saldoApos`, o teste falha.
+
+**Tornar `locationId` obrigatorio foi de proposito.** O compilador apontou os
+tres caminhos que mexem em estoque, e cada um decidiu conscientemente:
+
+  - baixa da OS -> a van de quem executou (resolvida UMA vez fora do laco);
+  - recebimento de compra -> o almoxarifado, e nao o carro de quem digitou;
+  - movimento manual -> o que a tela escolher.
+
+**A migracao preenche, e isso nao tem segunda chance.** Sem ela, toda empresa que
+ja usa estoque abriria a tela e veria os saldos fora de qualquer local —
+presentes no total e invisiveis na unica tela que passa a importar. A migracao
+cria o "Almoxarifado" de cada empresa QUE TEM PECA, move o saldo inteiro para
+dentro e aponta o historico antigo para ele. Empresa que nunca usou estoque nao
+ganha local nenhum: seria sujeira na tela de quem nem contratou o recurso.
+
+Testado com dados: um teste aplica as migrations ATE A ANTERIOR, insere uma
+empresa com pecas e saldo, e so entao aplica a de hoje. Mutacao: removendo o
+preenchimento, 4 testes falham.
+
+`resolverLocal` CRIA o almoxarifado quando a empresa nao tem nenhum — a migracao
+so atendeu quem ja tinha peca, e recusar o movimento seria pedir que a empresa
+nova adivinhe que precisa criar um lugar antes de guardar a primeira peca. Mesmo
+padrao do bucket de fotos.
+
+**Desativar local exige ele VAZIO.** Com peca dentro, o saldo sumiria das
+escolhas sem ter saido de lugar nenhum, e o total passaria a contar algo que
+ninguem acha na tela.
+
+Na tela: os locais aparecem ACIMA da lista de pecas (a primeira coisa a entender
+e que agora existe "onde"), e cada peca ganhou um botao "onde esta" — FORA do
+bloco de administrador, porque ver onde a peca esta e leitura e e o tecnico quem
+mais precisa. Transferir, que mexe em saldo, continua so para dono e admin, com
+a Action conferindo de novo.
+
+1129 -> 1172 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

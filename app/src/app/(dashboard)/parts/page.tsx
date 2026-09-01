@@ -3,12 +3,16 @@ import { getTranslations } from "next-intl/server"
 import { getTenant } from "@/lib/auth"
 import { temRecurso } from "@/lib/plan"
 import { getPecas } from "@/actions/estoque"
+import { getLocais } from "@/actions/estoque-locais"
+import { prisma } from "@/lib/prisma"
 import { situacaoDa } from "@/lib/estoque"
 import { formatCurrency } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
 import { SearchBar } from "@/components/shared/search-bar"
 import { PecaDialog } from "@/components/parts/peca-dialog"
 import { MovimentoDialog } from "@/components/parts/movimento-dialog"
+import { LocaisCard, type LocalNaTela } from "@/components/parts/locais-card"
+import { OndeEstaDialog } from "@/components/parts/onde-esta-dialog"
 import { AlertTriangle, PackageX } from "lucide-react"
 
 export default async function PartsPage({
@@ -23,8 +27,22 @@ export default async function PartsPage({
 
   const { q } = await searchParams
   const t = await getTranslations("estoque")
-  const pecas = await getPecas(q)
   const isAdmin = role === "OWNER" || role === "ADMIN"
+  // Em paralelo: as três consultas são independentes, e somadas em série
+  // atrasariam a tela pelo mais lento de cada uma.
+  const [pecas, locais, equipe] = await Promise.all([
+    getPecas(q),
+    getLocais(),
+    // Só para dizer de quem é a van. Nome e id, nada mais.
+    prisma.user.findMany({
+      where: { tenantId },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ])
+  // Só os ativos entram nas escolhas: gravar num local desativado esconderia
+  // o saldo assim que fosse gravado.
+  const locaisAtivos = locais.filter((l) => l.active).map((l) => ({ id: l.id, name: l.name }))
 
   const emAlerta = pecas.filter(
     (p) => p.active && situacaoDa(Number(p.stock), Number(p.minStock)) !== "ok"
@@ -39,6 +57,11 @@ export default async function PartsPage({
         </div>
         {isAdmin && <PecaDialog />}
       </div>
+
+      {/* Os LOCAIS antes da lista de peças: a primeira coisa que quem abre
+          esta tela precisa entender é que agora existe "onde", e não só
+          "quanto". */}
+      <LocaisCard locais={locais as unknown as LocalNaTela[]} tecnicos={equipe} isAdmin={isAdmin} />
 
       {/* O alerta vem antes da lista: quem abre esta tela quer saber o que
           está faltando, não navegar por um catálogo. */}
@@ -117,6 +140,19 @@ export default async function PartsPage({
                           {p.salePrice ? formatCurrency(Number(p.salePrice)) : "—"}
                         </td>
                         <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {/* Ver ONDE a peça está é leitura, e é o técnico
+                                quem mais precisa — por isso fora do bloco de
+                                administrador. Transferir, que mexe em saldo,
+                                continua só para dono e admin (o próprio
+                                diálogo decide, e a Action confere de novo). */}
+                            <OndeEstaDialog
+                              partId={p.id}
+                              nome={p.name}
+                              unidade={p.unit}
+                              podeTransferir={isAdmin}
+                            />
+                          </div>
                           {isAdmin && (
                             <div className="flex items-center justify-end gap-1.5">
                               <MovimentoDialog
@@ -124,6 +160,7 @@ export default async function PartsPage({
                                 nome={p.name}
                                 unidade={p.unit}
                                 saldo={saldo}
+                                locais={locaisAtivos}
                               />
                               <PecaDialog
                                 peca={{

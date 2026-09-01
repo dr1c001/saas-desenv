@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { requireRecurso } from "@/lib/plan"
-import { aplicarMovimento, proximoNumeroDeCompra } from "@/lib/estoque-db"
+import { aplicarMovimento, proximoNumeroDeCompra, resolverLocal } from "@/lib/estoque-db"
 import { statusAposRecebimento, type ItemRecebido } from "@/lib/compras"
 
 export type EstadoCompra = { erro?: string; ok?: boolean; id?: string }
@@ -245,6 +245,10 @@ export async function receberCompra(
       await aplicarMovimento(tx, {
         tenantId,
         partId: item.partId,
+        // A peça comprada chega no DEPÓSITO, e não na van de quem registrou o
+        // recebimento — por isso o local é resolvido sem usuário: `localPadrao`
+        // sem pessoa cai no almoxarifado.
+        locationId: await resolverLocal(tx, tenantId, null),
         tipo: "ENTRADA",
         quantidade: q,
         motivo: `Compra #${compra.number}`,

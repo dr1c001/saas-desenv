@@ -25,13 +25,17 @@ export function MovimentoDialog({
   nome,
   unidade,
   saldo,
+  locais,
 }: {
   partId: string
   nome: string
   unidade: string
   saldo: number
+  /** Os locais ATIVOS. Vazio esconde o seletor — a Action resolve o padrão. */
+  locais: { id: string; name: string }[]
 }) {
   const t = useTranslations("estoque")
+  const tL = useTranslations("estoqueLocais")
   const [aberto, setAberto] = useState(false)
   const [tipo, setTipo] = useState<TipoMovimento>("ENTRADA")
   const [quantidade, setQuantidade] = useState("")
@@ -81,6 +85,26 @@ export function MovimentoDialog({
               {t(`tiposAjuda.${tipo}` as "tiposAjuda.ENTRADA")}
             </p>
           </div>
+
+          {/* EM QUAL local. Só aparece com mais de um: com um só a pergunta
+              não existe, e um seletor de uma opção é ruído entre a pessoa e o
+              botão. Sem escolha, a Action resolve o padrão. */}
+          {locais.length > 1 && (
+            <div className="space-y-2">
+              <Label htmlFor="localId">{tL("titulo")}</Label>
+              <select
+                id="localId"
+                name="localId"
+                className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+              >
+                {locais.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="quantidade">

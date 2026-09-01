@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-// @ts-expect-error — script .mjs sem tipos, importado de propósito: a regra tem
-// de ser testada no MESMO arquivo que o backup usa, e não numa cópia.
+// Importado do .mjs de propósito: a regra tem de ser testada no MESMO arquivo
+// que o backup usa, e não numa cópia que pode divergir dele.
 import { pastasParaDescartar } from "../../../scripts/_backup-lib.mjs"
 
 // A regra que APAGA backup.

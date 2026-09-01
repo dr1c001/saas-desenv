@@ -3014,5 +3014,50 @@
     "meta": "Veja o ServiçoOS funcionando com serviços, checklist e valores de uma empresa de {ramo}. Sem cadastro e sem cartão.",
     "ogChamada": "Orçamento, OS, equipe em campo e financeiro num sistema só. Veja funcionando, sem cadastro.",
     "ogSemRamo": "Chega de OS no WhatsApp e na planilha"
+  },
+  "estoqueLocais": {
+    "titulo": "Locais de estoque",
+    "subtitulo": "Onde cada peça fica. A van de um técnico é um almoxarifado que anda — sem isso, “tem 4 no estoque” não diz de que lado da cidade.",
+    "novo": "Novo local",
+    "editar": "Editar",
+    "nome": "Nome",
+    "tipo": "Tipo",
+    "tipos": {
+      "ALMOXARIFADO": "Almoxarifado",
+      "VEICULO": "Veículo"
+    },
+    "responsavel": "Técnico responsável",
+    "semResponsavel": "Sem responsável",
+    "ativar": "Ativar",
+    "desativar": "Desativar",
+    "inativo": "Inativo",
+    "pecasDentro": "{n} peças",
+    "vazio": "vazio",
+    "semLocais": "Nenhum local ainda. O almoxarifado é criado sozinho na primeira movimentação.",
+    "ondeEsta": "Onde está",
+    "semSaldo": "Esta peça não está em nenhum local.",
+    "transferir": "Transferir",
+    "transferirTitulo": "Transferir entre locais",
+    "de": "De",
+    "para": "Para",
+    "quantidade": "Quantidade",
+    "disponivel": "Disponível: {q}",
+    "confirmar": "Transferir",
+    "salvar": "Salvar",
+    "cancelar": "Cancelar",
+    "errors": {
+      "semPermissao": "Você não tem permissão para alterar os locais.",
+      "nomeObrigatorio": "Dê um nome ao local.",
+      "tipoInvalido": "Tipo de local inválido.",
+      "pessoaInvalida": "Técnico não encontrado nesta empresa.",
+      "nomeRepetido": "Já existe um local com esse nome.",
+      "naoEncontrado": "Local não encontrado.",
+      "localComPeca": "Este local ainda tem peça dentro. Transfira o que está nele antes de desativar — senão o saldo some da tela sem ter saído do estoque.",
+      "mesmoLocal": "Origem e destino são o mesmo local.",
+      "quantidadeInvalida": "Informe uma quantidade maior que zero.",
+      "saldoInsuficiente": "A origem não tem essa quantidade.",
+      "localInativo": "Local inválido ou desativado.",
+      "pecaNaoEncontrada": "Peça não encontrada."
+    }
   }
 }

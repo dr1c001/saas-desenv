@@ -141,6 +141,7 @@ model Tenant {
   subscriptions     Subscription[]
   customFields      CustomField[]
   contracts         ServiceContract[]
+  stockLocations    StockLocation[]
 
   // Vocabulario adaptavel: como a empresa chama OS e tecnico.
   // Formato em lib/vocabulario.ts. Fica junto do locale porque e lido no mesmo
@@ -320,6 +321,7 @@ model User {
   // Aba Equipe lista por tenant; seleção de técnico filtra por papel.
   @@index([tenantId, role])
   @@index([branchId])
+  stockLocations     StockLocation[]
 }
 
 model UserAddress {
@@ -1212,6 +1214,7 @@ model Part {
 
   tenant        Tenant          @relation(fields: [tenantId], references: [id])
   movements     StockMovement[]
+  balances      StockBalance[]
   purchaseItems PurchaseItem[]
   serviceItems  ServiceItem[]
 
@@ -1233,6 +1236,59 @@ enum StockMovementType {
 /// que ser igual ao saldo dela — invariante que da pra testar, e que um
 /// campo "quantidade sempre positiva + tipo" nao daria sem recalcular sinal
 /// em toda leitura.
+/// Onde a peca FICA. Num negocio de campo a van de cada tecnico e um
+/// almoxarifado que anda — "tem 4 no estoque" nao responde "onde", e a peca
+/// pode estar do outro lado da cidade. Regras em lib/estoque-local.ts.
+model StockLocation {
+  id        String            @id @default(cuid())
+  tenantId  String
+  name      String
+  type      StockLocationType @default(ALMOXARIFADO)
+  /// O tecnico dono da van. Nulo no almoxarifado.
+  /// SetNull ao apagar a pessoa: a van continua existindo com o que tem dentro.
+  userId    String?
+  /// Desativado some das escolhas, mas o historico continua. So e permitido
+  /// desativar local VAZIO — ver podeDesativarLocal.
+  active    Boolean           @default(true)
+  createdAt DateTime          @default(now())
+
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  balances  StockBalance[]
+  saidas    StockMovement[] @relation("MovimentoNoLocal")
+  entradas  StockMovement[] @relation("MovimentoParaLocal")
+
+  /// Dois locais com o mesmo nome na mesma empresa seriam indistinguiveis na
+  /// hora de escolher — e a escolha errada move peca de verdade.
+  @@unique([tenantId, name])
+  @@index([tenantId, active])
+}
+
+enum StockLocationType {
+  ALMOXARIFADO
+  VEICULO
+}
+
+/// O saldo de uma peca EM UM local.
+///
+/// Part.stock continua sendo o TOTAL, porque ele ja e lido pelo alerta de
+/// minimo, pela listagem, pela escolha na OS e pelos relatorios — troca-lo por
+/// uma soma seria refazer meia duzia de telas pro mesmo numero. Os dois sao
+/// escritos na MESMA transacao, e ha teste garantindo que o total e a soma.
+model StockBalance {
+  id         String  @id @default(cuid())
+  partId     String
+  locationId String
+  quantity   Decimal @default(0) @db.Decimal(12, 3)
+
+  part     Part          @relation(fields: [partId], references: [id], onDelete: Cascade)
+  location StockLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  /// Um saldo por peca por local. Duplicado faria a soma contar duas vezes.
+  @@unique([partId, locationId])
+  @@index([locationId])
+}
+
 model StockMovement {
   id              String            @id @default(cuid())
   tenantId        String
@@ -1247,6 +1303,17 @@ model StockMovement {
   orderId         String?
   /// De qual ordem de compra entrou.
   purchaseOrderId String?
+  /// EM QUAL LOCAL este movimento aconteceu. `balanceAfter` passa a ser o
+  /// saldo DAQUELE local, e nao mais o total da empresa.
+  locationId      String?
+  /// Para onde foi, quando este movimento e a perna de saida de uma
+  /// TRANSFERENCIA. Serve so para a tela contar a historia ("saiu para a Van
+  /// do Carlos"); quem move o saldo sao as duas pernas.
+  toLocationId    String?
+  /// Liga as duas pernas da mesma transferencia. Transferencia e um PAR de
+  /// movimentos (saida na origem, entrada no destino) e nao um tipo novo,
+  /// porque `balanceAfter` e por local — uma linha so nao guarda dois saldos.
+  transferId      String?
   /// Quem fez. Fica nulo se a pessoa sair da empresa — o movimento continua.
   userId          String?
   createdAt       DateTime          @default(now())
@@ -1256,6 +1323,8 @@ model StockMovement {
   order         ServiceOrder?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
   purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
   user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  location      StockLocation? @relation("MovimentoNoLocal", fields: [locationId], references: [id], onDelete: SetNull)
+  toLocation    StockLocation? @relation("MovimentoParaLocal", fields: [toLocationId], references: [id], onDelete: SetNull)
 
   // Historico da peca, do mais novo pro mais velho.
   @@index([partId, createdAt])
@@ -1263,6 +1332,8 @@ model StockMovement {
   // Idempotencia da baixa por OS: "ja existe movimento desta OS?"
   @@index([orderId])
   @@index([purchaseOrderId])
+  // Historico de um local.
+  @@index([locationId, createdAt])
 }
 
 enum PurchaseStatus {

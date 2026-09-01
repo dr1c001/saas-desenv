@@ -11,6 +11,7 @@
 
 import { Prisma } from "@/generated/prisma/client"
 import { saldoApos, variacaoDo, type TipoMovimento } from "@/lib/estoque"
+import { LOCAL_PADRAO, localPadrao, type Local } from "@/lib/estoque-local"
 
 /** O cliente dentro de uma transação do Prisma. */
 export type Tx = Prisma.TransactionClient
@@ -25,6 +26,69 @@ export type PedidoDeMovimento = {
   orderId?: string | null
   purchaseOrderId?: string | null
   userId?: string | null
+  /**
+   * EM QUAL local. Obrigatório desde 01/09/2026.
+   *
+   * Sem ele o movimento mexeria no total da empresa sem dizer de onde saiu a
+   * peça — e o total deixaria de ser a soma dos locais no instante seguinte.
+   * Quem chama resolve o local antes (ver `localPadrao` em lib/estoque-local).
+   */
+  locationId: string
+  /** Só na perna de saída de uma transferência: para onde foi. */
+  toLocationId?: string | null
+  /** Liga as duas pernas da mesma transferência. */
+  transferId?: string | null
+}
+
+/**
+ * Em qual local este movimento acontece.
+ *
+ * Existe para os três caminhos que mexem no estoque (movimento manual, baixa
+ * pela OS, recebimento de compra) não repetirem a mesma escolha — e escolherem
+ * diferente com o tempo, que é como o saldo de um local começa a não bater.
+ *
+ * ─── Cria o almoxarifado quando não há nenhum ──────────────────────────────
+ *
+ * A migração só criou local para quem JÁ tinha peça cadastrada. Empresa nova, e
+ * empresa que ativou o estoque depois, chega aqui sem local nenhum — e recusar
+ * o movimento por causa disso seria pedir que ela adivinhe que precisa criar um
+ * lugar antes de guardar a primeira peça.
+ *
+ * Mesmo padrão do bucket de fotos, que também se cria sozinho no primeiro uso.
+ */
+export async function resolverLocal(
+  tx: Tx,
+  tenantId: string,
+  userId: string | null,
+  escolhido?: string | null
+): Promise<string> {
+  const locais = await tx.stockLocation.findMany({
+    where: { tenantId },
+    select: { id: true, name: true, type: true, userId: true, active: true },
+  })
+
+  // O escolhido só vale se for DESTA empresa e estiver ativo: um id de outra
+  // moveria estoque alheio, e um inativo esconderia o saldo assim que gravado.
+  if (escolhido) {
+    const valido = locais.find((l) => l.id === escolhido && l.active)
+    if (valido) return valido.id
+  }
+
+  const comoRegra: Local[] = locais.map((l) => ({
+    id: l.id,
+    nome: l.name,
+    tipo: l.type,
+    userId: l.userId,
+    ativo: l.active,
+  }))
+  const padrao = localPadrao(comoRegra, userId)
+  if (padrao) return padrao.id
+
+  const criado = await tx.stockLocation.create({
+    data: { tenantId, name: LOCAL_PADRAO, type: "ALMOXARIFADO" },
+    select: { id: true },
+  })
+  return criado.id
 }
 
 /**
@@ -44,11 +108,39 @@ export async function aplicarMovimento(tx: Tx, p: PedidoDeMovimento): Promise<nu
   })
   if (!peca) throw new Error("Peça não encontrada.")
 
+  // ─── O saldo DO LOCAL, que é o que o movimento realmente mexe ────────────
+  //
+  // Lido dentro da transação, imediatamente antes de escrever, pelo mesmo
+  // motivo do total: duas baixas simultâneas partindo do mesmo saldo fariam
+  // uma sobrescrever a outra.
+  const doLocal = await tx.stockBalance.findUnique({
+    where: { partId_locationId: { partId: peca.id, locationId: p.locationId } },
+    select: { id: true, quantity: true },
+  })
+  const saldoNoLocal = Number(doLocal?.quantity ?? 0)
+  const novoNoLocal = saldoApos(saldoNoLocal, p.tipo, p.quantidade)
+
+  // A variação sai do saldo DO LOCAL, e não do total: no AJUSTE a quantidade é
+  // o saldo contado, e contar 3 numa van que tinha 5 é uma variação de -2 ali,
+  // qualquer que seja o total da empresa.
+  const variacao = variacaoDo(saldoNoLocal, p.tipo, p.quantidade)
+
+  // O total acompanha pela VARIAÇÃO, e nunca é recalculado a partir da
+  // quantidade: recalcular faria um ajuste num local zerar o estoque dos
+  // outros, porque `saldoApos` no AJUSTE devolve o valor contado.
   const saldoAtual = Number(peca.stock)
-  const novo = saldoApos(saldoAtual, p.tipo, p.quantidade)
-  const variacao = variacaoDo(saldoAtual, p.tipo, p.quantidade)
+  const novo = Math.round((saldoAtual + variacao) * 1000) / 1000
 
   await tx.part.update({ where: { id: peca.id }, data: { stock: novo } })
+
+  // `upsert` porque a peça pode nunca ter estado neste local — é o caso da
+  // primeira entrada numa van nova.
+  await tx.stockBalance.upsert({
+    where: { partId_locationId: { partId: peca.id, locationId: p.locationId } },
+    create: { partId: peca.id, locationId: p.locationId, quantity: novoNoLocal },
+    update: { quantity: novoNoLocal },
+  })
+
   await tx.stockMovement.create({
     data: {
       tenantId: p.tenantId,
@@ -56,11 +148,16 @@ export async function aplicarMovimento(tx: Tx, p: PedidoDeMovimento): Promise<nu
       type: p.tipo,
       // Com sinal: a soma dos movimentos tem que reproduzir o saldo.
       quantity: variacao,
-      balanceAfter: novo,
+      // O saldo DAQUELE local — não o total. É o que o histórico do local
+      // precisa contar para fazer sentido lido de cima para baixo.
+      balanceAfter: novoNoLocal,
       reason: p.motivo ?? null,
       orderId: p.orderId ?? null,
       purchaseOrderId: p.purchaseOrderId ?? null,
       userId: p.userId ?? null,
+      locationId: p.locationId,
+      toLocationId: p.toLocationId ?? null,
+      transferId: p.transferId ?? null,
     },
   })
 
@@ -102,12 +199,22 @@ export async function baixarPecasDaOs(
 
     let baixadas = 0
     await prisma.$transaction(async (tx) => {
+      // A peça sai de ONDE ELA ESTAVA: a van de quem executou, quando ele tem
+      // uma. Baixar sempre do almoxarifado faria a van acumular peça já usada
+      // e o depósito ficar negativo sem ninguém ter tirado nada de lá.
+      //
+      // Resolvido UMA vez fora do laço: todas as peças da mesma OS saem do
+      // mesmo lugar, e repetir a consulta por item seria uma ida ao banco por
+      // peça dentro da transação.
+      const locationId = await resolverLocal(tx, tenantId, userId ?? null)
+
       for (const item of itens) {
         const quantidade = Number(item.quantity)
         if (!Number.isFinite(quantidade) || quantidade <= 0) continue
         await aplicarMovimento(tx, {
           tenantId,
           partId: item.partId!,
+          locationId,
           tipo: "SAIDA",
           quantidade,
           motivo: null,

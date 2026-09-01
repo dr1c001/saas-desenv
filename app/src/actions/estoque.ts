@@ -7,7 +7,7 @@ import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { requireRecurso } from "@/lib/plan"
 import { getTranslations } from "next-intl/server"
 import { translateFieldErrors } from "@/lib/validation"
-import { aplicarMovimento } from "@/lib/estoque-db"
+import { aplicarMovimento, resolverLocal } from "@/lib/estoque-db"
 import { quantidadeValida, UNIDADES, type TipoMovimento } from "@/lib/estoque"
 
 export type EstadoPeca = { errors?: Record<string, string[]>; message?: string; ok?: boolean }
@@ -167,15 +167,19 @@ export async function movimentar(
   const quantidade = Number(String(formData.get("quantidade") ?? "").replace(",", "."))
   if (!quantidadeValida(tipo, quantidade)) return { erro: "quantidadeInvalida" }
 
+  const localEscolhido = String(formData.get("localId") ?? "") || null
   const motivo = String(formData.get("motivo") ?? "").trim().slice(0, 200)
   // Ajuste sem motivo é indistinguível de erro seis meses depois.
   if (tipo === "AJUSTE" && !motivo) return { erro: "motivoObrigatorio" }
 
   try {
-    await prisma.$transaction((tx) =>
+    await prisma.$transaction(async (tx) =>
       aplicarMovimento(tx, {
         tenantId,
         partId,
+        // O local vem da tela. Vazio cai no padrão — a van de quem move,
+        // quando ele tem uma; senão o almoxarifado.
+        locationId: await resolverLocal(tx, tenantId, userId, localEscolhido),
         tipo,
         quantidade,
         motivo: motivo || null,
