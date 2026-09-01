@@ -28,6 +28,11 @@ function arvoreDaDemo(): string[] {
   const fila = [
     "src/app/demo/page.tsx",
     "src/app/demo/[ramo]/page.tsx",
+    // As imagens de compartilhamento também são rotas públicas da demo, e
+    // rodam no servidor: valem a mesma trava que as páginas.
+    "src/app/demo/opengraph-image.tsx",
+    "src/app/demo/[ramo]/opengraph-image.tsx",
+    "src/components/demo/cartao-og.tsx",
     "src/components/demo/moldura.tsx",
     "src/components/demo/visita.tsx",
     "src/lib/demo.ts",
@@ -93,7 +98,8 @@ describe("a demo não tem caminho até o banco", () => {
     expect(arvore).toContain("src/lib/demo.ts")
     expect(arvore).toContain("src/components/demo/visita.tsx")
     expect(arvore).toContain("src/app/demo/[ramo]/page.tsx")
-    expect(arvore.length).toBeGreaterThanOrEqual(5)
+    expect(arvore).toContain("src/components/demo/cartao-og.tsx")
+    expect(arvore.length).toBeGreaterThanOrEqual(8)
   })
 
   it("as rotas por RAMO também são públicas no proxy", () => {
@@ -126,6 +132,31 @@ describe("os endereços", () => {
     expect(segmentoPorSlug("nao-existe").slug).toBe(SEGMENTO_PADRAO)
     expect(segmentoPorSlug(undefined).slug).toBe(SEGMENTO_PADRAO)
     expect(ehSegmento("nao-existe")).toBe(false)
+  })
+
+  it("o cartão de compartilhamento tem texto nos dois idiomas", () => {
+    // Sem estas chaves a GERAÇÃO DA IMAGEM lança — e a falha aparece como
+    // link sem figura no WhatsApp, que é exatamente onde ela custa mais e
+    // onde ninguém vai investigar.
+    for (const idioma of ["pt", "en"]) {
+      const m = JSON.parse(readFileSync(join(RAIZ, `messages/${idioma}.json`), "utf8"))
+      expect(typeof m.demo.ogChamada, `${idioma}/ogChamada`).toBe("string")
+      expect(typeof m.demo.ogSemRamo, `${idioma}/ogSemRamo`).toBe("string")
+      expect(typeof m.demo.meta, `${idioma}/meta`).toBe("string")
+    }
+  })
+
+  it("as páginas declaram openGraph próprio", () => {
+    // O layout raiz define um `openGraph`, e um filho que muda só o `title`
+    // NÃO o sobrescreve: o link colado no WhatsApp anunciava "CRM, OS,
+    // Financeiro e Dashboard para empresas de serviço" — jargão que não diz
+    // nada para quem controla serviço no caderno. (Conferido no HTML servido
+    // em produção antes da correção.)
+    for (const rota of ["src/app/demo/page.tsx", "src/app/demo/[ramo]/page.tsx"]) {
+      const fonte = readFileSync(join(RAIZ, rota), "utf8")
+      expect(fonte, rota).toContain("openGraph")
+      expect(fonte, rota).toContain("summary_large_image")
+    }
   })
 
   it("todo ramo tem nome nos dois idiomas", () => {

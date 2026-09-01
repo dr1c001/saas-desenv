@@ -3010,6 +3010,8 @@
       "assistencia-tecnica": "Assistência técnica",
       "dedetizacao": "Dedetização"
     },
-    "meta": "Veja o ServiçoOS funcionando com serviços, checklist e valores de uma empresa de {ramo}. Sem cadastro e sem cartão."
+    "meta": "Veja o ServiçoOS funcionando com serviços, checklist e valores de uma empresa de {ramo}. Sem cadastro e sem cartão.",
+    "ogChamada": "Orçamento, OS, equipe em campo e financeiro num sistema só. Veja funcionando, sem cadastro.",
+    "ogSemRamo": "Chega de OS no WhatsApp e na planilha"
   }
 }

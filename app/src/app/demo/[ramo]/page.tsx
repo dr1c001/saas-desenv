@@ -26,9 +26,16 @@ export async function generateMetadata({
   if (!ehSegmento(ramo)) return {}
   const t = await getTranslations("demo")
   const nome = t(`ramos.${ramo}` as "ramos.desentupidora")
+  const titulo = `ServiçoOS para ${nome}`
+  const descricao = t("meta", { ramo: nome })
+  // `openGraph` explícito: o layout raiz tem o dele, e mudar só o `title` não
+  // o sobrescreve — o cartão do WhatsApp continuaria com o texto genérico do
+  // site em vez do nome do ramo, que é a razão de a página por ramo existir.
   return {
-    title: `ServiçoOS para ${nome} — Demonstração`,
-    description: t("meta", { ramo: nome }),
+    title: titulo,
+    description: descricao,
+    openGraph: { title: titulo, description: descricao, url: `/demo/${ramo}`, type: "website" },
+    twitter: { card: "summary_large_image", title: titulo, description: descricao },
   }
 }
 

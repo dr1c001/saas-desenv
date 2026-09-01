@@ -3010,6 +3010,8 @@
       "assistencia-tecnica": "Appliance repair",
       "dedetizacao": "Pest control"
     },
-    "meta": "See ServiçoOS in action with the jobs, checklist and figures of a {ramo} company. No sign-up, no card."
+    "meta": "See ServiçoOS in action with the jobs, checklist and figures of a {ramo} company. No sign-up, no card.",
+    "ogChamada": "Quotes, work orders, field crew and finances in one system. See it working, no sign-up.",
+    "ogSemRamo": "No more work orders in WhatsApp and spreadsheets"
   }
 }

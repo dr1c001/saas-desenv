@@ -2702,6 +2702,61 @@ dos cinco arquivos das duas rotas.
 
 ---
 
+### 7.2.48 O cartao do link: o que o WhatsApp mostra — 01/09/2026
+
+A venda deste produto e por conversa: manda-se o link para o dono de uma
+empresa e ele decide em meio segundo se toca. O que ele ve nesse meio segundo
+NAO e a pagina — e o cartao de preview que o WhatsApp monta a partir das meta
+tags. Conferindo o HTML servido em producao, o cartao estava assim:
+
+- **sem `og:image`** — o site inteiro nao tinha nenhuma. Cartao sem figura
+  encolhe e some no meio da conversa;
+- **com o texto GENERICO do site** em todas as paginas da demo:
+  "CRM, OS, Financeiro e Dashboard para empresas de servico". Jargao que nao diz
+  nada para quem controla servico no caderno — e, pior, `/demo/refrigeracao`
+  anunciava isso em vez de "Refrigeracao", que e a razao de a pagina existir;
+- **`twitter:card: summary`**, que renderiza a figura como miniatura ao lado do
+  texto em vez de banner.
+
+**A causa do texto generico:** o layout raiz define um `openGraph` proprio, e um
+filho que declara apenas `title`/`description` NAO o sobrescreve. Era preciso
+declarar `openGraph` explicitamente em cada pagina. Facil de errar e invisivel
+no navegador — so aparece no HTML servido, ou colando o link num aplicativo de
+conversa.
+
+**As imagens sao GERADAS por rota** (`opengraph-image.tsx` + `ImageResponse`),
+uma por ramo: quem recebe `/demo/eletrica` ve um cartao que diz "Eletrica" em
+letra grande. Desenho pensado para MINIATURA dentro de uma bolha de conversa —
+tres informacoes, contraste alto, e a linha do RAMO como maior elemento, porque
+em tamanho pequeno ela e praticamente a unica coisa legivel.
+
+Sem fonte propria de proposito: a padrao do `next/og` ja cobre o portugues com
+acento, e carregar arquivo de fonte e a mesma classe de problema que quebrou o
+`sharp` na Vercel (gotcha 19). O `ImageResponse` desenha com satori, que aceita
+so um subconjunto de CSS — flexbox com `display: flex` explicito, nada de grid.
+
+**Um defeito que so apareceu OLHANDO a imagem:** o endereco `servicoos.com.br`
+ficava na mesma fileira das pastilhas de modulo, com `space-between`; elas o
+empurravam para fora e saia "servicoos.com.b", com o "r" cortado. Nada no codigo
+acusaria — nao ha erro de tipo, de lint nem de build numa imagem mal
+diagramada. Corrigido movendo o endereco para o topo, ao lado da marca, onde a
+fileira tem so dois elementos.
+
+**Outro, tambem so visivel na imagem:** o cartao do endereco curto repetia
+"Veja o sistema funcionando" no titulo e "Veja funcionando, sem cadastro" na
+chamada. A manchete saiu do componente para as traducoes e passou a usar a
+posicao que a landing ja provou — "Chega de OS no WhatsApp e na planilha".
+
+Os testes cobrem o que da para cobrir sem renderizar: as chaves do cartao
+existem nos dois idiomas (sem elas a GERACAO DA IMAGEM lanca, e a falha aparece
+como link sem figura — onde ninguem vai investigar), e as duas paginas declaram
+`openGraph` e `summary_large_image`. A trava estrutural foi ampliada: as rotas
+de imagem rodam no servidor e entraram na travessia de imports.
+
+1112 -> 1114 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`
