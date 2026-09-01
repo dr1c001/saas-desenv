@@ -1279,7 +1279,8 @@
       "subtitle": "The complete system for service businesses — quotes, service orders, your field team on the map, finances and e-invoices. All in one place, on your phone or computer.",
       "ctaPrimary": "Create account and subscribe",
       "ctaSecondary": "I already have an account",
-      "socialProof": "<strong>No lock-in, no setup fee</strong> — your data is yours and you can export it anytime"
+      "socialProof": "<strong>No lock-in, no setup fee</strong> — your data is yours and you can export it anytime",
+      "ctaDemo": "See it in action"
     },
     "dashboardPreview": {
       "stats": [
@@ -2944,5 +2945,63 @@
     },
     "bloqueado": "Payment reminders are part of the Pro plan. The system reminds your client before the due date and follows up after it, on its own — nobody has to watch the overdue list.",
     "verPlanos": "See plans"
+  },
+  "demo": {
+    "selo": "Demo",
+    "titulo": "See ServiçoOS in action",
+    "subtitulo": "A sample company, with jobs, crew and finances. Tap the tabs and look around — no sign-up and no card needed.",
+    "abas": {
+      "painel": "Overview",
+      "os": "Jobs",
+      "detalhe": "One job",
+      "financeiro": "Finances"
+    },
+    "aviso": "The company, clients and amounts are fictitious. No real client data appears here.",
+    "cta": "Create my account",
+    "ctaPlanos": "See the plans",
+    "painel": {
+      "faturado": "Billed this month",
+      "aReceber": "Receivable",
+      "vencido": "Overdue",
+      "ticket": "Average ticket",
+      "grafico": "Revenue over the last 5 months",
+      "abertas": "Open jobs",
+      "concluidas": "Completed this month"
+    },
+    "os": {
+      "titulo": "Service orders"
+    },
+    "detalhe": {
+      "cliente": "Client:",
+      "tecnico": "Assigned to:",
+      "agendada": "Scheduled for:",
+      "checklist": "Execution checklist",
+      "item": "Item",
+      "qtd": "Qty",
+      "valor": "Amount",
+      "total": "Job total",
+      "rodape": "The technician ticks the checklist from their phone, on site. On completion the client signs on screen and the PDF is ready to hand over."
+    },
+    "financeiro": {
+      "recebido": "Received",
+      "pendente": "Receivable",
+      "vencido": "Overdue",
+      "titulo": "Accounts receivable",
+      "vence": "Due",
+      "pago": "Paid",
+      "atrasado": "Overdue",
+      "aVencer": "Upcoming",
+      "rodape": "A billed job becomes revenue on its own — no side spreadsheet."
+    },
+    "agenda": {
+      "titulo": "The crew's week",
+      "dias": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri"
+      ]
+    }
   }
 }

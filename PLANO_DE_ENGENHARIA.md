@@ -2577,6 +2577,71 @@ gerasse deixaria o botao pequeno em silencio, sem erro de build.
 
 ---
 
+### 7.2.46 Demonstracao publica em /demo — 01/09/2026
+
+**O que o funil mostrava.** Quatro cadastros em TRES MESES (2 em junho, 1 em
+julho, 1 em agosto), e dois deles com o mesmo nome variando so a maiuscula —
+na pratica, dois prospectos reais. Tres assinaturas criadas na historia toda,
+duas canceladas. O cron roda todo dia sem erro e o caminho de pagamento
+funcionou em 06/08, entao **nao havia venda travando por defeito**: o problema
+era que quase ninguem chegava, e quem chegava nao conseguia ver nada.
+
+Ate aqui a unica forma de conhecer o produto era criar conta E assinar. A FAQ
+dizia com todas as letras "nao ha periodo de teste", e o botao principal era
+"Criar conta e assinar". Para uma marca que o dono da desentupidora nunca ouviu
+falar, pedir R$ 97 antes de mostrar uma tela e o pedido mais dificil que existe.
+
+**A escolha: demo em vez de trial.** Voltar o teste gratis mexeria no fluxo de
+assinatura e no bloqueio de acesso, que e a parte mais delicada do sistema, e
+traria de volta o suporte de graca que a decisao original quis evitar. A demo
+nao mexe em cobranca nenhuma, e serve a venda que este produto realmente tem —
+por conversa, mandando um link no WhatsApp para o dono de uma empresa pequena.
+
+**A regra que define o desenho: a demo nao toca o banco.** E uma rota PUBLICA,
+sem login, dentro do mesmo aplicativo que guarda a carteira de clientes de
+terceiros. Qualquer caminho dali ate o Prisma seria uma porta anonima para dado
+real, e nao existe forma segura de "so ler um pouquinho". Os dados sao literais
+em `lib/demo.ts`; a rota vive fora do grupo `(dashboard)` e nao chama sessao.
+
+A garantia e ESTRUTURAL, e nao um filtro: `__tests__/demo.test.ts` percorre a
+arvore de imports a partir dos tres arquivos da rota e falha se qualquer um
+alcancar `@/lib/prisma`, o cliente gerado, uma Server Action ou a sessao.
+Confirmado por mutacao — injetando `import { prisma }` em `lib/demo.ts`, o
+teste acusa o arquivo E o `lib/prisma.ts` alcancado por ele, provando que a
+travessia e transitiva.
+
+**Empresa inventada, e nao print de conta real.** Print vaza nome, telefone e
+endereco de cliente final de uma empresa que nao autorizou virar material de
+venda. Um teste procura e-mail, CPF, CNPJ e telefone nos dados da demo.
+
+**Os numeros fecham, e ha teste para isso.** Dono de empresa confere soma: "a
+receber" e a soma das nao pagas, "vencido" e a soma das atrasadas, o total da OS
+e a soma dos itens, e a OS do detalhe e a mesma da lista. O teste ja pegou uma
+inconsistencia na primeira rodada — o painel dizia 4 OS em aberto e a lista
+tinha 3.
+
+**Dois defeitos achados no navegador, que nenhum teste pegaria:**
+
+1. *O grafico saia VAZIO.* `height: X%` so resolve contra um pai de altura
+   definida, e a coluna que embrulhava barra+rotulo tinha altura automatica. As
+   barras nasciam com zero. Corrigido separando barras e rotulos em duas
+   fileiras. Compilava, passava no lint, e estava errado na tela.
+2. *A quarta aba ficava cortada em 375px.* Numa barra rolante a tela do
+   Financeiro simplesmente nao seria vista — ninguem rola uma barra que nao
+   parece rolavel. As quatro passaram a dividir a largura, com o icone sumindo
+   no celular para caber o rotulo, que e o que carrega o significado.
+
+**Na landing, a demo virou o botao SECUNDARIO do heroi**, no lugar de "Ja tenho
+conta" — que desceu para um link discreto. Quem chega pela primeira vez nao quer
+entrar, quer ver; e quem ja e cliente acha o login de qualquer jeito.
+
+`/demo` precisou entrar em `isPublicRoute` no `proxy.ts`, senao o middleware
+manda para /login e o link nao serve para nada. Ha teste para isso tambem.
+
+1052 -> 1062 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

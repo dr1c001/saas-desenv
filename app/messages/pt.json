@@ -1279,7 +1279,8 @@
       "subtitle": "Sistema completo para empresas de serviço — orçamentos, ordens de serviço, equipe em campo no mapa, financeiro e NFS-e. Tudo em um só lugar, no celular ou no computador.",
       "ctaPrimary": "Criar conta e assinar",
       "ctaSecondary": "Já tenho conta",
-      "socialProof": "<strong>Sem fidelidade e sem taxa de instalação</strong> — seus dados são seus e você exporta quando quiser"
+      "socialProof": "<strong>Sem fidelidade e sem taxa de instalação</strong> — seus dados são seus e você exporta quando quiser",
+      "ctaDemo": "Ver o sistema por dentro"
     },
     "dashboardPreview": {
       "stats": [
@@ -2944,5 +2945,63 @@
     },
     "bloqueado": "A régua de cobrança faz parte do plano Pro. Com ela, o sistema lembra o seu cliente antes de vencer e cobra depois de vencido, sozinho — sem ninguém precisar olhar a lista de contas atrasadas.",
     "verPlanos": "Ver planos"
+  },
+  "demo": {
+    "selo": "Demonstração",
+    "titulo": "Veja o ServiçoOS funcionando",
+    "subtitulo": "Uma empresa de exemplo, com serviços, equipe e financeiro. Toque nas abas e navegue à vontade — não precisa de cadastro nem de cartão.",
+    "abas": {
+      "painel": "Painel",
+      "os": "Serviços",
+      "detalhe": "Um serviço",
+      "financeiro": "Financeiro"
+    },
+    "aviso": "Empresa, clientes e valores são fictícios. Nenhum dado real de cliente aparece aqui.",
+    "cta": "Criar a minha conta",
+    "ctaPlanos": "Ver os planos",
+    "painel": {
+      "faturado": "Faturado no mês",
+      "aReceber": "A receber",
+      "vencido": "Vencido",
+      "ticket": "Ticket médio",
+      "grafico": "Faturamento dos últimos 5 meses",
+      "abertas": "Serviços em aberto",
+      "concluidas": "Concluídos no mês"
+    },
+    "os": {
+      "titulo": "Ordens de serviço"
+    },
+    "detalhe": {
+      "cliente": "Cliente:",
+      "tecnico": "Responsável:",
+      "agendada": "Agendado para:",
+      "checklist": "Checklist de execução",
+      "item": "Item",
+      "qtd": "Qtd",
+      "valor": "Valor",
+      "total": "Total do serviço",
+      "rodape": "O técnico marca o checklist pelo celular, em campo. Ao concluir, o cliente assina na tela e o PDF sai pronto para entregar."
+    },
+    "financeiro": {
+      "recebido": "Recebido",
+      "pendente": "A receber",
+      "vencido": "Vencido",
+      "titulo": "Contas a receber",
+      "vence": "Vence em",
+      "pago": "Pago",
+      "atrasado": "Atrasado",
+      "aVencer": "A vencer",
+      "rodape": "O serviço faturado vira receita sozinho — sem planilha paralela."
+    },
+    "agenda": {
+      "titulo": "A semana da equipe",
+      "dias": [
+        "Seg",
+        "Ter",
+        "Qua",
+        "Qui",
+        "Sex"
+      ]
+    }
   }
 }

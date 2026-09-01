@@ -114,13 +114,23 @@ export default async function LandingPage() {
             {t("hero.ctaPrimary")}
             <ArrowRight className="size-5" />
           </Link>
+          {/* A DEMO no segundo lugar do herói, e não o login.
+              Quem chega pela primeira vez não quer entrar — quer ver. E o
+              sistema não tem teste grátis: sem este botão, a única forma de
+              conhecer o produto é assinar antes, que é o pedido mais difícil
+              que existe para uma marca desconhecida. */}
           <Link
-            href="/login"
+            href="/demo"
             className="inline-flex items-center gap-2 rounded-xl border px-8 py-4 text-lg font-semibold hover:bg-muted"
           >
-            {t("hero.ctaSecondary")}
+            {t("hero.ctaDemo")}
           </Link>
         </div>
+        <p className="mt-4 text-sm">
+          <Link href="/login" className="text-muted-foreground underline-offset-4 hover:underline">
+            {t("hero.ctaSecondary")}
+          </Link>
+        </p>
         <p className="mt-4 text-sm text-muted-foreground">
           {t.rich("hero.socialProof", { strong: (chunks) => <strong>{chunks}</strong> })}
         </p>

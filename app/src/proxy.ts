@@ -39,6 +39,11 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/p/") ||
     request.nextUrl.pathname.startsWith("/q/") ||
     request.nextUrl.pathname.startsWith("/api/") ||
+    // A demonstracao publica. Tem de responder a quem NAO esta logado — o
+    // link e feito pra ser mandado no WhatsApp para quem ainda nao e cliente,
+    // e mandar essa pessoa pro /login e perder exatamente a visita que o link
+    // existe para provocar. Nao toca o banco (ver lib/demo.ts).
+    request.nextUrl.pathname === "/demo" ||
     request.nextUrl.pathname === "/terms" ||
     request.nextUrl.pathname === "/privacy" ||
     // Status precisa responder pra quem NAO esta logado — e justamente quando
