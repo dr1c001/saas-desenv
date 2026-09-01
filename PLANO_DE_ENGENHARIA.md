@@ -2642,6 +2642,66 @@ manda para /login e o link nao serve para nada. Ha teste para isso tambem.
 
 ---
 
+### 7.2.47 Uma demo por RAMO, e o dinheiro deixa de ser texto — 01/09/2026
+
+A demo generica faz o dono da empresa perguntar "isso serve para mim?". A demo
+com os servicos, o checklist e os valores do ramo DELE nao faz pergunta nenhuma
+— ele reconhece o proprio dia de trabalho na tela. Como a venda aqui e por
+conversa (mandar o link no WhatsApp para uma empresa especifica), acertar o ramo
+e a diferenca entre o link ser aberto e ignorado.
+
+Cinco ramos, cada um com endereco proprio: `/demo` (desentupidora, o endereco
+curto para quando nao se sabe o ramo de quem vai abrir), `/demo/refrigeracao`,
+`/demo/eletrica`, `/demo/assistencia-tecnica`, `/demo/dedetizacao`. Cada um tem
+empresa, clientes, tecnicos, servicos, checklist e valores do proprio setor —
+descupinizacao e porta-iscas na dedetizacao, DPS e ART na eletrica, recolher a
+carga de gas na refrigeracao.
+
+**Slug desconhecido e 404, e nao o ramo padrao em silencio.** Um link errado que
+"funciona" esconde o erro de digitacao ate alguem reparar que metade dos
+contatos recebeu a demo do ramo errado.
+
+**O proxy precisou de `startsWith`, e nao igualdade.** Com `=== "/demo"` so o
+endereco curto ficava publico e TODO link por ramo caia no login — quebrando
+exatamente os links feitos para mandar no WhatsApp. Ha teste para isso.
+
+---
+
+**Duas correcoes de fundo, aproveitando a reestruturacao:**
+
+*1. Dinheiro virou NUMERO.* A primeira versao guardava `"18.740,00"` como
+string. Duas consequencias: a pagina em ingles mostrava a pontuacao brasileira,
+e os totais do painel eram escritos a mao. Agora sao numeros formatados com
+`Intl` no idioma de quem le — moeda continua sendo real, porque a empresa e
+brasileira, mas a pontuacao acompanha a pagina.
+
+*2. Os totais do painel passaram a ser CALCULADOS* (`painelDe`). "A receber",
+"vencido" e "OS em aberto" saem das listas, e nao de campos paralelos. Isso
+elimina de vez a classe de defeito que o teste tinha pego na versao anterior: o
+painel dizendo 4 OS em aberto com a lista tendo 3. O mesmo vale para o total da
+OS (`totalDaOs`, soma dos itens) e para o cabecalho do detalhe, que le da LISTA
+em vez de repetir os campos — lista e detalhe nao tem mais como discordar sobre
+o mesmo servico.
+
+**O teste virou `describe.each` sobre os cinco ramos**, e achou uma
+inconsistencia de imediato: na eletrica a lista dizia R$ 3.400 e os itens somavam
+R$ 3.375. Dono de empresa confere soma, e uma demo cuja conta nao fecha e a
+primeira coisa que ele nota e a ultima em que confia.
+
+Alem dos totais, cada ramo e checado por: o detalhe abre uma OS que existe na
+lista; nenhuma conta e "vencida e paga" ao mesmo tempo; o grafico termina no mes
+que o painel mostra; o checklist tem passos feitos E por fazer (todo marcado, ou
+todo vazio, nao mostra o que o recurso faz); e todo ramo tem nome nos dois
+idiomas — sem a chave, next-intl lanca na renderizacao e a pagina do ramo que
+estava sendo divulgada sai do ar.
+
+A trava estrutural continua e foi ampliada: a travessia de imports agora parte
+dos cinco arquivos das duas rotas.
+
+1062 -> 1112 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

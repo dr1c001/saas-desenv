@@ -3002,6 +3002,14 @@
         "Qui",
         "Sex"
       ]
-    }
+    },
+    "ramos": {
+      "desentupidora": "Desentupidora",
+      "refrigeracao": "Refrigeração",
+      "eletrica": "Elétrica",
+      "assistencia-tecnica": "Assistência técnica",
+      "dedetizacao": "Dedetização"
+    },
+    "meta": "Veja o ServiçoOS funcionando com serviços, checklist e valores de uma empresa de {ramo}. Sem cadastro e sem cartão."
   }
 }

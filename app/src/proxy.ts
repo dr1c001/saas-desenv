@@ -43,7 +43,11 @@ export async function proxy(request: NextRequest) {
     // link e feito pra ser mandado no WhatsApp para quem ainda nao e cliente,
     // e mandar essa pessoa pro /login e perder exatamente a visita que o link
     // existe para provocar. Nao toca o banco (ver lib/demo.ts).
-    request.nextUrl.pathname === "/demo" ||
+    // `startsWith` e nao igualdade: alem de /demo existe uma pagina por RAMO
+    // (/demo/refrigeracao, /demo/eletrica...). Com igualdade, so o endereco
+    // curto era publico e todo link por ramo caia no login — quebrando
+    // exatamente os links feitos pra mandar no WhatsApp.
+    request.nextUrl.pathname.startsWith("/demo") ||
     request.nextUrl.pathname === "/terms" ||
     request.nextUrl.pathname === "/privacy" ||
     // Status precisa responder pra quem NAO esta logado — e justamente quando

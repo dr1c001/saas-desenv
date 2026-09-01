@@ -3002,6 +3002,14 @@
         "Thu",
         "Fri"
       ]
-    }
+    },
+    "ramos": {
+      "desentupidora": "Drain cleaning",
+      "refrigeracao": "HVAC & refrigeration",
+      "eletrica": "Electrical",
+      "assistencia-tecnica": "Appliance repair",
+      "dedetizacao": "Pest control"
+    },
+    "meta": "See ServiçoOS in action with the jobs, checklist and figures of a {ramo} company. No sign-up, no card."
   }
 }
