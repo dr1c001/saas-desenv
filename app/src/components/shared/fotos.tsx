@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { Camera, Loader2, Trash2, X } from "lucide-react"
+import { Camera, ImageIcon, Loader2, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { type EstadoFoto, type FotoExibicao } from "@/actions/attachments"
@@ -77,6 +77,7 @@ export function Fotos({
   const [erro, setErro] = useState<string | null>(null)
   const [ampliada, setAmpliada] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const arquivoRef = useRef<HTMLInputElement>(null)
 
   const cheio = fotos.length >= MAX_FOTOS
 
@@ -109,21 +110,45 @@ export function Fotos({
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {t("title")} {fotos.length > 0 && `(${fotos.length}/${MAX_FOTOS})`}
         </CardTitle>
+        {/* DOIS botões, e não um.
+            Havia só o da câmera, com `capture="environment"` — o gesto certo
+            para o técnico que está no local e fotografa na hora. Mas `capture`
+            no celular abre a câmera E SÓ: não dá para escolher uma foto já
+            tirada, e é justamente o que o "antes" costuma ser, batido antes de
+            o serviço começar. No computador o atributo é ignorado, então o
+            problema só aparecia no aparelho de quem trabalha em campo.
+            (Relatado em 01/09/2026.)
+
+            Manter os dois preserva o toque único de quem está no local e
+            libera quem já tem a foto na galeria ou no computador. */}
         {!bloqueada && !cheio && (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={enviando}
-            onClick={() => inputRef.current?.click()}
-          >
-            {enviando ? (
-              <Loader2 className="size-3.5 mr-1.5 animate-spin" />
-            ) : (
-              <Camera className="size-3.5 mr-1.5" />
-            )}
-            {enviando ? t("sending") : t("add")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={enviando}
+              onClick={() => inputRef.current?.click()}
+            >
+              {enviando ? (
+                <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Camera className="size-3.5 mr-1.5" />
+              )}
+              {enviando ? t("sending") : t("add")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={enviando}
+              onClick={() => arquivoRef.current?.click()}
+              title={t("escolherArquivo")}
+            >
+              <ImageIcon className="size-3.5 mr-1.5" />
+              {t("escolherArquivo")}
+            </Button>
+          </div>
         )}
       </CardHeader>
 
@@ -135,6 +160,21 @@ export function Fotos({
           // capture="environment" abre a câmera traseira direto no celular, em
           // vez da galeria — que é o gesto certo pra quem está no local.
           capture="environment"
+          multiple
+          onChange={aoEscolher}
+          className="hidden"
+        />
+
+        {/* A mesma entrada, SEM `capture`: o celular abre o seletor com galeria
+            e arquivos, e o computador abre o explorador. Duas entradas em vez
+            de alternar o atributo porque `capture` é lido na hora de abrir, e
+            trocá-lo por estado dependeria de o React ter aplicado a mudança
+            antes do clique — dois `<input>` escondidos custam nada e não têm
+            corrida. */}
+        <input
+          ref={arquivoRef}
+          type="file"
+          accept="image/*"
           multiple
           onChange={aoEscolher}
           className="hidden"

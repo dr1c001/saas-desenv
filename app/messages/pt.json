@@ -1212,7 +1212,7 @@
     "sending": "Enviando...",
     "empty": "Nenhuma foto ainda.",
     "emptyLocked": "Nenhuma foto registrada nesta OS.",
-    "hint": "No celular, o botão abre a câmera direto. As fotos são reduzidas no aparelho antes de subir, pra funcionar mesmo com sinal fraco.",
+    "hint": "No celular, “Adicionar foto” abre a câmera direto e “Escolher arquivo” abre a galeria. As fotos são reduzidas no aparelho antes de subir, pra funcionar mesmo com sinal fraco.",
     "remove": "Remover foto",
     "confirmRemove": "Remover esta foto? Ela é a prova do serviço prestado e não dá pra recuperar depois.",
     "unavailable": "indisponível",
@@ -1228,7 +1228,8 @@
       "naoEncontrada": "Foto não encontrada.",
       "orcamentoNaoEncontrado": "Orçamento não encontrado.",
       "orcamentoRespondido": "O cliente já respondeu este orçamento. As fotos fazem parte do que ele viu para decidir, então não mudam mais."
-    }
+    },
+    "escolherArquivo": "Escolher arquivo"
   },
   "historicoOs": {
     "titulo": "Histórico de alterações",

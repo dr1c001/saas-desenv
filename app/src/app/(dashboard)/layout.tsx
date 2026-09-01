@@ -45,7 +45,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <SidebarProvider>
       <AppSidebar allowedTabs={allowedTabs} role={role} userId={userId} isSuperAdmin={souDono} temApi={temApi} temFiliais={temFiliais} />
-      <main className="flex-1 flex flex-col min-h-screen">
+      {/* `min-w-0` NÃO é enfeite: sem ele o menu some nas telas com tabela larga.
+          Item de flex nasce com `min-width: auto`, e isso o impede de encolher
+          abaixo da largura do próprio conteúdo. A tabela de 9 colunas do
+          Histórico esticava este `main` para 1223px numa tela de 375px — medido
+          no navegador —, e o `overflow-x-auto` da tabela nunca entrava em ação,
+          porque o `w-full` dele já resolvia contra a largura esticada.
+          Resultado: a página inteira ficava mais larga que o celular, e ao rolar
+          para o lado para ler a tabela o cabeçalho ia junto, levando o botão do
+          menu para fora da tela. Parecia "o menu travou em algumas abas".
+          (Relatado no Histórico e nos Recibos, 01/09/2026.) */}
+      <main className="flex-1 min-w-0 flex flex-col min-h-screen">
         <header className="h-14 border-b flex items-center px-4 gap-2">
           <SidebarTrigger />
         </header>

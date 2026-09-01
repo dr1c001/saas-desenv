@@ -2757,6 +2757,76 @@ de imagem rodam no servidor e entraram na travessia de imports.
 
 ---
 
+### 7.2.49 O menu que sumia, e a foto que so podia ser tirada na hora — 01/09/2026
+
+Dois relatos do dono. Nenhum dos dois aparece em erro de tipo, de lint ou de
+build, e nenhum dos dois aparece no computador — que e onde o desenvolvimento
+acontece.
+
+---
+
+**1. "Com a aba historico e/ou recibo aberta, nao da para clicar no menu de
+novo."**
+
+A causa nao era o menu. `SidebarProvider` e um flex EM LINHA, e o `<main>` do
+dashboard e um item flex — que nasce com `min-width: auto` e por isso NAO
+encolhe abaixo da largura do proprio conteudo.
+
+A tabela de 9 colunas do Historico esticava esse `main` para **1223px numa tela
+de 375px** (medido no navegador, injetando a estrutura real num shadow root), e
+o `overflow-x-auto` que a tabela ja tinha nunca entrava em acao: o `w-full` dele
+resolvia contra a largura ja esticada.
+
+Como o cabecalho vive DENTRO desse `main`, rolar para o lado para ler a tabela
+levava o botao do menu para fora da tela. Daí o sintoma parecer "o menu travou",
+e parecer acontecer so em algumas abas — as que tem tabela larga.
+
+A correcao e `min-w-0` no `main`: uma linha, no layout, que vale para todas as
+paginas. Consertar tabela por tabela seria remendo em cada tela nova.
+
+Medido antes e depois, na mesma pagina:
+
+| | largura do `main` (tela de 375px) | pagina estica | tabela rola sozinha |
+|---|---|---|---|
+| sem `min-w-0` | 1223px | sim | nao |
+| com `min-w-0` | 375px | nao | sim |
+
+---
+
+**2. "Nas OS, permitir adicionar fotos vindas dos arquivos do celular ou
+computador, para o tecnico adicionar a foto do antes e depois."**
+
+Havia uma entrada so, com `capture="environment"`. Aquilo foi decisao
+deliberada e continua certa para o caso principal: quem esta no local fotografa
+na hora, e `capture` abre a camera traseira num toque, sem passar pela galeria.
+
+O que faltou perceber e que `capture` no celular abre a camera **E SO**. A foto
+do "antes" costuma ja existir — batida antes de o servico comecar, as vezes
+mandada pelo cliente no WhatsApp — e nao havia como anexa-la. No computador o
+atributo e ignorado, entao o problema existia exatamente no aparelho de quem
+trabalha em campo.
+
+A correcao mantem os dois: "Adicionar foto" (camera, um toque) e "Escolher
+arquivo" (galeria no celular, explorador no computador).
+
+**Dois `<input>` escondidos, e nao um com `capture` alternado por estado:** o
+atributo e lido no momento de abrir o seletor, entao alternar dependeria de o
+React ter aplicado a mudanca antes do clique. Dois elementos escondidos custam
+nada e nao tem corrida. As duas entradas passam pelo MESMO tratador — a
+compressao no aparelho e o teto por registro nao podem valer so para um caminho.
+
+---
+
+Os dois ganharam trava em `__tests__/regressoes-de-tela.test.ts`: o `main` tem
+de declarar `min-w-0` (confirmado por mutacao — removendo, o teste falha), a
+tabela tem de manter o proprio contentor de rolagem, e o componente de fotos tem
+de ter exatamente duas entradas de arquivo, uma com `capture` e uma sem, as duas
+com o mesmo `onChange`.
+
+1114 -> 1120 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

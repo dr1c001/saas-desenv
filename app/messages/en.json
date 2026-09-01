@@ -1212,7 +1212,7 @@
     "sending": "Uploading...",
     "empty": "No photos yet.",
     "emptyLocked": "No photos on this order.",
-    "hint": "On a phone, the button opens the camera directly. Photos are shrunk on the device before uploading, so it works on a weak signal.",
+    "hint": "On a phone, “Add photo” opens the camera and “Choose file” opens the gallery. Photos are shrunk on the device before uploading, so it works on a weak signal.",
     "remove": "Remove photo",
     "confirmRemove": "Remove this photo? It is the proof of work done and cannot be recovered.",
     "unavailable": "unavailable",
@@ -1228,7 +1228,8 @@
       "naoEncontrada": "Photo not found.",
       "orcamentoNaoEncontrado": "Quote not found.",
       "orcamentoRespondido": "The client already answered this quote. The photos are part of what they saw when deciding, so they can't change now."
-    }
+    },
+    "escolherArquivo": "Choose file"
   },
   "historicoOs": {
     "titulo": "Change history",
