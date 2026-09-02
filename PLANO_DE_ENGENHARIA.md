@@ -2955,6 +2955,61 @@ a Action conferindo de novo.
 
 ---
 
+### 7.2.52 A visita que vira orcamento — 01/09/2026
+
+O cliente liga, a empresa abre a OS, o tecnico vai ate o endereco — e no local
+descobre que o servico e maior do que o telefonema sugeria. O cliente entao so
+quer saber quanto custa.
+
+Ate aqui `Quote` e `ServiceOrder` eram DUAS ILHAS: nenhuma coluna ligava uma a
+outra, e o orcamento aprovado tambem nao virava OS. Aquela visita virava uma OS
+orfa — fechar com valor cheio cobraria um servico que nao houve; cancelar
+apagaria o deslocamento que aconteceu de verdade.
+
+**O vinculo:** `Quote.orderId`, com `SetNull`. Apagar a OS nao pode levar junto
+o orcamento que o cliente ja recebeu e talvez ja tenha aprovado.
+
+**A taxa de visita e DE CADA EMPRESA** (`Tenant.visitFee`, NULL = nao cobra, e e
+o padrao). Umas cobram o deslocamento mesmo com o orcamento recusado —
+combustivel e duas horas do tecnico foram gastos. Outras absorvem, porque a
+visita e o custo de vender. O sistema nao escolhe por elas; foi decisao explicita
+do dono.
+
+**A regra do fechamento**, em lib/os-orcamento.ts:
+
+  - sem orcamento, ou orcamento APROVADO -> a OS fecha pelo valor dos itens;
+  - RECUSADO -> fecha com a taxa de visita, e NUNCA com o valor dos itens, que
+    sao exatamente o servico que o cliente decidiu nao fazer;
+  - AGUARDANDO -> nao barra, mas avisa. Faturar sem resposta cobra um servico
+    nao aprovado; a empresa pode ter combinado por telefone, entao o aviso e da
+    tela e nao uma trava.
+
+Fechar em zero ja nao gera cobranca por construcao: `INVOICED` so cria receita
+com total maior que zero.
+
+**As FOTOS vao junto para o orcamento.** O tecnico acabou de fotografar o cano
+estourado, e e essa foto que responde "por que custa isso" para quem vai
+decidir. Copia-se o VINCULO, nao o arquivo — ele continua um so no
+armazenamento. Reaproveita direto o `Attachment` com dois donos (7.2.45).
+
+**Uma visita gera UM orcamento.** O segundo seria o mesmo pedido contado duas
+vezes no funil, e a tela de fechamento nao saberia qual dos dois olhar.
+
+**Numeracao extraida para lib/orcamento-db.ts.** Dois caminhos passaram a
+precisar dela (a criacao normal e a que nasce da visita), e um arquivo
+`"use server"` so pode exportar Server Action — a funcao nao podia ser
+compartilhada de la. Duas copias da mesma contagem e como duas telas passam a
+numerar diferente.
+
+**Erro meu, corrigido no caminho:** escrevi a consulta de memoria — `os.address`,
+`os.fotos`, `@/lib/quotes-db`. Nenhum dos tres existe: o endereco fica no
+`Client`, as fotos sao `attachments`, e `retryOnUniqueConflict` mora em
+`lib/retry`. O compilador acusou os nove pontos de uma vez.
+
+1172 -> 1189 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

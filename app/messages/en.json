@@ -3059,5 +3059,35 @@
       "localInativo": "Invalid or deactivated location.",
       "pecaNaoEncontrada": "Part not found."
     }
+  },
+  "orcamentoDaVisita": {
+    "titulo": "Quote from this visit",
+    "explicacao": "Technician went out and the client only wants a price? Create the quote from this work order — client, address and the visit photos come along.",
+    "gerar": "Create quote from this order",
+    "situacao": {
+      "aguardando": "Awaiting reply",
+      "aprovado": "Approved",
+      "recusado": "Declined",
+      "semOrcamento": "No quote"
+    },
+    "aguardandoAviso": "The client hasn't replied yet. Invoicing now bills work they haven't approved.",
+    "aprovadoAviso": "Client approved. The order closes normally, at the value of its items.",
+    "recusadoSemTaxa": "Client declined. This order closes with NO value — your company charges no visit fee. To charge one, set it in Settings.",
+    "recusadoComTaxa": "Client declined. This order closes with the R$ {valor} visit fee, not the value of its items.",
+    "errors": {
+      "semPermissao": "Only the owner or an admin can create a quote.",
+      "naoEncontrada": "Work order not found.",
+      "statusNaoPermite": "A cancelled or already invoiced order cannot create a quote.",
+      "jaTemOrcamento": "This visit already has a quote."
+    }
+  },
+  "taxaDeVisita": {
+    "titulo": "Visit fee",
+    "ajuda": "What your company charges for the trip when the technician goes out, quotes the job and the client DECLINES. Leave at zero to charge nothing — the order closes with no value.",
+    "salvar": "Save",
+    "salvo": "Saved",
+    "errors": {
+      "semPermissao": "You do not have permission to change this."
+    }
   }
 }

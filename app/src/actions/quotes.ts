@@ -7,6 +7,9 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { retryOnUniqueConflict } from "@/lib/retry"
+// Compartilhada com actions/os-orcamento.ts: um arquivo "use server" so pode
+// exportar Server Action, entao a contagem mora num lib.
+import { proximoNumeroDeOrcamento } from "@/lib/orcamento-db"
 
 // As mensagens do zod são códigos estáveis, não frases prontas: quem monta o
 // texto é o formulário, via next-intl, no idioma do usuário. O schema é módulo
@@ -39,15 +42,6 @@ function parseBrCurrency(value: string): number {
   return parseFloat(value.replace(/\./g, "").replace(",", "."))
 }
 
-async function nextQuoteNumber(tenantId: string) {
-  const last = await prisma.quote.findFirst({
-    where: { tenantId },
-    orderBy: { number: "desc" },
-    select: { number: true },
-  })
-  return (last?.number ?? 0) + 1
-}
-
 export async function createQuote(
   _prev: QuoteFormState,
   formData: FormData
@@ -61,13 +55,10 @@ export async function createQuote(
 
   const { clientName, clientAddress, clientContact, description, materials, amount, notes, validUntil, status } = parsed.data
 
-  // nextQuoteNumber lê "o último número" sem lock — duas criações
-  // simultâneas podem calcular o mesmo número. number tem
-  // @@unique([tenantId, number]), então a segunda só falha (P2002) em vez de
-  // duplicar; retryOnUniqueConflict tenta de novo com o número atualizado.
-  // (Achado em auditoria pré-venda, 2026-08-05.)
+  // A contagem sem lock e o retry estão explicados em lib/orcamento-db.ts,
+  // junto da função. (Achado em auditoria pré-venda, 2026-08-05.)
   await retryOnUniqueConflict(async () => {
-    const number = await nextQuoteNumber(tenantId)
+    const number = await proximoNumeroDeOrcamento(tenantId)
     return prisma.quote.create({
       data: {
         number,

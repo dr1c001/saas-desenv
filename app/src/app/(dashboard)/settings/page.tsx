@@ -11,6 +11,8 @@ import { WhatsAppForm } from "@/components/settings/whatsapp-form"
 import { AvisoClienteForm } from "@/components/settings/aviso-cliente-form"
 import { getAvisoCliente } from "@/actions/aviso-cliente"
 import { ReguaCobrancaForm } from "@/components/settings/regua-cobranca-form"
+import { TaxaVisitaForm } from "@/components/settings/taxa-visita-form"
+import { getTaxaDeVisita } from "@/actions/os-orcamento"
 import { getReguaCobranca } from "@/actions/regua-cobranca"
 import { DocumentosForm } from "@/components/settings/documentos-form"
 import { getDocumentos } from "@/actions/documentos"
@@ -24,6 +26,7 @@ export default async function SettingsPage() {
   const { tenant, user, isAdmin, isOwner } = await getSettings()
   const aviso = await getAvisoCliente()
   const regua = await getReguaCobranca()
+  const taxaDeVisita = await getTaxaDeVisita()
   const documentos = await getDocumentos()
   const pix = await getPix()
   const t = await getTranslations("settingsCore")
@@ -128,6 +131,10 @@ export default async function SettingsPage() {
           o outro. Também é o par que a tela precisa deixar claro que são
           consentimentos separados — avisar que o técnico está a caminho não é
           cobrar uma conta atrasada. */}
+      {/* A taxa de visita fica perto dos documentos e da cobrança: é uma
+          decisão de quanto se cobra, não de como o sistema funciona. */}
+      {isAdmin && <TaxaVisitaForm atual={taxaDeVisita} />}
+
       {isAdmin && (
         <ReguaCobrancaForm
           atual={regua.config}

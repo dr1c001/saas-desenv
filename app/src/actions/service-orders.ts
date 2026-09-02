@@ -586,6 +586,13 @@ export async function getServiceOrder(id: string) {
       technician: true,
       items: true,
       attachments: true,
+      // O orçamento que saiu desta visita, quando houver. Uma OS gera um só
+      // (garantido na action), então `take: 1` é o suficiente.
+      quotes: {
+        select: { id: true, number: true, status: true, amount: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
       checklist: { orderBy: { position: "asc" } },
     },
   })

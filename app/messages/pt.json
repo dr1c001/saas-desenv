@@ -3059,5 +3059,35 @@
       "localInativo": "Local inválido ou desativado.",
       "pecaNaoEncontrada": "Peça não encontrada."
     }
+  },
+  "orcamentoDaVisita": {
+    "titulo": "Orçamento desta visita",
+    "explicacao": "O técnico foi até o local e o cliente só quer saber quanto custa? Gere o orçamento a partir desta OS — cliente, endereço e as fotos da visita já vão junto.",
+    "gerar": "Gerar orçamento desta OS",
+    "situacao": {
+      "aguardando": "Aguardando resposta",
+      "aprovado": "Aprovado",
+      "recusado": "Recusado",
+      "semOrcamento": "Sem orçamento"
+    },
+    "aguardandoAviso": "O cliente ainda não respondeu. Faturar agora cobra um serviço que ele não aprovou.",
+    "aprovadoAviso": "Cliente aprovou. A OS fecha normalmente pelo valor dos itens.",
+    "recusadoSemTaxa": "Cliente recusou. Esta OS fecha SEM valor — sua empresa não cobra taxa de visita. Para cobrar, configure em Configurações.",
+    "recusadoComTaxa": "Cliente recusou. Esta OS fecha com a taxa de visita de R$ {valor}, e não com o valor dos itens.",
+    "errors": {
+      "semPermissao": "Só o dono ou um administrador pode gerar orçamento.",
+      "naoEncontrada": "Ordem de serviço não encontrada.",
+      "statusNaoPermite": "OS cancelada ou já faturada não gera orçamento.",
+      "jaTemOrcamento": "Esta visita já tem um orçamento."
+    }
+  },
+  "taxaDeVisita": {
+    "titulo": "Taxa de visita",
+    "ajuda": "O que a empresa cobra pelo deslocamento quando o técnico vai até o local, faz o orçamento e o cliente RECUSA. Deixe em zero para não cobrar — a OS fecha sem valor.",
+    "salvar": "Salvar",
+    "salvo": "Salvo",
+    "errors": {
+      "semPermissao": "Você não tem permissão para alterar isso."
+    }
   }
 }

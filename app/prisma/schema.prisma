@@ -108,6 +108,14 @@ model Tenant {
   /// NULL herda IA_COMANDOS_PADRAO (lib/recursos.ts), e nao um teto de plano:
   /// a assistente e ADICIONAL, nenhum plano a inclui. Sem esse padrao,
   /// conceder o adicional daria "liberado, com zero comandos".
+  /// Taxa de visita: o que a empresa cobra pelo deslocamento quando o
+  /// orcamento sai do local e o cliente RECUSA. Regra em lib/os-orcamento.ts.
+  ///
+  /// NULL/0 = nao cobra, e e o padrao. Umas empresas cobram (combustivel e
+  /// duas horas do tecnico foram gastos), outras absorvem como custo de
+  /// vender — o sistema nao escolhe por elas.
+  visitFee                Decimal?           @db.Decimal(10, 2)
+
   maxIaOverride           Int?
   /// Quantos comandos ja foram gastos no mes corrente.
   iaComandosNoMes         Int                @default(0)
@@ -511,6 +519,8 @@ model ServiceOrder {
   // FKs: histórico do cliente, OS por técnico, e o cascade ao apagar cliente.
   @@index([clientId])
   @@index([technicianId])
+  quotes         Quote[]
+
 }
 
 model ChecklistItem {
@@ -723,6 +733,16 @@ model Quote {
   amount        Decimal     @default(0) @db.Decimal(12, 2)
   notes         String?
   status        QuoteStatus @default(DRAFT)
+  /// A VISITA que originou este orcamento.
+  ///
+  /// O caso: o cliente chama, o tecnico vai ate o endereco, e no local o
+  /// cliente so quer saber quanto custa. Sem o vinculo, aquela OS virava um
+  /// deslocamento orfao — fechar com valor cheio cobraria servico que nao
+  /// houve, cancelar apagaria a ida que aconteceu.
+  ///
+  /// SetNull, e nao Cascade: apagar a OS nao pode levar junto o orcamento que
+  /// o cliente ja recebeu e talvez ja tenha aprovado.
+  orderId       String?
   validUntil    DateTime?
   tenantId      String
   clientToken   String?     @unique @default(uuid())
@@ -750,6 +770,11 @@ model Quote {
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
   @@index([createdById])
+  order         ServiceOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  // Buscar o orcamento de uma visita.
+  @@index([orderId])
+
 }
 
 // ─── Equipamentos do Cliente ──────────────────────────────────────────────────

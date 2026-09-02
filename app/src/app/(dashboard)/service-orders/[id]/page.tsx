@@ -8,6 +8,8 @@ import { NfseButton } from "@/components/service-orders/nfse-button"
 import { Checklist } from "@/components/service-orders/checklist"
 import { SignaturePad } from "@/components/service-orders/signature-pad"
 import { OsFotos } from "@/components/service-orders/os-fotos"
+import { OrcamentoDaVisita } from "@/components/service-orders/orcamento-da-visita"
+import { getTaxaDeVisita } from "@/actions/os-orcamento"
 import { getFotosDaOs } from "@/actions/attachments"
 import { getAcoesPermitidas, getTenant } from "@/lib/auth"
 import { podeFazer } from "@/lib/acoes"
@@ -28,6 +30,7 @@ import { temFuncao } from "@/lib/plan"
 export default async function ServiceOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const os = await getServiceOrder(id)
+  const taxaDeVisita = await getTaxaDeVisita()
   if (!os) notFound()
 
   const [fotos, { role, tenantId, locale }] = await Promise.all([getFotosDaOs(id), getTenant()])
@@ -160,6 +163,26 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
             )}
           </CardContent>
         </Card>
+
+        {/* O orçamento que saiu desta visita. Fica logo abaixo das informações
+            porque, na hora de fechar, é a primeira coisa que decide quanto a
+            OS vale. */}
+        <OrcamentoDaVisita
+          orderId={os.id}
+          statusDaOs={os.status}
+          orcamento={
+            os.quotes?.[0]
+              ? {
+                  id: os.quotes[0].id,
+                  number: os.quotes[0].number,
+                  status: os.quotes[0].status,
+                  amount: Number(os.quotes[0].amount),
+                }
+              : null
+          }
+          taxaDeVisita={taxaDeVisita}
+          podeGerar={role === "OWNER" || role === "ADMIN"}
+        />
 
         {os.description && (
           <Card>
