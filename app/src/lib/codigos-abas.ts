@@ -69,6 +69,7 @@ export const DESTINOS: readonly Destino[] = [
   { codigo: "5.2", rota: "/reports", navKey: "reports", aba: "reports" },
   { codigo: "5.3", rota: "/referral", navKey: "referral", aba: "referral" },
   { codigo: "5.4", rota: "/settings", navKey: "settings", aba: null, soAdmin: true },
+  { codigo: "5.5", rota: "/bens", navKey: "bens", aba: "bens" },
   // Terceiro nível: telas DENTRO de Configurações.
   { codigo: "5.4.1", rota: "/settings/permissions", navKey: "permissions", aba: null, soAdmin: true },
   { codigo: "5.4.2", rota: "/settings/fields", navKey: "customFields", aba: null, soAdmin: true },

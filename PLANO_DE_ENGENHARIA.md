@@ -3139,6 +3139,84 @@ do manual para a aba de notas — o teste casou pelo codigo repetido.
 
 ---
 
+### 7.2.55 Controle de bens — 02/09/2026
+
+A empresa sabia quanto tinha em PECA e nao sabia quanto tinha em BEM. A van, o
+notebook, a maquina de solda, a sala — tudo que ela comprou para trabalhar e nao
+para revender ficava fora do sistema, e o contador pedia a lista todo fim de
+exercicio numa planilha feita a mao. Aba 5.5, `/bens`.
+
+**Bem nao e estoque, e a diferenca e a DEPRECIACAO.** Peca entra e sai; bem fica
+e perde valor com o tempo, e essa perda e despesa do exercicio. Por isso o
+modulo nao reaproveitou `Part`: teria um campo de saldo que nunca faz sentido e
+nenhum campo de data de compra, que e o que a depreciacao inteira precisa.
+
+**A regra vive em `lib/patrimonio.ts`, pura, com 26 testes.** Taxa linear por
+categoria, do Anexo III da IN RFB 1.700/2017 — veiculo e informatica 20%,
+maquina/ferramenta/movel 10%, imovel 4%. Quatro decisoes que sao o modulo
+inteiro:
+
+- **TERRENO nao deprecia** (taxa 0). Nao e um caso especial escrito a mao: e uma
+  linha da tabela, entao vale na lista, no resumo e no CSV pelo mesmo caminho.
+- **`??` e nao `||` ao ler a taxa propria.** Taxa ZERO e escolha legitima; com
+  `||` ela cairia na padrao da categoria e o terreno voltaria a depreciar.
+- **Conta MESES inteiros, nunca antes da compra.** E a convencao brasileira, e o
+  "nunca antes" e o que impede depreciacao negativa aparecer no balanco.
+- **A BAIXA congela.** Depois dela o bem nao e mais da empresa, e continuar
+  depreciando inventaria despesa que nao existe.
+
+**Baixar nao e excluir, e essa e a decisao de produto.** Bem que a empresa teve
+de verdade existiu, custou dinheiro e depreciou — o contador precisa dessa
+historia para fechar o exercicio, e apagar reescreveria o passado. Baixa guarda
+data e motivo. Excluir existe so para o que nunca deveria ter existido (cadastro
+duplicado, erro de digitacao): e so do DONO e some assim que ha manutencao
+ligada ao bem. Reativar LIMPA a data da baixa — sem isso o bem reativado ficaria
+congelado no tempo.
+
+**O que foi ligado ao que ja existia**, em vez de duplicar:
+
+- **Local** reaproveita os locais de estoque. "A rotativa esta na van do Carlos"
+  e a mesma pergunta que "onde esta a peca". Quando a empresa nao tem o recurso
+  de estoque o campo simplesmente some, e "com quem esta" continua respondido
+  pelo responsavel.
+- **Manutencao** ganhou `assetId`. E o historico da van: quantas vezes parou,
+  quanto ja custou. `SetNull`, porque a manutencao aconteceu mesmo que o bem
+  seja baixado depois.
+- **Anexo** ganhou um QUARTO dono (nota fiscal do bem, foto, manual). A trava
+  `num_nonnulls(...) = 1`, escrita em 7.2.54 justamente para crescer sozinha,
+  cresceu sozinha — uma linha, sem combinacao nova escrita a mao.
+
+**Sem trava de plano, de proposito.** Saber o que a empresa tem e o minimo para
+ela existir direito. Prender isso atras do Pro obrigaria quem tem uma van e tres
+ferramentas a pagar mais para anota-las — e essa empresa e justamente a que mais
+precisa de organizacao e menos pode pagar por ela.
+
+**A exportacao para o contador** sai com as quatro colunas que ele lanca no
+imobilizado: valor de aquisicao, taxa usada, depreciacao acumulada e valor
+contabil. Com BOM na frente, senao o Excel em portugues abre em ANSI e todo
+acento vira caractere estranho — e ele devolve pedindo de novo.
+
+**Quatro CHECKs no banco**, porque validacao de tela nao protege quem chama a
+Action direto: valor de aquisicao >= 0, taxa entre 0 e 100, residual >= 0, e
+baixa nunca antes da compra. Verificado no banco de verdade: *"Baixa antes da
+compra: RECUSADA"*.
+
+20 testes de Action sobre banco real (pglite), todos verificados por mutacao —
+tirar cada guarda faz o teste correspondente falhar. O teste do CSV pegou o
+escape: sem ele, `Furadeira 1/2", bancada` parte a linha em duas colunas e o
+contador recebe uma planilha desalinhada.
+
+**Um teste do projeto virou ruim e foi trocado.** `codigos-abas.test.ts` fixava
+o ULTIMO codigo do menu ("5.4.5"), entao quebrava a cada aba nova sem que nada
+estivesse errado — foi o que aconteceu ao entrar o 5.5. Teste que falha quando o
+sistema cresce corretamente treina quem le a ignora-lo. Trocado pela PROPRIEDADE
+que importa: a lista ordenada tem de ser nao decrescente, o que vale para
+qualquer aba futura.
+
+1275 -> 1321 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

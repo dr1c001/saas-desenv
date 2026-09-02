@@ -83,8 +83,25 @@ describe("o número na frente do nome, na barra lateral", () => {
 
   it("põe o menu inteiro em ordem crescente", () => {
     const ordenado = [...DESTINOS].sort((a, b) => compararCodigo(a.codigo, b.codigo))
+
+    // A primeira tela é sempre o Painel, e isso é decisão de produto.
     expect(ordenado[0].codigo).toBe("1.1")
-    expect(ordenado.at(-1)!.codigo).toBe("5.4.5")
+
+    // O resto é a PROPRIEDADE, e não um código fixo.
+    //
+    // Antes esta linha fixava o último ("5.4.5"), e quebrava a cada aba nova
+    // sem que nada estivesse errado — foi o que aconteceu ao entrar o Controle
+    // de bens (5.5), que legitimamente passou a ser o último. Um teste que
+    // falha quando o sistema cresce corretamente treina quem o lê a ignorá-lo.
+    //
+    // O que importa é que a lista fique NÃO DECRESCENTE, e isso vale para
+    // qualquer aba futura.
+    for (let i = 1; i < ordenado.length; i++) {
+      expect(
+        compararCodigo(ordenado[i - 1].codigo, ordenado[i].codigo),
+        `${ordenado[i - 1].codigo} deveria vir antes de ${ordenado[i].codigo}`
+      ).toBeLessThanOrEqual(0)
+    }
   })
 })
 

@@ -1986,7 +1986,8 @@
     "vocabulary": "Vocabulário",
     "fecharMenu": "Fechar menu",
     "notas": "Notas de compra",
-    "cotacoes": "Cotações"
+    "cotacoes": "Cotações",
+    "bens": "Controle de bens"
   },
   "notifications": {
     "quoteApproved": {
@@ -3169,6 +3170,87 @@
       "naoEncontrado": "Fornecedor não encontrado nesta cotação.",
       "cotacaoFechada": "Esta cotação não aceita mais alteração.",
       "fornecedorSemPreco": "Este fornecedor não cotou nada. Não há o que comprar dele."
+    }
+  },
+  "bens": {
+    "titulo": "Controle de bens",
+    "subtitulo": "O que a empresa tem: a van, as ferramentas, os computadores. Não é peça de estoque nem equipamento de cliente — é o patrimônio dela.",
+    "novo": "Cadastrar bem",
+    "editar": "Editar",
+    "nome": "Nome do bem",
+    "categoria": "Categoria",
+    "categorias": {
+      "VEICULO": "Veículo",
+      "MAQUINA": "Máquina",
+      "FERRAMENTA": "Ferramenta",
+      "INFORMATICA": "Informática",
+      "MOVEL": "Móvel",
+      "IMOVEL": "Imóvel",
+      "TERRENO": "Terreno",
+      "OUTRO": "Outro"
+    },
+    "marca": "Marca",
+    "modelo": "Modelo",
+    "serie": "Nº de série / placa",
+    "valor": "Valor de aquisição",
+    "dataCompra": "Data da compra",
+    "taxa": "Taxa anual (%)",
+    "taxaAjuda": "Vazio usa a taxa padrão da categoria (tabela da Receita Federal).",
+    "residual": "Valor residual",
+    "residualAjuda": "Quanto você espera receber ao vender no fim da vida útil. Não deprecia.",
+    "local": "Onde está",
+    "semLocal": "Sem local",
+    "responsavel": "Responsável",
+    "semResponsavel": "Sem responsável",
+    "observacoes": "Observações",
+    "salvar": "Salvar",
+    "cancelar": "Cancelar",
+    "situacoes": {
+      "ATIVO": "Em uso",
+      "MANUTENCAO": "Em manutenção",
+      "BAIXADO": "Baixado"
+    },
+    "resumo": {
+      "quantidade": "Bens",
+      "aquisicao": "Valor de aquisição",
+      "depreciado": "Já depreciado",
+      "contabil": "Valor contábil"
+    },
+    "avisoContador": "Estes números são gerenciais e servem para organizar o que você tem. O balanço com valor legal é peça que o seu contador assina.",
+    "busca": "Buscar por nome, marca, modelo ou número de série",
+    "vazio": "Nenhum bem cadastrado ainda.",
+    "vazioBusca": "Nenhum bem encontrado.",
+    "darBaixa": "Dar baixa",
+    "dataBaixa": "Data da baixa",
+    "motivoBaixa": "Motivo (vendido, perdido, descartado)",
+    "confirmarBaixa": "Dar baixa",
+    "reativar": "Reativar",
+    "porManutencao": "Marcar em manutenção",
+    "voltarDeManutencao": "Voltar ao uso",
+    "excluir": "Excluir",
+    "confirmarExcluir": "Excluir este bem? Use isso só para cadastro duplicado ou erro de digitação — bem que a empresa teve de verdade deve receber BAIXA, que guarda a história para o contador.",
+    "exportar": "Exportar para o contador",
+    "depreciacao": "Depreciação",
+    "manutencoes": "Manutenções",
+    "semManutencao": "Nenhuma manutenção registrada.",
+    "filtro": {
+      "todas": "Todos",
+      "ATIVO": "Em uso",
+      "MANUTENCAO": "Em manutenção",
+      "BAIXADO": "Baixados"
+    },
+    "erros": {
+      "semPermissao": "Você não tem permissão para isso.",
+      "nomeObrigatorio": "Dê um nome ao bem.",
+      "dataObrigatoria": "Informe a data da compra.",
+      "dataInvalida": "Data inválida.",
+      "localInvalido": "Local não encontrado nesta empresa.",
+      "pessoaInvalida": "Pessoa não encontrada nesta empresa.",
+      "naoEncontrado": "Bem não encontrado.",
+      "jaBaixado": "Este bem já foi baixado.",
+      "naoEstaBaixado": "Este bem não está baixado.",
+      "baixaAntesDaCompra": "A baixa não pode ser antes da compra.",
+      "temHistorico": "Este bem tem manutenções registradas. Dê baixa em vez de excluir — apagar reescreveria o histórico."
     }
   }
 }

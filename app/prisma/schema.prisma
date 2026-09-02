@@ -151,6 +151,7 @@ model Tenant {
   contracts         ServiceContract[]
   stockLocations    StockLocation[]
   quotations        Quotation[]
+  assets            Asset[]
 
   // Vocabulario adaptavel: como a empresa chama OS e tecnico.
   // Formato em lib/vocabulario.ts. Fica junto do locale porque e lido no mesmo
@@ -331,6 +332,7 @@ model User {
   @@index([tenantId, role])
   @@index([branchId])
   stockLocations     StockLocation[]
+  assets             Asset[]
 }
 
 model UserAddress {
@@ -581,14 +583,20 @@ model Attachment {
   /// Terceiro dono possivel deste anexo. A trava no banco passou de "um dos
   /// dois" para "exatamente um dos tres" — ver a migration.
   purchaseOrderId String?
+  /// A nota fiscal (ou a foto) de um BEM da empresa. Quarto dono possivel.
+  /// A trava `num_nonnulls(...) = 1` cresce com um argumento a mais — foi
+  /// exatamente para isto que ela deixou de ser escrita a mao.
+  assetId         String?
   createdAt DateTime @default(now())
 
   order ServiceOrder? @relation(fields: [orderId], references: [id], onDelete: Cascade)
   quote Quote?        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  asset         Asset?         @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([purchaseOrderId])
+  @@index([assetId])
 
 }
 
@@ -705,6 +713,10 @@ model MaintenanceOrder {
   totalAmount Decimal           @default(0) @db.Decimal(12, 2)
   tenantId    String
   providerId  String?
+  /// O BEM que esta em manutencao. Da historico a van: quantas vezes parou,
+  /// quanto ja custou, e quando. SetNull porque a manutencao aconteceu mesmo
+  /// que o bem seja baixado depois.
+  assetId     String?
   scheduledAt DateTime?
   concludedAt DateTime?
   createdAt   DateTime          @default(now())
@@ -712,6 +724,7 @@ model MaintenanceOrder {
 
   tenant   Tenant            @relation(fields: [tenantId], references: [id])
   provider Provider?         @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  asset    Asset?            @relation(fields: [assetId], references: [id], onDelete: SetNull)
   items    MaintenanceItem[]
 
   @@unique([tenantId, number])
@@ -719,6 +732,8 @@ model MaintenanceOrder {
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
   @@index([providerId])
+  @@index([assetId])
+
 }
 
 model MaintenanceItem {
@@ -1288,6 +1303,77 @@ enum StockMovementType {
 /// Onde a peca FICA. Num negocio de campo a van de cada tecnico e um
 /// almoxarifado que anda — "tem 4 no estoque" nao responde "onde", e a peca
 /// pode estar do outro lado da cidade. Regras em lib/estoque-local.ts.
+/// Um BEM da empresa: a van, a rotativa, o notebook, a bancada.
+///
+/// NAO e peca de estoque (`Part`, comprada para aplicar no servico) nem
+/// equipamento do cliente (`Equipment`, que nem e da empresa). Sao tres coisas
+/// com cara parecida e naturezas opostas — ativo, mercadoria e coisa alheia.
+///
+/// Depreciacao e regras em lib/patrimonio.ts. Os numeros sao GERENCIAIS: o
+/// balanco com valor legal e peca que o contador assina.
+model Asset {
+  id             String        @id @default(cuid())
+  tenantId       String
+  name           String
+  category       AssetCategory @default(OUTRO)
+  brand          String?
+  model          String?
+  /// Numero de serie, placa do veiculo, patrimonio colado na etiqueta.
+  serialNumber   String?
+  /// Quanto custou, e quando. Sao a base da depreciacao inteira.
+  purchaseValue  Decimal       @db.Decimal(12, 2)
+  purchasedAt    DateTime
+  /// Taxa anual PROPRIA, quando difere da padrao da categoria.
+  /// NULL usa a da tabela da Receita (lib/patrimonio.ts).
+  annualRate     Decimal?      @db.Decimal(5, 2)
+  /// Quanto se espera receber ao vender no fim da vida util. Nao deprecia.
+  residualValue  Decimal?      @db.Decimal(12, 2)
+  status         AssetStatus   @default(ATIVO)
+  /// Quando saiu do patrimonio (venda, perda, descarte). Depois dela o bem
+  /// PARA de depreciar — continuar inventaria despesa que nao existe.
+  disposedAt     DateTime?
+  disposalNotes  String?
+  /// ONDE ele esta. Reaproveita os locais de estoque: a rotativa que esta na
+  /// van do Carlos responde a mesma pergunta que "onde esta a peca".
+  /// SetNull: apagar o local nao pode apagar o bem que estava nele.
+  locationId     String?
+  /// QUEM responde por ele. Util para o que nao mora em local nenhum — o
+  /// notebook esta com a Ana, e nao no almoxarifado.
+  responsibleId  String?
+  notes          String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location    StockLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  responsible User?          @relation(fields: [responsibleId], references: [id], onDelete: SetNull)
+  attachments Attachment[]
+  maintenance MaintenanceOrder[]
+
+  // Listagem da aba: por empresa, os ativos primeiro, do mais novo pro velho.
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([locationId])
+  @@index([responsibleId])
+}
+
+enum AssetCategory {
+  VEICULO
+  MAQUINA
+  FERRAMENTA
+  INFORMATICA
+  MOVEL
+  IMOVEL
+  TERRENO
+  OUTRO
+}
+
+enum AssetStatus {
+  ATIVO
+  MANUTENCAO
+  BAIXADO
+}
+
 model StockLocation {
   id        String            @id @default(cuid())
   tenantId  String
@@ -1304,6 +1390,7 @@ model StockLocation {
   tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user      User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   balances  StockBalance[]
+  assets    Asset[]
   saidas    StockMovement[] @relation("MovimentoNoLocal")
   entradas  StockMovement[] @relation("MovimentoParaLocal")
 

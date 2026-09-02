@@ -34,6 +34,7 @@ import {
   ShoppingCart,
   ReceiptText,
   Scale,
+  Boxes,
   CircleQuestionMark,
   ArrowLeft,
 } from "lucide-react"
@@ -84,6 +85,7 @@ const NAV_ITEMS: { titleKey: string; href: string; icon: React.ElementType; slug
   { titleKey: "notas", href: "/notas", icon: ReceiptText, slug: "notas" },
   { titleKey: "cotacoes", href: "/cotacoes", icon: Scale, slug: "cotacoes" },
   { titleKey: "billing", href: "/billing", icon: CreditCard, slug: "billing" },
+  { titleKey: "bens", href: "/bens", icon: Boxes, slug: "bens" },
   { titleKey: "referral", href: "/referral", icon: Gift, slug: "referral" },
   // "fiscal" já existia em ALL_TABS (lib/auth.ts) e era atribuível em
   // Permissões, mas não tinha link em lugar nenhum da UI — ninguém

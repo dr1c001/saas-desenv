@@ -1014,6 +1014,60 @@ export const MANUAL: readonly Secao[] = [
         ],
         "Enterprise"
       ),
+      aba(
+        "5.5",
+        "Controle de bens",
+        "O que a empresa TEM: a van, as ferramentas, os computadores, a bancada.",
+        [
+          {
+            tipo: "atencao",
+            titulo: "Bem não é peça, e não é equipamento de cliente",
+            texto:
+              "São três coisas com cara parecida e naturezas opostas. *Bem* é o que a empresa comprou para usar. *Peça* (4.1) é o que ela compra para aplicar no serviço, e sai do estoque quando usada. *Equipamento* (2.1) é o do cliente — nem é dela.",
+          },
+          {
+            tipo: "lista",
+            titulo: "O que registrar",
+            itens: [
+              "*Valor e data da compra* — obrigatórios. Sem eles não há depreciação, e o balanço fica sem base.",
+              "*Categoria* — define a taxa de depreciação padrão.",
+              "*Onde está e com quem* — a rotativa está na van do Carlos; o notebook está com a Ana.",
+              "*Nº de série ou placa* — o que o seguro e a garantia pedem.",
+            ],
+          },
+          {
+            tipo: "p",
+            texto:
+              "A tela calcula sozinha quanto cada bem já *depreciou* e quanto ele *vale hoje nos livros*. As taxas padrão saem da tabela da Receita Federal, e cada bem aceita a sua própria se o seu contador usar outra.",
+          },
+          {
+            tipo: "lista",
+            titulo: "Taxas padrão por ano",
+            itens: [
+              "*Veículo* e *informática*: 20% (cinco anos).",
+              "*Máquina*, *ferramenta* e *móvel*: 10% (dez anos).",
+              "*Imóvel*: 4% (vinte e cinco anos).",
+              "*Terreno*: não deprecia. Não é arredondamento — terreno não se desgasta, e é regra contábil.",
+            ],
+          },
+          {
+            tipo: "passos",
+            titulo: "Quando o bem sai da empresa",
+            itens: [
+              "Use *Dar baixa*, e não Excluir.",
+              "Informe a data: é nela que a depreciação PARA.",
+              "Diga o motivo — vendido, perdido, descartado.",
+              "O bem some dos totais mas continua no histórico, que é o que o contador precisa para fechar o exercício.",
+            ],
+          },
+          {
+            tipo: "atencao",
+            titulo: "Estes números são gerenciais",
+            texto:
+              "Servem para você saber o que tem e entregar dado organizado ao contador. O balanço com valor legal depende do regime tributário e é peça que um profissional habilitado assina. Use *Exportar para o contador* para mandar a lista pronta.",
+          },
+        ]
+      ),
     ],
   },
 

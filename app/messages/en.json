@@ -1986,7 +1986,8 @@
     "vocabulary": "Vocabulary",
     "fecharMenu": "Close menu",
     "notas": "Purchase invoices",
-    "cotacoes": "Quotations"
+    "cotacoes": "Quotations",
+    "bens": "Asset register"
   },
   "notifications": {
     "quoteApproved": {
@@ -3169,6 +3170,87 @@
       "naoEncontrado": "Supplier not found in this quotation.",
       "cotacaoFechada": "This quotation no longer accepts changes.",
       "fornecedorSemPreco": "This supplier priced nothing. There is nothing to buy from them."
+    }
+  },
+  "bens": {
+    "titulo": "Asset register",
+    "subtitulo": "What the company owns: the van, the tools, the computers. Not stock parts, not client equipment — its own property.",
+    "novo": "Add asset",
+    "editar": "Edit",
+    "nome": "Asset name",
+    "categoria": "Category",
+    "categorias": {
+      "VEICULO": "Vehicle",
+      "MAQUINA": "Machine",
+      "FERRAMENTA": "Tool",
+      "INFORMATICA": "IT equipment",
+      "MOVEL": "Furniture",
+      "IMOVEL": "Building",
+      "TERRENO": "Land",
+      "OUTRO": "Other"
+    },
+    "marca": "Brand",
+    "modelo": "Model",
+    "serie": "Serial / plate",
+    "valor": "Purchase value",
+    "dataCompra": "Purchase date",
+    "taxa": "Annual rate (%)",
+    "taxaAjuda": "Blank uses the category default (Brazilian tax authority table).",
+    "residual": "Residual value",
+    "residualAjuda": "What you expect to get when selling at end of life. Does not depreciate.",
+    "local": "Where it is",
+    "semLocal": "No location",
+    "responsavel": "Responsible",
+    "semResponsavel": "Unassigned",
+    "observacoes": "Notes",
+    "salvar": "Save",
+    "cancelar": "Cancel",
+    "situacoes": {
+      "ATIVO": "In use",
+      "MANUTENCAO": "Under repair",
+      "BAIXADO": "Disposed"
+    },
+    "resumo": {
+      "quantidade": "Assets",
+      "aquisicao": "Purchase value",
+      "depreciado": "Depreciated",
+      "contabil": "Book value"
+    },
+    "avisoContador": "These figures are for management. The legally binding balance sheet is signed by your accountant.",
+    "busca": "Search by name, brand, model or serial",
+    "vazio": "No assets yet.",
+    "vazioBusca": "No assets found.",
+    "darBaixa": "Dispose",
+    "dataBaixa": "Disposal date",
+    "motivoBaixa": "Reason (sold, lost, scrapped)",
+    "confirmarBaixa": "Dispose",
+    "reativar": "Reinstate",
+    "porManutencao": "Mark under repair",
+    "voltarDeManutencao": "Back in use",
+    "excluir": "Delete",
+    "confirmarExcluir": "Delete this asset? Use this only for a duplicate or a typo — an asset the company really owned should be DISPOSED, which keeps the history for the accountant.",
+    "exportar": "Export for the accountant",
+    "depreciacao": "Depreciation",
+    "manutencoes": "Repairs",
+    "semManutencao": "No repairs recorded.",
+    "filtro": {
+      "todas": "All",
+      "ATIVO": "In use",
+      "MANUTENCAO": "Under repair",
+      "BAIXADO": "Disposed"
+    },
+    "erros": {
+      "semPermissao": "You do not have permission to do that.",
+      "nomeObrigatorio": "Give the asset a name.",
+      "dataObrigatoria": "Enter the purchase date.",
+      "dataInvalida": "Invalid date.",
+      "localInvalido": "Location not found in this company.",
+      "pessoaInvalida": "Person not found in this company.",
+      "naoEncontrado": "Asset not found.",
+      "jaBaixado": "This asset is already disposed.",
+      "naoEstaBaixado": "This asset is not disposed.",
+      "baixaAntesDaCompra": "Disposal cannot be before purchase.",
+      "temHistorico": "This asset has repairs recorded. Dispose it instead of deleting — deleting would rewrite the history."
     }
   }
 }
