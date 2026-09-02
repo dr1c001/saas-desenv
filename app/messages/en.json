@@ -916,7 +916,8 @@
       "reguaCobranca": "Payment reminders are part of the Pro plan. Upgrade in Settings → Plan to unlock them.",
       "api": "The integration API is part of the Enterprise plan. Upgrade in Settings → Plan to unlock it.",
       "filiais": "Branches is an add-on, sold separately from any plan. Get in touch to unlock it.",
-      "ia": "The voice assistant is an add-on, sold separately from any plan. Get in touch to unlock it."
+      "ia": "The voice assistant is an add-on, sold separately from any plan. Get in touch to unlock it.",
+      "balanco": "The balance sheet is part of the Pro plan. Upgrade in Settings → Plan to unlock it."
     },
     "planLimit": {
       "users": "Your plan allows up to {max} users and that limit has been reached. Upgrade in Settings → Plan to add more.",
@@ -1863,7 +1864,8 @@
           "reguaCobranca": "Payment reminders",
           "api": "Integration API",
           "filiais": "Branches",
-          "ia": "Voice assistant"
+          "ia": "Voice assistant",
+          "balanco": "Balance sheet"
         },
         "featuresAll": "Enable {count, plural, one {the remaining feature} other {the # remaining features}}",
         "tabsTitle": "Tabs this company sees ({visiveis} of {total})",
@@ -1987,7 +1989,8 @@
     "fecharMenu": "Close menu",
     "notas": "Purchase invoices",
     "cotacoes": "Quotations",
-    "bens": "Asset register"
+    "bens": "Asset register",
+    "balanco": "Balance sheet"
   },
   "notifications": {
     "quoteApproved": {
@@ -3251,6 +3254,99 @@
       "naoEstaBaixado": "This asset is not disposed.",
       "baixaAntesDaCompra": "Disposal cannot be before purchase.",
       "temHistorico": "This asset has repairs recorded. Dispose it instead of deleting — deleting would rewrite the history."
+    }
+  },
+  "balanco": {
+    "titulo": "Balance sheet",
+    "subtitulo": "What the company owns, what it owes, and what is left. Built from what the system already knows.",
+    "avisoContador": "This balance sheet is MANAGERIAL: it organises what the system knows so you can take it to your accountant. The legally valid balance sheet is an accounting document signed by a licensed professional.",
+    "exportar": "Export for the accountant",
+    "grupos": {
+      "ATIVO_CIRCULANTE": "Current assets",
+      "ATIVO_NAO_CIRCULANTE": "Non-current assets",
+      "PASSIVO_CIRCULANTE": "Current liabilities",
+      "PASSIVO_NAO_CIRCULANTE": "Non-current liabilities",
+      "PATRIMONIO_LIQUIDO": "Equity"
+    },
+    "gruposAjuda": {
+      "ATIVO_CIRCULANTE": "What turns into cash within a year",
+      "ATIVO_NAO_CIRCULANTE": "What stays: assets, property, investments",
+      "PASSIVO_CIRCULANTE": "What is due within a year",
+      "PASSIVO_NAO_CIRCULANTE": "Longer-term debt",
+      "PATRIMONIO_LIQUIDO": "What is left for the owners"
+    },
+    "linhas": {
+      "caixa": "Cash and banks",
+      "aReceber": "Accounts receivable",
+      "estoque": "Parts inventory",
+      "imobilizado": "Fixed assets",
+      "depreciacao": "(-) Accumulated depreciation",
+      "aPagar": "Accounts payable",
+      "capitalSocial": "Share capital",
+      "resultadoAcumulado": "Retained earnings"
+    },
+    "totais": {
+      "ativo": "Total assets",
+      "passivo": "Total liabilities",
+      "pl": "Equity"
+    },
+    "bases": {
+      "titulo": "What only you know",
+      "ajuda": "Two numbers the system cannot work out on its own. Without them the balance sheet comes out wrong — and this is the most common defect of all.",
+      "caixaInicial": "Opening cash",
+      "caixaInicialAjuda": "How much the company had in cash and bank on the day it started using the system.",
+      "capitalSocial": "Share capital",
+      "capitalSocialAjuda": "What the owners put into the company.",
+      "salvar": "Save",
+      "vazioApaga": "Leaving it blank clears the value."
+    },
+    "manual": {
+      "titulo": "Manual lines",
+      "ajuda": "What lives outside the system: loans, financing, property not registered here, profit reserves.",
+      "nova": "New line",
+      "editar": "Edit line",
+      "descricao": "Description",
+      "grupo": "Group",
+      "valor": "Amount",
+      "valorAjuda": "Negative values are allowed — contra accounts, such as loss provisions.",
+      "excluir": "Delete",
+      "confirmarExcluir": "Delete this line from the balance sheet?",
+      "vazio": "No manual lines.",
+      "cancelar": "Cancel",
+      "salvar": "Save"
+    },
+    "conferente": {
+      "titulo": "The reviewer",
+      "subtitulo": "What is usually wrong in a balance sheet, checked against yours.",
+      "ok": "Nothing to fix. This balance sheet is ready for your accountant.",
+      "impede": "Something needs fixing before you use this balance sheet.",
+      "atencao": "The balance sheet adds up, but there are points to review.",
+      "resolver": "Fix",
+      "gravidades": {
+        "impede": "Fix",
+        "atencao": "Review",
+        "informa": "Note"
+      },
+      "achados": {
+        "naoFecha": "The balance sheet did not add up. This is a system defect, not your data — please contact support.",
+        "caixaNegativoSemInicial": "Cash came out at {caixa} — negative. Almost always this is the missing opening cash: the system only knows the movement since you started using it. Enter what the company had on day one.",
+        "caixaNegativoComInicial": "Cash came out at {caixa} — negative, even with opening cash entered. Either the money really ran out, or an expense is marked as paid but never left.",
+        "plNegativo": "Equity is negative at {pl}: the company owes {passivo} and holds {ativo}. It is the most important number on this sheet.",
+        "semCapitalSocial": "With no share capital entered, all equity shows as retained earnings — as if the company came from nothing and earned everything. It is the first question your accountant will ask.",
+        "estoqueSemCusto": "{pecas} parts have stock and no cost price: they exist on the shelf and are worth zero on the balance sheet.",
+        "recebivelVelho": "{quantidade} invoices totalling {valor} are more than {dias} days overdue and still count at full value. Worth discussing a loss provision with your accountant.",
+        "semBens": "No assets registered. If the company has a van, a laptop or tools, the asset side is incomplete.",
+        "bemSemNota": "{bens} assets have no invoice attached. It is the document your accountant needs to book fixed assets.",
+        "bemZerado": "{bens} assets are fully depreciated and still in use. Worth reviewing their useful life with your accountant.",
+        "depreciacaoForaDoCaixa": "Depreciation of {depreciacao} reduces equity here and does not appear as an expense in Finance — because no money left. Both screens are right."
+      }
+    },
+    "erros": {
+      "semPermissao": "Only the owner or an administrator can change the balance sheet.",
+      "valorInvalido": "Invalid amount.",
+      "descricaoObrigatoria": "Describe the line.",
+      "grupoInvalido": "Choose a group.",
+      "naoEncontrado": "Line not found."
     }
   }
 }

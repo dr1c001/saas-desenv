@@ -157,7 +157,7 @@
       </div>
       <div class="trilho-grupo">
         <p class="trilho-titulo">5 · Empresa</p>
-        <a href="#5-1"><span class="cod">5.1</span><span>Equipe</span></a><a href="#5-2"><span class="cod">5.2</span><span>Relatórios</span></a><a href="#5-3"><span class="cod">5.3</span><span>Indicação</span></a><a href="#5-4"><span class="cod">5.4</span><span>Configurações</span></a><a href="#5-4-1"><span class="cod">5.4.1</span><span>Permissões</span></a><a href="#5-4-2"><span class="cod">5.4.2</span><span>Campos personalizados</span></a><a href="#5-4-3"><span class="cod">5.4.3</span><span>Vocabulário</span></a><a href="#5-4-4"><span class="cod">5.4.4</span><span>Filiais</span></a><a href="#5-4-5"><span class="cod">5.4.5</span><span>API de integração</span></a><a href="#5-5"><span class="cod">5.5</span><span>Controle de bens</span></a>
+        <a href="#5-1"><span class="cod">5.1</span><span>Equipe</span></a><a href="#5-2"><span class="cod">5.2</span><span>Relatórios</span></a><a href="#5-3"><span class="cod">5.3</span><span>Indicação</span></a><a href="#5-4"><span class="cod">5.4</span><span>Configurações</span></a><a href="#5-4-1"><span class="cod">5.4.1</span><span>Permissões</span></a><a href="#5-4-2"><span class="cod">5.4.2</span><span>Campos personalizados</span></a><a href="#5-4-3"><span class="cod">5.4.3</span><span>Vocabulário</span></a><a href="#5-4-4"><span class="cod">5.4.4</span><span>Filiais</span></a><a href="#5-4-5"><span class="cod">5.4.5</span><span>API de integração</span></a><a href="#5-5"><span class="cod">5.5</span><span>Controle de bens</span></a><a href="#5-6"><span class="cod">5.6</span><span>Balanço patrimonial</span></a>
       </div>
       <div class="trilho-grupo">
         <p class="trilho-titulo">Na prática</p>
@@ -597,6 +597,21 @@
 <h4>Taxas padrão por ano</h4><ul><li><strong>Veículo</strong> e <strong>informática</strong>: 20% (cinco anos).</li><li><strong>Máquina</strong>, <strong>ferramenta</strong> e <strong>móvel</strong>: 10% (dez anos).</li><li><strong>Imóvel</strong>: 4% (vinte e cinco anos).</li><li><strong>Terreno</strong>: não deprecia. Não é arredondamento — terreno não se desgasta, e é regra contábil.</li></ul>
 <h4>Quando o bem sai da empresa</h4><ol class="passos"><li><span>Use <strong>Dar baixa</strong>, e não Excluir.</span></li><li><span>Informe a data: é nela que a depreciação PARA.</span></li><li><span>Diga o motivo — vendido, perdido, descartado.</span></li><li><span>O bem some dos totais mas continua no histórico, que é o que o contador precisa para fechar o exercício.</span></li></ol>
 <div class="atencao"><h4>Estes números são gerenciais</h4><p>Servem para você saber o que tem e entregar dado organizado ao contador. O balanço com valor legal depende do regime tributário e é peça que um profissional habilitado assina. Use <strong>Exportar para o contador</strong> para mandar a lista pronta.</p></div>
+    </section>
+
+    <section class="aba" id="5-6">
+      <div class="aba-topo">
+        <span class="aba-cod">5.6</span>
+        <h3>Balanço patrimonial</h3>
+        <span class="etiqueta">Pro</span>
+      </div>
+      <p class="resumo">O que a empresa tem, o que ela deve, e o que sobra dela — num retrato só.</p>
+      <p>O balanço monta sozinho, com o que o sistema já sabe: o dinheiro que entrou e saiu (3.1), o que há para receber e para pagar, o estoque (4.1) e os bens já depreciados (5.5). Ele fecha na conta de sempre: <strong>ativo = passivo + patrimônio líquido</strong>.</p>
+<div class="atencao"><h4>Dois números o sistema não tem como saber</h4><p>O <strong>caixa inicial</strong> — quanto a empresa tinha no dia em que começou a usar o sistema — e o <strong>capital social</strong> — o que os sócios puseram nela. Sem o primeiro, o caixa aparece negativo logo no primeiro mês, e é de longe o defeito mais comum. Preencha os dois no alto da tela.</p></div>
+<h4>Os cinco grupos</h4><ul><li><strong>Ativo circulante</strong> — o que vira dinheiro em até um ano: caixa, contas a receber, estoque.</li><li><strong>Ativo não circulante</strong> — o que fica: os bens, pelo valor de compra menos a depreciação.</li><li><strong>Passivo circulante</strong> — o que se paga em até um ano.</li><li><strong>Passivo não circulante</strong> — dívidas de prazo mais longo.</li><li><strong>Patrimônio líquido</strong> — o que sobra para os sócios: capital social mais resultado acumulado.</li></ul>
+<p>O que vive fora do sistema entra em <strong>Linhas manuais</strong>: empréstimo, financiamento da van, imóvel não cadastrado, reserva de lucros. Elas aceitam valor negativo, porque conta retificadora existe — uma provisão para perdas é linha legítima do ativo.</p>
+<h4>O conferente</h4><ol class="passos"><li><span>Ele roda sozinho toda vez que a tela abre, e vem ANTES do balanço.</span></li><li><span><strong>Corrigir</strong> é o que precisa resolver antes de usar o número: caixa negativo, patrimônio líquido negativo.</span></li><li><span><strong>Revisar</strong> é o que fecha mas merece um olhar: capital social em branco, peça sem preço de custo, recebível vencido há mais de 180 dias.</span></li><li><span><strong>Saiba</strong> é explicação: por que a depreciação reduz o patrimônio aqui e não aparece como despesa no Financeiro.</span></li><li><span>Cada achado tem um atalho <strong>Resolver</strong> que leva direto à tela onde se conserta.</span></li></ol>
+<div class="atencao"><h4>Este balanço é gerencial</h4><p>Ele organiza o que o sistema sabe para você levar ao contador — e mostra o que está faltando antes de você mandar. O balanço com valor legal (Receita, banco, licitação) é peça contábil que um profissional habilitado assina. Use <strong>Exportar para o contador</strong>: o arquivo sai com as ressalvas do conferente junto, de propósito.</p></div>
     </section>
 
     <div class="grupo">

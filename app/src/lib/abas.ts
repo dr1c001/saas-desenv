@@ -32,6 +32,7 @@ export const ALL_TABS = [
   { slug: "notas", navKey: "notas" },
   { slug: "cotacoes", navKey: "cotacoes" },
   { slug: "bens", navKey: "bens" },
+  { slug: "balanco", navKey: "balanco" },
   { slug: "referral", navKey: "referral" },
 ] as const
 
@@ -52,6 +53,13 @@ export const ABAS_POR_RECURSO: { slug: TabSlug; recurso: Recurso }[] = [
   // compra, e sem compra nao ha nota para guardar.
   { slug: "notas", recurso: "stock" },
   { slug: "cotacoes", recurso: "stock" },
+  // O BALANÇO é gated; o CONTROLE DE BENS, que o alimenta, não é.
+  //
+  // Não é descuido: anotar o que a empresa tem é o mínimo para ela existir
+  // direito, e prender isso atrás do Pro cobraria mais de quem tem uma van e
+  // três ferramentas. O balanço é o RELATÓRIO CONTÁBIL montado em cima disso —
+  // outra coisa, e a que naturalmente cresce com a empresa.
+  { slug: "balanco", recurso: "balanco" },
 ]
 
 /**

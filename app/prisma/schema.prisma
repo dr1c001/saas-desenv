@@ -116,6 +116,20 @@ model Tenant {
   /// vender — o sistema nao escolhe por elas.
   visitFee                Decimal?           @db.Decimal(10, 2)
 
+  /// Quanto a empresa tinha em caixa/banco no dia em que comecou a usar o
+  /// sistema. Sem isso o caixa do balanco e so o MOVIMENTO desde entao, e uma
+  /// empresa que ja existia aparece com caixa negativo no primeiro mes em que
+  /// paga mais do que recebe. Regra em lib/balanco.ts.
+  ///
+  /// NULL = nao informou, que e diferente de zero informado — o conferente
+  /// (lib/contador-agente.ts) usa essa diferenca para escolher a mensagem.
+  openingCash             Decimal?           @db.Decimal(12, 2)
+
+  /// O que os socios puseram na empresa. Sem ele, TODO o patrimonio liquido
+  /// aparece como resultado acumulado, como se a empresa tivesse nascido do
+  /// nada e lucrado tudo — e e a primeira pergunta que o contador faz.
+  shareCapital            Decimal?           @db.Decimal(12, 2)
+
   maxIaOverride           Int?
   /// Quantos comandos ja foram gastos no mes corrente.
   iaComandosNoMes         Int                @default(0)
@@ -152,6 +166,7 @@ model Tenant {
   stockLocations    StockLocation[]
   quotations        Quotation[]
   assets            Asset[]
+  balanceEntries    BalanceEntry[]
 
   // Vocabulario adaptavel: como a empresa chama OS e tecnico.
   // Formato em lib/vocabulario.ts. Fica junto do locale porque e lido no mesmo
@@ -1355,6 +1370,38 @@ model Asset {
   @@index([tenantId, createdAt])
   @@index([locationId])
   @@index([responsibleId])
+}
+
+enum BalanceGroup {
+  ATIVO_CIRCULANTE
+  ATIVO_NAO_CIRCULANTE
+  PASSIVO_CIRCULANTE
+  PASSIVO_NAO_CIRCULANTE
+  PATRIMONIO_LIQUIDO
+}
+
+/// Uma linha do balanco que vive FORA do sistema: emprestimo, financiamento da
+/// van, imovel nao cadastrado, reserva de lucros.
+///
+/// Generica de proposito. A alternativa era um campo por tipo — `emprestimos`,
+/// `bancos`, `outrosAtivos` — e o quarto tipo, quando aparecesse, seria
+/// esquecido. Grupo + descricao + valor cresce sozinho.
+model BalanceEntry {
+  id          String       @id @default(cuid())
+  tenantId    String
+  group       BalanceGroup
+  description String
+  /// Aceita NEGATIVO: conta retificadora existe. "(-) Provisao para devedores
+  /// duvidosos" e linha legitima do ativo, e travar em zero obrigaria a empresa
+  /// a mentir no balanco para caber na regra do sistema.
+  amount      Decimal      @db.Decimal(14, 2)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // A tela le todas as linhas da empresa de uma vez, agrupadas.
+  @@index([tenantId, group])
 }
 
 enum AssetCategory {

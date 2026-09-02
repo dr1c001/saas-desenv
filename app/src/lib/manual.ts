@@ -1068,6 +1068,58 @@ export const MANUAL: readonly Secao[] = [
           },
         ]
       ),
+      aba(
+        "5.6",
+        "Balanço patrimonial",
+        "O que a empresa tem, o que ela deve, e o que sobra dela — num retrato só.",
+        [
+          {
+            tipo: "p",
+            texto:
+              "O balanço monta sozinho, com o que o sistema já sabe: o dinheiro que entrou e saiu (3.1), o que há para receber e para pagar, o estoque (4.1) e os bens já depreciados (5.5). Ele fecha na conta de sempre: *ativo = passivo + patrimônio líquido*.",
+          },
+          {
+            tipo: "atencao",
+            titulo: "Dois números o sistema não tem como saber",
+            texto:
+              "O *caixa inicial* — quanto a empresa tinha no dia em que começou a usar o sistema — e o *capital social* — o que os sócios puseram nela. Sem o primeiro, o caixa aparece negativo logo no primeiro mês, e é de longe o defeito mais comum. Preencha os dois no alto da tela.",
+          },
+          {
+            tipo: "lista",
+            titulo: "Os cinco grupos",
+            itens: [
+              "*Ativo circulante* — o que vira dinheiro em até um ano: caixa, contas a receber, estoque.",
+              "*Ativo não circulante* — o que fica: os bens, pelo valor de compra menos a depreciação.",
+              "*Passivo circulante* — o que se paga em até um ano.",
+              "*Passivo não circulante* — dívidas de prazo mais longo.",
+              "*Patrimônio líquido* — o que sobra para os sócios: capital social mais resultado acumulado.",
+            ],
+          },
+          {
+            tipo: "p",
+            texto:
+              "O que vive fora do sistema entra em *Linhas manuais*: empréstimo, financiamento da van, imóvel não cadastrado, reserva de lucros. Elas aceitam valor negativo, porque conta retificadora existe — uma provisão para perdas é linha legítima do ativo.",
+          },
+          {
+            tipo: "passos",
+            titulo: "O conferente",
+            itens: [
+              "Ele roda sozinho toda vez que a tela abre, e vem ANTES do balanço.",
+              "*Corrigir* é o que precisa resolver antes de usar o número: caixa negativo, patrimônio líquido negativo.",
+              "*Revisar* é o que fecha mas merece um olhar: capital social em branco, peça sem preço de custo, recebível vencido há mais de 180 dias.",
+              "*Saiba* é explicação: por que a depreciação reduz o patrimônio aqui e não aparece como despesa no Financeiro.",
+              "Cada achado tem um atalho *Resolver* que leva direto à tela onde se conserta.",
+            ],
+          },
+          {
+            tipo: "atencao",
+            titulo: "Este balanço é gerencial",
+            texto:
+              "Ele organiza o que o sistema sabe para você levar ao contador — e mostra o que está faltando antes de você mandar. O balanço com valor legal (Receita, banco, licitação) é peça contábil que um profissional habilitado assina. Use *Exportar para o contador*: o arquivo sai com as ressalvas do conferente junto, de propósito.",
+          },
+        ],
+        "Pro"
+      ),
     ],
   },
 

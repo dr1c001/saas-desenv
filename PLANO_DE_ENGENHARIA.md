@@ -3217,6 +3217,100 @@ qualquer aba futura.
 
 ---
 
+### 7.2.56 Balanco patrimonial, e o conferente — 02/09/2026
+
+A pergunta que o dono nunca consegue responder: *quanto vale a minha empresa?*
+O sistema ja tinha as pecas — dinheiro que entrou e saiu, o que ha para receber
+e para pagar, estoque, e os bens com depreciacao (7.2.55). Faltava a foto.
+Aba 5.6, `/balanco`.
+
+**A identidade fecha por CONSTRUCAO, e isso e dito com todas as letras.** O
+patrimonio liquido sai por diferenca (Ativo − Passivo), porque o sistema nao tem
+partidas dobradas. Entao `fecha` nao e conferencia de contabilidade: e trava
+contra erro de programacao daqui, com tolerancia de um centavo pelo
+arredondamento por linha. Um sistema que anunciasse "seu balanco fecha!" como se
+fosse validacao estaria vendendo confianca que nao tem.
+
+**O caixa PODE ficar negativo, e fica.** E o que acontece com toda empresa que
+comecou a usar o sistema no meio da vida: ele so conhece o MOVIMENTO desde
+entao. Travar em zero esconderia exatamente o defeito que o balanco existe para
+mostrar, e o conferente nao teria o que apontar. Numero errado visivel se
+conserta; numero errado escondido vira decisao errada.
+
+**Duas coisas o sistema pergunta**, porque nao tem como calcular: o caixa
+inicial e o capital social. `NULL` significa "nao informou", que e DIFERENTE de
+zero informado — e e dessa diferenca que o conferente tira qual mensagem
+mostrar: falta cadastrar, ou o dinheiro acabou mesmo. Um `DEFAULT 0` apagaria a
+distincao e mandaria toda empresa consertar um campo que ja esta certo.
+
+**As linhas manuais sao GENERICAS de proposito.** Emprestimo, financiamento da
+van, imovel nao cadastrado, reserva de lucros: grupo + descricao + valor. A
+alternativa era um campo por tipo, e o quarto tipo seria esquecido — a mesma
+licao do `num_nonnulls(...) = 1`. Aceitam valor NEGATIVO, porque conta
+retificadora existe: "(-) Provisao para perdas" e linha legitima do ativo, e
+travar em zero obrigaria a empresa a mentir no balanco para caber na regra do
+sistema.
+
+---
+
+**O AGENTE DE CONTABILIDADE e REGRA, e nao modelo de linguagem.** O sistema ja
+tem uma assistente de IA (7.2.38); o conferente nao usa ela, por tres motivos:
+
+1. Ele fala sobre DINHEIRO. Um modelo que erra um numero num balanco erra com a
+   mesma confianca com que acerta, e quem le nao tem como saber qual foi. Regra
+   escrita erra de um jeito que o teste pega.
+2. Ele precisa funcionar para TODO MUNDO. A assistente e adicional pago e
+   depende de chave de API — que hoje nem esta configurada. O conferente roda
+   sem chave, de graca, e e justamente a empresa sem contador de plantao que
+   mais precisa dele.
+3. O que ele faz e CONFERENCIA, e nao conversa: uma lista fechada de coisas que
+   costumam estar erradas, cada uma com o numero que a denuncia.
+
+Dez achados, em tres gravidades. Dois detalhes que separam lista de conferencia
+util de ruido:
+
+- **O PL negativo NAO aparece junto do caixa negativo.** Com o caixa negativo, o
+  PL negativo e eco do mesmo defeito, e apontar os dois faria o dono perseguir
+  duas causas quando ha uma.
+- **"Nenhum bem cadastrado" so aparece para quem JA usa o sistema.** No primeiro
+  dia nao haver bem e normal, e o aviso seria ruido.
+
+O conferente vem ANTES do balanco na tela, de proposito: mostrar o numero antes
+da ressalva e entregar uma conclusao sem o aviso de que ela pode estar errada.
+E o CSV para o contador leva as ressalvas junto, pelo mesmo motivo — traduzidas,
+e nao as chaves internas, porque quem abre o arquivo e uma pessoa.
+
+---
+
+**A TRAVA DE PLANO, e a linha que ela desenha.** `balanco` entrou em `RECURSOS`
+e caiu sozinho no Pro e no Enterprise. O controle de bens (5.5), que o alimenta,
+continua livre. A linha e: **anotar e de todos; o relatorio contabil e do Pro.**
+Anotar a van e as tres ferramentas e o minimo para a empresa existir direito;
+prender isso atras do Pro cobraria mais de quem menos pode pagar.
+
+**Um teste novo que vale por muitos: DRIFT entre migration e schema.** As duas
+descrevem a mesma tabela por caminhos diferentes — a migration e escrita a mao,
+o schema e lido pelo Prisma. Quando divergem, o sistema funciona local e quebra
+no deploy, que e o pior lugar para descobrir. O teste aplica as duas num pglite
+e compara `information_schema.columns` da tabela nova e os campos novos do
+Tenant, coluna por coluna.
+
+**Um gotcha novo do Next 16** (secao 9, item 20): `export type { ... }` num
+arquivo `"use server"` passa no typecheck e QUEBRA O BUILD — o compilador de
+Server Actions do Turbopack trata toda export como endereco em tempo de
+execucao, e reclama que "The export Balanco was not found in module".
+
+**Dez mutantes, dez mortos.** Entre eles um que sobreviveu na primeira rodada e
+denunciou um teste que afirmava mais do que provava: "bem baixado some do
+balanco" passava mesmo sem o filtro na consulta, porque `resumirPatrimonio`
+tambem descarta o baixado. Quem pagava o preco era o CONFERENTE, que passaria a
+cobrar nota fiscal de uma van vendida ha dois anos — e e isso que o teste
+verifica agora.
+
+1321 -> 1402 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`
@@ -3252,6 +3346,8 @@ Estes pontos custaram tempo real de debug — não repetir os mesmos caminhos:
 17. **`id` duplicado entre dois formulários renderizados na mesma página quebra a associação `label for=`** (o navegador resolve pro primeiro elemento com aquele id — clicar no label do segundo campo foca o campo errado). Achado em `/settings` (`TenantForm` e `ProfileForm` ambos usando `id="name"`/`"document"`/`"phone"`). Ao adicionar um novo formulário numa página que já tem outro, conferir que nenhum `id` colide.
 18. **Env var nova na Vercel não entra em vigor na build já rodando — precisa de um redeploy depois de `vercel env add`.** Confirmado ao configurar o `ASAAS_WEBHOOK_SECRET` pendente (seção 7.1) em 21/07/2026: adicionar a variável via CLI não foi suficiente sozinho, foi preciso rodar `vercel --prod` de novo pra ela ficar disponível no runtime. Verificação simples e reaproveitável pra qualquer secret novo: `POST` na rota que o usa sem o header/valor esperado (deve dar 401/erro) e com o valor certo (deve dar 200) — comparar antes/depois do redeploy.
 19. **Biblioteca nativa carregada por `dlopen` não é rastreada pelo build — e falha SÓ em produção, EM SILÊNCIO.** O `sharp` resolve o binário da plataforma por caminho dinâmico (`@img/sharp-${plataforma}`), e esse binário carrega a `libvips` via `dlopen` do sistema operacional. Nenhum rastreador estático segue `dlopen`, então `@img/sharp-libvips-linux-x64` ficava de fora do pacote da função na Vercel: no Windows do desenvolvedor funcionava, em produção dava `ERR_DLOPEN_FAILED: libvips-cpp.so.8.18.3: cannot open shared object file`. Pior: a exceção era pega por um `catch` e virava "não consegui salvar agora, tente de novo" — o usuário tentou **cinco vezes** antes de reportar, e nem o build, nem o lint, nem os 870 testes, nem o deploy acusaram nada. Atingia a gravação de assinatura E o upload de logo (este quebrado sem ninguém ter notado). Corrigido com `outputFileTracingIncludes` no `next.config.ts`, incluindo **só** os binários `linux-x64` (a pasta `@img` inteira arrastaria Windows e macOS, ~50 MB por função). **Não dá para verificar isto no Windows:** o npm só instala o binário da plataforma local, então o glob não casa nada em dev — tentar instalar os de Linux com `npm install --os=linux --cpu=x64` troca os binários de *todos* os pacotes opcionais e quebra o build local (sumiu o `@parcel/watcher-win32-x64`). Por isso existe `src/lib/__tests__/sharp-empacotado.test.ts`, que confere o que dá para conferir sem deploy: que a config declara os binários, e que **todo arquivo que usa sharp está numa rota listada no rastreamento**. Usar sharp numa rota nova sem lembrar do `next.config` reintroduz o mesmo defeito com a mesma cara silenciosa.
+
+20. **`export type { ... }` num arquivo `"use server"` passa no typecheck e QUEBRA O BUILD.** O compilador de Server Actions do Turbopack trata toda export de um arquivo `"use server"` como endereço em tempo de execução, inclusive as que só existem para o TypeScript. O `tsc --noEmit` passava limpo e o `next build` morria com *"The export Balanco was not found in module"* — quatro erros de uma vez, todos apontando para um arquivo gerado (`.next-internal/.../actions.js`) que não existe no repositório, o que torna a mensagem difícil de ligar à causa. Descoberto ao reexportar tipos por conveniência em `actions/balanco.ts` (02/09/2026). **Regra:** arquivo `"use server"` exporta função `async`, e nada mais. Quem precisa dos tipos importa direto do `lib/` de onde eles vêm.
 
 ---
 

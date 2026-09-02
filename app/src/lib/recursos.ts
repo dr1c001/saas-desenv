@@ -17,6 +17,7 @@ export type Recurso =
   | "advancedReports" // Período personalizado, ranking de clientes, detalhamento
   | "stock"           // Estoque de peças e ordens de compra
   | "reguaCobranca"   // Lembrete antes de vencer + cobrança automática depois
+  | "balanco"         // Balanço patrimonial + conferente (ver /bens, que é livre)
   | "api"             // API de integração — SÓ Enterprise (ver lib/plan.ts)
   | "filiais"         // Mais de uma unidade — ADICIONAL (ver lib/plan.ts)
   | "ia"              // Assistente de voz — ADICIONAL, nenhum plano inclui
@@ -33,6 +34,10 @@ export const RECURSOS: readonly Recurso[] = [
   // FORA do Starter — `TODOS` é `RECURSOS` menos `ADICIONAIS`, e o Starter tem
   // a lista literal vazia. Nenhuma linha de POR_PLANO precisou mudar.
   "reguaCobranca",
+  // Mesmo caminho da régua: entra aqui e cai sozinho no Pro e no Enterprise,
+  // ficando fora do Starter. A linha do produto é "anotar é de todos, o
+  // relatório contábil é do Pro" — /bens continua livre de propósito.
+  "balanco",
   "api",
   "filiais",
   "ia",
@@ -73,7 +78,7 @@ export const IA_COMANDOS_PADRAO = 500
  * mostra essa diferença porque conceder "Mapa GPS" e conceder "Checklist" têm
  * efeitos bem diferentes pra quem está do outro lado.
  */
-export const RECURSOS_DE_ABA: readonly Recurso[] = ["gpsMap", "nfse", "stock"]
+export const RECURSOS_DE_ABA: readonly Recurso[] = ["gpsMap", "nfse", "stock", "balanco"]
 
 export function ehRecurso(valor: string): valor is Recurso {
   return (RECURSOS as readonly string[]).includes(valor)

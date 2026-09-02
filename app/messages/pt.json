@@ -916,7 +916,8 @@
       "reguaCobranca": "A régua de cobrança faz parte do plano Pro. Faça upgrade em Configurações → Plano para liberar.",
       "api": "A API de integração faz parte do plano Enterprise. Faça upgrade em Configurações → Plano para liberar.",
       "filiais": "Filiais é um adicional, contratado à parte de qualquer plano. Fale com a gente para liberar.",
-      "ia": "A assistente de voz é um adicional, contratado à parte de qualquer plano. Fale com a gente para liberar."
+      "ia": "A assistente de voz é um adicional, contratado à parte de qualquer plano. Fale com a gente para liberar.",
+      "balanco": "O balanço patrimonial faz parte do plano Pro. Faça upgrade em Configurações → Plano para liberar."
     },
     "planLimit": {
       "users": "Seu plano permite até {max} usuários e esse limite já foi atingido. Faça upgrade em Configurações → Plano para adicionar mais.",
@@ -1863,7 +1864,8 @@
           "reguaCobranca": "Régua de cobrança",
           "api": "API de integração",
           "filiais": "Filiais",
-          "ia": "Assistente de voz"
+          "ia": "Assistente de voz",
+          "balanco": "Balanço patrimonial"
         },
         "featuresAll": "Liberar {count, plural, one {o recurso restante} other {os # recursos restantes}}",
         "tabsTitle": "Abas que esta empresa vê ({visiveis} de {total})",
@@ -1987,7 +1989,8 @@
     "fecharMenu": "Fechar menu",
     "notas": "Notas de compra",
     "cotacoes": "Cotações",
-    "bens": "Controle de bens"
+    "bens": "Controle de bens",
+    "balanco": "Balanço patrimonial"
   },
   "notifications": {
     "quoteApproved": {
@@ -3251,6 +3254,99 @@
       "naoEstaBaixado": "Este bem não está baixado.",
       "baixaAntesDaCompra": "A baixa não pode ser antes da compra.",
       "temHistorico": "Este bem tem manutenções registradas. Dê baixa em vez de excluir — apagar reescreveria o histórico."
+    }
+  },
+  "balanco": {
+    "titulo": "Balanço patrimonial",
+    "subtitulo": "O que a empresa tem, o que ela deve, e o que sobra dela. Montado com o que o sistema já sabe.",
+    "avisoContador": "Este balanço é GERENCIAL: ele organiza o que o sistema sabe para você levar ao contador. O balanço com valor legal — para a Receita, para o banco, para licitação — é peça contábil assinada por profissional habilitado.",
+    "exportar": "Exportar para o contador",
+    "grupos": {
+      "ATIVO_CIRCULANTE": "Ativo circulante",
+      "ATIVO_NAO_CIRCULANTE": "Ativo não circulante",
+      "PASSIVO_CIRCULANTE": "Passivo circulante",
+      "PASSIVO_NAO_CIRCULANTE": "Passivo não circulante",
+      "PATRIMONIO_LIQUIDO": "Patrimônio líquido"
+    },
+    "gruposAjuda": {
+      "ATIVO_CIRCULANTE": "O que vira dinheiro em até um ano",
+      "ATIVO_NAO_CIRCULANTE": "O que fica: bens, imóveis, investimentos",
+      "PASSIVO_CIRCULANTE": "O que se paga em até um ano",
+      "PASSIVO_NAO_CIRCULANTE": "Dívidas de prazo mais longo",
+      "PATRIMONIO_LIQUIDO": "O que sobra para os sócios"
+    },
+    "linhas": {
+      "caixa": "Caixa e bancos",
+      "aReceber": "Contas a receber",
+      "estoque": "Estoque de peças",
+      "imobilizado": "Imobilizado (bens)",
+      "depreciacao": "(-) Depreciação acumulada",
+      "aPagar": "Contas a pagar",
+      "capitalSocial": "Capital social",
+      "resultadoAcumulado": "Resultado acumulado"
+    },
+    "totais": {
+      "ativo": "Total do ativo",
+      "passivo": "Total do passivo",
+      "pl": "Patrimônio líquido"
+    },
+    "bases": {
+      "titulo": "O que só você sabe",
+      "ajuda": "Dois números que o sistema não tem como calcular sozinho. Sem eles o balanço sai torto — e é o defeito mais comum de todos.",
+      "caixaInicial": "Caixa inicial",
+      "caixaInicialAjuda": "Quanto a empresa tinha em caixa e banco no dia em que começou a usar o sistema.",
+      "capitalSocial": "Capital social",
+      "capitalSocialAjuda": "O que os sócios puseram na empresa.",
+      "salvar": "Salvar",
+      "vazioApaga": "Deixar em branco apaga o valor informado."
+    },
+    "manual": {
+      "titulo": "Linhas manuais",
+      "ajuda": "O que vive fora do sistema: empréstimo, financiamento, imóvel não cadastrado, reserva de lucros.",
+      "nova": "Nova linha",
+      "editar": "Editar linha",
+      "descricao": "Descrição",
+      "grupo": "Grupo",
+      "valor": "Valor",
+      "valorAjuda": "Aceita valor negativo — conta retificadora, como provisão para perdas.",
+      "excluir": "Excluir",
+      "confirmarExcluir": "Excluir esta linha do balanço?",
+      "vazio": "Nenhuma linha manual.",
+      "cancelar": "Cancelar",
+      "salvar": "Salvar"
+    },
+    "conferente": {
+      "titulo": "O conferente",
+      "subtitulo": "O que costuma estar errado num balanço, conferido no seu.",
+      "ok": "Nada a corrigir. O balanço está pronto para ir ao contador.",
+      "impede": "Há algo que precisa ser corrigido antes de usar este balanço.",
+      "atencao": "O balanço fecha, mas há pontos a revisar.",
+      "resolver": "Resolver",
+      "gravidades": {
+        "impede": "Corrigir",
+        "atencao": "Revisar",
+        "informa": "Saiba"
+      },
+      "achados": {
+        "naoFecha": "O balanço não fechou. Isto é defeito do sistema, e não do seu cadastro — avise o suporte.",
+        "caixaNegativoSemInicial": "O caixa calculado ficou em {caixa} — negativo. Quase sempre é o caixa inicial faltando: o sistema só conhece o movimento desde que você começou a usá-lo. Informe quanto a empresa tinha no primeiro dia.",
+        "caixaNegativoComInicial": "O caixa calculado ficou em {caixa} — negativo, mesmo com o caixa inicial informado. Ou o dinheiro acabou mesmo, ou há despesa marcada como paga que não saiu.",
+        "plNegativo": "O patrimônio líquido está negativo em {pl}: a empresa deve {passivo} e tem {ativo}. É o número mais importante deste balanço.",
+        "semCapitalSocial": "Sem capital social informado, todo o patrimônio aparece como resultado acumulado — como se a empresa tivesse nascido do nada e lucrado tudo. É a primeira pergunta que o contador faz.",
+        "estoqueSemCusto": "{pecas} peças têm saldo e não têm preço de custo: elas existem na prateleira e valem zero no balanço.",
+        "recebivelVelho": "{quantidade} contas somando {valor} estão vencidas há mais de {dias} dias e continuam somando no ativo pelo valor cheio. Vale conversar com o contador sobre provisão para perdas.",
+        "semBens": "Nenhum bem cadastrado. Se a empresa tem van, notebook ou ferramenta, o ativo está incompleto.",
+        "bemSemNota": "{bens} bens estão sem nota anexada. É o documento que o contador pede para lançar o imobilizado.",
+        "bemZerado": "{bens} bens já foram totalmente depreciados e continuam em uso. Vale rever a vida útil com o contador.",
+        "depreciacaoForaDoCaixa": "A depreciação de {depreciacao} reduz o patrimônio aqui e não aparece como despesa no Financeiro — porque não saiu dinheiro nenhum. As duas telas estão certas."
+      }
+    },
+    "erros": {
+      "semPermissao": "Só o dono ou um administrador pode mexer no balanço.",
+      "valorInvalido": "Valor inválido.",
+      "descricaoObrigatoria": "Descreva a linha.",
+      "grupoInvalido": "Escolha um grupo.",
+      "naoEncontrado": "Linha não encontrada."
     }
   }
 }
