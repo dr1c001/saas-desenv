@@ -4,6 +4,8 @@ import { getTranslations } from "next-intl/server"
 import { ArrowLeft } from "lucide-react"
 import { getTenant } from "@/lib/auth"
 import { temRecurso } from "@/lib/plan"
+import { getNotasDaCompra } from "@/actions/notas-compra"
+import { NotasDaCompra } from "@/components/notas/notas-da-compra"
 import { getCompra } from "@/actions/compras"
 import { faltaReceber, podeCancelar, type StatusCompra } from "@/lib/compras"
 import { formatCurrency, formatDate } from "@/lib/utils"
@@ -30,6 +32,7 @@ export default async function CompraPage({ params }: { params: Promise<{ id: str
 
   const t = await getTranslations("compras")
   const isAdmin = role === "OWNER" || role === "ADMIN"
+  const notas = await getNotasDaCompra(id)
   const status = compra.status as StatusCompra
   const aberta = status === "ENVIADA" || status === "PARCIAL" || status === "RASCUNHO"
 
@@ -141,6 +144,11 @@ export default async function CompraPage({ params }: { params: Promise<{ id: str
           {t("recebidaEm", { data: formatDate(compra.receivedAt) })}
         </p>
       )}
+      {/* A nota do fornecedor. Fica no fim porque e o ultimo passo do
+          recebimento — a peca chegou, o dinheiro virou despesa, e o papel
+          que prova as duas coisas entra aqui. */}
+      <NotasDaCompra purchaseOrderId={compra.id} notas={notas} podeAnexar={isAdmin} />
+
     </div>
   )
 }

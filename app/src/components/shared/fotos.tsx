@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { type EstadoFoto, type FotoExibicao } from "@/actions/attachments"
 import { MAX_FOTOS } from "@/lib/foto"
+// Compartilhada com a nota do fornecedor — ver lib/comprimir-foto.ts.
+import { comprimir } from "@/lib/comprimir-foto"
 
 // A galeria de fotos, usada pela OS E pelo orcamento.
 //
@@ -20,37 +22,6 @@ import { MAX_FOTOS } from "@/lib/foto"
 
 /** Maior lado da imagem depois de reduzir. 1600px imprime bem em A4 e mostra
  *  detalhe de vazamento, risco ou etiqueta de equipamento. */
-const LADO_MAXIMO = 1600
-const QUALIDADE = 0.75
-
-/**
- * Reduz a foto no próprio aparelho, antes de subir.
- *
- * É a decisão que faz a diferença em campo: foto de celular moderno tem 3–8 MB
- * e o técnico está num subsolo com 4G ruim. Depois disto fica em 200–400 KB —
- * a diferença entre enviar em segundos e desistir no meio.
- *
- * De quebra resolve o HEIC do iPhone: o canvas devolve JPEG, que todo mundo
- * abre, sem precisar de biblioteca de conversão.
- */
-async function comprimir(arquivo: File): Promise<File> {
-  const bitmap = await createImageBitmap(arquivo)
-  const escala = Math.min(1, LADO_MAXIMO / Math.max(bitmap.width, bitmap.height))
-  const largura = Math.round(bitmap.width * escala)
-  const altura = Math.round(bitmap.height * escala)
-
-  const canvas = document.createElement("canvas")
-  canvas.width = largura
-  canvas.height = altura
-  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, largura, altura)
-  bitmap.close()
-
-  const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", QUALIDADE))
-  // Se o navegador não devolver o blob (caso raro), envia o original em vez de
-  // travar: melhor upload pesado que foto perdida.
-  if (!blob) return arquivo
-  return new File([blob], "foto.jpg", { type: "image/jpeg" })
-}
 
 export function Fotos({
   campo,

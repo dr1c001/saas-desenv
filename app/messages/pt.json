@@ -1984,7 +1984,9 @@
     "signOut": "Sair",
     "team": "Equipe",
     "vocabulary": "Vocabulário",
-    "fecharMenu": "Fechar menu"
+    "fecharMenu": "Fechar menu",
+    "notas": "Notas de compra",
+    "cotacoes": "Cotações"
   },
   "notifications": {
     "quoteApproved": {
@@ -3093,6 +3095,80 @@
     "salvo": "Salvo",
     "errors": {
       "semPermissao": "Você não tem permissão para alterar isso."
+    }
+  },
+  "notasCompra": {
+    "titulo": "Notas de compra",
+    "subtitulo": "As notas que os fornecedores mandaram, todas num lugar só. É o que o contador pede — e o que hoje sai de uma caixa de papel.",
+    "busca": "Buscar por fornecedor, número da compra ou nome do arquivo",
+    "vazio": "Nenhuma nota anexada ainda.",
+    "vazioBusca": "Nenhuma nota encontrada.",
+    "anexar": "Anexar nota",
+    "enviando": "Enviando...",
+    "abrir": "Abrir",
+    "remover": "Remover",
+    "confirmarRemover": "Remover esta nota? Ela é o documento da compra, e não dá para recuperar depois.",
+    "daCompra": "Compra #{n}",
+    "semFornecedor": "Sem fornecedor",
+    "indisponivel": "indisponível",
+    "erros": {
+      "semPermissao": "Você não tem permissão para isso.",
+      "arquivoVazio": "Arquivo vazio. Escolha um arquivo.",
+      "compraNaoEncontrada": "Ordem de compra não encontrada.",
+      "naoEncontrada": "Nota não encontrada.",
+      "tipoNaoAceito": "Só aceitamos imagem (JPG, PNG ou WEBP).",
+      "muitoGrande": "Arquivo grande demais.",
+      "limitePorOs": "Limite de anexos atingido nesta compra."
+    }
+  },
+  "cotacoes": {
+    "titulo": "Cotações",
+    "subtitulo": "Peça preço a vários fornecedores e compare antes de comprar. Responde a pergunta que a ordem de compra não responde: de quem eu compro.",
+    "nova": "Nova cotação",
+    "tituloDaCotacao": "O que está cotando",
+    "prazo": "Prazo de resposta",
+    "observacoes": "Observações",
+    "itens": "Itens",
+    "fornecedores": "Fornecedores",
+    "peca": "Peça",
+    "quantidade": "Quantidade",
+    "adicionar": "Adicionar",
+    "status": {
+      "ABERTA": "Aberta",
+      "FECHADA": "Fechada",
+      "CANCELADA": "Cancelada"
+    },
+    "respondeu": "Respondeu",
+    "naoRespondeu": "Aguardando",
+    "cotou": "{n} de {total} itens",
+    "comparacao": "Comparação",
+    "melhorUnico": "Melhor fornecedor único",
+    "totalDividindo": "Comprando de cada um o mais barato",
+    "economia": "Economia ao dividir",
+    "semUnico": "Nenhum fornecedor cotou todos os itens.",
+    "semCotacao": "Ninguém cotou: {itens}",
+    "naoCotou": "—",
+    "lancarPrecos": "Lançar preços",
+    "salvar": "Salvar",
+    "salvo": "Salvo",
+    "cancelar": "Cancelar",
+    "fecharCom": "Comprar deste",
+    "fechada": "Cotação fechada. Ordem de compra gerada.",
+    "cancelar_": "Cancelar cotação",
+    "vazio": "Nenhuma cotação ainda.",
+    "explicaDividir": "Dividir custa igual ou menos, sempre. O preço é operacional: mais de uma entrega, mais de uma nota, mais de um telefone para cobrar.",
+    "erros": {
+      "semPermissao": "Você não tem permissão para isso.",
+      "tituloObrigatorio": "Dê um nome à cotação.",
+      "semItens": "Escolha ao menos uma peça.",
+      "semFornecedores": "Escolha ao menos um fornecedor.",
+      "pecaInvalida": "Peça não encontrada nesta empresa.",
+      "fornecedorInvalido": "Fornecedor não encontrado nesta empresa.",
+      "quantidadeInvalida": "Informe uma quantidade maior que zero.",
+      "naoEncontrada": "Cotação não encontrada.",
+      "naoEncontrado": "Fornecedor não encontrado nesta cotação.",
+      "cotacaoFechada": "Esta cotação não aceita mais alteração.",
+      "fornecedorSemPreco": "Este fornecedor não cotou nada. Não há o que comprar dele."
     }
   }
 }

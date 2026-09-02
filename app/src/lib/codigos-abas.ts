@@ -61,6 +61,8 @@ export const DESTINOS: readonly Destino[] = [
   { codigo: "4.1", rota: "/parts", navKey: "parts", aba: "parts" },
   { codigo: "4.2", rota: "/purchases", navKey: "purchases", aba: "purchases" },
   { codigo: "4.3", rota: "/providers", navKey: "providers", aba: "providers" },
+  { codigo: "4.4", rota: "/notas", navKey: "notas", aba: "notas" },
+  { codigo: "4.5", rota: "/cotacoes", navKey: "cotacoes", aba: "cotacoes" },
 
   // ── 5. Empresa ────────────────────────────────────────────────────────────
   { codigo: "5.1", rota: "/team", navKey: "team", aba: "team" },

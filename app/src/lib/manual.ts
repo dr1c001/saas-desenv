@@ -672,6 +672,75 @@ export const MANUAL: readonly Secao[] = [
           },
         ]
       ),
+      aba(
+        "4.4",
+        "Notas de compra",
+        "As notas que os fornecedores mandaram, todas num lugar só.",
+        [
+          {
+            tipo: "p",
+            texto:
+              "A nota é anexada *dentro da compra* (4.2), no momento em que chega. Esta tela existe para a outra pergunta: “onde está a nota daquele compressor que comprei em março?”.",
+          },
+          {
+            tipo: "lista",
+            titulo: "A busca encontra por",
+            itens: [
+              "*Nome do arquivo* — o que você escreveu ao salvar.",
+              "*Fornecedor* — quem vendeu.",
+              "*Número da compra* — o que está no e-mail do pedido.",
+            ],
+          },
+          {
+            tipo: "p",
+            texto:
+              "É também o que o contador pede todo mês, e o que hoje costuma sair de uma caixa de papel.",
+          },
+          {
+            tipo: "atencao",
+            titulo: "Remover apaga de vez",
+            texto:
+              "A nota é o documento da compra. Removida, não há como recuperar — nem pelo sistema, nem pelo suporte.",
+          },
+        ]
+      ),
+      aba(
+        "4.5",
+        "Cotações",
+        "Peça preço a vários fornecedores e compare antes de comprar.",
+        [
+          {
+            tipo: "p",
+            texto:
+              "A ordem de compra responde *o que* comprar. A cotação responde *de quem* — que hoje se resolve ligando para três fornecedores e anotando num papel que some.",
+          },
+          {
+            tipo: "passos",
+            titulo: "Como funciona",
+            itens: [
+              "Crie a cotação: escolha as peças, as quantidades e a quem perguntar.",
+              "Ligue ou mande mensagem para cada fornecedor. Quem digita a resposta é você, em *Lançar preços*.",
+              "A tela compara sozinha e mostra quem está mais barato, item a item.",
+              "Escolha um fornecedor e clique em *Comprar deste*. A ordem de compra nasce com os preços cotados, sem redigitar.",
+            ],
+          },
+          {
+            tipo: "lista",
+            titulo: "A comparação mostra DUAS respostas",
+            itens: [
+              "*Melhor fornecedor único* — o menor total entre quem cotou tudo. Uma nota, um frete, um contato para cobrar.",
+              "*Comprando de cada um o mais barato* — sempre custa igual ou menos. O preço é operacional: mais de uma entrega e mais de uma nota.",
+              "A diferença entre os dois é a *economia ao dividir* — e é o que você está comprando ao aceitar o trabalho a mais.",
+            ],
+          },
+          {
+            tipo: "atencao",
+            titulo: "Campo de preço vazio não é zero",
+            texto:
+              "Deixar em branco significa “não cotou esse item”. Se você digitar zero, o sistema entende brinde — e zero vence a comparação.",
+          },
+        ]
+      ),
     ],
   },
 

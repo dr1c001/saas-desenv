@@ -1984,7 +1984,9 @@
     "signOut": "Sign out",
     "team": "Team",
     "vocabulary": "Vocabulary",
-    "fecharMenu": "Close menu"
+    "fecharMenu": "Close menu",
+    "notas": "Purchase invoices",
+    "cotacoes": "Quotations"
   },
   "notifications": {
     "quoteApproved": {
@@ -3093,6 +3095,80 @@
     "salvo": "Saved",
     "errors": {
       "semPermissao": "You do not have permission to change this."
+    }
+  },
+  "notasCompra": {
+    "titulo": "Purchase invoices",
+    "subtitulo": "The invoices your suppliers sent, all in one place. It is what your accountant asks for — and what today lives in a paper box.",
+    "busca": "Search by supplier, purchase number or file name",
+    "vazio": "No invoices attached yet.",
+    "vazioBusca": "No invoices found.",
+    "anexar": "Attach invoice",
+    "enviando": "Uploading...",
+    "abrir": "Open",
+    "remover": "Remove",
+    "confirmarRemover": "Remove this invoice? It is the purchase document, and it cannot be recovered.",
+    "daCompra": "Purchase #{n}",
+    "semFornecedor": "No supplier",
+    "indisponivel": "unavailable",
+    "erros": {
+      "semPermissao": "You do not have permission to do that.",
+      "arquivoVazio": "Empty file. Choose a file.",
+      "compraNaoEncontrada": "Purchase order not found.",
+      "naoEncontrada": "Invoice not found.",
+      "tipoNaoAceito": "Images only (JPG, PNG or WEBP).",
+      "muitoGrande": "File too large.",
+      "limitePorOs": "Attachment limit reached for this purchase."
+    }
+  },
+  "cotacoes": {
+    "titulo": "Quotations",
+    "subtitulo": "Ask several suppliers for prices and compare before buying. Answers what a purchase order cannot: who to buy from.",
+    "nova": "New quotation",
+    "tituloDaCotacao": "What you are pricing",
+    "prazo": "Reply deadline",
+    "observacoes": "Notes",
+    "itens": "Items",
+    "fornecedores": "Suppliers",
+    "peca": "Part",
+    "quantidade": "Quantity",
+    "adicionar": "Add",
+    "status": {
+      "ABERTA": "Open",
+      "FECHADA": "Closed",
+      "CANCELADA": "Cancelled"
+    },
+    "respondeu": "Replied",
+    "naoRespondeu": "Awaiting",
+    "cotou": "{n} of {total} items",
+    "comparacao": "Comparison",
+    "melhorUnico": "Best single supplier",
+    "totalDividindo": "Buying each item from the cheapest",
+    "economia": "Saving by splitting",
+    "semUnico": "No supplier priced every item.",
+    "semCotacao": "Nobody priced: {itens}",
+    "naoCotou": "—",
+    "lancarPrecos": "Enter prices",
+    "salvar": "Save",
+    "salvo": "Saved",
+    "cancelar": "Cancel",
+    "fecharCom": "Buy from this one",
+    "fechada": "Quotation closed. Purchase order created.",
+    "cancelar_": "Cancel quotation",
+    "vazio": "No quotations yet.",
+    "explicaDividir": "Splitting always costs the same or less. The price is operational: more deliveries, more invoices, more people to chase.",
+    "erros": {
+      "semPermissao": "You do not have permission to do that.",
+      "tituloObrigatorio": "Give the quotation a name.",
+      "semItens": "Pick at least one part.",
+      "semFornecedores": "Pick at least one supplier.",
+      "pecaInvalida": "Part not found in this company.",
+      "fornecedorInvalido": "Supplier not found in this company.",
+      "quantidadeInvalida": "Enter a quantity greater than zero.",
+      "naoEncontrada": "Quotation not found.",
+      "naoEncontrado": "Supplier not found in this quotation.",
+      "cotacaoFechada": "This quotation no longer accepts changes.",
+      "fornecedorSemPreco": "This supplier priced nothing. There is nothing to buy from them."
     }
   }
 }

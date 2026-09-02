@@ -150,6 +150,7 @@ model Tenant {
   customFields      CustomField[]
   contracts         ServiceContract[]
   stockLocations    StockLocation[]
+  quotations        Quotation[]
 
   // Vocabulario adaptavel: como a empresa chama OS e tecnico.
   // Formato em lib/vocabulario.ts. Fica junto do locale porque e lido no mesmo
@@ -575,12 +576,20 @@ model Attachment {
   /// armazenamento e ninguem consegue apagar pela interface.
   orderId   String?
   quoteId   String?
+  /// A NOTA do fornecedor, anexada a uma ordem de compra.
+  ///
+  /// Terceiro dono possivel deste anexo. A trava no banco passou de "um dos
+  /// dois" para "exatamente um dos tres" — ver a migration.
+  purchaseOrderId String?
   createdAt DateTime @default(now())
 
   order ServiceOrder? @relation(fields: [orderId], references: [id], onDelete: Cascade)
   quote Quote?        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
+  @@index([purchaseOrderId])
+
 }
 
 // ─── Financeiro ───────────────────────────────────────────────────────────────
@@ -1221,6 +1230,8 @@ model Supplier {
   purchaseOrders PurchaseOrder[]
 
   @@index([tenantId, name])
+  quotations QuotationParticipant[]
+
 }
 
 /// Peca de estoque.
@@ -1253,6 +1264,7 @@ model Part {
   movements     StockMovement[]
   balances      StockBalance[]
   purchaseItems PurchaseItem[]
+  quotationItems QuotationItem[]
   serviceItems  ServiceItem[]
 
   // Listagem e busca por nome; a de escolha filtra por active.
@@ -1382,6 +1394,100 @@ enum PurchaseStatus {
 }
 
 /// Ordem de compra de pecas ao fornecedor.
+/// Cotacao: pedir preco a varios fornecedores antes de comprar.
+///
+/// O que ela responde e uma pergunta que a ordem de compra nao responde: "de
+/// quem eu compro?". Sem isso, a empresa liga para tres fornecedores, anota
+/// num papel e o papel some — e na proxima compra a comparacao e refeita do
+/// zero, muitas vezes com o mesmo resultado.
+///
+/// Regras de comparacao em lib/cotacao.ts.
+model Quotation {
+  id          String          @id @default(cuid())
+  tenantId    String
+  number      Int
+  title       String
+  status      QuotationStatus @default(ABERTA)
+  /// Ate quando os fornecedores tem para responder. So informativo — nada
+  /// fecha sozinho, porque fornecedor atrasado que responde bem ainda ganha.
+  deadline    DateTime?
+  notes       String?         @db.Text
+  /// Quem venceu, quando a cotacao foi fechada. Guardado para o historico
+  /// continuar legivel depois de a compra ter sido gerada.
+  winnerId    String?
+  closedAt    DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items        QuotationItem[]
+  participants QuotationParticipant[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+enum QuotationStatus {
+  ABERTA
+  FECHADA
+  CANCELADA
+}
+
+/// O que se esta cotando, e quanto.
+model QuotationItem {
+  id          String  @id @default(cuid())
+  quotationId String
+  partId      String
+  quantity    Decimal @db.Decimal(12, 3)
+
+  quotation Quotation        @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  part      Part             @relation(fields: [partId], references: [id])
+  prices    QuotationPrice[]
+
+  /// A mesma peca duas vezes na mesma cotacao faria a comparacao contar o
+  /// dobro e o total do fornecedor sair errado.
+  @@unique([quotationId, partId])
+  @@index([partId])
+}
+
+/// Um fornecedor CONVIDADO a cotar.
+///
+/// Existe como linha propria (e nao so como preco) para o sistema saber a
+/// diferenca entre "nao respondeu" e "respondeu que nao tem" — que sao coisas
+/// diferentes na hora de decidir a quem ligar da proxima vez.
+model QuotationParticipant {
+  id          String    @id @default(cuid())
+  quotationId String
+  supplierId  String
+  notes       String?
+  respondedAt DateTime?
+
+  quotation Quotation        @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  supplier  Supplier         @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  prices    QuotationPrice[]
+
+  /// Convidar o mesmo fornecedor duas vezes duplicaria a coluna dele na
+  /// comparacao.
+  @@unique([quotationId, supplierId])
+  @@index([supplierId])
+}
+
+/// O preco que UM fornecedor deu para UM item.
+model QuotationPrice {
+  id            String  @id @default(cuid())
+  participantId String
+  itemId        String
+  unitPrice     Decimal @db.Decimal(12, 2)
+
+  participant QuotationParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  item        QuotationItem        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  /// Um preco por fornecedor por item. Dois faria a soma contar duas vezes.
+  @@unique([participantId, itemId])
+  @@index([itemId])
+}
+
 model PurchaseOrder {
   id         String         @id @default(cuid())
   number     Int
@@ -1401,6 +1507,7 @@ model PurchaseOrder {
   items     PurchaseItem[]
   movements StockMovement[]
   expenses  Expense[]
+  attachments Attachment[]
 
   @@unique([tenantId, number])
   @@index([tenantId, createdAt])

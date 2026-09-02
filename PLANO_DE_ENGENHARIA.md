@@ -3065,6 +3065,80 @@ fornecedores.
 
 ---
 
+### 7.2.54 Nota do fornecedor e cotacao entre fornecedores — 02/09/2026
+
+Os dois ultimos itens do modulo de compras.
+
+**A NOTA DO FORNECEDOR** ganhou um terceiro dono possivel no `Attachment`, que
+ja servia a OS e ao orcamento. A trava de dono unico foi REESCRITA: dizia
+"orderId OU quoteId, nunca os dois", e com um terceiro viraria quatro
+combinacoes escritas a mao — a quinta, quando um quarto dono aparecer, seria
+esquecida. Agora e `num_nonnulls("orderId","quoteId","purchaseOrderId") = 1`,
+que e literalmente "exatamente um" e cresce sozinha. Nove testes cobrem cada
+combinacao, incluindo as tres que a trava antiga nao conhecia.
+
+**Uma ABA propria** (4.4), e nao so o anexo dentro da compra. Sao duas
+perguntas: "onde esta a nota DESTA compra" (resolve dentro dela) e "onde esta a
+nota daquele compressor de marco" (so resolve com todas num lugar so, com
+busca). E o que o contador pede todo mes.
+
+**A COTACAO** (4.5) responde o que a ordem de compra nao responde: de quem
+comprar. Quatro tabelas — cotacao, item, participante convidado e preco. O
+participante e linha propria para o sistema distinguir "nao respondeu" de
+"respondeu que nao tem".
+
+A comparacao mostra DUAS respostas porque elas divergem: o melhor fornecedor
+unico (menor total entre quem cotou TUDO — comparar quem respondeu 1 de 3 contra
+quem respondeu os 3 daria a vitoria a quem respondeu menos) e o total comprando
+cada item de quem esta mais barato. A diferenca e a economia ao dividir, e e o
+que o dono compra ao aceitar tres entregas. Ao escolher, a ordem de compra nasce
+COM OS PRECOS COTADOS — sem redigitar justamente o numero que se acabou de
+comparar.
+
+---
+
+**A REVISAO ADVERSARIAL, e o que ela achou.** O pedido era "sem erros para nao
+precisar corrigir depois", entao rodei quatro agentes independentes sobre o
+codigo antes de commitar. Encontraram quatro defeitos reais, todos corrigidos
+antes de subir:
+
+*1. Duas convencoes de arredondamento (alta).* `totaisPorFornecedor` somava cru
+e arredondava uma vez; `melhorPorItem` arredondava por linha; o fechamento
+gravava a soma das linhas arredondadas. Com quantidade fracionaria — e a coluna
+e Decimal(12,3) — os tres divergiam. Verificado: 2,5×3,45 + 1,5×7,15 + 0,5×9,99
+dava R$ 24,35 num caminho e R$ 24,36 no outro, entao "dividindo" aparecia MAIS
+CARO que o melhor unico, **o que e impossivel por definicao**, e a ordem de
+compra gravava um centavo a mais do que o dono aprovou na tela. Unificado para
+arredondar POR LINHA — que e o que a nota fiscal faz.
+
+*2. Corrida no fechamento (alta).* A guarda de status ficava FORA da transacao e
+o update gravava por id puro. Dois administradores na mesma tela criariam DUAS
+ordens de compra identicas, que ao serem recebidas dobrariam estoque E despesa.
+Corrigido com `updateMany` condicionado ao status DENTRO da transacao, abortando
+quando `count === 0`. Tres testes com `Promise.all` provam; por mutacao, os tres
+falham sem a trava.
+
+*3. A nota subia sem compressao (alta).* O componente mandava o arquivo cru,
+enquanto a galeria de fotos reduz no aparelho. Fotografar uma nota de papel da
+3–8 MB, o limite de corpo das Server Actions e 4 MB, e o HEIC do iPhone nem
+passa pela validacao de tipo — ou seja, o caminho PRINCIPAL da funcionalidade
+falhava justamente no aparelho em que ela e usada. A compressao virou
+`lib/comprimir-foto.ts`, compartilhada: estar dentro de um componente foi
+exatamente o que permitiu o segundo caminho esquece-la.
+
+*4. Busca numerica estourando INT4 (alta).* `/^\d+$/` aceitava a chave de acesso
+da NF-e (44 digitos) e mandava para `PurchaseOrder.number`, que e INT4. O Prisma
+lancava, a aba devolvia 500 — e o texto ficava na URL, entao ela continuava
+quebrada ao recarregar. Corrigido com `Number.isSafeInteger` e teto de INT4.
+
+**Dois testes do proprio projeto tambem me pegaram**, antes da revisao: o codigo
+de aba `4.3` ja era do Fornecedores, e a duplicata mascarou a falta de verbete
+do manual para a aba de notas — o teste casou pelo codigo repetido.
+
+1222 -> 1275 testes.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

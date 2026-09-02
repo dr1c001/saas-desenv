@@ -32,6 +32,8 @@ import {
   CalendarSync,
   Package,
   ShoppingCart,
+  ReceiptText,
+  Scale,
   CircleQuestionMark,
   ArrowLeft,
 } from "lucide-react"
@@ -79,6 +81,8 @@ const NAV_ITEMS: { titleKey: string; href: string; icon: React.ElementType; slug
   { titleKey: "map", href: "/map", icon: MapPin, slug: "map" },
   { titleKey: "parts", href: "/parts", icon: Package, slug: "parts" },
   { titleKey: "purchases", href: "/purchases", icon: ShoppingCart, slug: "purchases" },
+  { titleKey: "notas", href: "/notas", icon: ReceiptText, slug: "notas" },
+  { titleKey: "cotacoes", href: "/cotacoes", icon: Scale, slug: "cotacoes" },
   { titleKey: "billing", href: "/billing", icon: CreditCard, slug: "billing" },
   { titleKey: "referral", href: "/referral", icon: Gift, slug: "referral" },
   // "fiscal" já existia em ALL_TABS (lib/auth.ts) e era atribuível em
