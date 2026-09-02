@@ -6,6 +6,7 @@ import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { requireRecurso } from "@/lib/plan"
 import { aplicarMovimento, proximoNumeroDeCompra, resolverLocal } from "@/lib/estoque-db"
 import { statusAposRecebimento, type ItemRecebido } from "@/lib/compras"
+import { custoMedio, dividirEmParcelas, sugerirCompra } from "@/lib/compras-dinheiro"
 
 export type EstadoCompra = { erro?: string; ok?: boolean; id?: string }
 
@@ -213,7 +214,7 @@ export async function receberCompra(
 
   const compra = await prisma.purchaseOrder.findFirst({
     where: { id, tenantId },
-    include: { items: true },
+    include: { items: true, supplier: { select: { name: true } } },
   })
   if (!compra) return { erro: "naoEncontrada" }
   if (compra.status === "CANCELADA") return { erro: "compraCancelada" }
@@ -232,6 +233,28 @@ export async function receberCompra(
     recebido: Number(i.receivedQuantity) + (chegou.get(i.id) ?? 0),
   }))
   const novoStatus = statusAposRecebimento(paraStatus)
+
+  // ─── O que vira despesa, e quando vence ───────────────────────────────────
+  //
+  // O valor é o do que chegou AGORA, e não o total da ordem: numa compra
+  // parcial paga-se o que foi entregue, e lançar o total inteiro registraria
+  // dinheiro que ainda não saiu.
+  const valorRecebidoAgora = compra.items.reduce(
+    (soma, i) => soma + (chegou.get(i.id) ?? 0) * Number(i.unitCost),
+    0
+  )
+
+  // Prazo e parcelas vêm da tela do recebimento — é ali que se sabe o que foi
+  // combinado com o fornecedor. Sem informar, vence hoje em uma parcela, que é
+  // o comportamento de quem paga à vista.
+  const parcelas = Math.max(1, Math.floor(numero(formData.get("parcelas")) || 1))
+  const vencimentoCru = String(formData.get("primeiroVencimento") ?? "").trim()
+  const primeiroVencimento = vencimentoCru
+    ? // Meio-dia evita o vencimento escorregar um dia para trás no fuso.
+      new Date(`${vencimentoCru}T12:00:00`)
+    : new Date()
+
+  const fornecedor = compra.supplier?.name ?? null
 
   await prisma.$transaction(async (tx) => {
     for (const item of compra.items) {
@@ -255,10 +278,31 @@ export async function receberCompra(
         purchaseOrderId: compra.id,
         userId,
       })
-      // Custo mais recente é o que vale pra calcular margem daqui pra frente.
+      // Custo MÉDIO PONDERADO, e não a última nota.
+      //
+      // Sobrescrever com o preço da última compra fazia 10 peças a R$ 80 mais
+      // 2 a R$ 120 passarem a valer R$ 120 cada — e a margem de todo serviço
+      // seguinte aparecia menor do que é, calculada sobre um estoque que
+      // custou outra coisa. Regra e casos de borda em lib/compras-dinheiro.ts.
+      //
+      // Lido DENTRO da transação e antes do movimento ter sido aplicado à
+      // linha: `saldoAntes` é o estoque que existia quando este custo valia.
+      const antes = await tx.part.findUnique({
+        where: { id: item.partId },
+        select: { stock: true, costPrice: true },
+      })
       await tx.part.update({
         where: { id: item.partId },
-        data: { costPrice: item.unitCost },
+        data: {
+          costPrice: custoMedio({
+            // O movimento acima já somou `q` ao estoque, então o saldo de
+            // antes é o atual menos o que acabou de entrar.
+            estoqueAtual: Number(antes?.stock ?? 0) - q,
+            custoAtual: antes?.costPrice ? Number(antes.costPrice) : null,
+            quantidadeRecebida: q,
+            custoDaCompra: Number(item.unitCost),
+          }),
+        },
       })
     }
 
@@ -269,6 +313,38 @@ export async function receberCompra(
         receivedAt: novoStatus === "RECEBIDA" ? new Date() : compra.receivedAt,
       },
     })
+
+    // ─── A COMPRA VIRA DESPESA ─────────────────────────────────────────────
+    //
+    // Era o defeito mais caro deste módulo: a peça entrava no estoque e o
+    // dinheiro não saía do caixa. A empresa comprava R$ 2.400, o saldo subia,
+    // e o Financeiro não ficava sabendo — o lucro na tela ficava maior que o
+    // lucro de verdade.
+    //
+    // A despesa é por RECEBIMENTO, e pelo valor do que chegou AGORA: numa
+    // compra parcial paga-se o que foi entregue, e uma despesa só, do total,
+    // lançaria dinheiro que ainda não saiu.
+    //
+    // Na MESMA transação do estoque: se uma gravasse e a outra não, estoque e
+    // caixa passariam a discordar sem ninguém notar.
+    if (valorRecebidoAgora > 0) {
+      for (const p of dividirEmParcelas(valorRecebidoAgora, parcelas, primeiroVencimento)) {
+        await tx.expense.create({
+          data: {
+            tenantId,
+            description:
+              `Compra #${compra.number}` +
+              (compra.supplierId && fornecedor ? ` — ${fornecedor}` : "") +
+              (parcelas > 1 ? ` (${p.numero}/${parcelas})` : ""),
+            amount: p.valor,
+            dueDate: p.vencimento,
+            // Peça é custo que varia com o volume de serviço — não é aluguel.
+            category: "VARIABLE",
+            purchaseOrderId: compra.id,
+          },
+        })
+      }
+    }
   })
 
   revalidatePath("/purchases")
@@ -292,4 +368,76 @@ export async function cancelarCompra(id: string) {
 
   await prisma.purchaseOrder.update({ where: { id }, data: { status: "CANCELADA" } })
   revalidatePath("/purchases")
+}
+
+// ─── Sugestão de compra ──────────────────────────────────────────────────────
+
+/**
+ * O que está abaixo do mínimo, e quanto falta comprar.
+ *
+ * O sistema já sabia disso — o alerta da tela de peças usa a mesma informação
+ * todo dia. O que faltava era transformar esse conhecimento numa ordem de
+ * compra, em vez de deixar o dono somar à mão o que precisa pedir.
+ */
+export async function getSugestaoDeCompra() {
+  const { tenantId } = await getTenant()
+  await requireRecurso(tenantId, "stock")
+
+  const pecas = await prisma.part.findMany({
+    where: { tenantId, active: true },
+    select: { id: true, name: true, stock: true, minStock: true, costPrice: true },
+  })
+
+  return sugerirCompra(
+    pecas.map((p) => ({
+      id: p.id,
+      nome: p.name,
+      estoque: Number(p.stock),
+      minimo: Number(p.minStock),
+      custo: p.costPrice ? Number(p.costPrice) : null,
+    }))
+  )
+}
+
+/**
+ * Cria uma ordem de compra em RASCUNHO com o que está faltando.
+ *
+ * Rascunho, e não enviada: o dono ainda vai escolher o fornecedor, conferir as
+ * quantidades e negociar o preço. Criar já enviada seria o sistema comprando
+ * sozinho.
+ *
+ * O custo do item vem do custo médio da peça — é a melhor estimativa que
+ * existe antes de o fornecedor responder. Peça sem custo entra com zero, e a
+ * tela mostra o campo vazio para ser preenchido.
+ */
+export async function criarCompraSugerida(): Promise<EstadoCompra> {
+  const { tenantId, role } = await contexto()
+  if (role !== "OWNER" && role !== "ADMIN") return { erro: "semPermissao" }
+
+  const sugestao = await getSugestaoDeCompra()
+  if (sugestao.length === 0) return { erro: "nadaAComprar" }
+
+  const criada = await prisma.$transaction(async (tx) => {
+    const number = await proximoNumeroDeCompra(tx, tenantId)
+    return tx.purchaseOrder.create({
+      data: {
+        tenantId,
+        number,
+        status: "RASCUNHO",
+        total: sugestao.reduce((s, p) => s + p.comprar * (p.custo ?? 0), 0),
+        items: {
+          create: sugestao.map((p) => ({
+            partId: p.id,
+            quantity: p.comprar,
+            unitCost: p.custo ?? 0,
+            total: Math.round(p.comprar * (p.custo ?? 0) * 100) / 100,
+          })),
+        },
+      },
+      select: { id: true },
+    })
+  })
+
+  revalidatePath("/purchases")
+  return { ok: true, id: criada.id }
 }

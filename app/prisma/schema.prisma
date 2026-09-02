@@ -629,14 +629,26 @@ model Expense {
   recurring   Boolean         @default(false)
   /// Escolhida no cadastro da despesa.
   branchId    String?
+  /// A COMPRA que gerou esta despesa.
+  ///
+  /// Existe porque ate 01/09/2026 a compra entrava no estoque e nao saia do
+  /// caixa: a empresa comprava R$ 2.400, o saldo subia, e o Financeiro nao
+  /// ficava sabendo. Com o vinculo da para ir da despesa ate a nota que a
+  /// originou — e de volta.
+  ///
+  /// SetNull: apagar a ordem de compra nao pode apagar o dinheiro que saiu.
+  purchaseOrderId String?
   createdAt   DateTime        @default(now())
 
   branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
   tenant Tenant @relation(fields: [tenantId], references: [id])
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
 
   // Mesma forma da Revenue: gráfico do dashboard e listagem do Financeiro.
   @@index([tenantId, status, paidAt])
   @@index([tenantId, status, dueDate])
+  @@index([purchaseOrderId])
+
 }
 
 enum PaymentStatus {
@@ -1388,6 +1400,7 @@ model PurchaseOrder {
   supplier  Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   items     PurchaseItem[]
   movements StockMovement[]
+  expenses  Expense[]
 
   @@unique([tenantId, number])
   @@index([tenantId, createdAt])

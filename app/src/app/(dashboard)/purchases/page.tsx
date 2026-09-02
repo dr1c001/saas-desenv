@@ -3,12 +3,13 @@ import { redirect } from "next/navigation"
 import { getTranslations } from "next-intl/server"
 import { getTenant } from "@/lib/auth"
 import { temRecurso } from "@/lib/plan"
-import { getCompras, getFornecedores } from "@/actions/compras"
+import { getCompras, getFornecedores, getSugestaoDeCompra } from "@/actions/compras"
 import { getPecasAtivas } from "@/actions/estoque"
 import { estaPendente, type StatusCompra } from "@/lib/compras"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { SugestaoButton } from "@/components/purchases/sugestao-button"
 import { CompraDialog } from "@/components/purchases/compra-dialog"
 import { FornecedoresDialog } from "@/components/purchases/fornecedores-dialog"
 
@@ -30,6 +31,7 @@ export default async function PurchasesPage({
 
   const { status } = await searchParams
   const t = await getTranslations("compras")
+  const faltando = await getSugestaoDeCompra()
   const [compras, fornecedores, pecas] = await Promise.all([
     getCompras(status),
     getFornecedores(),
@@ -55,6 +57,7 @@ export default async function PurchasesPage({
               unit: p.unit,
               costPrice: p.costPrice ? Number(p.costPrice) : null,
             }))} />
+        <SugestaoButton quantasFaltam={faltando.length} />
           </div>
         )}
       </div>

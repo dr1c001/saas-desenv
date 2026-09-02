@@ -3010,6 +3010,61 @@ numerar diferente.
 
 ---
 
+### 7.2.53 A compra que nao saia do caixa — 01/09/2026
+
+Quatro correcoes no modulo de compras. A primeira e um DEFEITO, e nao uma
+melhoria.
+
+**1. A compra nao virava despesa.** A empresa comprava R$ 2.400 em pecas, o
+estoque subia — e o Financeiro nao ficava sabendo. O dinheiro saiu do mundo real
+e nao saiu do sistema, entao o lucro na tela era maior que o lucro de verdade.
+Estoque que engorda sem despesa correspondente e a forma mais silenciosa de um
+sistema mentir sobre o resultado do mes.
+
+A despesa nasce por RECEBIMENTO, e pelo valor do que chegou AGORA — numa compra
+parcial paga-se o que foi entregue, e lancar o total inteiro registraria
+dinheiro que ainda nao saiu. Na MESMA transacao do estoque: se uma gravasse e a
+outra nao, estoque e caixa passariam a discordar sem ninguem notar.
+`Expense.purchaseOrderId` (SetNull) permite ir da despesa ate a nota e de volta.
+
+**2. Prazo e parcelas.** O recebimento e o momento em que se sabe o que foi
+combinado com o fornecedor, entao e ali que se informa. Sem preencher, vence hoje
+em uma parcela — o comportamento de quem paga a vista.
+
+A sobra do arredondamento vai toda na PRIMEIRA parcela (33,34 + 33,33 + 33,33),
+como banco e boleto fazem. Dividir R$ 100 em 3 e arredondar cada uma soma 99,99,
+e o centavo perdido reaparece meses depois como diferenca inexplicavel na
+conciliacao. Ha teste afirmando que a soma fecha EXATO em varios valores.
+
+**3. Custo MEDIO ponderado.** O custo era sobrescrito pela ultima nota: 10 pecas
+a R$ 80 mais 2 a R$ 120 passavam a valer R$ 120 cada, e a margem de todo servico
+seguinte aparecia menor do que e — calculada sobre um estoque que custou outra
+coisa. Agora e a media pesada pelas quantidades.
+
+Casos de borda que importam: estoque zerado, peca nova e estoque NEGATIVO (que
+acontece quando a baixa chega antes da entrada) usam o custo da compra nova —
+ponderar por quantidade negativa produziria numero sem sentido.
+
+**4. Sugestao de compra.** O sistema ja sabia o que esta abaixo do minimo — o
+alerta usa isso todo dia. Faltava transformar em ordem de compra em vez de o
+dono somar a mao. Cria em RASCUNHO: ele ainda vai escolher fornecedor, conferir
+quantidade e negociar preco. Criar enviada seria o sistema comprando sozinho.
+Ordena pelo que esta MAIS faltando, e nao por nome.
+
+**Um defeito meu, pego pelo teste:** `Math.max(1, Math.floor(NaN))` e NaN, e
+`Array.from({ length: NaN })` devolve lista VAZIA — um campo de parcelas mal
+preenchido faria a despesa sumir em silencio. O `Number.isFinite` veio antes.
+
+Confirmado por mutacao: desligando a criacao da despesa, 8 testes falham;
+voltando ao custo da ultima nota, o do custo medio falha.
+
+1189 -> 1222 testes.
+
+**Ainda pendentes deste modulo:** anexar a nota do fornecedor e cotacao entre
+fornecedores.
+
+---
+
 ## 8. Infraestrutura e deploy
 
 - **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`

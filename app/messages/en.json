@@ -646,8 +646,13 @@
       "naoEncontrada": "Purchase not found.",
       "compraCancelada": "This purchase was cancelled.",
       "jaRecebida": "This purchase was already fully received.",
-      "nadaARecebeber": "Enter how much arrived for at least one item."
-    }
+      "nadaARecebeber": "Enter how much arrived for at least one item.",
+      "nadaAComprar": "Nothing below minimum stock."
+    },
+    "primeiroVencimento": "First due date",
+    "parcelas": "Instalments",
+    "pagamentoAjuda": "On confirmation, the received amount becomes an expense in Finance. Left blank, it is due today in one instalment.",
+    "sugerir": "Order what's missing ({n})"
   },
   "contratos": {
     "title": "Recurring contracts",

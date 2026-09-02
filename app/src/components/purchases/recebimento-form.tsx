@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { Loader2, PackageCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { receberCompra, type EstadoCompra } from "@/actions/compras"
 import { faltaReceber } from "@/lib/compras"
 
@@ -65,6 +66,34 @@ export function RecebimentoForm({ compraId, itens }: { compraId: string; itens: 
           {t(`erros.${estado.erro}` as "erros.semItens")}
         </p>
       )}
+
+      {/* ─── Como isso vai ser PAGO ────────────────────────────────────
+          O recebimento é o momento em que se sabe o que foi combinado com o
+          fornecedor — e é aqui que a compra vira despesa no Financeiro. Sem
+          preencher, vence hoje em uma parcela: o comportamento de quem paga
+          à vista, que é o caso mais comum. */}
+      <div className="grid grid-cols-2 gap-3 rounded-lg border p-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="primeiroVencimento" className="text-xs">
+            {t("primeiroVencimento")}
+          </Label>
+          <Input id="primeiroVencimento" name="primeiroVencimento" type="date" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="parcelas" className="text-xs">
+            {t("parcelas")}
+          </Label>
+          <Input
+            id="parcelas"
+            name="parcelas"
+            type="number"
+            min={1}
+            max={36}
+            defaultValue={1}
+          />
+        </div>
+        <p className="col-span-2 text-xs text-muted-foreground">{t("pagamentoAjuda")}</p>
+      </div>
 
       <p className="text-xs text-muted-foreground">{t("receberAviso")}</p>
 

@@ -646,8 +646,13 @@
       "naoEncontrada": "Compra não encontrada.",
       "compraCancelada": "Esta compra foi cancelada.",
       "jaRecebida": "Esta compra já foi totalmente recebida.",
-      "nadaARecebeber": "Informe quanto chegou de ao menos um item."
-    }
+      "nadaARecebeber": "Informe quanto chegou de ao menos um item.",
+      "nadaAComprar": "Nada abaixo do estoque mínimo."
+    },
+    "primeiroVencimento": "Primeiro vencimento",
+    "parcelas": "Parcelas",
+    "pagamentoAjuda": "Ao confirmar, o valor recebido vira despesa no Financeiro. Sem preencher, vence hoje em uma parcela.",
+    "sugerir": "Comprar o que falta ({n})"
   },
   "contratos": {
     "title": "Contratos recorrentes",
