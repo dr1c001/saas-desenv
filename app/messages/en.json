@@ -3444,5 +3444,25 @@
       "naoEncontrado": "Supplier not found.",
       "temHistorico": "This supplier already has purchases or quotations. Deleting would take that history with it — use Deactivate."
     }
+  },
+  "avisosPlataforma": {
+    "novaEmpresa": {
+      "title": "New company",
+      "body": "{empresa} just signed up.",
+      "bodyIndicada": "{empresa} just signed up, referred by {indicador}."
+    },
+    "assinaturaEmAtraso": {
+      "title": "Payment overdue",
+      "body": "{empresa}'s subscription is past due.",
+      "bodyComValor": "{empresa} has not paid the {plano} of {valor}. Access ends after the grace period."
+    },
+    "assinaturaCancelada": {
+      "title": "Subscription cancelled",
+      "body": "{empresa} cancelled the {plano}. Access has been cut."
+    },
+    "testeDeAviso": {
+      "title": "Test alert",
+      "body": "If you are reading this on your phone, alerts are working."
+    }
   }
 }

@@ -1842,3 +1842,30 @@ model OfflineOperation {
   @@index([tenantId, appliedAt])
   @@index([orderId])
 }
+
+/// A reivindicacao de que um fato JA FOI AVISADO ao dono da plataforma.
+///
+/// A linha e criada ANTES do envio, e o indice unico da  e o que impede o
+/// aviso repetido — nao um . As duas origens repetem por natureza: o
+/// webhook do Asaas reenvia o mesmo evento, e o primeiro login tem corrida
+/// conhecida entre Server Components.
+model PlatformAlert {
+  id        String   @id @default(cuid())
+  /// novaEmpresa:<tenantId> · atraso:<subId>:<fimDoPeriodo> · cancelamento:<subId>
+  /// Atraso e cancelamento tem chaves DIFERENTES: com uma chave por empresa, o
+  /// cancelamento seria engolido pela linha do atraso, e o dono saberia que o
+  /// cliente atrasou e nunca que ele foi embora.
+  key       String   @unique
+  event     String
+  /// Sem chave estrangeira de proposito: o registro sobrevive ao apagar da
+  /// empresa, pelo mesmo motivo do AdminAuditLog.
+  tenantId  String?
+  /// O corpo exato que saiu, para responder depois o que o aviso dizia.
+  detail    String?
+  /// Quantos aparelhos receberam. ZERO com a linha presente = o gatilho rodou e
+  /// o push falhou; linha AUSENTE = o gatilho nunca rodou.
+  delivered Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

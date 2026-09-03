@@ -8,7 +8,9 @@ import { escopoDe, filtroDeFilial, type Escopo } from "@/lib/filial"
 import { tenantImpersonado, isSuperAdmin } from "@/lib/admin"
 import { PAST_DUE_GRACE_DAYS } from "@/lib/past-due"
 import { redirect } from "next/navigation"
+import { after } from "next/server"
 import { sendWelcomeEmail } from "@/lib/resend"
+import { avisarPlataforma } from "@/lib/avisar-plataforma"
 import { Prisma } from "@/generated/prisma/client"
 import { getTranslations } from "next-intl/server"
 import { abasPadraoDe, ehAdministrativo } from "@/lib/cargos"
@@ -192,6 +194,19 @@ export const getTenant = cache(async function getTenant() {
         locale: winner.tenant.locale,
       }
     }
+
+    // ─── Avisa o dono da plataforma ─────────────────────────────────────────
+    //
+    // AQUI, e não junto do `tenant.create` acima: naquele ponto o cadastro
+    // ainda pode ser desfeito. Os dois ramos do `catch` apagam o tenant recém
+    // criado — o da corrida entre requisições e o do e-mail duplicado —, e
+    // avisar de lá anunciaria empresas que deixaram de existir milissegundos
+    // depois. Este é o único caminho em que o tenant sobreviveu E o User foi
+    // criado.
+    //
+    // `after` para não segurar o primeiro login por causa de uma notificação, e
+    // `avisarPlataforma` nunca lança: cadastro não pode falhar por push.
+    after(avisarPlataforma("novaEmpresa", { tenantId, empresa: companyName }))
 
     // Empresa recém-criada não tem filial nenhuma ainda.
     return { userId: user.id, tenantId, role, branchId: null, tenantStatus, locale: tenant.locale }

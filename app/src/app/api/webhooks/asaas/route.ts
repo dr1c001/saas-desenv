@@ -1,5 +1,6 @@
 import { after, NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { avisarPlataforma } from "@/lib/avisar-plataforma"
 import { sendPaymentConfirmedEmail } from "@/lib/resend"
 import { gerarContrato } from "@/lib/contrato"
 import { notificar } from "@/lib/notificar"
@@ -188,17 +189,42 @@ export async function POST(req: NextRequest) {
     // derrubar um tenant que ainda está em trial válido — ele nunca ganhou
     // acesso por causa dela, então não há nada a revogar no tenant.
     if (event === "PAYMENT_OVERDUE" && sub.status === "ACTIVE") {
-      await prisma.$transaction([
-        prisma.subscription.update({ where: { id: sub.id }, data: { status: "PAST_DUE" } }),
+      // `updateMany` condicionado ao status, e não `update` por id puro.
+      //
+      // O `sub` acima veio de um findFirst no TOPO do handler. O Asaas reenvia
+      // o mesmo evento, e duas entregas quase simultâneas leem as duas
+      // `status === "ACTIVE"` e ambas passam pelo `if` — a guarda lá em cima
+      // não é atômica. Com a condição dentro do WHERE, o banco decide quem
+      // ganhou: `count` é 1 para uma só, e é ele que autoriza o aviso.
+      const [mudou] = await prisma.$transaction([
+        prisma.subscription.updateMany({
+          where: { id: sub.id, status: "ACTIVE" },
+          data: { status: "PAST_DUE" },
+        }),
+        // O do tenant fica incondicional de propósito: é idempotente, e
+        // gravar PAST_DUE duas vezes não muda nada.
         prisma.tenant.update({ where: { id: sub.tenantId }, data: { subscriptionStatus: "PAST_DUE" } }),
       ])
+
+      if (mudou.count === 1) {
+        after(
+          avisarPlataforma("assinaturaEmAtraso", {
+            tenantId: sub.tenantId,
+            subscriptionId: sub.id,
+            fimDoPeriodo: sub.currentPeriodEnd,
+            empresa: sub.tenant.name,
+            plano: sub.plan?.name ?? null,
+          })
+        )
+      }
     }
 
     if (event === "SUBSCRIPTION_DELETED") {
       if (sub.status === "ACTIVE") {
-        await prisma.$transaction([
-          prisma.subscription.update({
-            where: { id: sub.id },
+        // Mesma trava do atraso: quem move o status de ACTIVE é uma só.
+        const [mudou] = await prisma.$transaction([
+          prisma.subscription.updateMany({
+            where: { id: sub.id, status: "ACTIVE" },
             data: { status: "CANCELLED", cancelledAt: new Date() },
           }),
           prisma.tenant.update({
@@ -206,6 +232,22 @@ export async function POST(req: NextRequest) {
             data: { subscriptionStatus: "CANCELLED", planId: null },
           }),
         ])
+
+        // Cliente PERDIDO é fato diferente de cliente atrasado, e por isso tem
+        // aviso e chave próprios. Com uma chave só por empresa, este aqui —
+        // que chega DEPOIS do atraso — encontraria a linha já gravada e seria
+        // engolido: o dono saberia que o cliente atrasou e nunca que ele foi
+        // embora, que é a metade que importa.
+        if (mudou.count === 1) {
+          after(
+            avisarPlataforma("assinaturaCancelada", {
+              tenantId: sub.tenantId,
+              subscriptionId: sub.id,
+              empresa: sub.tenant.name,
+              plano: sub.plan?.name ?? null,
+            })
+          )
+        }
       } else {
         await prisma.subscription.update({
           where: { id: sub.id },

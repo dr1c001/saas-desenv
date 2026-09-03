@@ -17,6 +17,7 @@ import {
 } from "@/components/admin/admin-charts"
 import { Users, Building2, TrendingUp, AlertCircle, CheckCircle2, Clock, CreditCard, UserCheck, Search, FileDown } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
+import { TestarAviso } from "@/components/admin/testar-aviso"
 
 type SubscriptionStatusKey = "TRIAL" | "PENDING" | "ACTIVE" | "PAST_DUE" | "CANCELLED"
 
@@ -55,6 +56,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
             OR: [
               { name: { contains: busca, mode: "insensitive" } },
               { document: { contains: busca, mode: "insensitive" } },
+              // Pelo ID também: é assim que o toque na notificação cai na
+              // linha exata da empresa (/admin?q=<tenantId>). Sem isto o deep
+              // link do aviso abriria a lista inteira, e achar a empresa à mão
+              // é justamente o trabalho que o aviso existe para poupar.
+              { id: busca },
             ],
           }
         : undefined,
@@ -225,6 +231,10 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
               {t("admin.table.pdfButton")}
             </a>
             )}
+            {/* Prova que o aviso no celular está de pé. O modo de falha deste
+                recurso é o silêncio — sem um botão, o cano pode estar quebrado
+                há meses e ninguém saber. */}
+            <TestarAviso />
           </form>
         </CardHeader>
         <CardContent className="p-0">

@@ -10,6 +10,7 @@ import {
   requireSuperAdmin,
   tenantImpersonado,
 } from "@/lib/admin"
+import { enviarAvisoDeTeste } from "@/lib/avisar-plataforma"
 import { sendTeamInviteEmail } from "@/lib/resend"
 import { ehRecurso, recursosDoPlano } from "@/lib/plan"
 import type { PlatformRole } from "@/generated/prisma/client"
@@ -569,5 +570,32 @@ async function enviarConviteAdmin(email: string, name: string): Promise<boolean>
   } catch (err) {
     console.error("[convite de admin] falhou:", err)
     return false
+  }
+}
+
+/**
+ * Dispara um aviso de teste para os aparelhos do dono da plataforma.
+ *
+ * O modo de falha do aviso e o SILENCIO: inscricao morta, chave VAPID trocada,
+ * permissao revogada no navegador — nada acusa. Com quatro empresas na historia
+ * inteira, pode levar meses ate um gatilho de verdade revelar o cano quebrado.
+ *
+ * Devolve os numeros crus porque quem le e o dono da plataforma: "1 aparelho"
+ * responde a pergunta melhor do que "enviado com sucesso", que e o que se diz
+ * quando nao se sabe.
+ */
+export async function testarAvisoDaPlataforma(): Promise<{
+  enviadas: number
+  removidas: number
+  falharam: number
+  erro?: string
+}> {
+  // Primeira linha, sempre: a checagem do layout nao protege Server Action.
+  await requireSuperAdmin("verPainel")
+  try {
+    return await enviarAvisoDeTeste()
+  } catch (e) {
+    console.error("[testarAvisoDaPlataforma]", e)
+    return { enviadas: 0, removidas: 0, falharam: 0, erro: "Falhou ao enviar." }
   }
 }

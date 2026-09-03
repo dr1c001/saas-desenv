@@ -3444,5 +3444,25 @@
       "naoEncontrado": "Fornecedor não encontrado.",
       "temHistorico": "Este fornecedor já tem compras ou cotações. Apagar levaria esse histórico junto — use Desativar."
     }
+  },
+  "avisosPlataforma": {
+    "novaEmpresa": {
+      "title": "Empresa nova",
+      "body": "{empresa} acabou de se cadastrar.",
+      "bodyIndicada": "{empresa} acabou de se cadastrar, indicada por {indicador}."
+    },
+    "assinaturaEmAtraso": {
+      "title": "Pagamento em atraso",
+      "body": "A assinatura de {empresa} venceu e não foi paga.",
+      "bodyComValor": "{empresa} não pagou o {plano} de {valor}. O acesso cai depois da carência."
+    },
+    "assinaturaCancelada": {
+      "title": "Assinatura cancelada",
+      "body": "{empresa} cancelou o {plano}. O acesso foi cortado."
+    },
+    "testeDeAviso": {
+      "title": "Teste de aviso",
+      "body": "Se você está lendo isto no celular, o aviso está funcionando."
+    }
   }
 }
