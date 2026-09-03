@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { requireRecurso } from "@/lib/plan"
 import { aplicarMovimento, proximoNumeroDeCompra, resolverLocal } from "@/lib/estoque-db"
-import { statusAposRecebimento, type ItemRecebido } from "@/lib/compras"
+import { custoDoRecebimento, statusAposRecebimento, type ItemRecebido } from "@/lib/compras"
+import { lerDinheiro } from "@/lib/dinheiro"
 import { custoMedio, dividirEmParcelas, sugerirCompra } from "@/lib/compras-dinheiro"
 
 export type EstadoCompra = { erro?: string; ok?: boolean; id?: string }
@@ -228,6 +229,26 @@ export async function receberCompra(
   }
   if (chegou.size === 0) return { erro: "nadaARecebeber" }
 
+  // ─── Nada entra valendo ZERO ──────────────────────────────────────────────
+  //
+  // A ordem gerada por "Comprar o que falta" nasce com o último custo conhecido
+  // da peça, e peça nunca comprada não tem custo — a linha vinha R$ 0,00.
+  // Receber assim derrubava o custo médio da peça E não criava despesa nenhuma:
+  // a peça entrava no estoque e o dinheiro não saía do caixa.
+  //
+  // O preço se sabe AQUI, com a nota do fornecedor na mão. O campo só aparece
+  // para a linha zerada, e o custo já gravado nunca é sobrescrito.
+  const custos = new Map<string, number>()
+  for (const item of compra.items) {
+    if (!chegou.has(item.id)) continue
+    const custo = custoDoRecebimento(
+      Number(item.unitCost),
+      lerDinheiro(formData.get(`custo_${item.id}`))
+    )
+    if (custo <= 0) return { erro: "custoZerado" }
+    custos.set(item.id, custo)
+  }
+
   const paraStatus: ItemRecebido[] = compra.items.map((i) => ({
     pedido: Number(i.quantity),
     recebido: Number(i.receivedQuantity) + (chegou.get(i.id) ?? 0),
@@ -239,8 +260,11 @@ export async function receberCompra(
   // O valor é o do que chegou AGORA, e não o total da ordem: numa compra
   // parcial paga-se o que foi entregue, e lançar o total inteiro registraria
   // dinheiro que ainda não saiu.
+  // Usa o custo RESOLVIDO (o gravado, ou o informado agora para a linha
+  // zerada), senão a despesa continuaria saindo zero justamente no caso que
+  // este conserto existe para cobrir.
   const valorRecebidoAgora = compra.items.reduce(
-    (soma, i) => soma + (chegou.get(i.id) ?? 0) * Number(i.unitCost),
+    (soma, i) => soma + (chegou.get(i.id) ?? 0) * (custos.get(i.id) ?? Number(i.unitCost)),
     0
   )
 
@@ -261,9 +285,18 @@ export async function receberCompra(
       const q = chegou.get(item.id)
       if (!q) continue
 
+      const custo = custos.get(item.id) ?? Number(item.unitCost)
+
       await tx.purchaseItem.update({
         where: { id: item.id },
-        data: { receivedQuantity: Number(item.receivedQuantity) + q },
+        data: {
+          receivedQuantity: Number(item.receivedQuantity) + q,
+          // O preço informado no recebimento fica GRAVADO na linha. Sem isto a
+          // ordem continuaria mostrando R$ 0,00 depois de recebida, e o total
+          // dela nunca bateria com a despesa que ela gerou.
+          unitCost: custo,
+          total: Math.round(Number(item.quantity) * custo * 100) / 100,
+        },
       })
       await aplicarMovimento(tx, {
         tenantId,
@@ -300,7 +333,7 @@ export async function receberCompra(
             estoqueAtual: Number(antes?.stock ?? 0) - q,
             custoAtual: antes?.costPrice ? Number(antes.costPrice) : null,
             quantidadeRecebida: q,
-            custoDaCompra: Number(item.unitCost),
+            custoDaCompra: custo,
           }),
         },
       })

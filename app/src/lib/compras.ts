@@ -52,6 +52,45 @@ export function estaPendente(status: StatusCompra): boolean {
   return status === "ENVIADA" || status === "PARCIAL"
 }
 
+/**
+ * O custo que vale para este recebimento.
+ *
+ * ─── O defeito que isto fecha ────────────────────────────────────────────────
+ *
+ * "Comprar o que falta" gera a ordem com o último custo conhecido da peça — e
+ * peça que nunca foi comprada não tem custo nenhum, então a linha nascia
+ * valendo R$ 0,00. Receber essa ordem fazia DUAS coisas ruins de uma vez:
+ *
+ *   1. o custo médio da peça era recalculado contra uma compra de zero e
+ *      DESPENCAVA, estragando a margem de todo serviço seguinte;
+ *   2. o valor recebido dava zero, então NENHUMA despesa era criada — a peça
+ *      entrava no estoque e o dinheiro não saía do caixa, que é exatamente o
+ *      defeito que o módulo de compras foi escrito para consertar.
+ *
+ * E não havia saída: a ordem gerada não era editável em lugar nenhum.
+ *
+ * Agora o custo informado NA HORA DE RECEBER vale quando a linha está zerada —
+ * que é o momento em que a nota do fornecedor está na mão e o preço se sabe.
+ * O custo já gravado nunca é sobrescrito por este caminho: quem digitou o preço
+ * ao criar a compra não pode vê-lo trocado por um campo de outra tela.
+ */
+export function custoDoRecebimento(custoDoItem: number, custoInformado: number | null): number {
+  if (custoDoItem > 0) return custoDoItem
+  return custoInformado !== null && custoInformado > 0 ? custoInformado : 0
+}
+
+/**
+ * Os itens que ainda não têm preço, pelo nome.
+ *
+ * Devolve a LISTA e não um sim/não porque a tela precisa dizer QUAL item está
+ * sem preço — "esta compra tem item sem custo" manda a pessoa procurar.
+ */
+export function itensSemCusto(
+  itens: readonly { nome: string; custo: number }[]
+): string[] {
+  return itens.filter((i) => !(i.custo > 0)).map((i) => i.nome)
+}
+
 /** Total da compra a partir dos itens. */
 export function totalDaCompra(itens: { quantity: number; unitCost: number }[]): number {
   return arredondar(itens.reduce((s, i) => s + i.quantity * i.unitCost, 0), 2)

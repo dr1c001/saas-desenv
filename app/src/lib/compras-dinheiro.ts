@@ -18,6 +18,8 @@
 //
 // Módulo puro: contas de dinheiro precisam ser testáveis sem banco.
 
+import { quantoRepor } from "@/lib/estoque"
+
 /** Dinheiro, sempre em centavos fechados. */
 const centavos = (n: number) => Math.round(n * 100) / 100
 
@@ -96,21 +98,14 @@ export function dividirEmParcelas(
   })
 }
 
-/**
- * Quanto comprar de uma peça para ela voltar ao mínimo.
- *
- * Zero quando já está no mínimo ou acima — a sugestão não pode propor compra
- * de quem não precisa, senão a lista vira ruído e ninguém olha.
- *
- * Estoque NEGATIVO conta a favor: faltando 3 com mínimo 5, o que falta comprar
- * são 8, e não 5.
- */
-export function quantoComprar(estoque: number, minimo: number): number {
-  if (minimo <= 0) return 0
-  const falta = minimo - estoque
-  // Três casas: a coluna de quantidade é Decimal(12,3).
-  return falta > 0 ? Math.round(falta * 1000) / 1000 : 0
-}
+// `quantoComprar` morava aqui e FOI REMOVIDA.
+//
+// Ela era a segunda regra de "está faltando" — a primeira é o alerta da tela de
+// peças — e as duas discordavam em dois casos, um deles caro: peça com saldo
+// negativo e mínimo zero pintava de vermelho e valia ZERO na sugestão.
+//
+// Agora existe uma só, `quantoRepor` em lib/estoque.ts, que é o módulo dono do
+// alerta. Duas regras para a mesma pergunta é como elas divergem.
 
 export type PecaParaComprar = {
   id: string
@@ -132,7 +127,7 @@ export type PecaParaComprar = {
  */
 export function sugerirCompra(pecas: readonly PecaParaComprar[]) {
   return pecas
-    .map((p) => ({ ...p, comprar: quantoComprar(p.estoque, p.minimo) }))
+    .map((p) => ({ ...p, comprar: quantoRepor(p.estoque, p.minimo) }))
     .filter((p) => p.comprar > 0)
     .sort((a, b) => b.comprar - a.comprar)
 }

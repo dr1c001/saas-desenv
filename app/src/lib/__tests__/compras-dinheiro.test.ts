@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 import {
   custoMedio,
   dividirEmParcelas,
-  quantoComprar,
   sugerirCompra,
 } from "@/lib/compras-dinheiro"
 
@@ -104,28 +103,31 @@ describe("parcelas", () => {
   })
 })
 
-describe("quanto comprar", () => {
-  it("o que falta para chegar ao mínimo", () => {
-    expect(quantoComprar(2, 5)).toBe(3)
+// A conta de "quanto comprar" MUDOU DE CASA: virou `quantoRepor` em
+// lib/estoque.ts, que é o módulo dono do alerta de mínimo. Duas regras para a
+// mesma pergunta é como elas divergem — e tinham divergido. Os casos estão em
+// estoque.test.ts; aqui fica só o que a lista de sugestão faz com o resultado.
+
+describe("sem mínimo definido, a lista continua enxuta", () => {
+  it("peça zerada sem mínimo NÃO entra — e essa parte não mudou", () => {
+    // A razão do teste original vale e foi preservada: `minStock: 0` é o padrão
+    // de quem nunca configurou, e sugerir compra para todas encheria a lista
+    // com o catálogo inteiro.
+    const lista = sugerirCompra([
+      { id: "a", nome: "Sem mínimo, zerada", estoque: 0, minimo: 0, custo: 10 },
+      { id: "b", nome: "Sem mínimo, com saldo", estoque: 7, minimo: 0, custo: 10 },
+    ])
+    expect(lista).toHaveLength(0)
   })
 
-  it("no mínimo ou acima, não sugere nada", () => {
-    // Sugestão que propõe comprar quem não precisa vira ruído, e lista com
-    // ruído é lista que ninguém abre.
-    expect(quantoComprar(5, 5)).toBe(0)
-    expect(quantoComprar(9, 5)).toBe(0)
-  })
-
-  it("estoque NEGATIVO conta a favor", () => {
-    // Faltando 3 com mínimo 5, o que falta comprar são 8 — não 5.
-    expect(quantoComprar(-3, 5)).toBe(8)
-  })
-
-  it("sem mínimo definido, não sugere", () => {
-    // `minStock: 0` é o padrão de quem nunca configurou. Sugerir compra para
-    // essas peças encheria a lista com o catálogo inteiro.
-    expect(quantoComprar(0, 0)).toBe(0)
-    expect(quantoComprar(-2, 0)).toBe(0)
+  it("mas a NEGATIVA entra, porque essa o técnico já usou e não tinha", () => {
+    // É a única coisa que mudou, e é o defeito que a auditoria achou: ela
+    // pintava de vermelho na tela e valia zero aqui.
+    const lista = sugerirCompra([
+      { id: "a", nome: "Sem mínimo, negativa", estoque: -3, minimo: 0, custo: 10 },
+      { id: "b", nome: "Sem mínimo, zerada", estoque: 0, minimo: 0, custo: 10 },
+    ])
+    expect(lista.map((p) => [p.nome, p.comprar])).toEqual([["Sem mínimo, negativa", 3]])
   })
 })
 

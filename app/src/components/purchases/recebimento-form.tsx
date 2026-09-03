@@ -15,6 +15,8 @@ type Item = {
   unidade: string
   pedido: number
   recebido: number
+  /** Custo unitário já gravado. Zero = a ordem nasceu sem preço. */
+  custo: number
 }
 
 export function RecebimentoForm({ compraId, itens }: { compraId: string; itens: Item[] }) {
@@ -48,15 +50,40 @@ export function RecebimentoForm({ compraId, itens }: { compraId: string; itens: 
               <p className="text-xs text-muted-foreground">
                 {t("faltamUnidades", { qtd: falta, unidade: i.unidade })}
               </p>
+              {/* ─── O preço que faltava ─────────────────────────────────
+                  A ordem gerada por "Comprar o que falta" nasce com o último
+                  custo conhecido da peça, e peça nunca comprada não tem custo:
+                  a linha vinha R$ 0,00. Receber assim derrubava o custo médio
+                  E não criava despesa nenhuma — a peça entrava no estoque e o
+                  dinheiro não saía do caixa.
+
+                  O campo só aparece na linha zerada, que é onde não há preço
+                  nenhum a perder, e é aqui que a nota do fornecedor está na
+                  mão. */}
+              {i.custo <= 0 && (
+                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">{t("semCusto")}</p>
+              )}
             </div>
-            <Input
-              name={`recebido_${i.id}`}
-              inputMode="decimal"
-              className="w-24 shrink-0"
-              value={valores[i.id] ?? ""}
-              onChange={(e) => setValores((v) => ({ ...v, [i.id]: e.target.value }))}
-              aria-label={t("colunas.recebido")}
-            />
+            <div className="flex shrink-0 items-center gap-2">
+              {i.custo <= 0 && (
+                <Input
+                  name={`custo_${i.id}`}
+                  inputMode="decimal"
+                  required
+                  className="w-28"
+                  placeholder={t("campos.custoUnit")}
+                  aria-label={t("campos.custoUnit")}
+                />
+              )}
+              <Input
+                name={`recebido_${i.id}`}
+                inputMode="decimal"
+                className="w-24"
+                value={valores[i.id] ?? ""}
+                onChange={(e) => setValores((v) => ({ ...v, [i.id]: e.target.value }))}
+                aria-label={t("colunas.recebido")}
+              />
+            </div>
           </div>
         )
       })}

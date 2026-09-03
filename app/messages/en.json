@@ -647,12 +647,14 @@
       "compraCancelada": "This purchase was cancelled.",
       "jaRecebida": "This purchase was already fully received.",
       "nadaARecebeber": "Enter how much arrived for at least one item.",
-      "nadaAComprar": "Nothing below minimum stock."
+      "nadaAComprar": "Nothing below minimum stock.",
+      "custoZerado": "Enter the cost for the item with no price. Receiving at R$ 0.00 drags the part average cost down and creates no expense in Finance."
     },
     "primeiroVencimento": "First due date",
     "parcelas": "Instalments",
     "pagamentoAjuda": "On confirmation, the received amount becomes an expense in Finance. Left blank, it is due today in one instalment.",
-    "sugerir": "Order what's missing ({n})"
+    "sugerir": "Order what's missing ({n})",
+    "semCusto": "No price — enter the cost from the invoice"
   },
   "contratos": {
     "title": "Recurring contracts",

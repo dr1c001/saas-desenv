@@ -72,7 +72,55 @@ export function estaNegativo(saldo: number): boolean {
   return saldo < 0
 }
 
-/** Peça abaixo do mínimo definido pela empresa. Mínimo zero = sem alerta. */
+/**
+ * Quanto comprar para a peça voltar ao mínimo. A REGRA ÚNICA de reposição.
+ *
+ * ─── Por que ela mora aqui, e sozinha ────────────────────────────────────────
+ *
+ * A regra vivia em `compras-dinheiro.ts` e desistia quando o mínimo era zero:
+ *
+ *     if (minimo <= 0) return 0
+ *
+ * Consequência, achada na conta de um cliente: peça com saldo NEGATIVO e sem
+ * mínimo definido pintava de VERMELHO na tela e valia ZERO na sugestão de
+ * compra. O sistema gritava que estava faltando e nunca oferecia o conserto —
+ * e saldo negativo é justamente a peça que o técnico já usou e não tinha.
+ *
+ * ─── Uma fórmula só, sem ramo ────────────────────────────────────────────────
+ *
+ * O alvo é o mínimo, e nunca menos que zero. Falta é o alvo menos o que se tem:
+ *
+ *   saldo -3, mínimo 0  ->  alvo 0, falta 3   (antes: 0 — o defeito)
+ *   saldo -3, mínimo 5  ->  alvo 5, falta 8   (como já era)
+ *   saldo  5, mínimo 5  ->  alvo 5, falta 0   (ver `abaixoDoMinimo`)
+ *
+ * Mora aqui, e não em compras: este é o módulo dono do alerta, e as duas
+ * perguntas — "está faltando?" e "quanto pedir?" — têm de sair do mesmo lugar.
+ */
+export function quantoRepor(saldo: number, minimo: number): number {
+  const alvo = Math.max(minimo, 0)
+  const falta = alvo - saldo
+  return falta > 0 ? arredondar(falta) : 0
+}
+
+/** Precisa repor? É `quantoRepor` acima de zero, e nada mais. */
+export function precisaRepor(saldo: number, minimo: number): boolean {
+  return quantoRepor(saldo, minimo) > 0
+}
+
+/**
+ * Peça abaixo do mínimo definido pela empresa. Mínimo zero = sem alerta.
+ *
+ * CONTINUA INCLUSIVO (`<=`), e isso é decisão de produto, não descuido: o
+ * mínimo aqui é PONTO DE PEDIDO, e avisar só depois de furá-lo é avisar tarde
+ * — a última peça já saiu.
+ *
+ * Por isso ele e `quantoRepor` divergem de propósito num caso: saldo IGUAL ao
+ * mínimo acende o alerta e não gera compra, porque comprar "até o mínimo"
+ * quando já se está nele é comprar zero. Resolver isso de verdade exige um
+ * segundo número — quanto pedir de cada vez — que a empresa ainda não informa.
+ * Ver `quantoRepor`.
+ */
 export function abaixoDoMinimo(saldo: number, minimo: number): boolean {
   return minimo > 0 && saldo <= minimo
 }

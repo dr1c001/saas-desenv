@@ -247,3 +247,92 @@ describe("nada é gravado quando o recebimento é recusado", () => {
     expect(await despesas(outra.id)).toEqual([])
   })
 })
+
+// ─── O item que nasceu SEM PREÇO ────────────────────────────────────────────
+//
+// "Comprar o que falta" gera a ordem com o último custo conhecido da peça, e
+// peça nunca comprada não tem custo: a linha nascia valendo R$ 0,00. Receber
+// assim fazia duas coisas ruins de uma vez — derrubava o custo médio da peça e
+// não criava despesa nenhuma. E não havia saída: a ordem gerada não era
+// editável em lugar nenhum do sistema.
+
+async function cenarioSemPreco(custoAnterior?: number) {
+  const tenant = await testDb.db.tenant.create({ data: { name: "Polar Clima" } })
+  const dono = await testDb.db.user.create({
+    data: { id: "u1", tenantId: tenant.id, name: "Adriel", email: "d@ex.com", role: "OWNER" },
+  })
+  mockGetTenant.mockResolvedValue({ tenantId: tenant.id, userId: dono.id, role: "OWNER" })
+
+  const peca = await testDb.db.part.create({
+    data: { tenantId: tenant.id, name: "Filtro", stock: 10, costPrice: custoAnterior ?? null },
+  })
+  const compra = await testDb.db.purchaseOrder.create({
+    data: {
+      tenantId: tenant.id,
+      number: 1,
+      status: "ENVIADA",
+      total: 0,
+      // Exatamente como `criarCompraSugerida` grava quando a peça não tem custo.
+      items: { create: [{ partId: peca.id, quantity: 5, unitCost: 0, total: 0 }] },
+    },
+    include: { items: true },
+  })
+  return { tenant, peca, compra, item: compra.items[0] }
+}
+
+describe("o item que nasceu sem preço", () => {
+  it("RECUSA o recebimento quando ninguém informa o custo", async () => {
+    const { tenant, compra, item } = await cenarioSemPreco()
+    const r = await (await receber())(compra.id, {}, form(item.id, 5))
+
+    expect(r.erro).toBe("custoZerado")
+    // E nada aconteceu: nem estoque, nem despesa, nem movimento.
+    expect(await despesas(tenant.id)).toHaveLength(0)
+    expect(await testDb.db.stockMovement.count()).toBe(0)
+    expect(Number((await testDb.db.part.findFirst())!.stock)).toBe(10)
+  })
+
+  it("com o custo informado, a despesa sai no valor certo", async () => {
+    // O defeito: sem isto o valor recebido dava zero e NENHUMA despesa era
+    // criada — a peça entrava no estoque e o dinheiro não saía do caixa.
+    const { tenant, compra, item } = await cenarioSemPreco()
+    const r = await (await receber())(compra.id, {}, form(item.id, 5, { [`custo_${item.id}`]: "12,50" }))
+
+    expect(r.erro).toBeUndefined()
+    const d = await despesas(tenant.id)
+    expect(d).toHaveLength(1)
+    expect(Number(d[0].amount)).toBe(62.5)
+  })
+
+  it("o custo informado NÃO derruba o custo médio da peça", async () => {
+    // O outro lado do estrago: receber a R$ 0,00 puxava o custo médio para
+    // baixo e estragava a margem de todo serviço seguinte. Com 10 a R$ 20 e 5
+    // a R$ 12,50, a média é R$ 17,50 — e não R$ 13,33, que é o que dava
+    // ponderando contra zero.
+    const { compra, item } = await cenarioSemPreco(20)
+    await (await receber())(compra.id, {}, form(item.id, 5, { [`custo_${item.id}`]: "12,50" }))
+
+    expect(Number((await testDb.db.part.findFirst())!.costPrice)).toBe(17.5)
+  })
+
+  it("o preço informado fica GRAVADO na linha da compra", async () => {
+    // Sem isto a ordem continuaria mostrando R$ 0,00 depois de recebida, e o
+    // total dela nunca bateria com a despesa que ela gerou.
+    const { compra, item } = await cenarioSemPreco()
+    await (await receber())(compra.id, {}, form(item.id, 5, { [`custo_${item.id}`]: "12,50" }))
+
+    const linha = (await testDb.db.purchaseItem.findUnique({ where: { id: item.id } }))!
+    expect(Number(linha.unitCost)).toBe(12.5)
+    expect(Number(linha.total)).toBe(62.5)
+  })
+
+  it("custo separado por MILHAR também passa", async () => {
+    // O parser antigo lia "1.234,56" como texto inválido e caía em zero — o
+    // recebimento seria recusado justamente por quem digitou certo.
+    const { tenant, compra, item } = await cenarioSemPreco()
+    const r = await (await receber())(compra.id, {}, form(item.id, 2, { [`custo_${item.id}`]: "1.234,56" }))
+
+    expect(r.erro).toBeUndefined()
+    expect(Number((await despesas(tenant.id))[0].amount)).toBe(2469.12)
+  })
+})

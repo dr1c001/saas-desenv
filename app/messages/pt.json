@@ -647,12 +647,14 @@
       "compraCancelada": "Esta compra foi cancelada.",
       "jaRecebida": "Esta compra já foi totalmente recebida.",
       "nadaARecebeber": "Informe quanto chegou de ao menos um item.",
-      "nadaAComprar": "Nada abaixo do estoque mínimo."
+      "nadaAComprar": "Nada abaixo do estoque mínimo.",
+      "custoZerado": "Informe o custo do item que está sem preço. Receber com R$ 0,00 derruba o custo médio da peça e não gera despesa no Financeiro."
     },
     "primeiroVencimento": "Primeiro vencimento",
     "parcelas": "Parcelas",
     "pagamentoAjuda": "Ao confirmar, o valor recebido vira despesa no Financeiro. Sem preencher, vence hoje em uma parcela.",
-    "sugerir": "Comprar o que falta ({n})"
+    "sugerir": "Comprar o que falta ({n})",
+    "semCusto": "Sem preço — informe o custo da nota"
   },
   "contratos": {
     "title": "Contratos recorrentes",

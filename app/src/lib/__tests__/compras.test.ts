@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest"
 import {
+  custoDoRecebimento,
   estaPendente,
   faltaReceber,
+  itensSemCusto,
   podeCancelar,
   statusAposRecebimento,
   totalDaCompra,
@@ -108,5 +110,48 @@ describe("total", () => {
 
   it("compra vazia soma zero", () => {
     expect(totalDaCompra([])).toBe(0)
+  })
+})
+
+describe("o custo que vale no recebimento", () => {
+  it("linha ZERADA usa o custo informado na hora de receber", () => {
+    // "Comprar o que falta" gera a ordem com o último custo conhecido da peça,
+    // e peça nunca comprada não tem custo — a linha nascia R$ 0,00. Receber
+    // assim derrubava o custo médio E não criava despesa: a peça entrava no
+    // estoque e o dinheiro não saía do caixa.
+    expect(custoDoRecebimento(0, 42.5)).toBe(42.5)
+  })
+
+  it("custo JÁ GRAVADO nunca é sobrescrito pelo campo de recebimento", () => {
+    // Quem digitou o preço ao criar a compra não pode vê-lo trocado por um
+    // campo de outra tela — seria perder o número conferido com o fornecedor.
+    expect(custoDoRecebimento(80, 999)).toBe(80)
+    expect(custoDoRecebimento(80, null)).toBe(80)
+  })
+
+  it("sem nenhum dos dois, devolve ZERO — e a Action recusa", () => {
+    // Devolver zero é honesto. Inventar um custo aqui esconderia o problema em
+    // vez de mandar a pessoa buscar a nota do fornecedor.
+    expect(custoDoRecebimento(0, null)).toBe(0)
+    expect(custoDoRecebimento(0, 0)).toBe(0)
+    expect(custoDoRecebimento(0, -5)).toBe(0)
+  })
+})
+
+describe("quem está sem preço", () => {
+  it("devolve os NOMES, e não um sim ou não", () => {
+    // A tela precisa dizer QUAL item está sem preço; "esta compra tem item sem
+    // custo" manda a pessoa procurar linha por linha.
+    expect(
+      itensSemCusto([
+        { nome: "Compressor", custo: 900 },
+        { nome: "Filtro", custo: 0 },
+        { nome: "Gás", custo: 300 },
+      ])
+    ).toEqual(["Filtro"])
+  })
+
+  it("lista sem buracos devolve vazio", () => {
+    expect(itensSemCusto([{ nome: "Compressor", custo: 900 }])).toEqual([])
   })
 })

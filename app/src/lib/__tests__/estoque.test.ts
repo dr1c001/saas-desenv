@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 import {
   abaixoDoMinimo,
+  precisaRepor,
+  quantoRepor,
   estaNegativo,
   quantidadeValida,
   saldoApos,
@@ -111,6 +113,45 @@ describe("alertas", () => {
   it("negativo é sinalizado à parte", () => {
     expect(estaNegativo(-0.5)).toBe(true)
     expect(estaNegativo(0)).toBe(false)
+  })
+
+  it("saldo NEGATIVO sem mínimo definido pede reposição", () => {
+    // O defeito que uniu as duas regras. A conta de reposição morava em
+    // compras-dinheiro.ts e desistia quando o mínimo era zero (`if (minimo <= 0)
+    // return 0`), então a peça pintava de VERMELHO na tela de estoque e valia
+    // ZERO em "Comprar o que falta". O sistema gritava e nunca oferecia o
+    // conserto — e saldo negativo é justamente a peça que o técnico já usou e
+    // não tinha.
+    expect(estaNegativo(-3)).toBe(true)
+    expect(quantoRepor(-3, 0)).toBe(3)
+    expect(precisaRepor(-3, 0)).toBe(true)
+  })
+
+  it("negativo COM mínimo soma as duas coisas", () => {
+    // Faltando 3 com mínimo 5, o que falta comprar são 8, e não 5.
+    expect(quantoRepor(-3, 5)).toBe(8)
+  })
+
+  it("quem está no mínimo ou acima não gera compra", () => {
+    expect(quantoRepor(5, 5)).toBe(0)
+    expect(quantoRepor(9, 5)).toBe(0)
+    expect(quantoRepor(0, 0)).toBe(0)
+  })
+
+  it("arredonda em três casas, como a coluna do banco", () => {
+    // Sem isso o saldo carrega lixo binário e ele aparece na tela.
+    expect(quantoRepor(0.1 + 0.2, 1)).toBe(0.7)
+  })
+
+  it("VERMELHO sempre tem conserto: negativo nunca fica sem reposição", () => {
+    // A propriedade que impede a volta do defeito. Era exatamente aqui que as
+    // duas regras discordavam, e é o único caso em que o sistema apontava um
+    // problema sem oferecer saída.
+    for (const saldo of [-0.5, -1, -3, -100]) {
+      for (const minimo of [0, 1, 5, 50]) {
+        expect(precisaRepor(saldo, minimo), `saldo ${saldo}, mínimo ${minimo}`).toBe(true)
+      }
+    }
   })
 
   it("situação combina os dois, com o negativo na frente", () => {
