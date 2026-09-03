@@ -39,7 +39,16 @@ export function StatusFilter({ paramKey = "status", options, placeholder }: Prop
       onValueChange={handleChange}
     >
       <SelectTrigger className="w-44">
-        <SelectValue placeholder={allLabel} />
+        {/* A FUNÇÃO é obrigatória, e não enfeite.
+            `Select.Value` do base-ui mostra o VALOR CRU quando não recebe
+            `children` — e como o filtro nasce com "ALL" selecionado, o
+            `placeholder` nunca chega a valer. O resultado era a palavra "ALL"
+            aparecendo no lugar de "Todos" em TODAS as telas com filtro:
+            clientes, financeiro, histórico, manutenção, orçamentos, OS e bens.
+            (Achado olhando a tela de bens em 02/09/2026.) */}
+        <SelectValue>
+          {(v) => options.find((o) => o.value === v)?.label ?? allLabel}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="ALL">{allLabel}</SelectItem>

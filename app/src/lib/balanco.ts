@@ -36,6 +36,8 @@
 //
 // Módulo puro: conta de dinheiro precisa ser testável sem banco.
 
+import { lerDinheiro } from "@/lib/dinheiro"
+
 export type GrupoDoBalanco =
   | "ATIVO_CIRCULANTE"
   | "ATIVO_NAO_CIRCULANTE"
@@ -255,9 +257,5 @@ export function montarBalanco(n: NumerosDaEmpresa): Balanco {
  * lixo no balanço, com nome e tudo, e nenhuma mensagem dizendo o que faltou.
  */
 export function lerValorManual(valor: unknown): number | null {
-  const texto = String(valor ?? "").trim()
-  if (!texto) return null
-  const n = Number(texto.replace(/\./g, "").replace(",", "."))
-  if (!Number.isFinite(n)) return null
-  return centavos(n)
+  return lerDinheiro(valor)
 }

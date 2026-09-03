@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { lerDinheiro } from "@/lib/dinheiro"
 import {
   CATEGORIAS,
   depreciacaoAcumulada,
@@ -37,9 +38,11 @@ async function contexto() {
   return { tenantId, role }
 }
 
+// Valor de bem não é negativo; zero existe (bem doado). A LEITURA mora em
+// lib/dinheiro.ts — a cópia que existia aqui lia "12.5" como 125.
 const dinheiro = (v: FormDataEntryValue | null) => {
-  const n = Number(String(v ?? "").replace(/\./g, "").replace(",", "."))
-  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0
+  const n = lerDinheiro(v)
+  return n !== null && n >= 0 ? n : 0
 }
 
 /** Converte a linha do banco no formato que lib/patrimonio.ts entende. */

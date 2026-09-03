@@ -51,6 +51,16 @@ export type FatosDaEmpresa = {
   bensSemNota: number
   /** Bens ativos já totalmente depreciados. */
   bensZerados: number
+  /**
+   * Bens que NUNCA vão depreciar: taxa efetiva zero e categoria que não é
+   * terreno. Terreno fica de fora porque nele o zero é regra contábil.
+   */
+  bensSemDepreciacao: number
+  /**
+   * Bens cujo valor residual come mais da metade do valor de aquisição, e por
+   * isso quase não geram despesa.
+   */
+  bensComResidualAlto: number
   /** A empresa informou o caixa inicial? Zero informado É informar. */
   caixaInicialInformado: boolean
   /** Movimento financeiro já registrado — separa empresa nova de empresa vazia. */
@@ -66,6 +76,15 @@ export type FatosDaEmpresa = {
  * para devedores duvidosos; aqui o conferente só aponta o número para ele.
  */
 export const DIAS_RECEBIVEL_VELHO = 180
+
+/**
+ * Metade.
+ *
+ * Acima disso o valor residual está comendo mais do bem do que sobra para
+ * depreciar, e a decisão deixa de ser detalhe de cadastro. Não é regra legal —
+ * é o ponto em que vale a pena alguém conferir o número com o contador.
+ */
+export const FRACAO_RESIDUAL_ALTO = 0.5
 
 /** Peso para ordenar: o que impede vem antes do que só informa. */
 const PESO: Record<Gravidade, number> = { impede: 0, atencao: 1, informa: 2 }
@@ -161,6 +180,43 @@ export function conferirBalanco(b: Balanco, f: FatosDaEmpresa): Achado[] {
       chave: "bemZerado",
       gravidade: "informa",
       dados: { bens: f.bensZerados },
+      ir: "/bens",
+    })
+  }
+
+  // ─── Bem que nunca vai depreciar ───────────────────────────────────────────
+  //
+  // Taxa zero num veículo, numa máquina ou num notebook é quase sempre engano —
+  // o campo aceita zero de propósito (há caso legítimo: bem já baixado
+  // contabilmente que o contador quer congelado), então o sistema NÃO
+  // sobrescreve o número da pessoa. Mas ele avisa, porque o efeito é grande e
+  // silencioso: o bem entra no balanço valendo o preço de compra para sempre,
+  // e a despesa de depreciação nunca aparece no resultado.
+  //
+  // TERRENO fica de fora: ali o zero é regra contábil, e avisar seria ruído
+  // eterno para quem fez tudo certo.
+  //
+  // (Achado numa conta real: uma Kangoo de 2023, R$ 15.000, com 0%/ano.)
+  if (f.bensSemDepreciacao > 0) {
+    achados.push({
+      chave: "bemSemDepreciacao",
+      gravidade: "atencao",
+      dados: { bens: f.bensSemDepreciacao },
+      ir: "/bens",
+    })
+  }
+
+  // ─── Residual comendo o bem ────────────────────────────────────────────────
+  //
+  // O residual não deprecia. Um residual de R$ 13.000 num bem de R$ 15.000
+  // deixa só R$ 2.000 depreciáveis — 87% do valor nunca vira despesa. Não é
+  // proibido, mas é decisão grande demais para passar sem ninguém conferir com
+  // o contador.
+  if (f.bensComResidualAlto > 0) {
+    achados.push({
+      chave: "residualAlto",
+      gravidade: "atencao",
+      dados: { bens: f.bensComResidualAlto },
       ir: "/bens",
     })
   }

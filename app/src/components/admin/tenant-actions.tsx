@@ -240,11 +240,12 @@ export function TenantActions({
               </button>
             )}
 
-            {/* Rola dentro da propria caixa, e nao empurrando a janela: com
-                nove recursos a lista ja passa da altura util numa tela de
-                notebook, e o botao de salvar ficava fora do alcance. O teto em
-                vh acompanha a tela em vez de fixar uma altura que erra nas
-                duas pontas. */}
+            {/* Rola dentro da propria caixa, e nao empurrando a janela: a
+                lista ja passava da altura util numa tela de notebook com nove
+                recursos (hoje sao onze), e o botao de salvar ficava fora do
+                alcance. O teto em vh acompanha a tela em vez de fixar uma
+                altura que erra nas duas pontas — e por isso a caixa aguenta o
+                recurso que entrar depois deste comentario. */}
             <div className="max-h-[45vh] space-y-1 overflow-y-auto pr-1">
               {RECURSOS.map((r) => {
                 const doPlano = noPlano.has(r)

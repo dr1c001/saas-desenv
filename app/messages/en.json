@@ -3338,7 +3338,9 @@
         "semBens": "No assets registered. If the company has a van, a laptop or tools, the asset side is incomplete.",
         "bemSemNota": "{bens} assets have no invoice attached. It is the document your accountant needs to book fixed assets.",
         "bemZerado": "{bens} assets are fully depreciated and still in use. Worth reviewing their useful life with your accountant.",
-        "depreciacaoForaDoCaixa": "Depreciation of {depreciacao} reduces equity here and does not appear as an expense in Finance — because no money left. Both screens are right."
+        "depreciacaoForaDoCaixa": "Depreciation of {depreciacao} reduces equity here and does not appear as an expense in Finance — because no money left. Both screens are right.",
+        "bemSemDepreciacao": "{bens} assets have a 0%/year rate and will never depreciate — they stay on the balance sheet at cost forever. Only land legitimately does not depreciate; for anything else, leave the rate blank to use the category default.",
+        "residualAlto": "{bens} assets have a residual value above half their purchase price, so almost none of them ever becomes an expense. Worth checking that number with your accountant."
       }
     },
     "erros": {

@@ -8,6 +8,7 @@ import { requireRecurso } from "@/lib/plan"
 import { getTranslations } from "next-intl/server"
 import { translateFieldErrors } from "@/lib/validation"
 import { aplicarMovimento, resolverLocal } from "@/lib/estoque-db"
+import { lerDinheiro } from "@/lib/dinheiro"
 import { quantidadeValida, UNIDADES, type TipoMovimento } from "@/lib/estoque"
 
 export type EstadoPeca = { errors?: Record<string, string[]>; message?: string; ok?: boolean }
@@ -21,11 +22,11 @@ const pecaSchema = z.object({
   minStock: z.string().optional(),
 })
 
+// Preço não é negativo. A LEITURA mora em lib/dinheiro.ts, que aceita negativo
+// porque o balanço precisa; a recusa é regra desta tela, e fica aqui.
 const dinheiro = (v: string | undefined) => {
-  if (!v || !v.trim()) return null
-  // Aceita "12,50" e "12.50": o teclado do celular brasileiro dá vírgula.
-  const n = Number(v.replace(/\./g, "").replace(",", "."))
-  return Number.isFinite(n) && n >= 0 ? n : null
+  const n = lerDinheiro(v)
+  return n !== null && n >= 0 ? n : null
 }
 
 const numero = (v: string | undefined) => {

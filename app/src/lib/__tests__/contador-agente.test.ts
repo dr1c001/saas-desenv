@@ -26,6 +26,8 @@ const fatosLimpos: FatosDaEmpresa = {
   bens: 3,
   bensSemNota: 0,
   bensZerados: 0,
+  bensSemDepreciacao: 0,
+  bensComResidualAlto: 0,
   caixaInicialInformado: true,
   temMovimento: true,
 }
@@ -160,6 +162,33 @@ describe("os bens", () => {
     // No primeiro dia não haver bem ainda é normal, e o aviso seria ruído.
     const a = conferir({}, { bens: 0, temMovimento: false })
     expect(chaves(a)).not.toContain("semBens")
+  })
+
+  it("bem que NUNCA vai depreciar é atenção, e não recado informativo", () => {
+    // Veio de uma conta real: uma Kangoo de 2023, R$ 15.000, cadastrada com
+    // 0%/ano. Ela entrava no balanço valendo o preço de compra para sempre, a
+    // despesa de depreciação nunca aparecia, e NADA na tela dizia isso.
+    const a = conferir({}, { bensSemDepreciacao: 1 })
+    const x = a.find((y) => y.chave === "bemSemDepreciacao")!
+    expect(x.gravidade).toBe("atencao")
+    expect(x.dados).toEqual({ bens: 1 })
+    expect(x.ir).toBe("/bens")
+    expect(veredito(a)).toBe("atencao")
+  })
+
+  it("residual alto demais também é atenção", () => {
+    // Residual de R$ 13.000 num bem de R$ 15.000 deixa R$ 2.000 depreciáveis:
+    // 87% do valor nunca vira despesa.
+    const a = conferir({}, { bensComResidualAlto: 2 })
+    expect(a.find((y) => y.chave === "residualAlto")!.dados).toEqual({ bens: 2 })
+  })
+
+  it("empresa sem esses casos não recebe nenhum dos dois avisos", () => {
+    // Terreno tem taxa zero por regra contábil, e não pode virar ruído eterno
+    // para quem cadastrou tudo certo — quem filtra terreno é a Action.
+    const a = conferir()
+    expect(chaves(a)).not.toContain("bemSemDepreciacao")
+    expect(chaves(a)).not.toContain("residualAlto")
   })
 
   it("bem sem nota e bem já zerado são informativos", () => {

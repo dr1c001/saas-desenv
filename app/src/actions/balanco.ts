@@ -14,8 +14,13 @@ import {
   type GrupoDoBalanco,
   type NumerosDaEmpresa,
 } from "@/lib/balanco"
-import { conferirBalanco, DIAS_RECEBIVEL_VELHO, type Achado } from "@/lib/contador-agente"
-import { resumirPatrimonio, valorContabil, type Bem } from "@/lib/patrimonio"
+import {
+  conferirBalanco,
+  DIAS_RECEBIVEL_VELHO,
+  FRACAO_RESIDUAL_ALTO,
+  type Achado,
+} from "@/lib/contador-agente"
+import { resumirPatrimonio, taxaDoBem, valorContabil, type Bem } from "@/lib/patrimonio"
 import type { PaymentStatus } from "@/generated/prisma/client"
 
 // O BALANÇO PATRIMONIAL.
@@ -152,6 +157,22 @@ export async function getBalanco(): Promise<BalancoCompleto> {
     // zero) nasce com contábil zero e não é caso de revisão nenhuma.
     bensZerados: bens.filter(
       (b) => num(b.purchaseValue) > 0 && valorContabil(paraRegra(b), hoje) === 0
+    ).length,
+    // Taxa EFETIVA zero: `taxaDoBem` já resolve "vazio usa a da categoria", e é
+    // por ela que se pergunta — olhar o campo cru diria que todo bem sem taxa
+    // própria não deprecia, o que é o contrário da verdade.
+    //
+    // TERRENO fora: ali o zero é regra contábil, não engano.
+    bensSemDepreciacao: bens.filter(
+      (b) =>
+        b.category !== "TERRENO" &&
+        num(b.purchaseValue) > 0 &&
+        taxaDoBem(paraRegra(b)) === 0
+    ).length,
+    bensComResidualAlto: bens.filter(
+      (b) =>
+        num(b.purchaseValue) > 0 &&
+        num(b.residualValue) > num(b.purchaseValue) * FRACAO_RESIDUAL_ALTO
     ).length,
     caixaInicialInformado: empresa?.openingCash !== null && empresa?.openingCash !== undefined,
     temMovimento: movimentos > 0,

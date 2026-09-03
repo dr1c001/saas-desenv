@@ -7,6 +7,7 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { retryOnUniqueConflict } from "@/lib/retry"
+import { lerDinheiro } from "@/lib/dinheiro"
 // Compartilhada com actions/os-orcamento.ts: um arquivo "use server" so pode
 // exportar Server Action, entao a contagem mora num lib.
 import { proximoNumeroDeOrcamento } from "@/lib/orcamento-db"
@@ -38,8 +39,12 @@ export type QuoteFormState = {
 // ponto e devolve 1.234 em vez de 1234.56. Remove primeiro o separador de
 // milhar, só depois troca a vírgula decimal pelo ponto.
 // (Achado verificando o sistema antes da primeira venda, 2026-07-28.)
+// A leitura virou lib/dinheiro.ts, compartilhada. Esta era a QUARTA cópia da
+// mesma linha no projeto, e é assim que a quinta nasce errada — foi o que
+// aconteceu no estoque e no patrimônio, onde a mesma regra lia "12.5" como 125.
+// Aqui nunca deu problema porque o formulário já formatava com vírgula.
 function parseBrCurrency(value: string): number {
-  return parseFloat(value.replace(/\./g, "").replace(",", "."))
+  return lerDinheiro(value) ?? 0
 }
 
 export async function createQuote(

@@ -3338,7 +3338,9 @@
         "semBens": "Nenhum bem cadastrado. Se a empresa tem van, notebook ou ferramenta, o ativo está incompleto.",
         "bemSemNota": "{bens} bens estão sem nota anexada. É o documento que o contador pede para lançar o imobilizado.",
         "bemZerado": "{bens} bens já foram totalmente depreciados e continuam em uso. Vale rever a vida útil com o contador.",
-        "depreciacaoForaDoCaixa": "A depreciação de {depreciacao} reduz o patrimônio aqui e não aparece como despesa no Financeiro — porque não saiu dinheiro nenhum. As duas telas estão certas."
+        "depreciacaoForaDoCaixa": "A depreciação de {depreciacao} reduz o patrimônio aqui e não aparece como despesa no Financeiro — porque não saiu dinheiro nenhum. As duas telas estão certas.",
+        "bemSemDepreciacao": "{bens} bens estão com taxa 0% ao ano e nunca vão depreciar — entram no balanço valendo o preço de compra para sempre. Só terreno não deprecia por regra; para o resto, deixe a taxa em branco para usar a da categoria.",
+        "residualAlto": "{bens} bens têm valor residual acima da metade do preço de compra, então quase nada deles vira despesa. Vale conferir esse número com o contador."
       }
     },
     "erros": {

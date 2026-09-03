@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { criarCompra, type EstadoCompra } from "@/actions/compras"
 import { totalDaCompra } from "@/lib/compras"
+import { lerDinheiro } from "@/lib/dinheiro"
 import { formatCurrency } from "@/lib/utils"
 
 type Peca = { id: string; name: string; sku: string | null; unit: string; costPrice: number | null }
@@ -61,8 +62,18 @@ export function CompraDialog({
   }
 
   const numeros = linhas.map((l) => ({
+    // Quantidade continua com `replace` simples: aqui "1.234" quer dizer 1,234
+    // unidades, porque a coluna é Decimal(12,3). Dinheiro é outra história.
     quantity: Number(l.quantity.replace(",", ".")) || 0,
-    unitCost: Number(l.unitCost.replace(",", ".")) || 0,
+    // O custo passa por lerDinheiro.
+    //
+    // Antes era `Number(l.unitCost.replace(",", ".")) || 0`, que deixava o
+    // ponto do milhar em pé: "1.234,56" virava "1.234.56", que não é número,
+    // e o `|| 0` transformava em R$ 0,00 EM SILÊNCIO. Uma compra de mil reais
+    // entrava valendo zero — e ao receber, zerava o custo médio da peça e não
+    // gerava despesa nenhuma, que é o defeito que o módulo de compras foi
+    // escrito para consertar.
+    unitCost: lerDinheiro(l.unitCost) ?? 0,
   }))
   const total = totalDaCompra(numeros)
   const validas = linhas.filter((l, i) => l.partId && numeros[i].quantity > 0)

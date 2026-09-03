@@ -6,6 +6,7 @@ import { Loader2, Pencil, Plus, Power } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { paraCampo } from "@/lib/dinheiro"
 import {
   Dialog,
   DialogContent,
@@ -92,13 +93,28 @@ export function PecaDialog({ peca }: { peca?: Peca }) {
           </div>
 
           <div className="grid grid-cols-3 gap-3">
+            {/* `paraCampo`, e não o número cru.
+                O cru saía com PONTO decimal ("12.5"), e o parser da Action lia
+                ponto como separador de milhar — abrir a peça de R$ 12,50 e
+                salvar sem tocar em nada gravava R$ 125,00. Dez vezes, calado.
+                Ver lib/dinheiro.ts. */}
             <div className="space-y-2">
               <Label htmlFor="costPrice">{t("campos.custo")}</Label>
-              <Input id="costPrice" name="costPrice" inputMode="decimal" defaultValue={peca?.costPrice ?? ""} />
+              <Input
+                id="costPrice"
+                name="costPrice"
+                inputMode="decimal"
+                defaultValue={paraCampo(peca?.costPrice)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="salePrice">{t("campos.venda")}</Label>
-              <Input id="salePrice" name="salePrice" inputMode="decimal" defaultValue={peca?.salePrice ?? ""} />
+              <Input
+                id="salePrice"
+                name="salePrice"
+                inputMode="decimal"
+                defaultValue={paraCampo(peca?.salePrice)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="minStock">{t("campos.minimo")}</Label>

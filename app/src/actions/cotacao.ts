@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { requireRecurso } from "@/lib/plan"
 import { proximoNumeroDeCompra } from "@/lib/estoque-db"
+import { lerDinheiro } from "@/lib/dinheiro"
 import {
   aceitaPreco,
   compararCotacao,
@@ -218,7 +219,10 @@ export async function salvarPrecos(
         continue
       }
 
-      const valor = numero(cru)
+      // `lerDinheiro`, e não o `numero` daqui: aquele deixa o ponto do milhar
+      // em pé, então "1.234,56" virava NaN e caía em zero — o fornecedor
+      // "ganhava" a cotação com preço zero, em silêncio.
+      const valor = lerDinheiro(cru) ?? 0
       // Negativo não existe; o banco também recusa, mas aqui a mensagem é
       // melhor que um erro de constraint.
       if (valor < 0) continue

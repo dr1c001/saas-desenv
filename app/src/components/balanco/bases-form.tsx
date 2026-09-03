@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { salvarBasesDoBalanco, type EstadoBalanco } from "@/actions/balanco"
+import { paraCampo } from "@/lib/dinheiro"
 
 // Os dois números que o sistema não tem como calcular sozinho.
 //
@@ -49,7 +50,7 @@ export function BasesForm({
               // `?? ""` e não `|| ""`: zero informado é escolha legítima, e
               // com `||` o campo apareceria vazio como se ninguém tivesse
               // preenchido — que é justamente a distinção que o conferente usa.
-              defaultValue={caixaInicial ?? ""}
+              defaultValue={paraCampo(caixaInicial)}
             />
             <p className="max-w-56 text-[11px] text-muted-foreground">{t("caixaInicialAjuda")}</p>
           </div>
@@ -61,7 +62,7 @@ export function BasesForm({
               name="shareCapital"
               inputMode="decimal"
               className="w-44"
-              defaultValue={capitalSocial ?? ""}
+              defaultValue={paraCampo(capitalSocial)}
             />
             <p className="max-w-56 text-[11px] text-muted-foreground">{t("capitalSocialAjuda")}</p>
           </div>

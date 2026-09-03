@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { salvarBem, type EstadoBem } from "@/actions/patrimonio"
 import { CATEGORIAS, TAXA_ANUAL, type CategoriaBem } from "@/lib/patrimonio"
+import { paraCampo } from "@/lib/dinheiro"
 
 export type BemDoFormulario = {
   id: string
@@ -134,12 +135,16 @@ export function BemDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="purchaseValue">{t("valor")}</Label>
+              {/* `paraCampo` e não `String`: o número cru sai com PONTO
+                  decimal, e o parser da Action lia ponto como milhar — um bem
+                  de R$ 15.750,50 reeditado virava R$ 1.575.050,00. Ver
+                  lib/dinheiro.ts. */}
               <Input
                 id="purchaseValue"
                 name="purchaseValue"
                 inputMode="decimal"
                 required
-                defaultValue={bem ? String(bem.purchaseValue) : ""}
+                defaultValue={bem ? paraCampo(bem.purchaseValue) : ""}
               />
             </div>
             <div className="space-y-1.5">

@@ -268,6 +268,95 @@ describe("o conferente, ligado ao banco", () => {
     expect(achados.find((a) => a.chave === "bemSemNota")!.dados).toEqual({ bens: 1 })
   })
 
+  it("pega o VEÍCULO com taxa 0%, que nunca vai depreciar", async () => {
+    // O caso real que revelou o buraco: uma Kangoo de 2023, R$ 15.000,
+    // cadastrada com 0%/ano. Ela entrava no balanço valendo o preço de compra
+    // para sempre e nada avisava.
+    const t = await empresa()
+    await testDb.db.asset.create({
+      data: {
+        tenantId: t.id,
+        name: "Kangoo",
+        category: "VEICULO",
+        purchaseValue: 15000,
+        purchasedAt: new Date("2023-03-08T12:00:00"),
+        annualRate: 0,
+      },
+    })
+
+    const { achados } = await (await acoes()).getBalanco()
+    expect(achados.find((a) => a.chave === "bemSemDepreciacao")!.dados).toEqual({ bens: 1 })
+  })
+
+  it("TERRENO com taxa zero NÃO é apontado — ali o zero é regra", async () => {
+    // Sem esta distinção o aviso viraria ruído eterno para quem fez certo.
+    const t = await empresa()
+    await testDb.db.asset.create({
+      data: {
+        tenantId: t.id,
+        name: "Terreno da sede",
+        category: "TERRENO",
+        purchaseValue: 200000,
+        purchasedAt: new Date("2023-01-01T12:00:00"),
+      },
+    })
+
+    const { achados } = await (await acoes()).getBalanco()
+    expect(achados.map((a) => a.chave)).not.toContain("bemSemDepreciacao")
+  })
+
+  it("bem SEM taxa própria não é confundido com taxa zero", async () => {
+    // Campo vazio usa a taxa da categoria (20% em veículo). Olhar o campo cru
+    // em vez da taxa EFETIVA acusaria todo bem normal do sistema.
+    const t = await empresa()
+    await testDb.db.asset.create({
+      data: {
+        tenantId: t.id,
+        name: "Van normal",
+        category: "VEICULO",
+        purchaseValue: 60000,
+        purchasedAt: new Date("2025-01-01T12:00:00"),
+      },
+    })
+
+    const { achados } = await (await acoes()).getBalanco()
+    expect(achados.map((a) => a.chave)).not.toContain("bemSemDepreciacao")
+  })
+
+  it("pega o residual que come mais da metade do bem", async () => {
+    const t = await empresa()
+    await testDb.db.asset.create({
+      data: {
+        tenantId: t.id,
+        name: "Kangoo",
+        category: "VEICULO",
+        purchaseValue: 15000,
+        purchasedAt: new Date("2023-03-08T12:00:00"),
+        residualValue: 13000,
+      },
+    })
+
+    const { achados } = await (await acoes()).getBalanco()
+    expect(achados.find((a) => a.chave === "residualAlto")!.dados).toEqual({ bens: 1 })
+  })
+
+  it("residual na metade exata ainda passa", async () => {
+    // A regra é ACIMA da metade. Empatar não é caso de aviso.
+    const t = await empresa()
+    await testDb.db.asset.create({
+      data: {
+        tenantId: t.id,
+        name: "Maquina",
+        purchaseValue: 10000,
+        purchasedAt: new Date("2025-01-01T12:00:00"),
+        residualValue: 5000,
+      },
+    })
+
+    const { achados } = await (await acoes()).getBalanco()
+    expect(achados.map((a) => a.chave)).not.toContain("residualAlto")
+  })
+
   it("bem DOADO (valor zero) não vira 'já depreciado'", async () => {
     // Ele nasce com valor contábil zero e não é caso de revisão de vida útil —
     // sem essa distinção o aviso apareceria para todo bem doado, para sempre.

@@ -15,6 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { GRUPOS, type GrupoDoBalanco } from "@/lib/balanco"
+import { paraCampo } from "@/lib/dinheiro"
 import { excluirLinhaManual, salvarLinhaManual, type EstadoBalanco } from "@/actions/balanco"
 
 // As linhas que vivem FORA do sistema: empréstimo, financiamento da van, imóvel
@@ -111,7 +112,7 @@ export function LinhaManualDialog({
               inputMode="decimal"
               required
               className="max-w-48"
-              defaultValue={linha ? String(linha.valor) : ""}
+              defaultValue={linha ? paraCampo(linha.valor) : ""}
             />
             <p className="text-[11px] text-muted-foreground">{t("valorAjuda")}</p>
           </div>

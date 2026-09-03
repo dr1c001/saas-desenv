@@ -136,6 +136,24 @@ describe("lançar preços", () => {
     expect(Number(precos[0].unitPrice)).toBe(850)
   })
 
+  it("preço com separador de MILHAR não vira zero", async () => {
+    // Era um defeito vivo: o parser trocava a vírgula por ponto e deixava o
+    // ponto do milhar em pé — "1.234,56" virava "1.234.56", que não é número,
+    // e caía em zero. O fornecedor passava a "ganhar" a cotação com preço
+    // zero, em silêncio. Corrigido levando a leitura para lib/dinheiro.ts.
+    const { p1, f1 } = await cenario()
+    const c = await (await acoes()).criarCotacao({}, formCriar([{ id: p1.id, q: 1 }], [f1.id]))
+    const part = (await testDb.db.quotationParticipant.findFirst({ where: { quotationId: c.id! } }))!
+    const item = (await testDb.db.quotationItem.findFirst({ where: { quotationId: c.id! } }))!
+
+    const fd = new FormData()
+    fd.set(`preco_${item.id}`, "1.234,56")
+    await (await acoes()).salvarPrecos(part.id, {}, fd)
+
+    const precos = await testDb.db.quotationPrice.findMany({ where: { participantId: part.id } })
+    expect(Number(precos[0].unitPrice)).toBe(1234.56)
+  })
+
   it("campo VAZIO apaga o preço, e não grava zero", async () => {
     // "Não tenho essa peça" e "é de graça" são coisas diferentes: zero
     // venceria a comparação e faria o sistema recomendar quem não tem o

@@ -5,6 +5,7 @@ import { getLocais } from "@/actions/estoque-locais"
 import { temRecurso } from "@/lib/plan"
 import { prisma } from "@/lib/prisma"
 import { formatCurrency } from "@/lib/utils"
+import { paraCampo } from "@/lib/dinheiro"
 import { Card, CardContent } from "@/components/ui/card"
 import { SearchBar } from "@/components/shared/search-bar"
 import { StatusFilter } from "@/components/shared/status-filter"
@@ -98,9 +99,11 @@ export default async function BensPage({
 
       <div className="flex flex-wrap gap-3">
         <SearchBar placeholder={t("busca")} />
+        {/* Sem opção "todas" própria: o StatusFilter já injeta a dele ("ALL"),
+            e as duas juntas mostravam "Todos" repetido no mesmo menu. */}
         <StatusFilter
+          placeholder={t("filtro.todas")}
           options={[
-            { value: "todas", label: t("filtro.todas") },
             { value: "ATIVO", label: t("filtro.ATIVO") },
             { value: "MANUTENCAO", label: t("filtro.MANUTENCAO") },
             { value: "BAIXADO", label: t("filtro.BAIXADO") },
@@ -173,8 +176,14 @@ export default async function BensPage({
                             serialNumber: b.serialNumber,
                             purchaseValue: b.purchaseValue,
                             purchasedAt: b.purchasedAt.toISOString().slice(0, 10),
+                            // A taxa é porcentagem e `lerTaxa` não mexe em
+                            // ponto — String basta. O RESIDUAL é dinheiro, e
+                            // aí `String` sairia com ponto decimal, que o
+                            // parser lia como milhar. Ver lib/dinheiro.ts.
                             annualRate: b.annualRate === null ? "" : String(b.annualRate),
-                            residualValue: b.residualValue === null ? "" : String(b.residualValue),
+                            residualValue: paraCampo(
+                              b.residualValue === null ? null : Number(b.residualValue)
+                            ),
                             locationId: b.locationId,
                             responsibleId: b.responsibleId,
                             notes: b.notes,
