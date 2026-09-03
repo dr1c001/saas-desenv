@@ -48,17 +48,22 @@ export type Permissao =
   // do painel que destroi dado em vez de mexer em acesso, nao tem desfazer, e
   // nao ha motivo operacional para financeiro ou comercial precisarem dela.
   | "apagarEmpresa"
+  // Ler e responder duvida de cliente. Vai para LOGISTICO e TI, que sao os
+  // papeis de suporte, e nao para FINANCEIRO nem COMERCIAL — a duvida carrega
+  // o que a empresa esta tentando fazer no sistema, e isso nao e assunto de
+  // quem cuida de cobranca ou de venda.
+  | "atenderDuvida"
 
 const PERMISSOES: Record<PlatformRole, Permissao[]> = {
   DONO: [
     "verPainel", "verFinanceiro", "gerarRelatorio", "liberarAcesso",
     "cancelarAcesso", "trocarPlano", "concederRecurso", "alterarLimites",
-    "entrarNaConta", "gerenciarEquipe", "apagarEmpresa",
+    "entrarNaConta", "gerenciarEquipe", "apagarEmpresa", "atenderDuvida",
   ],
   FINANCEIRO: ["verPainel", "verFinanceiro", "gerarRelatorio", "liberarAcesso", "cancelarAcesso", "trocarPlano", "concederRecurso", "alterarLimites"],
   COMERCIAL: ["verPainel", "verFinanceiro", "gerarRelatorio", "trocarPlano", "concederRecurso", "alterarLimites"],
-  LOGISTICO: ["verPainel", "entrarNaConta"],
-  TI: ["verPainel", "liberarAcesso", "entrarNaConta"],
+  LOGISTICO: ["verPainel", "entrarNaConta", "atenderDuvida"],
+  TI: ["verPainel", "liberarAcesso", "entrarNaConta", "atenderDuvida"],
 }
 
 export function papelPode(role: PlatformRole, permissao: Permissao): boolean {

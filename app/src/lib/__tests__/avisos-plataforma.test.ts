@@ -133,15 +133,57 @@ describe("para onde o toque leva", () => {
     // inventado seria ignorado em silêncio e o dono cairia na lista inteira,
     // tendo que procurar a empresa à mão. Que é o trabalho que o aviso existe
     // para poupar.
-    expect(destinoDoAviso("t1")).toBe("/admin?q=t1")
+    expect(destinoDoAviso("novaEmpresa", { tenantId: "t1" })).toBe("/admin?q=t1")
   })
 
   it("sem empresa, leva ao painel mesmo", () => {
-    expect(destinoDoAviso(null)).toBe("/admin")
-    expect(destinoDoAviso(undefined)).toBe("/admin")
+    expect(destinoDoAviso("novaEmpresa", {})).toBe("/admin")
   })
 
   it("escapa o id, para um valor estranho não quebrar a URL", () => {
-    expect(destinoDoAviso("a b&c")).toBe("/admin?q=a%20b%26c")
+    expect(destinoDoAviso("novaEmpresa", { tenantId: "a b&c" })).toBe("/admin?q=a%20b%26c")
+  })
+
+  it("a DÚVIDA abre a conversa, e não a linha da empresa", () => {
+    // Quem toca num aviso de pergunta quer ler a pergunta, não gerenciar o
+    // plano de quem perguntou.
+    expect(destinoDoAviso("duvidaNova", { tenantId: "t1", duvidaId: "d9" })).toBe(
+      "/admin/duvidas/d9"
+    )
+  })
+
+  it("dúvida sem id cai na fila, e não numa página quebrada", () => {
+    expect(destinoDoAviso("duvidaNova", { tenantId: "t1" })).toBe("/admin/duvidas")
+  })
+})
+
+describe("o aviso de dúvida", () => {
+  it("a chave é da MENSAGEM, não da conversa", () => {
+    // A mesma conversa recebe pergunta de volta depois da resposta, e cada uma
+    // é um fato novo. Chavear pela conversa avisaria só a primeira — e o dono
+    // nunca saberia que o cliente voltou a perguntar.
+    const a = chaveDoAviso("duvidaNova", { duvidaId: "d1", mensagemId: "m1" })
+    const b = chaveDoAviso("duvidaNova", { duvidaId: "d1", mensagemId: "m2" })
+    expect(a).not.toBe(b)
+  })
+
+  it("leva a PERGUNTA no corpo, e não só 'você tem uma dúvida'", () => {
+    // Metade delas o dono responde de cabeça: ler a pergunta na tela de
+    // bloqueio já diz se dá para esperar ou se é agora.
+    const a = montarAviso(
+      "duvidaNova",
+      { empresa: "Livela", quem: "Priscila", pergunta: "Como emito nota?" },
+      t
+    )
+    expect(a.body).toContain("pergunta=Como emito nota?")
+    expect(a.body).toContain("quem=Priscila")
+  })
+
+  it("acorda o aparelho: o cliente está esperando", () => {
+    expect(INSISTENTE.has("duvidaNova")).toBe(true)
+  })
+
+  it("vai para quem ATENDE dúvida, não para quem vê dinheiro", () => {
+    expect(PERMISSAO_DO_AVISO.duvidaNova).toBe("atenderDuvida")
   })
 })

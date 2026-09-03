@@ -167,6 +167,7 @@ model Tenant {
   quotations        Quotation[]
   assets            Asset[]
   balanceEntries    BalanceEntry[]
+  supportThreads    SupportThread[]
 
   // Vocabulario adaptavel: como a empresa chama OS e tecnico.
   // Formato em lib/vocabulario.ts. Fica junto do locale porque e lido no mesmo
@@ -348,6 +349,7 @@ model User {
   @@index([branchId])
   stockLocations     StockLocation[]
   assets             Asset[]
+  supportThreads     SupportThread[]
 }
 
 model UserAddress {
@@ -1868,4 +1870,87 @@ model PlatformAlert {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+enum SupportThreadStatus {
+  ABERTA
+  RESPONDIDA
+  FECHADA
+}
+
+/// Quem falou. Dois lados so: a empresa cliente e a plataforma.
+enum SupportAuthorKind {
+  CLIENTE
+  PLATAFORMA
+}
+
+/// Uma DUVIDA do cliente, e a conversa inteira sobre ela.
+///
+/// `tenantId` e `authorId` sao ANULAVEIS com SET NULL, e isso e deliberado:
+/// a duvida de quem DESISTIU e a mais valiosa que existe — e o motivo do
+/// abandono, escrito pela propria pessoa. Cascade apagaria justamente ela, e
+/// Restrict impediria apagarEmpresaAbandonada() de funcionar.
+///
+/// Por isso a linha carrega o RETRATO do momento da pergunta: depois do
+/// apagamento, e a unica memoria de que ela foi feita.
+model SupportThread {
+  id       String  @id @default(cuid())
+  tenantId String?
+  authorId String?
+
+  /// O retrato. Guardado e nao lido ao vivo: "por que nao vejo o mapa?" so faz
+  /// sentido junto do plano que a empresa TINHA quando perguntou.
+  tenantName         String
+  authorName         String
+  authorEmail        String
+  /// Cargo como texto: cargo pode sair do enum, e a linha antiga nao pode
+  /// virar invalida por causa disso.
+  authorRole         String
+  planName           String?
+  subscriptionStatus String
+
+  /// A tela onde a pessoa estava, pela rota CANONICA do catalogo — nunca o
+  /// caminho cru, para nao entrar id de cliente nem de OS no painel.
+  screenRoute String?
+  /// "1.1", para o dono reconhecer a tela de imediato.
+  screenCode  String?
+
+  status          SupportThreadStatus @default(ABERTA)
+  messageCount    Int                 @default(0)
+  lastMessageAt   DateTime
+  lastMessageFrom SupportAuthorKind
+
+  /// Quando o CLIENTE leu a ultima resposta. So do lado dele: no painel, "nao
+  /// lida" e simplesmente status ABERTA.
+  readByClientAt DateTime?
+
+  closedAt  DateTime?
+  /// E-mail de quem fechou, ou "cliente".
+  closedBy  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tenant   Tenant?          @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  author   User?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  messages SupportMessage[]
+
+  // A fila do painel: abertas primeiro, da mais recente para a mais velha.
+  @@index([status, lastMessageAt])
+  // A lista do cliente, e a contagem de abertas por empresa.
+  @@index([tenantId, status])
+}
+
+model SupportMessage {
+  id       String            @id @default(cuid())
+  threadId String
+  kind     SupportAuthorKind
+  body     String
+  /// Retrato tambem aqui: quem respondeu pode nao estar mais na equipe.
+  authorName  String
+  authorEmail String
+  createdAt   DateTime @default(now())
+
+  thread SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
 }

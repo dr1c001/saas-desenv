@@ -33,6 +33,7 @@ export type Evento =
   | "pagamentoConfirmado"
   | "notaRejeitada"
   | "certificadoVencendo"
+  | "duvidaRespondida"
 
 export type Definicao = {
   evento: Evento
@@ -58,6 +59,11 @@ export const EVENTOS: readonly Definicao[] = [
   // Insistente: certificado vencido para de emitir nota, e sem aviso ninguém
   // descobre até precisar faturar — que é sempre a pior hora.
   { evento: "certificadoVencendo", publico: "escritorio", insistente: true },
+
+  // Para QUEM PERGUNTOU, e so para ela: publico "responsavel" mira uma pessoa.
+  // Insistente porque ela esta esperando — perguntou e parou de trabalhar por
+  // causa disso.
+  { evento: "duvidaRespondida", publico: "responsavel", insistente: true },
 ]
 
 export function ehEvento(valor: string): valor is Evento {

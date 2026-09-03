@@ -88,7 +88,12 @@ export async function destinatariosDaPlataforma(
  */
 export async function avisarPlataforma(
   evento: AvisoDaPlataforma,
-  dados: DadosDoAviso & { subscriptionId?: string | null; fimDoPeriodo?: Date | null }
+  dados: DadosDoAviso & {
+    subscriptionId?: string | null
+    fimDoPeriodo?: Date | null
+    /** Só na dúvida: a chave é da MENSAGEM, para a pergunta de volta avisar. */
+    mensagemId?: string | null
+  }
 ): Promise<void> {
   try {
     const key = chaveDoAviso(evento, dados)

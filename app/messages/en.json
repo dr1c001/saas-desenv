@@ -2033,6 +2033,9 @@
     },
     "certificadoVencendo": {
       "title": "Digital certificate expiring"
+    },
+    "duvidaRespondida": {
+      "title": "Your question was answered"
     }
   },
   "offline": {
@@ -3463,6 +3466,38 @@
     "testeDeAviso": {
       "title": "Test alert",
       "body": "If you are reading this on your phone, alerts are working."
+    },
+    "duvidaNova": {
+      "title": "Customer question",
+      "body": "{empresa} · {quem}: {pergunta}"
+    }
+  },
+  "duvidas": {
+    "titulo": "Need help?",
+    "subtitulo": "Write your question here. We get it right away and answer in this same place — the conversation is kept.",
+    "novaPergunta": "Ask a question",
+    "placeholder": "What were you trying to do, and what happened?",
+    "ajudaEnvio": "We send the screen you are on along with it, so we do not have to ask.",
+    "enviar": "Send",
+    "cancelar": "Cancel",
+    "escrever": "Write",
+    "reabrir": "Ask again",
+    "resolvido": "Resolved",
+    "marcarLida": "Mark as read",
+    "suporte": "ServiçoOS Support",
+    "vazio": "You have not asked anything yet.",
+    "status": {
+      "ABERTA": "Awaiting reply",
+      "RESPONDIDA": "Answered",
+      "FECHADA": "Closed"
+    },
+    "erros": {
+      "vazio": "Write your question.",
+      "curto": "Write a bit more so we can understand.",
+      "longo": "That got too long. Summarise the essentials and we will ask for the rest.",
+      "muitasAbertas": "You already have {max} open questions. Close one that is resolved to open another.",
+      "conversaCheia": "This conversation got long. Let us sort it out by phone — we will call you.",
+      "naoEncontrado": "Question not found."
     }
   }
 }

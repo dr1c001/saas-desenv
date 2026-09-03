@@ -24,6 +24,7 @@ export type AvisoDaPlataforma =
   | "novaEmpresa"
   | "assinaturaEmAtraso"
   | "assinaturaCancelada"
+  | "duvidaNova"
   /** Só o botão de teste do painel. Não tem gatilho automático. */
   | "testeDeAviso"
 
@@ -31,6 +32,7 @@ export const AVISOS: readonly AvisoDaPlataforma[] = [
   "novaEmpresa",
   "assinaturaEmAtraso",
   "assinaturaCancelada",
+  "duvidaNova",
   "testeDeAviso",
 ]
 
@@ -40,6 +42,8 @@ export const PERMISSAO_DO_AVISO: Record<AvisoDaPlataforma, Permissao> = {
   // Dinheiro só para quem cuida de dinheiro.
   assinaturaEmAtraso: "verFinanceiro",
   assinaturaCancelada: "verFinanceiro",
+  // Quem atende duvida, e nao quem ve dinheiro.
+  duvidaNova: "atenderDuvida",
   testeDeAviso: "verPainel",
 }
 
@@ -54,6 +58,8 @@ export const PERMISSAO_DO_AVISO: Record<AvisoDaPlataforma, Permissao> = {
 export const INSISTENTE: ReadonlySet<AvisoDaPlataforma> = new Set([
   "assinaturaEmAtraso",
   "assinaturaCancelada",
+  // O cliente perguntou e parou de trabalhar por causa disso.
+  "duvidaNova",
 ])
 
 /**
@@ -77,7 +83,13 @@ export const INSISTENTE: ReadonlySet<AvisoDaPlataforma> = new Set([
  */
 export function chaveDoAviso(
   evento: AvisoDaPlataforma,
-  dados: { tenantId?: string | null; subscriptionId?: string | null; fimDoPeriodo?: Date | null }
+  dados: {
+    tenantId?: string | null
+    subscriptionId?: string | null
+    fimDoPeriodo?: Date | null
+    duvidaId?: string | null
+    mensagemId?: string | null
+  }
 ): string {
   const periodo = dados.fimDoPeriodo ? dados.fimDoPeriodo.toISOString().slice(0, 10) : "sem-data"
   switch (evento) {
@@ -87,6 +99,11 @@ export function chaveDoAviso(
       return `atraso:${dados.subscriptionId ?? "?"}:${periodo}`
     case "assinaturaCancelada":
       return `cancelamento:${dados.subscriptionId ?? "?"}`
+    case "duvidaNova":
+      // Pela MENSAGEM, e não pela conversa: a mesma conversa recebe pergunta de
+      // volta depois da resposta, e cada uma delas é um fato novo que o dono
+      // precisa saber. Chavear pela conversa avisaria só a primeira.
+      return `duvida:${dados.mensagemId ?? dados.duvidaId ?? "?"}`
     case "testeDeAviso":
       // O teste NUNCA é único: o dono precisa poder apertar o botão de novo
       // amanhã para conferir se o cano continua de pé.
@@ -109,6 +126,12 @@ export type DadosDoAviso = {
   plano?: string | null
   valor?: number | null
   indicador?: string | null
+  /** Só na dúvida: para onde o toque leva, e o que a linha diz. */
+  duvidaId?: string | null
+  /** O resumo da pergunta, já cortado (ver lib/duvida.ts). */
+  pergunta?: string | null
+  /** Quem perguntou — a PESSOA, dentro da empresa. */
+  quem?: string | null
 }
 
 /**
@@ -149,6 +172,15 @@ export function montarAviso(
           : traduzir("assinaturaEmAtraso.body", { empresa })
       case "assinaturaCancelada":
         return traduzir("assinaturaCancelada.body", { empresa, plano: dados.plano ?? "—" })
+      case "duvidaNova":
+        // A PERGUNTA no corpo, e não "você tem uma dúvida nova": metade delas o
+        // dono responde de cabeça, e ler a pergunta na tela de bloqueio já diz
+        // se dá para esperar ou se é agora.
+        return traduzir("duvidaNova.body", {
+          empresa,
+          quem: dados.quem ?? "—",
+          pergunta: dados.pergunta ?? "",
+        })
       case "testeDeAviso":
         return traduzir("testeDeAviso.body")
     }
@@ -160,7 +192,7 @@ export function montarAviso(
     // A etiqueta agrupa por EVENTO, e não por empresa: três empresas atrasando
     // na mesma semana devem virar três linhas, não uma substituindo a outra.
     tag: `plataforma:${evento}:${dados.tenantId ?? "geral"}`,
-    url: destinoDoAviso(dados.tenantId),
+    url: destinoDoAviso(evento, dados),
     requireInteraction: INSISTENTE.has(evento),
   }
 }
@@ -168,11 +200,20 @@ export function montarAviso(
 /**
  * Para onde o toque na notificação leva.
  *
- * `?q=` e não `?tenant=`: é o parâmetro que a busca do painel realmente lê
+ * A dúvida abre a CONVERSA, e não a linha da empresa: quem toca num aviso de
+ * pergunta quer ler a pergunta, não gerenciar o plano de quem perguntou.
+ *
+ * Os demais usam `?q=`, que é o parâmetro que a busca do painel realmente lê
  * (src/app/admin/page.tsx). Um nome inventado seria ignorado em silêncio e o
  * dono cairia na lista inteira, tendo que procurar a empresa à mão — que é o
  * trabalho que o aviso existe para poupar.
  */
-export function destinoDoAviso(tenantId?: string | null): string {
-  return tenantId ? `/admin?q=${encodeURIComponent(tenantId)}` : "/admin"
+export function destinoDoAviso(
+  evento: AvisoDaPlataforma,
+  dados: { tenantId?: string | null; duvidaId?: string | null }
+): string {
+  if (evento === "duvidaNova") {
+    return dados.duvidaId ? `/admin/duvidas/${dados.duvidaId}` : "/admin/duvidas"
+  }
+  return dados.tenantId ? `/admin?q=${encodeURIComponent(dados.tenantId)}` : "/admin"
 }

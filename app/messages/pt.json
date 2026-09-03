@@ -2033,6 +2033,9 @@
     },
     "certificadoVencendo": {
       "title": "Certificado digital vencendo"
+    },
+    "duvidaRespondida": {
+      "title": "Sua dúvida foi respondida"
     }
   },
   "offline": {
@@ -3463,6 +3466,38 @@
     "testeDeAviso": {
       "title": "Teste de aviso",
       "body": "Se você está lendo isto no celular, o aviso está funcionando."
+    },
+    "duvidaNova": {
+      "title": "Dúvida de cliente",
+      "body": "{empresa} · {quem}: {pergunta}"
+    }
+  },
+  "duvidas": {
+    "titulo": "Precisa de ajuda?",
+    "subtitulo": "Escreva sua dúvida aqui. A gente recebe na hora e responde por aqui mesmo — a conversa fica guardada.",
+    "novaPergunta": "Fazer uma pergunta",
+    "placeholder": "O que você está tentando fazer, e o que aconteceu?",
+    "ajudaEnvio": "Mandamos junto a tela em que você está, para não precisarmos perguntar.",
+    "enviar": "Enviar",
+    "cancelar": "Cancelar",
+    "escrever": "Escrever",
+    "reabrir": "Voltar a perguntar",
+    "resolvido": "Resolvido",
+    "marcarLida": "Marcar como lida",
+    "suporte": "Suporte ServiçoOS",
+    "vazio": "Você ainda não fez nenhuma pergunta.",
+    "status": {
+      "ABERTA": "Aguardando resposta",
+      "RESPONDIDA": "Respondida",
+      "FECHADA": "Encerrada"
+    },
+    "erros": {
+      "vazio": "Escreva sua dúvida.",
+      "curto": "Escreva um pouco mais, para a gente entender.",
+      "longo": "Ficou longo demais. Resuma o essencial e a gente pergunta o resto.",
+      "muitasAbertas": "Você já tem {max} perguntas em aberto. Encerre uma que já foi resolvida para abrir outra.",
+      "conversaCheia": "Esta conversa ficou longa. Vamos resolver por telefone — a gente te liga.",
+      "naoEncontrado": "Pergunta não encontrada."
     }
   }
 }

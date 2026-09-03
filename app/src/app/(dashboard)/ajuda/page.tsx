@@ -1,6 +1,8 @@
 import { getLocale, getTranslations } from "next-intl/server"
 import { MANUAL, pedacos, type Bloco, type Verbete } from "@/lib/manual"
 import { AlertTriangle } from "lucide-react"
+import { getMinhasDuvidas } from "@/actions/duvidas"
+import { MinhasDuvidas } from "@/components/duvidas/minhas-duvidas"
 
 // A tela de ajuda. O conteúdo mora em lib/manual.ts, e aqui só se desenha.
 //
@@ -14,6 +16,7 @@ import { AlertTriangle } from "lucide-react"
 export default async function AjudaPage() {
   const t = await getTranslations("ajuda")
   const locale = await getLocale()
+  const duvidas = await getMinhasDuvidas()
 
   return (
     <div className="max-w-3xl space-y-10 pb-16">
@@ -21,6 +24,24 @@ export default async function AjudaPage() {
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-muted-foreground">{t("subtitle")}</p>
       </header>
+
+      {/* Antes do manual, e nao depois: quem abre esta tela com uma pergunta
+          na cabeca nao quer rolar sete secoes ate achar onde perguntar. */}
+      <MinhasDuvidas
+        duvidas={duvidas.map((d) => ({
+          id: d.id,
+          status: d.status,
+          lastMessageAt: d.lastMessageAt.toISOString(),
+          lastMessageFrom: d.lastMessageFrom,
+          readByClientAt: d.readByClientAt?.toISOString() ?? null,
+          mensagens: d.messages.map((m) => ({
+            id: m.id,
+            kind: m.kind,
+            body: m.body,
+            authorName: m.authorName,
+          })),
+        }))}
+      />
 
       {/* O conteúdo do manual só existe em português. Dizer isso é melhor que
           mostrar uma tela vazia — ou, pior, meia tradução. */}
