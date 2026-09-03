@@ -1245,13 +1245,67 @@ model GeocodeBatch {
 /// TERCEIRIZADO, que executa servico pra empresa; este e quem VENDE peca pra
 /// ela. Juntar os dois daria uma lista so com duas coisas diferentes dentro,
 /// e o dia em que precisassem de campos distintos ninguem conseguiria separar.
+/// Quem VENDE peca e material para a empresa.
+///
+/// Nao confundir com Provider (prestador), que PRESTA servico para ela. Sao
+/// dois cadastros diferentes de proposito: o fornecedor entra em compra e
+/// cotacao, o prestador entra em manutencao.
+///
+/// Todos os campos alem do nome sao OPCIONAIS. Ja existem fornecedores gravados
+/// so com nome, e campo obrigatorio travaria a EDICAO deles — a pessoa abriria
+/// a ficha para corrigir o telefone e teria de preencher CEP e razao social
+/// antes de salvar. Cadastro pobre e melhor que cadastro impossivel de corrigir.
 model Supplier {
   id        String   @id @default(cuid())
   tenantId  String
+  /// Como a empresa CHAMA o fornecedor. Nome fantasia.
   name      String
+  /// A razao social, que e o que sai na nota.
+  legalName String?
+  /// CNPJ ou CPF como a pessoa digitou, com mascara — e o que ela reconhece.
   document  String?
+  /// So os digitos do mesmo documento. Serve para descobrir que
+  /// "12.345.678/0001-99" e "12345678000199" sao o MESMO fornecedor cadastrado
+  /// duas vezes. Derivado de `document`, sempre pela mesma funcao.
+  documentDigits    String?
+  stateRegistration String?
+  cityRegistration  String?
+  /// Ramo, em texto livre. Enum obrigaria migration a cada ramo novo.
+  category  String?
+
   email     String?
   phone     String?
+  /// Quem atende. O telefone da empresa e uma coisa; o celular do vendedor que
+  /// resolve e outra, e e esse que o dono liga.
+  contactName  String?
+  contactPhone String?
+  website      String?
+
+  /// Endereco em colunas proprias, e nao na tabela Address: aquela e presa ao
+  /// Client e carrega a fila de geocodificacao. Os nomes sao identicos aos de
+  /// Address de proposito — no dia em que generalizar valer a pena, e mover
+  /// coluna, e nao renomear nada.
+  zipCode    String?
+  street     String?
+  number     String?
+  complement String?
+  district   String?
+  city       String?
+  state      String?
+
+  /// O lado comercial: e o que decide de quem comprar quando o preco empata.
+  paymentTerms String?
+  leadTimeDays Int?
+  pixKey       String?
+  bankName     String?
+  bankAgency   String?
+  bankAccount  String?
+
+  /// Desativar substitui apagar. Fornecedor que ja participou de cotacao nao
+  /// pode ser apagado — o banco recusa (ver QuotationParticipant).
+  active        Boolean   @default(true)
+  deactivatedAt DateTime?
+
   notes     String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1260,6 +1314,9 @@ model Supplier {
   purchaseOrders PurchaseOrder[]
 
   @@index([tenantId, name])
+  // Listagem filtra por ativo; a busca de duplicata casa pelos digitos.
+  @@index([tenantId, active])
+  @@index([tenantId, documentDigits])
   quotations QuotationParticipant[]
 
 }
@@ -1598,7 +1655,14 @@ model QuotationParticipant {
   respondedAt DateTime?
 
   quotation Quotation        @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  supplier  Supplier         @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  /// RESTRICT, e nao Cascade.
+  ///
+  /// Com Cascade, apagar um fornecedor apagava em silencio a participacao dele
+  /// em TODA cotacao e os precos que ele deu — o historico que este modulo
+  /// existe para guardar. E como a unica forma de corrigir um dado errado era
+  /// apagar e recadastrar, o caminho para perder o historico era o caminho
+  /// NORMAL de uso. Fornecedor que ja cotou nao se apaga, se DESATIVA.
+  supplier  Supplier         @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   prices    QuotationPrice[]
 
   /// Convidar o mesmo fornecedor duas vezes duplicaria a coluna dele na

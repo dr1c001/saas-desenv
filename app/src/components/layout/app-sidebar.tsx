@@ -36,6 +36,7 @@ import {
   Scale,
   Calculator,
   Boxes,
+  Truck,
   CircleQuestionMark,
   ArrowLeft,
 } from "lucide-react"
@@ -86,6 +87,7 @@ const NAV_ITEMS: { titleKey: string; href: string; icon: React.ElementType; slug
   { titleKey: "notas", href: "/notas", icon: ReceiptText, slug: "notas" },
   { titleKey: "cotacoes", href: "/cotacoes", icon: Scale, slug: "cotacoes" },
   { titleKey: "billing", href: "/billing", icon: CreditCard, slug: "billing" },
+  { titleKey: "fornecedores", href: "/fornecedores", icon: Truck, slug: "fornecedores" },
   { titleKey: "bens", href: "/bens", icon: Boxes, slug: "bens" },
   { titleKey: "balanco", href: "/balanco", icon: Calculator, slug: "balanco" },
   { titleKey: "referral", href: "/referral", icon: Gift, slug: "referral" },

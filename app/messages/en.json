@@ -1992,7 +1992,8 @@
     "notas": "Purchase invoices",
     "cotacoes": "Quotations",
     "bens": "Asset register",
-    "balanco": "Balance sheet"
+    "balanco": "Balance sheet",
+    "fornecedores": "Suppliers"
   },
   "notifications": {
     "quoteApproved": {
@@ -3351,6 +3352,97 @@
       "descricaoObrigatoria": "Describe the line.",
       "grupoInvalido": "Choose a group.",
       "naoEncontrado": "Line not found."
+    }
+  },
+  "fornecedores": {
+    "titulo": "Suppliers",
+    "subtitulo": "Who sells parts and materials to the company. Not to be confused with Providers, who perform services for it.",
+    "novo": "New supplier",
+    "editar": "Edit",
+    "salvar": "Save",
+    "cancelar": "Cancel",
+    "busca": "Search by name, tax ID, category, contact or city...",
+    "vazio": "No suppliers registered yet.",
+    "vazioBusca": "No suppliers match these filters.",
+    "inativo": "Inactive",
+    "verFicha": "View details",
+    "desativar": "Deactivate",
+    "reativar": "Reactivate",
+    "excluir": "Delete",
+    "confirmarExcluir": "Delete this supplier for good? Only possible because it has no history.",
+    "formAjuda": "Only the name is required. Fill in the rest when you have it — you can come back and complete it any time.",
+    "prazoDias": "{dias} days lead time",
+    "compras": "{n} purchases",
+    "cotacoes": "{n} quotations",
+    "filtro": {
+      "todos": "All",
+      "ATIVO": "Active",
+      "INATIVO": "Inactive"
+    },
+    "colunas": {
+      "fornecedor": "Supplier",
+      "contato": "Contact",
+      "condicoes": "Terms",
+      "historico": "History"
+    },
+    "blocos": {
+      "identificacao": "Identification",
+      "contato": "Contact",
+      "endereco": "Address",
+      "comercial": "Commercial",
+      "observacoes": "Notes"
+    },
+    "campos": {
+      "nome": "Name",
+      "nomeAjuda": "What you call this supplier day to day.",
+      "razaoSocial": "Legal name",
+      "documento": "Tax ID",
+      "documentoAjuda": "Optional. If filled in, the system checks that the number adds up.",
+      "ramo": "Category",
+      "ramoExemplo": "Refrigeration, electrical, tools...",
+      "inscricaoEstadual": "State registration",
+      "inscricaoMunicipal": "City registration",
+      "telefone": "Phone",
+      "email": "Email",
+      "contato": "Contact person",
+      "contatoAjuda": "The rep who gets things done. This is who you call.",
+      "contatoTelefone": "Contact phone",
+      "site": "Website",
+      "cep": "Postcode",
+      "rua": "Street",
+      "numero": "Number",
+      "complemento": "Complement",
+      "bairro": "District",
+      "cidade": "City",
+      "uf": "State",
+      "pagamento": "Payment terms",
+      "pagamentoExemplo": "Cash, 30/60, net 28...",
+      "prazo": "Lead time",
+      "prazoAjuda": "In days, from order to delivery.",
+      "pix": "PIX key",
+      "banco": "Bank",
+      "agencia": "Branch",
+      "conta": "Account",
+      "observacoesAjuda": "What you want to remember next time you buy."
+    },
+    "historico": {
+      "compras": "Purchases from this supplier",
+      "cotacoes": "Quotations they took part in",
+      "semCompras": "No purchases recorded yet.",
+      "semCotacoes": "No quotations yet.",
+      "totalComprado": "Total purchased: {valor}",
+      "respondeu": "Responded",
+      "naoRespondeu": "No response"
+    },
+    "avisos": {
+      "documentoRepetido": "Another supplier already has this tax ID. It was saved anyway — but worth checking, because the same document on two records splits the purchase history in two."
+    },
+    "erros": {
+      "semPermissao": "Only the owner or an administrator can change suppliers.",
+      "nomeObrigatorio": "Enter the supplier name.",
+      "documentoInvalido": "That tax ID does not check out. Review the digits or leave it blank.",
+      "naoEncontrado": "Supplier not found.",
+      "temHistorico": "This supplier already has purchases or quotations. Deleting would take that history with it — use Deactivate."
     }
   }
 }

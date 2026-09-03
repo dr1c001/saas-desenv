@@ -31,6 +31,7 @@ export const ALL_TABS = [
   { slug: "purchases", navKey: "purchases" },
   { slug: "notas", navKey: "notas" },
   { slug: "cotacoes", navKey: "cotacoes" },
+  { slug: "fornecedores", navKey: "fornecedores" },
   { slug: "bens", navKey: "bens" },
   { slug: "balanco", navKey: "balanco" },
   { slug: "referral", navKey: "referral" },

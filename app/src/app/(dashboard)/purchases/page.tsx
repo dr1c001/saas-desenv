@@ -3,15 +3,17 @@ import { redirect } from "next/navigation"
 import { getTranslations } from "next-intl/server"
 import { getTenant } from "@/lib/auth"
 import { temRecurso } from "@/lib/plan"
-import { getCompras, getFornecedores, getSugestaoDeCompra } from "@/actions/compras"
+import { getCompras, getSugestaoDeCompra } from "@/actions/compras"
+import { getFornecedoresAtivos } from "@/actions/fornecedores"
 import { getPecasAtivas } from "@/actions/estoque"
 import { estaPendente, type StatusCompra } from "@/lib/compras"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { SugestaoButton } from "@/components/purchases/sugestao-button"
 import { CompraDialog } from "@/components/purchases/compra-dialog"
-import { FornecedoresDialog } from "@/components/purchases/fornecedores-dialog"
+import { Truck } from "lucide-react"
 
 const COR: Record<StatusCompra, "default" | "secondary" | "destructive" | "outline"> = {
   RASCUNHO: "secondary",
@@ -34,7 +36,7 @@ export default async function PurchasesPage({
   const faltando = await getSugestaoDeCompra()
   const [compras, fornecedores, pecas] = await Promise.all([
     getCompras(status),
-    getFornecedores(),
+    getFornecedoresAtivos(),
     getPecasAtivas(),
   ])
   const isAdmin = role === "OWNER" || role === "ADMIN"
@@ -49,7 +51,14 @@ export default async function PurchasesPage({
         </div>
         {isAdmin && (
           <div className="flex gap-2">
-            <FornecedoresDialog fornecedores={fornecedores} />
+            {/* Era um diálogo aqui dentro, onde só dava para criar e apagar.
+                Virou tela própria (4.6), com busca, ficha e EDIÇÃO — corrigir
+                um telefone errado não exige mais apagar e recadastrar. O link
+                fica onde o botão estava: é onde quem já usa vai procurar. */}
+            <Button size="sm" variant="outline" render={<Link href="/fornecedores" />}>
+              <Truck className="size-4 mr-1.5" />
+              {t("fornecedores")}
+            </Button>
             <CompraDialog fornecedores={fornecedores} pecas={pecas.map((p) => ({
               id: p.id,
               name: p.name,

@@ -5,7 +5,7 @@ import { getTenant } from "@/lib/auth"
 import { temRecurso } from "@/lib/plan"
 import { getCotacoes } from "@/actions/cotacao"
 import { getPecasAtivas } from "@/actions/estoque"
-import { getFornecedores } from "@/actions/compras"
+import { getFornecedoresAtivos } from "@/actions/fornecedores"
 import { Card, CardContent } from "@/components/ui/card"
 import { CotacaoDialog } from "@/components/cotacoes/cotacao-dialog"
 import { Scale } from "lucide-react"
@@ -24,7 +24,7 @@ export default async function CotacoesPage() {
   const [cotacoes, pecas, fornecedores] = await Promise.all([
     getCotacoes(),
     getPecasAtivas(),
-    getFornecedores(),
+    getFornecedoresAtivos(),
   ])
   const isAdmin = role === "OWNER" || role === "ADMIN"
 

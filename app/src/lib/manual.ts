@@ -741,6 +741,54 @@ export const MANUAL: readonly Secao[] = [
           },
         ]
       ),
+      aba(
+        "4.6",
+        "Fornecedores",
+        "Quem vende peça e material para a empresa.",
+        [
+          {
+            tipo: "atencao",
+            titulo: "Fornecedor não é prestador",
+            texto:
+              "*Fornecedor* VENDE para a empresa: peça, material, ferramenta. É quem aparece na compra (4.2) e na cotação (4.5). *Prestador* (4.3) PRESTA serviço para ela — manutenção, elétrica, terceirizado. São dois cadastros separados de propósito: misturados, a lista de quem cotar peça viria cheia de eletricista.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "Só o *nome* é obrigatório. O resto você preenche quando tiver, e pode voltar e completar a qualquer momento — cadastro pobre é melhor que cadastro que você não consegue salvar.",
+          },
+          {
+            tipo: "lista",
+            titulo: "O que vale a pena preencher, e por quê",
+            itens: [
+              "*Pessoa de contato e o telefone dela* — o vendedor que resolve. É para ele que você liga, e não para a central.",
+              "*Condição de pagamento e prazo de entrega* — é o que decide de quem comprar quando o preço empata.",
+              "*CNPJ* — se preencher, o sistema confere se o número fecha. Documento errado não para no cadastro: sai no boleto e na nota.",
+              "*Chave PIX e dados bancários* — para não procurar no WhatsApp na hora de pagar.",
+            ],
+          },
+          {
+            tipo: "passos",
+            titulo: "Corrigir um dado errado",
+            itens: [
+              "Abra a ficha do fornecedor pelo nome, na lista.",
+              "Clique em *Editar*.",
+              "Corrija e salve. Nada mais é apagado nem recriado.",
+            ],
+          },
+          {
+            tipo: "atencao",
+            titulo: "Desativar, e não excluir",
+            texto:
+              "Fornecedor de quem você já comprou tem histórico: as compras e as cotações em que ele deu preço. Parou de comprar dele? Use *Desativar* — ele some das listas de escolha e o histórico fica inteiro. *Excluir* só aparece para quem nunca teve movimento nenhum, que é o caso do cadastro duplicado.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "A *ficha* de cada fornecedor mostra tudo que você já comprou dele, com o total, e as cotações de que ele participou — inclusive as que ele não respondeu.",
+          },
+        ]
+      ),
     ],
   },
 

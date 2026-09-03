@@ -1992,7 +1992,8 @@
     "notas": "Notas de compra",
     "cotacoes": "Cotações",
     "bens": "Controle de bens",
-    "balanco": "Balanço patrimonial"
+    "balanco": "Balanço patrimonial",
+    "fornecedores": "Fornecedores"
   },
   "notifications": {
     "quoteApproved": {
@@ -3351,6 +3352,97 @@
       "descricaoObrigatoria": "Descreva a linha.",
       "grupoInvalido": "Escolha um grupo.",
       "naoEncontrado": "Linha não encontrada."
+    }
+  },
+  "fornecedores": {
+    "titulo": "Fornecedores",
+    "subtitulo": "Quem vende peça e material para a empresa. Não confundir com Prestadores, que prestam serviço para ela.",
+    "novo": "Novo fornecedor",
+    "editar": "Editar",
+    "salvar": "Salvar",
+    "cancelar": "Cancelar",
+    "busca": "Buscar por nome, CNPJ, ramo, contato ou cidade...",
+    "vazio": "Nenhum fornecedor cadastrado ainda.",
+    "vazioBusca": "Nenhum fornecedor encontrado com esses filtros.",
+    "inativo": "Inativo",
+    "verFicha": "Ver ficha",
+    "desativar": "Desativar",
+    "reativar": "Reativar",
+    "excluir": "Excluir",
+    "confirmarExcluir": "Excluir este fornecedor de vez? Só é possível porque ele não tem histórico.",
+    "formAjuda": "Só o nome é obrigatório. O resto você preenche quando tiver — dá para voltar e completar a qualquer momento.",
+    "prazoDias": "{dias} dias de prazo",
+    "compras": "{n} compras",
+    "cotacoes": "{n} cotações",
+    "filtro": {
+      "todos": "Todos",
+      "ATIVO": "Ativos",
+      "INATIVO": "Inativos"
+    },
+    "colunas": {
+      "fornecedor": "Fornecedor",
+      "contato": "Contato",
+      "condicoes": "Condições",
+      "historico": "Histórico"
+    },
+    "blocos": {
+      "identificacao": "Identificação",
+      "contato": "Contato",
+      "endereco": "Endereço",
+      "comercial": "Comercial",
+      "observacoes": "Observações"
+    },
+    "campos": {
+      "nome": "Nome",
+      "nomeAjuda": "Como você chama esse fornecedor no dia a dia.",
+      "razaoSocial": "Razão social",
+      "documento": "CNPJ ou CPF",
+      "documentoAjuda": "Opcional. Se preencher, o sistema confere se o número fecha.",
+      "ramo": "Ramo",
+      "ramoExemplo": "Refrigeração, elétrica, ferramentas...",
+      "inscricaoEstadual": "Inscrição estadual",
+      "inscricaoMunicipal": "Inscrição municipal",
+      "telefone": "Telefone",
+      "email": "E-mail",
+      "contato": "Pessoa de contato",
+      "contatoAjuda": "O vendedor que resolve. É para ele que você liga.",
+      "contatoTelefone": "Telefone do contato",
+      "site": "Site",
+      "cep": "CEP",
+      "rua": "Rua",
+      "numero": "Número",
+      "complemento": "Complemento",
+      "bairro": "Bairro",
+      "cidade": "Cidade",
+      "uf": "UF",
+      "pagamento": "Condição de pagamento",
+      "pagamentoExemplo": "À vista, 30/60, 28 dias...",
+      "prazo": "Prazo de entrega",
+      "prazoAjuda": "Em dias, do pedido até chegar.",
+      "pix": "Chave PIX",
+      "banco": "Banco",
+      "agencia": "Agência",
+      "conta": "Conta",
+      "observacoesAjuda": "O que você quer lembrar na próxima compra."
+    },
+    "historico": {
+      "compras": "Compras deste fornecedor",
+      "cotacoes": "Cotações que ele participou",
+      "semCompras": "Nenhuma compra registrada ainda.",
+      "semCotacoes": "Nenhuma cotação ainda.",
+      "totalComprado": "Total comprado: {valor}",
+      "respondeu": "Respondeu",
+      "naoRespondeu": "Não respondeu"
+    },
+    "avisos": {
+      "documentoRepetido": "Já existe outro fornecedor com esse mesmo CNPJ. Foi salvo assim mesmo — mas vale conferir, porque o mesmo documento em duas fichas divide o histórico de compras em duas."
+    },
+    "erros": {
+      "semPermissao": "Só o dono ou um administrador pode mexer nos fornecedores.",
+      "nomeObrigatorio": "Informe o nome do fornecedor.",
+      "documentoInvalido": "Esse CNPJ ou CPF não confere. Confira os números ou deixe em branco.",
+      "naoEncontrado": "Fornecedor não encontrado.",
+      "temHistorico": "Este fornecedor já tem compras ou cotações. Apagar levaria esse histórico junto — use Desativar."
     }
   }
 }

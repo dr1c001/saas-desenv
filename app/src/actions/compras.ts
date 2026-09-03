@@ -23,60 +23,12 @@ const numero = (v: FormDataEntryValue | null) => {
   return Number.isFinite(n) ? n : 0
 }
 
-// ─── Fornecedores ────────────────────────────────────────────────────────────
-
-export async function getFornecedores(busca?: string) {
-  const { tenantId } = await getTenant()
-  await requireRecurso(tenantId, "stock")
-  return prisma.supplier.findMany({
-    where: {
-      tenantId,
-      ...(busca?.trim() ? { name: { contains: busca.trim(), mode: "insensitive" as const } } : {}),
-    },
-    orderBy: { name: "asc" },
-  })
-}
-
-export async function salvarFornecedor(
-  id: string | null,
-  _prev: EstadoCompra,
-  formData: FormData
-): Promise<EstadoCompra> {
-  const { tenantId, role } = await contexto()
-  if (role !== "OWNER" && role !== "ADMIN") return { erro: "semPermissao" }
-
-  const nome = String(formData.get("name") ?? "").trim()
-  if (nome.length < 2) return { erro: "nomeObrigatorio" }
-
-  const dados = {
-    name: nome.slice(0, 120),
-    document: String(formData.get("document") ?? "").trim() || null,
-    email: String(formData.get("email") ?? "").trim() || null,
-    phone: String(formData.get("phone") ?? "").trim() || null,
-    notes: String(formData.get("notes") ?? "").trim() || null,
-  }
-
-  if (id) {
-    const existe = await prisma.supplier.findFirst({ where: { id, tenantId }, select: { id: true } })
-    if (!existe) return { erro: "semPermissao" }
-    await prisma.supplier.update({ where: { id }, data: dados })
-  } else {
-    await prisma.supplier.create({ data: { ...dados, tenantId } })
-  }
-
-  revalidatePath("/purchases")
-  return { ok: true }
-}
-
-export async function excluirFornecedor(id: string) {
-  const { tenantId, role } = await contexto()
-  if (role !== "OWNER" && role !== "ADMIN") return
-  // O onDelete: SetNull da ordem de compra preserva o histórico: a compra
-  // continua existindo, só perde o vínculo com um fornecedor que não existe
-  // mais. Apagar em cascata destruiria o registro do que foi comprado.
-  await prisma.supplier.deleteMany({ where: { id, tenantId } })
-  revalidatePath("/purchases")
-}
+// Os FORNECEDORES mudaram de casa: actions/fornecedores.ts.
+//
+// Eles moravam aqui porque so existiam dentro da tela de Compras — um dialogo
+// onde so dava para criar e apagar. Agora tem tela propria (4.6), sao usados
+// por compra E por cotacao, e tem ciclo de vida proprio (ativo/inativo).
+// Manter uma copia aqui faria as duas divergirem.
 
 // ─── Ordens de compra ────────────────────────────────────────────────────────
 
