@@ -145,6 +145,53 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
   // o relatório em PDF também exige a permissão, na própria rota.
   const cartoesVisiveis = cartoes.filter((c) => veFinanceiro || c.key !== "mrr")
 
+  // ── A mesma empresa, para as DUAS formas de mostrar ──────────────────────
+  //
+  // A tabela de 8 colunas não cabe num celular: medida em 375px, ela precisa de
+  // 732px e só três colunas aparecem — Empresa, Status e Plano. "Ações", que é
+  // o botão Gerenciar, é a ÚLTIMA, completamente fora da tela. Quem recebe um
+  // aviso no celular e toca nele chegava numa tela onde o botão que resolve não
+  // existe.
+  //
+  // Abaixo de `md` a lista vira cartão; de `md` para cima a tabela continua
+  // igual. Os dados derivados são calculados UMA VEZ aqui, e as duas formas
+  // consomem os mesmos — a marcação precisa diferir, a regra não.
+  const linhas = tenants.map((tenant) => {
+    const statusKey: SubscriptionStatusKey =
+      tenant.subscriptionStatus in STATUS_VARIANT
+        ? (tenant.subscriptionStatus as SubscriptionStatusKey)
+        : "TRIAL"
+    const sub = tenant.subscriptions[0]
+    return {
+      tenant,
+      statusKey,
+      plano: tenant.plan,
+      mensalidade: tenant.plan ? formatCurrency(valorMensal(sub?.billingCycle, tenant.plan)) : null,
+      renova: sub?.currentPeriodEnd
+        ? new Date(sub.currentPeriodEnd).toLocaleDateString("pt-BR")
+        : "—",
+      acoes: {
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+        status: tenant.subscriptionStatus,
+        planId: tenant.planId,
+        planos,
+        recursosDoPlano: recursosDoPlano(tenant.plan?.slug),
+        recursosExtras: tenant.extraFeatures.filter(ehRecurso),
+        limitesDoPlano: limitesDoPlano(tenant.plan?.slug),
+        funcoesDesligadas: tenant.disabledFeatures,
+        ajustes: {
+          usuarios: tenant.maxUsersOverride,
+          osMes: tenant.maxOrdersOverride,
+          nfseMes: tenant.maxNfseOverride,
+          precoMensal:
+            tenant.customPriceMonthly === null ? null : Number(tenant.customPriceMonthly),
+        },
+        permissoes,
+      },
+    }
+  })
+
   return (
     <div className="space-y-6 max-w-7xl">
       {/* Quem sou eu e o que posso */}
@@ -238,7 +285,50 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
           </form>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* ── No CELULAR: um cartão por empresa ─────────────────────────
+              Com o Gerenciar visível. Na tabela ele é a oitava coluna, a 393px
+              fora da tela — quem chega aqui pelo aviso no celular não
+              alcançava o botão que resolve. */}
+          <ul className="divide-y md:hidden">
+            {linhas.map(({ tenant, statusKey, plano, mensalidade, renova, acoes }) => (
+              <li key={tenant.id} className="space-y-3 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium">{tenant.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {tenant.document ?? t("admin.table.noDocument")} ·{" "}
+                      {new Date(tenant.createdAt).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                  <Badge variant={STATUS_VARIANT[statusKey]} className="shrink-0">
+                    {t(`admin.subscriptionStatus.${statusKey}`)}
+                  </Badge>
+                </div>
+
+                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <span>
+                    {plano ? (
+                      <>
+                        <span className="font-medium text-foreground">{plano.name}</span>
+                        {mensalidade && ` · ${mensalidade}${t("admin.table.perMonth")}`}
+                      </>
+                    ) : (
+                      t("admin.table.noPlan")
+                    )}
+                  </span>
+                  <span className="tabular-nums">
+                    {tenant.users.length} · {tenant._count.orders} · {tenant._count.clients}
+                  </span>
+                  <span>{renova}</span>
+                </div>
+
+                <TenantActions {...acoes} />
+              </li>
+            ))}
+          </ul>
+
+          {/* ── No computador: a tabela, sem mudança nenhuma ──────────────── */}
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
@@ -253,15 +343,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
                 </tr>
               </thead>
               <tbody>
-                {tenants.map((tenant, i) => {
-                  const statusKey: SubscriptionStatusKey = tenant.subscriptionStatus in STATUS_VARIANT
-                    ? tenant.subscriptionStatus
-                    : "TRIAL"
-                  const sub = tenant.subscriptions[0]
-                  const dateLabel = sub?.currentPeriodEnd
-                    ? new Date(sub.currentPeriodEnd).toLocaleDateString("pt-BR")
-                    : "—"
-
+                {linhas.map(({ tenant, statusKey, plano, mensalidade, renova, acoes }, i) => {
                   return (
                     <tr key={tenant.id} className={`border-b hover:bg-muted/30 transition-colors ${i % 2 === 0 ? "" : "bg-muted/10"}`}>
                       <td className="px-4 py-3">
@@ -274,11 +356,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
                         <Badge variant={STATUS_VARIANT[statusKey]}>{t(`admin.subscriptionStatus.${statusKey}`)}</Badge>
                       </td>
                       <td className="px-4 py-3">
-                        {tenant.plan ? (
+                        {plano ? (
                           <div>
-                            <p className="font-medium">{tenant.plan.name}</p>
+                            <p className="font-medium">{plano.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {formatCurrency(valorMensal(sub?.billingCycle, tenant.plan))}{t("admin.table.perMonth")}
+                              {mensalidade}{t("admin.table.perMonth")}
                             </p>
                           </div>
                         ) : (
@@ -289,30 +371,10 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
                       <td className="px-4 py-3 text-center">{tenant._count.orders}</td>
                       <td className="px-4 py-3 text-center">{tenant._count.clients}</td>
                       <td className="px-4 py-3">
-                        <span className="text-xs font-medium text-muted-foreground">{dateLabel}</span>
+                        <span className="text-xs font-medium text-muted-foreground">{renova}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <TenantActions
-                          tenantId={tenant.id}
-                          tenantName={tenant.name}
-                          status={tenant.subscriptionStatus}
-                          planId={tenant.planId}
-                          planos={planos}
-                          recursosDoPlano={recursosDoPlano(tenant.plan?.slug)}
-                          recursosExtras={tenant.extraFeatures.filter(ehRecurso)}
-                          limitesDoPlano={limitesDoPlano(tenant.plan?.slug)}
-                          funcoesDesligadas={tenant.disabledFeatures}
-                          ajustes={{
-                            usuarios: tenant.maxUsersOverride,
-                            osMes: tenant.maxOrdersOverride,
-                            nfseMes: tenant.maxNfseOverride,
-                            precoMensal:
-                              tenant.customPriceMonthly === null
-                                ? null
-                                : Number(tenant.customPriceMonthly),
-                          }}
-                          permissoes={permissoes}
-                        />
+                        <TenantActions {...acoes} />
                       </td>
                     </tr>
                   )
