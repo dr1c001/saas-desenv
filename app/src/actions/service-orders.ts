@@ -566,7 +566,10 @@ export async function getServiceOrders(filters?: {
     include: {
       client: { select: { name: true } },
       technician: { select: { name: true } },
-      items: { select: { description: true, quantity: true, unitPrice: true } },
+      // `partId` junto: sem ele, reabrir uma OS concluída devolveria os itens
+      // como texto livre e o vínculo com a peça se perderia — a baixa de
+      // estoque sumiria do histórico ao salvar de novo.
+      items: { select: { description: true, quantity: true, unitPrice: true, partId: true } },
       _count: { select: { items: true } },
     },
     orderBy: { createdAt: "desc" },

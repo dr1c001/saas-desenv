@@ -14,12 +14,37 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Plus, Trash2, CheckCircle } from "lucide-react"
+import { Plus, Trash2, CheckCircle, Package } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { completeServiceOrder } from "@/actions/service-orders"
 import { enfileirar, semRede } from "@/lib/usar-fila-offline"
 
-type Item = { description: string; quantity: number; unitPrice: number }
+/**
+ * `partId` liga o item a uma PEÇA do estoque.
+ *
+ * ─── O que estava construído e inalcançável ──────────────────────────────────
+ *
+ * O caminho inteiro já existia: `completeServiceOrder` aceita `partId`, grava em
+ * `ServiceItem`, e `baixarPecasDaOs` dá a baixa no fecho — tirando da van de
+ * quem executou, não do almoxarifado. Só que NENHUMA tela oferecia escolher a
+ * peça, então o campo era sempre nulo e a baixa nunca disparava.
+ *
+ * Nulo continua sendo o caminho normal: mão de obra, taxa, deslocamento e peça
+ * comprada avulsa não saem do estoque de ninguém.
+ */
+type Item = { description: string; quantity: number; unitPrice: number; partId?: string | null }
+
+/** Uma peça do catálogo, para escolher na hora de fechar. */
+export type PecaDisponivel = {
+  id: string
+  name: string
+  sku: string | null
+  unit: string
+  /** Preço sugerido ao cliente. Continua editável na linha. */
+  salePrice: number | null
+  /** Saldo de hoje. Mostrado para o técnico não prometer o que não tem. */
+  stock: number
+}
 
 type Props = {
   orderId: string
@@ -27,6 +52,8 @@ type Props = {
   currentStatus: string
   initialConclusionNote?: string | null
   initialItems?: Item[]
+  /** Vazio quando a empresa não tem o recurso de estoque. */
+  pecas?: PecaDisponivel[]
 }
 
 export function ConcluirDialog({
@@ -35,6 +62,7 @@ export function ConcluirDialog({
   currentStatus,
   initialConclusionNote,
   initialItems,
+  pecas = [],
 }: Props) {
   const t = useTranslations("serviceOrdersComponents")
   const tc = useTranslations("common")
@@ -55,6 +83,31 @@ export function ConcluirDialog({
     setItems((p) => p.map((item, idx) =>
       idx === i ? { ...item, [field]: field === "description" ? val : Number(val) } : item
     ))
+  }
+
+  /**
+   * Acrescenta uma peça do estoque.
+   *
+   * Nome e preço vêm do catálogo, mas ficam EDITÁVEIS: o técnico às vezes cobra
+   * diferente do preço de tabela, e travar aqui faria ele desistir da peça e
+   * digitar à mão — perdendo justamente o vínculo que baixa o estoque.
+   *
+   * A linha em branco que o diálogo abre por padrão é aproveitada em vez de
+   * empurrada para baixo: fechar uma OS com "1 peça e 1 linha vazia" é o tipo
+   * de coisa que faz a pessoa achar que errou.
+   */
+  function addPeca(peca: PecaDisponivel) {
+    const nova: Item = {
+      description: peca.sku ? `${peca.name} (${peca.sku})` : peca.name,
+      quantity: 1,
+      unitPrice: peca.salePrice ?? 0,
+      partId: peca.id,
+    }
+    setItems((p) => {
+      const vazia = p.findIndex((i) => !i.description.trim() && !i.partId)
+      if (vazia === -1) return [...p, nova]
+      return p.map((i, idx) => (idx === vazia ? nova : i))
+    })
   }
 
   function handleConclude(invoice: boolean) {
@@ -117,12 +170,39 @@ export function ConcluirDialog({
 
           {/* Itens cobrados */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <Label>{t("concludeDialog.itemsLabel")}</Label>
-              <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                <Plus className="size-3.5 mr-1" />
-                {t("items.addButton")}
-              </Button>
+              <div className="flex items-center gap-2">
+                {/* Só aparece para quem controla estoque. Sem o recurso, a
+                    lista chega vazia e o botão some — em vez de oferecer algo
+                    que abre um menu sem nada dentro. */}
+                {pecas.length > 0 && (
+                  <select
+                    aria-label={t("concludeDialog.pecaDoEstoque")}
+                    className="h-8 max-w-52 rounded-md border bg-transparent px-2 text-sm"
+                    value=""
+                    onChange={(e) => {
+                      const p = pecas.find((x) => x.id === e.target.value)
+                      if (p) addPeca(p)
+                      // Volta ao vazio: o select é um GATILHO, não um campo com
+                      // valor. Deixá-lo marcado faria parecer que a peça está
+                      // selecionada, quando ela já virou uma linha da lista.
+                      e.target.value = ""
+                    }}
+                  >
+                    <option value="">{t("concludeDialog.pecaDoEstoque")}</option>
+                    {pecas.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} — {p.stock} {p.unit}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                  <Plus className="size-3.5 mr-1" />
+                  {t("items.addButton")}
+                </Button>
+              </div>
             </div>
 
             {items.map((item, i) => (
@@ -134,6 +214,30 @@ export function ConcluirDialog({
                     value={item.description}
                     onChange={(e) => updateItem(i, "description", e.target.value)}
                   />
+                  {/* A linha que SAI DO ESTOQUE precisa dizer isso.
+                      Fechar a OS baixa a peça de verdade, e uma linha que
+                      parece igual às outras faz o técnico descobrir o efeito
+                      só quando o saldo mudar. */}
+                  {item.partId && (
+                    <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Package className="size-3" />
+                      {t("concludeDialog.saiDoEstoque")}
+                      {(() => {
+                        const p = pecas.find((x) => x.id === item.partId)
+                        if (!p) return null
+                        // Saldo insuficiente NÃO impede concluir: o serviço
+                        // aconteceu no mundo real, e recusar aqui faria o
+                        // técnico digitar à mão e perder a baixa. Avisa, e o
+                        // saldo fica negativo — que é a pendência honesta.
+                        const falta = item.quantity > p.stock
+                        return (
+                          <span className={falta ? "text-amber-600 dark:text-amber-400" : ""}>
+                            · {t("concludeDialog.saldo", { saldo: p.stock, unidade: p.unit })}
+                          </span>
+                        )
+                      })()}
+                    </p>
+                  )}
                 </div>
                 <div>
                   {i === 0 && <p className="text-xs text-muted-foreground mb-1">{t("items.quantityLabel")}</p>}

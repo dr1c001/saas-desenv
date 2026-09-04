@@ -5,11 +5,11 @@ import { useTransition } from "react"
 import { useTranslations } from "next-intl"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { FileDown, Play, Pencil } from "lucide-react"
-import { ConcluirDialog } from "./conclude-dialog"
+import { ConcluirDialog, type PecaDisponivel } from "./conclude-dialog"
 import { updateOrderStatus } from "@/actions/service-orders"
 import { enfileirar, semRede } from "@/lib/usar-fila-offline"
 
-type Item = { description: string; quantity: number; unitPrice: number }
+type Item = { description: string; quantity: number; unitPrice: number; partId?: string | null }
 
 type Props = {
   id: string
@@ -17,6 +17,8 @@ type Props = {
   status: string
   conclusionNote?: string | null
   items?: Item[]
+  /** Peças do catálogo, para escolher ao concluir. Vazio sem o recurso de estoque. */
+  pecas?: PecaDisponivel[]
   /** O que este usuário pode fazer. Vem do servidor (lib/acoes.ts): esconder o
    *  botão é cortesia, não proteção — a Action se defende sozinha. Mas botão
    *  que aparece e falha é pior que botão que não aparece. */
@@ -26,7 +28,7 @@ type Props = {
 }
 
 export function OsActionsRow({
-  id, title, status, conclusionNote, items,
+  id, title, status, conclusionNote, items, pecas,
   podeStatus = true, podeConcluir = true, podeEditar = true,
 }: Props) {
   const t = useTranslations("serviceOrdersComponents")
@@ -76,6 +78,7 @@ export function OsActionsRow({
           currentStatus={status}
           initialConclusionNote={conclusionNote}
           initialItems={items}
+          pecas={pecas}
         />
       )}
       {/* Editar direto da lista: antes era preciso abrir a OS pra achar o

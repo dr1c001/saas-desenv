@@ -2511,7 +2511,10 @@
       "saveNoInvoice": "Salvar (sem faturar)",
       "concludeNoInvoice": "Concluir (sem faturar)",
       "saveAndInvoice": "Salvar e Faturar",
-      "concludeAndInvoice": "Concluir e Faturar"
+      "concludeAndInvoice": "Concluir e Faturar",
+      "pecaDoEstoque": "Peça do estoque",
+      "saiDoEstoque": "Sai do estoque ao concluir",
+      "saldo": "saldo {saldo} {unidade}"
     },
     "osActionsRow": {
       "startButton": "Iniciar"

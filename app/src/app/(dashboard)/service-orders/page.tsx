@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/table"
 import { Plus, ClipboardList } from "lucide-react"
 import { getServiceOrders } from "@/actions/service-orders"
+import { getPecasAtivas } from "@/actions/estoque"
+import { temRecurso } from "@/lib/plan"
 import { getAcoesPermitidas, getTenant } from "@/lib/auth"
 import { podeFazer } from "@/lib/acoes"
 import { SearchBar } from "@/components/shared/search-bar"
@@ -43,7 +45,12 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
   const statusValido = status === "all" || (!!status && STATUS_CONHECIDOS.includes(status))
   const activeOnly = !statusValido || status === undefined
 
-  const [orders, filiais] = await Promise.all([
+  // O tenant vem ANTES do Promise.all porque a trava de estoque depende dele:
+  // sem o recurso, nem vale ir ao banco buscar peça.
+  const { tenantId, role } = await getTenant()
+  const temEstoque = await temRecurso(tenantId, "stock")
+
+  const [orders, filiais, pecas] = await Promise.all([
     getServiceOrders({
       q,
       status: statusValido && status !== "all" ? status : undefined,
@@ -51,10 +58,21 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
       filial,
     }),
     filiaisAtivas(),
+    // Lista vazia sem o recurso: o seletor de peça some do diálogo em vez de
+    // abrir um menu sem nada dentro.
+    temEstoque ? getPecasAtivas() : Promise.resolve([]),
   ])
 
+  const pecasParaConcluir = pecas.map((p) => ({
+    id: p.id,
+    name: p.name,
+    sku: p.sku,
+    unit: p.unit,
+    salePrice: p.salePrice === null ? null : Number(p.salePrice),
+    stock: Number(p.stock),
+  }))
+
   // Uma consulta só, e não uma por linha da tabela: a lista pode ter cem OS.
-  const { tenantId, role } = await getTenant()
   const permitidas = await getAcoesPermitidas(tenantId, role)
   const pode = (acao: Parameters<typeof podeFazer>[2]) => podeFazer(role, permitidas, acao)
 
@@ -170,7 +188,12 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
                           description: i.description,
                           quantity: Number(i.quantity),
                           unitPrice: Number(i.unitPrice),
+                          // Sem isto, reabrir uma OS já concluída perderia o
+                          // vínculo com a peça: o item voltaria como texto
+                          // livre e a baixa some do histórico.
+                          partId: i.partId,
                         }))}
+                        pecas={pecasParaConcluir}
                         podeStatus={pode("os.status")}
                         podeConcluir={pode("os.concluir")}
                         podeEditar={pode("os.editar")}

@@ -2511,7 +2511,10 @@
       "saveNoInvoice": "Save (without invoicing)",
       "concludeNoInvoice": "Complete (without invoicing)",
       "saveAndInvoice": "Save and Invoice",
-      "concludeAndInvoice": "Complete and Invoice"
+      "concludeAndInvoice": "Complete and Invoice",
+      "pecaDoEstoque": "Part from stock",
+      "saiDoEstoque": "Leaves stock on completion",
+      "saldo": "{saldo} {unidade} on hand"
     },
     "osActionsRow": {
       "startButton": "Start"
