@@ -170,6 +170,21 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
       renova: sub?.currentPeriodEnd
         ? new Date(sub.currentPeriodEnd).toLocaleDateString("pt-BR")
         : "—",
+      // ── Plano personalizado, à vista ────────────────────────────────────
+      //
+      // Os quatro ajustes por empresa (usuários, OS, notas e preço) sempre
+      // existiram, mas só apareciam DENTRO do diálogo de gerenciar: para saber
+      // quem estava em condição especial era preciso abrir empresa por
+      // empresa. Numa lista, o que não aparece não existe.
+      personalizado:
+        tenant.maxUsersOverride !== null ||
+        tenant.maxOrdersOverride !== null ||
+        tenant.maxNfseOverride !== null ||
+        tenant.customPriceMonthly !== null,
+      precoPersonalizado:
+        tenant.customPriceMonthly === null
+          ? null
+          : formatCurrency(Number(tenant.customPriceMonthly)),
       acoes: {
         tenantId: tenant.id,
         tenantName: tenant.name,
@@ -290,7 +305,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
               fora da tela — quem chega aqui pelo aviso no celular não
               alcançava o botão que resolve. */}
           <ul className="divide-y md:hidden">
-            {linhas.map(({ tenant, statusKey, plano, mensalidade, renova, acoes }) => (
+            {linhas.map(({ tenant, statusKey, plano, mensalidade, renova, acoes, personalizado, precoPersonalizado }) => (
               <li key={tenant.id} className="space-y-3 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -314,6 +329,13 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
                       </>
                     ) : (
                       t("admin.table.noPlan")
+                    )}
+                    {personalizado && (
+                      <span className="ml-1.5 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                        {precoPersonalizado
+                          ? `${t("admin.table.personalizado")} · ${precoPersonalizado}`
+                          : t("admin.table.personalizado")}
+                      </span>
                     )}
                   </span>
                   <span className="tabular-nums">
@@ -343,7 +365,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
                 </tr>
               </thead>
               <tbody>
-                {linhas.map(({ tenant, statusKey, plano, mensalidade, renova, acoes }, i) => {
+                {linhas.map(({ tenant, statusKey, plano, mensalidade, renova, acoes, personalizado, precoPersonalizado }, i) => {
                   return (
                     <tr key={tenant.id} className={`border-b hover:bg-muted/30 transition-colors ${i % 2 === 0 ? "" : "bg-muted/10"}`}>
                       <td className="px-4 py-3">
@@ -365,6 +387,15 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
                           </div>
                         ) : (
                           <span className="text-muted-foreground text-xs">{t("admin.table.noPlan")}</span>
+                        )}
+                        {personalizado && (
+                          <p className="mt-1">
+                            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                              {precoPersonalizado
+                                ? `${t("admin.table.personalizado")} · ${precoPersonalizado}`
+                                : t("admin.table.personalizado")}
+                            </span>
+                          </p>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">{tenant.users.length}</td>

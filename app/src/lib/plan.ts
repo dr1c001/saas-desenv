@@ -89,7 +89,21 @@ const POR_PLANO: Record<string, Limites> = {
   // e ilimitado —, que já era o desenho de `maxNfseMes`.
   starter: { maxUsuarios: 3, maxOsMes: 50, maxNfseMes: 8, recursos: ["nfse"] },
   pro: { maxUsuarios: 10, maxOsMes: 200, maxNfseMes: 70, recursos: SEM_EXCLUSIVOS },
-  enterprise: { maxUsuarios: null, maxOsMes: null, maxNfseMes: null, recursos: TODOS },
+  // O Enterprise deixou de ser ILIMITADO em usuarios e em notas (04/09/2026).
+  //
+  // Nota fiscal tem CUSTO POR UNIDADE para nos, na nfe.io. "Notas ilimitadas"
+  // por preco fixo e como se perde dinheiro no maior cliente: quanto mais ele
+  // usa, menos sobra. O teto de 200 fecha esse vazamento.
+  //
+  // Usuario e outra coisa: o custo marginal e quase zero, entao os 30 sao
+  // alavanca de PRECO, e nao defesa de custo.
+  //
+  // OS continua sem teto: ela nao custa nada por unidade, e e o volume que o
+  // cliente grande usa para justificar o plano.
+  //
+  // Quem passar disso compra PLANO PERSONALIZADO — que ja existe, por empresa,
+  // via maxUsersOverride/maxNfseOverride/customPriceMonthly no painel.
+  enterprise: { maxUsuarios: 30, maxOsMes: null, maxNfseMes: 200, recursos: TODOS },
 }
 
 // Slug desconhecido (plano novo cadastrado direto no banco) cai no permissivo

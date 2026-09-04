@@ -1821,7 +1821,8 @@
         "searchPlaceholder": "Buscar empresa ou CNPJ",
         "searchButton": "Buscar",
         "searchResults": "{count, plural, one {# empresa encontrada} other {# empresas encontradas}} para “{term}”",
-        "pdfButton": "Relatório PDF"
+        "pdfButton": "Relatório PDF",
+        "personalizado": "Personalizado"
       },
       "pendingWarning": "{count, plural, one {# empresa assinou e está aguardando confirmação de pagamento} other {# empresas assinaram e estão aguardando confirmação de pagamento}}. Se o pagamento já caiu na Asaas, use “Liberar acesso” — foi exatamente esse o caso de 07/08.",
       "charts": {
@@ -2209,8 +2210,9 @@
     ],
     "enterprise": [
       "Tudo do Pro",
-      "Usuários ilimitados",
+      "Até 30 usuários",
       "OS ilimitadas",
+      "200 notas fiscais por mês",
       "Onboarding dedicado",
       "API de integração",
       "Suporte 24h via WhatsApp"

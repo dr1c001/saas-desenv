@@ -77,7 +77,9 @@ describe("cada plano entrega exatamente a sua faixa", () => {
     }
     expect(limitesDoPlano("starter").nfseMes).toBe(8)
     expect(limitesDoPlano("pro").nfseMes).toBe(70)
-    expect(limitesDoPlano("enterprise").nfseMes).toBeNull() // ilimitado
+    // Deixou de ser ilimitado: nota tem custo por unidade, e cota infinita
+    // por preço fixo faz o maior cliente ser o menos lucrativo.
+    expect(limitesDoPlano("enterprise").nfseMes).toBe(200)
   })
 
   it("o Pro inclui tudo, menos o que é só do Enterprise e os adicionais", () => {

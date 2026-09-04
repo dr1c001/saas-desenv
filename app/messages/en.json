@@ -1821,7 +1821,8 @@
         "searchPlaceholder": "Search company or tax ID",
         "searchButton": "Search",
         "searchResults": "{count, plural, one {# company found} other {# companies found}} for “{term}”",
-        "pdfButton": "PDF report"
+        "pdfButton": "PDF report",
+        "personalizado": "Custom"
       },
       "pendingWarning": "{count, plural, one {# company subscribed and is awaiting payment confirmation} other {# companies subscribed and are awaiting payment confirmation}}. If the payment already cleared in Asaas, use “Release access”.",
       "charts": {
@@ -2209,11 +2210,12 @@
     ],
     "enterprise": [
       "Everything in Pro",
-      "Unlimited users",
-      "Unlimited jobs",
+      "Up to 30 users",
+      "Unlimited work orders",
+      "200 tax invoices per month",
       "Dedicated onboarding",
       "Integration API",
-      "24h support via WhatsApp"
+      "24h WhatsApp support"
     ]
   },
   "portal": {

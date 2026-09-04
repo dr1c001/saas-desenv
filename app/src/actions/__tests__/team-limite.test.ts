@@ -151,14 +151,22 @@ describe("o teto de usuários do plano vale na hora de convidar", () => {
     expect(await testDb.db.user.count({ where: { tenantId: t.id } })).toBe(10)
   })
 
-  it("Enterprise não trava", async () => {
-    const t = await empresaComPlano("enterprise", 30)
+  it("Enterprise vai até 30, e trava no 31", async () => {
+    // Deixou de ser ilimitado em 04/09/2026. Quem passa disso compra plano
+    // personalizado — que o painel já concede por empresa, e o teste logo
+    // abaixo prova que o teto concedido vale por cima do plano.
+    const t = await empresaComPlano("enterprise", 29)
     const { inviteTeamMember } = await import("@/actions/team")
 
-    const r = await inviteTeamMember({}, convite("trintaeum@x.com"))
+    // O trigésimo entra.
+    await inviteTeamMember({}, convite("trigesimo@x.com"))
+    expect(await testDb.db.user.count({ where: { tenantId: t.id } })).toBe(30)
 
-    expect(r.message ?? "").not.toMatch(/planLimit\.users/)
-    expect(await testDb.db.user.count({ where: { tenantId: t.id } })).toBe(31)
+    // O trigésimo primeiro não, e a mensagem diz o teto — para a pessoa saber
+    // que existe caminho acima dele.
+    const r = await inviteTeamMember({}, convite("trintaeum@x.com"))
+    expect(r.message ?? "").toMatch(/planLimit\.users/)
+    expect(await testDb.db.user.count({ where: { tenantId: t.id } })).toBe(30)
   })
 
   it("o teto concedido por empresa vale por cima do plano", async () => {

@@ -112,7 +112,7 @@ describe("plan — o que cada plano libera", () => {
     expect(soDoEnterprise.length).toBeGreaterThan(0)
   })
 
-  it("Enterprise libera tudo, sem limite de usuário nem de OS", async () => {
+  it("Enterprise libera todo RECURSO, e OS sem teto", async () => {
     const { getLimites } = await import("@/lib/plan")
     await seedPlanos()
     const t = await seedTenant("enterprise")
@@ -129,7 +129,8 @@ describe("plan — o que cada plano libera", () => {
     expect([...limites.recursos].sort()).toEqual(
       [...RECURSOS].filter((r) => !ADICIONAIS.includes(r)).sort()
     )
-    expect(limites.maxUsuarios).toBeNull()
+    // Usuario tem teto desde 04/09/2026; OS nao — ela nao custa por unidade.
+    expect(limites.maxUsuarios).toBe(30)
     expect(limites.maxOsMes).toBeNull()
   })
 
@@ -204,17 +205,28 @@ describe("plan — limite de usuários", () => {
     await expect(requireVagaDeUsuario(a.id)).resolves.toBeUndefined()
   })
 
-  it("Enterprise não tem teto de usuários", async () => {
+  it("Enterprise tem teto de 30 usuários", async () => {
+    // Deixou de ser ilimitado em 04/09/2026. Usuário custa quase nada a mais,
+    // então os 30 são alavanca de PREÇO e não defesa de custo — quem passar
+    // disso compra plano personalizado, que já existe por empresa.
     const { requireVagaDeUsuario } = await import("@/lib/plan")
     await seedPlanos()
     const t = await seedTenant("enterprise")
 
-    for (let i = 0; i < 30; i++) {
+    const criar = async (n: number) => {
       await testDb.db.user.create({
-        data: { id: `e${i}`, name: `E${i}`, email: `e${i}@x.com`, tenantId: t.id },
+        data: { id: `e${n}`, name: `E${n}`, email: `e${n}@x.com`, tenantId: t.id },
       })
     }
+
+    // Com 29, ainda cabe mais um.
+    for (let i = 0; i < 29; i++) await criar(i)
     await expect(requireVagaDeUsuario(t.id)).resolves.toBeUndefined()
+
+    // Com 30, acabou — e a mensagem diz o teto, para a pessoa saber que existe
+    // plano personalizado acima disso.
+    await criar(29)
+    await expect(requireVagaDeUsuario(t.id)).rejects.toThrow(/30/)
   })
 })
 
@@ -290,15 +302,19 @@ describe("plan — requireRecurso", () => {
 })
 
 describe("plan — cota de notas fiscais", () => {
-  it("Starter tem 8 por mês, Pro 70, Enterprise ilimitado", async () => {
+  it("Starter tem 8 por mês, Pro 70, Enterprise 200", async () => {
     // Vendido como NÚMERO na tela de planos. Até 21/08/2026 nada no sistema
     // contava nota emitida — a promessa existia só na vitrine.
+    //
+    // O Enterprise deixou de ser ilimitado em 04/09/2026: nota tem CUSTO POR
+    // UNIDADE na nfe.io, e cota infinita por preço fixo faz o maior cliente
+    // ser o menos lucrativo.
     const { getLimites } = await import("@/lib/plan")
     await seedPlanos()
 
     expect((await getLimites((await seedTenant("starter")).id)).maxNfseMes).toBe(8)
     expect((await getLimites((await seedTenant("pro")).id)).maxNfseMes).toBe(70)
-    expect((await getLimites((await seedTenant("enterprise")).id)).maxNfseMes).toBeNull()
+    expect((await getLimites((await seedTenant("enterprise")).id)).maxNfseMes).toBe(200)
   })
 
   it("o Pro deixou de ter OS ilimitada: 200 por mês", async () => {
