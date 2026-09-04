@@ -58,7 +58,12 @@ export async function proxy(request: NextRequest) {
     // pública: se respondesse com redirect pro /login, o service worker
     // guardaria ESSE redirect no lugar da página, e o técnico sem sinal cairia
     // numa tela de login que não tem como funcionar offline.
-    request.nextUrl.pathname === "/offline" ||
+    // `startsWith`, e não igualdade: /offline/admin é a página do painel sem
+    // rede, e com a comparação exata ela respondia 307 para /login — o service
+    // worker guardaria o HTML do login sob a chave dela, e a página offline
+    // nunca apareceria. É a mesma correção que este arquivo já registra
+    // para /demo.
+    request.nextUrl.pathname.startsWith("/offline") ||
     // /reset-password must work whether or not a (recovery) session already exists —
     // it should never bounce to /login nor to /dashboard.
     request.nextUrl.pathname.startsWith("/reset-password")

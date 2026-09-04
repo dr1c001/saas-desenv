@@ -11,16 +11,27 @@
 // quando o sinal volta. O que NÃO está: criar OS nova offline, que precisaria
 // gerar número e conferir limite de plano no servidor.
 
+// v4 (04/09/2026): o painel do admin passou a ABRIR sem rede, com pagina
+// propria. Ele continua FORA do cache (a lista NUNCA_CACHEAR nao mudou) — o
+// que mudou e ter resposta em vez de nada: numa janela instalada, sem barra de
+// endereco e sem botao de recarregar, a tela de dinossauro parece o aplicativo
+// morto. O Chrome tambem confere se o service worker responde a navegacao
+// offline antes de OFERECER a instalacao.
+//
 // v3 (22/08/2026): o push passou a repassar silent, requireInteraction e tag.
 // A versao PRECISA subir a cada mudanca aqui — sem isso o navegador segue com
 // o service worker antigo em cache e as opcoes novas sao ignoradas em silencio.
-const VERSAO = "v3"
+const VERSAO = "v4"
 const CACHE_SHELL = `servicoos-shell-${VERSAO}`
 const CACHE_PAGINAS = `servicoos-paginas-${VERSAO}`
 const CACHE_ESTATICOS = `servicoos-estaticos-${VERSAO}`
 const CACHES_ATUAIS = [CACHE_SHELL, CACHE_PAGINAS, CACHE_ESTATICOS]
 
 const PAGINA_OFFLINE = "/offline"
+// O texto do /offline e do TECNICO em campo, e promete o que o painel nao faz:
+// "concluir e mudar status funcionam sem sinal". O dono precisa ler outra
+// frase — o painel mostra o estado de AGORA, e por isso precisa de internet.
+const PAGINA_OFFLINE_ADMIN = "/offline/admin"
 
 // Nunca guardar: dados de API (ficam velhos e enganam), telas de autenticação
 // (guardar uma tela de login "logada" é pedir confusão) e o painel do admin.
@@ -33,9 +44,25 @@ self.addEventListener("install", (event) => {
       const cache = await caches.open(CACHE_SHELL)
       // Um a um, com catch: addAll() falha inteiro se UM arquivo falhar, e aí
       // a instalação do service worker inteira é abortada.
-      for (const url of [PAGINA_OFFLINE, "/icon-192.png", "/icon-512.png", "/manifest.json"]) {
+      //
+      // `fetch` + `podeGuardar` + `cache.put`, e NÃO `cache.add`. O add segue
+      // redirect e guardaria o HTML do LOGIN sob a chave da página offline —
+      // e resposta redirecionada é recusada pelo navegador quando servida em
+      // navegação, então a página offline simplesmente não apareceria. Isso
+      // rodaria no aparelho de TODO técnico, calado.
+      for (const url of [
+        PAGINA_OFFLINE,
+        PAGINA_OFFLINE_ADMIN,
+        "/icon-192.png",
+        "/icon-512.png",
+        "/icon-admin-192.png",
+        "/icon-admin-512.png",
+        "/manifest.json",
+        "/manifest-admin.json",
+      ]) {
         try {
-          await cache.add(new Request(url, { cache: "reload" }))
+          const res = await fetch(new Request(url, { cache: "reload" }))
+          if (podeGuardar(res)) await cache.put(url, res)
         } catch {}
       }
       await self.skipWaiting()
@@ -91,14 +118,51 @@ async function cachePrimeiro(req, nomeCache) {
   return res
 }
 
+function paginaOfflineDe(pathname) {
+  return pathname.startsWith("/admin") ? PAGINA_OFFLINE_ADMIN : PAGINA_OFFLINE
+}
+
+async function semConexao(pathname) {
+  // O CORPO da resposta, nunca um redirect: resposta redirecionada é recusada
+  // pelo navegador em navegação, e um redirect de verdade tiraria a URL do
+  // escopo /admin — a janela instalada abriria a barra de endereço.
+  const offline = await caches.match(paginaOfflineDe(pathname))
+  return (
+    offline ??
+    new Response("Sem conexão.", {
+      status: 503,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    })
+  )
+}
+
 async function navegacao(req) {
   try {
     return await redePrimeiro(req, CACHE_PAGINAS)
   } catch {
     // Nem rede nem cópia guardada desta página: explica o que houve em vez de
     // entregar a tela de dinossauro do navegador.
-    const offline = await caches.match(PAGINA_OFFLINE)
-    return offline ?? new Response("Sem conexão.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } })
+    return semConexao(new URL(req.url).pathname)
+  }
+}
+
+/**
+ * Vai à rede e NADA é guardado.
+ *
+ * É o painel do dono: ele mostra o estado de agora do negócio — MRR,
+ * inadimplentes, assinaturas —, e um número de ontem ali é pior que painel
+ * nenhum. Por isso o disco continua intocado.
+ *
+ * O que mudou da v3 para cá é só ter RESPOSTA quando não há rede. Antes o
+ * service worker se afastava com um `return` cru; num navegador comum o custo
+ * era a tela de dinossauro, mas numa janela instalada — sem barra de endereço e
+ * sem botão de recarregar — a mesma tela parece o aplicativo morto.
+ */
+async function redeSemGuardar(req) {
+  try {
+    return await fetch(req)
+  } catch {
+    return semConexao(new URL(req.url).pathname)
   }
 }
 
@@ -111,7 +175,15 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(req.url)
   if (url.origin !== self.location.origin) return
-  if (NUNCA_CACHEAR.some((p) => url.pathname.startsWith(p))) return
+
+  // O que nunca é guardado: fora de navegação o service worker se afasta; EM
+  // navegação ele vai à rede e, sem rede, responde a página offline. Guardar e
+  // ABRIR são coisas diferentes, e antes as duas eram resolvidas pela mesma
+  // linha de `return`. Regra e casos em src/lib/sw-estrategia.ts.
+  if (NUNCA_CACHEAR.some((p) => url.pathname.startsWith(p))) {
+    if (req.mode === "navigate") event.respondWith(redeSemGuardar(req))
+    return
+  }
 
   // Payload de navegação do App Router (?_rsc=...). Fica de fora de propósito:
   // a mesma URL devolve conteúdo diferente conforme os cabeçalhos de roteamento

@@ -5,6 +5,26 @@ import { isSuperAdmin } from "@/lib/admin"
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { MessageCircleQuestion } from "lucide-react"
+import type { Metadata, Viewport } from "next"
+import { InstalarPainel } from "@/components/admin/instalar-painel"
+
+// O painel é um app INSTALÁVEL separado do app do cliente.
+//
+// A identidade de um app instalado vem do manifest do DOCUMENTO onde a
+// instalação acontece — não do domínio. Declarar outro manifest só aqui faz as
+// telas /admin virarem um segundo app, com ícone e nome próprios, convivendo
+// com o app do cliente que já está instalado no celular do dono.
+//
+// Arquivo estático em public/, e não rota autenticada: o navegador busca o
+// manifest com CREDENCIAIS OMITIDAS por padrão, então uma rota protegida
+// devolveria redirect, o manifest não seria lido, e a instalação simplesmente
+// não seria oferecida — sem erro visível em lugar nenhum.
+export const metadata: Metadata = { manifest: "/manifest-admin.json" }
+
+// O mesmo valor do manifest, repetido de propósito: o manifest manda na cor da
+// barra de status no LANÇAMENTO do app, e a meta tag manda depois que a página
+// carrega. Valores diferentes fazem a barra piscar de cor.
+export const viewport: Viewport = { themeColor: "#0f172a" }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // A regra de quem é o dono da plataforma saiu daqui pra lib/admin.ts, porque
@@ -33,12 +53,23 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-muted/30">
+      {/* O `beforeinstallprompt` é disparado UMA VEZ, cedo, e o navegador não
+          o repete. Sem alguém escutando no parse, ele se perde — e a hidratação
+          do React acontece depois. Guardado aqui, o botão o encontra quando
+          montar. */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html:
+            "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__promptPainel=e;window.dispatchEvent(new Event('painel:instalavel'))})",
+        }}
+      />
       <header className="border-b bg-background px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold">{t("admin.layout.title")}</h1>
           <p className="text-xs text-muted-foreground">{t("admin.layout.subtitle")}</p>
         </div>
         <div className="flex items-center gap-4">
+          <InstalarPainel rotulo={t("admin.layout.instalar")} />
           {/* O caminho até as dúvidas. Sem link aqui, a única forma de chegar
               seria pela notificação — e uma tela que só existe se o push
               funcionar é uma tela que some no dia em que ele falhar. */}

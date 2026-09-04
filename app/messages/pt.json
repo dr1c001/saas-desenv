@@ -1781,7 +1781,8 @@
         "title": "ServiçoOS — Painel do Administrador",
         "subtitle": "Visão geral de todos os clientes do sistema",
         "backToApp": "Voltar ao sistema",
-        "noCompany": "Esta conta administra a plataforma e não pertence a nenhuma empresa."
+        "noCompany": "Esta conta administra a plataforma e não pertence a nenhuma empresa.",
+        "instalar": "Instalar painel"
       },
       "stats": {
         "companies": "Empresas",
@@ -2056,6 +2057,10 @@
       "enviando": "Enviando...",
       "travadas": "{n, plural, one {# alteração não pôde ser enviada} other {# alterações não puderam ser enviadas}}",
       "travadasAjuda": "Provavelmente alguém já mexeu nessas ordens de serviço enquanto você estava sem sinal. Confira antes de refazer."
+    },
+    "painel": {
+      "title": "Painel sem conexão",
+      "description": "O painel mostra o estado do negócio agora — assinaturas, cobranças, dúvidas. Por isso ele precisa de internet, e não guardamos cópia: um número de ontem aqui seria pior que tela nenhuma."
     }
   },
   "pdf": {

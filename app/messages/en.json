@@ -1781,7 +1781,8 @@
         "title": "ServiçoOS — Admin Panel",
         "subtitle": "Overview of every customer in the system",
         "backToApp": "Back to the app",
-        "noCompany": "This account manages the platform and does not belong to any company."
+        "noCompany": "This account manages the platform and does not belong to any company.",
+        "instalar": "Install panel"
       },
       "stats": {
         "companies": "Companies",
@@ -2056,6 +2057,10 @@
       "enviando": "Sending...",
       "travadas": "{n, plural, one {# change could not be sent} other {# changes could not be sent}}",
       "travadasAjuda": "Someone probably changed those jobs while you were offline. Check before redoing them."
+    },
+    "painel": {
+      "title": "Panel offline",
+      "description": "The panel shows the state of the business right now — subscriptions, billing, questions. That is why it needs a connection, and we keep no copy on purpose: a number from yesterday here would be worse than no screen at all."
     }
   },
   "pdf": {
