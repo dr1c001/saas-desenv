@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest"
 import {
   LOCAL_PADRAO,
   localPadrao,
+  motivoDaTransferencia,
   nomeCompleto,
+  ordemDoTipo,
   podeDesativarLocal,
   problemaNaTransferencia,
+  saldosParaTransferir,
+  TIPOS_DE_LOCAL,
   tipoDeLocalValido,
   totalDosLocais,
   type Local,
@@ -173,5 +177,137 @@ describe("detalhes", () => {
     // tem de ter nome antes de o dono abrir a tela — senão ele encontra "sem
     // local" e não sabe se é defeito.
     expect(LOCAL_PADRAO.length).toBeGreaterThan(0)
+  })
+})
+
+describe("os setores", () => {
+  it("os quatro que a empresa pediu existem, e o almoxarifado vem primeiro", () => {
+    // Recebimento, produção e expedição entraram em 04/09/2026. A ordem é a
+    // do <select>: ALMOXARIFADO primeiro porque é o padrão e o caso comum.
+    expect(TIPOS_DE_LOCAL).toEqual([
+      "ALMOXARIFADO",
+      "RECEBIMENTO",
+      "PRODUCAO",
+      "EXPEDICAO",
+      "VEICULO",
+    ])
+  })
+
+  it("cada setor passa na validação do formulário", () => {
+    // A trava de tipo é o que separa o <select> da Action — um tipo novo na
+    // tela e ausente aqui daria "tipo inválido" ao salvar.
+    for (const tipo of TIPOS_DE_LOCAL) expect(tipoDeLocalValido(tipo)).toBe(true)
+  })
+
+  it("o padrão continua sendo o almoxarifado, e não o primeiro setor da lista", () => {
+    // Com cinco tipos, "qualquer local ativo" passou a poder cair no
+    // recebimento — que é onde a peça CHEGA, não onde ela mora. A baixa da OS
+    // e o recebimento de compra usam este padrão.
+    const escolhido = localPadrao(
+      [
+        { id: "r", nome: "Recebimento", tipo: "RECEBIMENTO", userId: null, ativo: true },
+        almox({ id: "a" }),
+      ],
+      null
+    )
+    expect(escolhido?.id).toBe("a")
+  })
+})
+
+describe("o motivo da transferência", () => {
+  it("guarda o PORQUÊ junto do para-onde", () => {
+    // Antes a linha dizia só "Transferência para Expedição". Isso responde
+    // para onde e nunca responde por quê — que é metade do que se pergunta
+    // três meses depois.
+    const texto = motivoDaTransferencia("separado para a entrega de amanhã", "Expedição", "saida")
+    expect(texto).toContain("Expedição")
+    expect(texto).toContain("separado para a entrega de amanhã")
+  })
+
+  it("sem motivo, a linha continua exatamente como sempre foi", () => {
+    // Motivo é opcional de propósito: campo obrigatório de justificativa
+    // ensina a digitar "x" para o formulário passar. E as linhas antigas do
+    // histórico precisam continuar querendo dizer a mesma coisa.
+    expect(motivoDaTransferencia("", "Expedição", "saida")).toBe("Transferência para Expedição")
+    expect(motivoDaTransferencia("   ", "Almoxarifado", "entrada")).toBe(
+      "Transferência de Almoxarifado"
+    )
+  })
+
+  it("a perna de entrada diz DE ONDE veio, não para onde vai", () => {
+    // As duas pernas são linhas separadas, cada uma no histórico do seu
+    // local. Trocar o sentido faria o destino registrar que mandou a peça
+    // para si mesmo.
+    expect(motivoDaTransferencia("", "Van 01", "entrada")).toBe("Transferência de Van 01")
+  })
+
+  it("corta motivo gigante em vez de recusar a transferência", () => {
+    // A peça já se moveu de verdade no galpão. Barrar o registro por causa do
+    // tamanho do texto deixaria o sistema mentindo sobre onde ela está.
+    const texto = motivoDaTransferencia("x".repeat(500), "Expedição", "saida")
+    expect(texto.length).toBeLessThan(500)
+    expect(texto).toContain("Expedição")
+  })
+})
+
+describe("para onde a peça pode ir", () => {
+  it("o setor VAZIO aparece como destino", () => {
+    // O defeito que isto conserta: enquanto a tela listava só os locais com
+    // saldo, um setor recém-criado nunca aparecia como destino — e a única
+    // forma de ganhar saldo era receber uma transferência. O recurso de
+    // setores inteiro morria nesse laço.
+    const expedicao: Local = {
+      id: "exp",
+      nome: "Expedição",
+      tipo: "EXPEDICAO",
+      userId: null,
+      ativo: true,
+    }
+    const linhas = saldosParaTransferir([almox(), expedicao], [{ locationId: "l1", quantidade: 4 }])
+
+    expect(linhas.map((l) => l.local.id)).toContain("exp")
+    expect(linhas.find((l) => l.local.id === "exp")?.quantidade).toBe(0)
+    expect(linhas.find((l) => l.local.id === "l1")?.quantidade).toBe(4)
+  })
+
+  it("local inativo SOME — a não ser que ainda tenha peça presa dentro", () => {
+    // Escondê-lo com saldo prenderia a peça lá: desativar exige esvaziar, e
+    // esvaziar é transferir a partir dele.
+    const mortoVazio = almox({ id: "m1", nome: "Depósito velho", ativo: false })
+    const mortoCheio = almox({ id: "m2", nome: "Depósito antigo", ativo: false })
+
+    const linhas = saldosParaTransferir(
+      [almox(), mortoVazio, mortoCheio],
+      [{ locationId: "m2", quantidade: 3 }]
+    )
+
+    expect(linhas.map((l) => l.local.id)).not.toContain("m1")
+    expect(linhas.map((l) => l.local.id)).toContain("m2")
+  })
+
+  it("saldo negativo num local inativo também continua visível", () => {
+    // Negativo é registro atrasado, não ausência. Sumir com ele esconderia
+    // justamente o local que precisa ser acertado.
+    const morto = almox({ id: "m", ativo: false })
+    const linhas = saldosParaTransferir([morto], [{ locationId: "m", quantidade: -2 }])
+    expect(linhas).toHaveLength(1)
+  })
+})
+
+describe("a ordem dos setores na tela", () => {
+  it("não é a ordem do enum do banco", () => {
+    // O Postgres ordena enum pela ordem de DECLARAÇÃO, e RECEBIMENTO/PRODUCAO/
+    // EXPEDICAO tiveram de ser declarados DEPOIS de VEICULO — não existe
+    // inserir valor no meio de um enum. Ordenar no banco jogaria a van entre o
+    // almoxarifado e o recebimento.
+    expect(ordemDoTipo("ALMOXARIFADO")).toBeLessThan(ordemDoTipo("RECEBIMENTO"))
+    expect(ordemDoTipo("RECEBIMENTO")).toBeLessThan(ordemDoTipo("EXPEDICAO"))
+    expect(ordemDoTipo("EXPEDICAO")).toBeLessThan(ordemDoTipo("VEICULO"))
+  })
+
+  it("tipo desconhecido vai para o FIM, não para o começo", () => {
+    // Se um valor novo chegar do banco antes de existir aqui, ele aparece no
+    // lugar menos danoso — e não empurrando o almoxarifado para baixo.
+    expect(ordemDoTipo("SETOR_QUE_NAO_EXISTE")).toBeGreaterThan(ordemDoTipo("VEICULO"))
   })
 })

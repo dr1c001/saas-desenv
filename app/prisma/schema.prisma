@@ -1506,9 +1506,18 @@ model StockLocation {
   @@index([tenantId, active])
 }
 
+/// Os setores do estoque. A ordem de exibicao e outra (ver TIPOS_DE_LOCAL em
+/// lib/estoque-local.ts); aqui a ordem e a de criacao, porque o Postgres nao
+/// reordena nem remove valor de enum — acrescentar e decisao sem volta.
 enum StockLocationType {
   ALMOXARIFADO
   VEICULO
+  /// Onde a compra CHEGA e ainda nao foi conferida.
+  RECEBIMENTO
+  /// Chao de fabrica: material ja separado para ser consumido.
+  PRODUCAO
+  /// O que esta separado para SAIR — carga de van, entrega, retirada.
+  EXPEDICAO
 }
 
 /// O saldo de uma peca EM UM local.

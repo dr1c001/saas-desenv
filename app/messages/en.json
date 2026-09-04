@@ -968,6 +968,10 @@
     "buscar": "Search by name or code...",
     "vazio": "No parts registered yet.",
     "vazioBusca": "No parts found.",
+    "todosOsLocais": "All locations",
+    "vazioLocal": "No parts in this location.",
+    "noLocal": "Balance at {local}",
+    "totalDaEmpresa": "company total: {q}",
     "inativa": "inactive",
     "desativar": "Deactivate",
     "reativar": "Reactivate",
@@ -3042,6 +3046,19 @@
     "ogChamada": "Quotes, work orders, field crew and finances in one system. See it working, no sign-up.",
     "ogSemRamo": "No more work orders in WhatsApp and spreadsheets"
   },
+  "estoqueHistorico": {
+    "titulo": "This part's history",
+    "vazio": "No movements recorded yet.",
+    "tipos": {
+      "ENTRADA": "in",
+      "SAIDA": "out",
+      "AJUSTE": "adjustment"
+    },
+    "semAutor": "no author",
+    "ficou": "left {q}",
+    "daOs": "Used on order #{n}",
+    "daCompra": "Received from PO #{n}"
+  },
   "estoqueLocais": {
     "titulo": "Stock locations",
     "subtitulo": "Where each part sits. A technician's van is a warehouse on wheels — without this, “4 in stock” doesn't say which side of town.",
@@ -3051,6 +3068,9 @@
     "tipo": "Type",
     "tipos": {
       "ALMOXARIFADO": "Warehouse",
+      "RECEBIMENTO": "Receiving",
+      "PRODUCAO": "Production",
+      "EXPEDICAO": "Shipping",
       "VEICULO": "Vehicle"
     },
     "responsavel": "Assigned technician",
@@ -3069,6 +3089,8 @@
     "para": "To",
     "quantidade": "Quantity",
     "disponivel": "Available: {q}",
+    "motivo": "Why are you transferring? (optional)",
+    "motivoExemplo": "e.g. staged for tomorrow's delivery",
     "confirmar": "Transfer",
     "salvar": "Save",
     "cancelar": "Cancel",

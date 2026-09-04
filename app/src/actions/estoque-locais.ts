@@ -6,8 +6,11 @@ import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { requireRecurso } from "@/lib/plan"
 import { aplicarMovimento } from "@/lib/estoque-db"
 import {
+  motivoDaTransferencia,
+  ordemDoTipo,
   podeDesativarLocal,
   problemaNaTransferencia,
+  saldosParaTransferir,
   tipoDeLocalValido,
   type Local,
 } from "@/lib/estoque-local"
@@ -37,27 +40,66 @@ async function contexto() {
 export async function getLocais() {
   const { tenantId } = await getTenant()
   await requireRecurso(tenantId, "stock")
-  return prisma.stockLocation.findMany({
+  const locais = await prisma.stockLocation.findMany({
     where: { tenantId },
     include: {
       user: { select: { name: true } },
       _count: { select: { balances: true } },
     },
-    orderBy: [{ active: "desc" }, { type: "asc" }, { name: "asc" }],
+    orderBy: [{ active: "desc" }, { name: "asc" }],
   })
+  // A ordem do TIPO é decidida fora do banco — ver ordemDoTipo. `sort` é
+  // estável, então a ordem por nome que veio do banco sobrevive dentro de cada
+  // grupo.
+  return locais.sort(
+    (a, b) => Number(b.active) - Number(a.active) || ordemDoTipo(a.type) - ordemDoTipo(b.type)
+  )
 }
 
-/** Os saldos de uma peça, local a local. É a resposta para "onde está?". */
+/**
+ * Onde está esta peça — e para onde ela PODE ir.
+ *
+ * Devolve todo local ativo da empresa, com zero onde não há saldo, mais os
+ * inativos que ainda têm peça dentro. As duas coisas na mesma resposta porque
+ * a tela faz as duas perguntas de uma vez: a lista mostra quem tem saldo, e o
+ * formulário de transferência precisa dos vazios como destino.
+ *
+ * Foi assim que o setor novo deixou de nascer inútil: enquanto isto devolvia
+ * só as linhas de StockBalance, "Expedição" recém-criada não aparecia como
+ * destino, e não havia como pôr a primeira peça lá dentro.
+ */
 export async function getSaldosDaPeca(partId: string) {
   const { tenantId } = await getTenant()
   await requireRecurso(tenantId, "stock")
-  // Filtra pelo tenant do LOCAL: sem isso, um partId de outra empresa
-  // devolveria a distribuição do estoque alheio.
-  return prisma.stockBalance.findMany({
-    where: { partId, location: { tenantId } },
-    include: { location: { select: { name: true, type: true, active: true } } },
-    orderBy: { location: { name: "asc" } },
-  })
+
+  const [locais, saldos] = await Promise.all([
+    prisma.stockLocation.findMany({
+      where: { tenantId },
+      select: { id: true, name: true, type: true, userId: true, active: true },
+      orderBy: { name: "asc" },
+    }),
+    // Filtra pelo tenant do LOCAL: sem isso, um partId de outra empresa
+    // devolveria a distribuição do estoque alheio.
+    prisma.stockBalance.findMany({
+      where: { partId, location: { tenantId } },
+      select: { locationId: true, quantity: true },
+    }),
+  ])
+
+  const linhas = saldosParaTransferir(
+    // Mesma ordem do cartão de locais e do <select> — a tela não pode listar
+    // os setores numa ordem aqui e noutra ali.
+    locais
+      .map((l) => ({ id: l.id, nome: l.name, tipo: l.type, userId: l.userId, ativo: l.active }))
+      .sort((a, b) => ordemDoTipo(a.tipo) - ordemDoTipo(b.tipo)),
+    saldos.map((s) => ({ locationId: s.locationId, quantidade: Number(s.quantity) }))
+  )
+
+  return linhas.map(({ local, quantidade }) => ({
+    locationId: local.id,
+    quantity: quantidade,
+    location: { name: local.nome, type: local.tipo, active: local.ativo },
+  }))
 }
 
 export async function salvarLocal(
@@ -156,6 +198,7 @@ export async function transferir(_prev: EstadoLocal, formData: FormData): Promis
   const origemId = String(formData.get("origemId") ?? "")
   const destinoId = String(formData.get("destinoId") ?? "")
   const quantidade = Number(String(formData.get("quantidade") ?? "").replace(",", "."))
+  const motivo = String(formData.get("motivo") ?? "")
 
   const locais = await prisma.stockLocation.findMany({
     where: { tenantId, id: { in: [origemId, destinoId] } },
@@ -193,7 +236,7 @@ export async function transferir(_prev: EstadoLocal, formData: FormData): Promis
         locationId: origemId,
         tipo: "SAIDA",
         quantidade,
-        motivo: `Transferência para ${destino.nome}`,
+        motivo: motivoDaTransferencia(motivo, destino.nome, "saida"),
         toLocationId: destinoId,
         transferId,
         userId,
@@ -204,7 +247,7 @@ export async function transferir(_prev: EstadoLocal, formData: FormData): Promis
         locationId: destinoId,
         tipo: "ENTRADA",
         quantidade,
-        motivo: `Transferência de ${origem.nome}`,
+        motivo: motivoDaTransferencia(motivo, origem.nome, "entrada"),
         transferId,
         userId,
       })

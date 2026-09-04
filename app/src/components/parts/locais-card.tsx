@@ -2,7 +2,16 @@
 
 import { useActionState, useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import { Loader2, MapPin, Plus, Truck, Warehouse } from "lucide-react"
+import {
+  Factory,
+  Inbox,
+  Loader2,
+  MapPin,
+  PackageCheck,
+  Plus,
+  Truck,
+  Warehouse,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,6 +32,17 @@ import { TIPOS_DE_LOCAL, type TipoDeLocal } from "@/lib/estoque-local"
 //
 // Fica ACIMA da lista de peças de propósito: a primeira coisa que quem abre
 // esta tela precisa entender é que agora existe "onde", e não só "quanto".
+
+// Um ícone por setor. Numa lista de oito locais, a palavra "Expedição" é lida
+// depois do ícone, não antes — e é o ícone que faz a pessoa achar a linha certa
+// sem ler a lista inteira.
+const ICONE: Record<TipoDeLocal, typeof Warehouse> = {
+  ALMOXARIFADO: Warehouse,
+  RECEBIMENTO: Inbox,
+  PRODUCAO: Factory,
+  EXPEDICAO: PackageCheck,
+  VEICULO: Truck,
+}
 
 export type LocalNaTela = {
   id: string
@@ -64,7 +84,9 @@ export function LocaisCard({
           <p className="text-sm text-muted-foreground">{t("semLocais")}</p>
         ) : (
           <ul className="grid gap-2 sm:grid-cols-2">
-            {locais.map((l) => (
+            {locais.map((l) => {
+              const Icone = ICONE[l.type] ?? Warehouse
+              return (
               <li
                 key={l.id}
                 className={`flex items-center justify-between gap-3 rounded-lg border p-3 ${
@@ -72,11 +94,7 @@ export function LocaisCard({
                 }`}
               >
                 <div className="flex min-w-0 items-center gap-2">
-                  {l.type === "VEICULO" ? (
-                    <Truck className="size-4 shrink-0 text-muted-foreground" />
-                  ) : (
-                    <Warehouse className="size-4 shrink-0 text-muted-foreground" />
-                  )}
+                  <Icone className="size-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">
                       {l.name}
@@ -87,6 +105,10 @@ export function LocaisCard({
                       )}
                     </p>
                     <p className="text-xs text-muted-foreground">
+                      {/* O SETOR na frente da contagem: com cinco tipos, "12
+                          peças" sozinho não diz se aquilo está guardado,
+                          esperando conferência ou pronto para sair. */}
+                      {t(`tipos.${l.type}` as "tipos.VEICULO")} ·{" "}
                       {l._count.balances > 0 ? t("pecasDentro", { n: l._count.balances }) : t("vazio")}
                       {!l.active && ` · ${t("inativo")}`}
                     </p>
@@ -115,7 +137,8 @@ export function LocaisCard({
                   </div>
                 )}
               </li>
-            ))}
+              )
+            })}
           </ul>
         )}
       </CardContent>

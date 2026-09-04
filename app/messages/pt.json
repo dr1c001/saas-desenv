@@ -968,6 +968,10 @@
     "buscar": "Buscar por nome ou código...",
     "vazio": "Nenhuma peça cadastrada ainda.",
     "vazioBusca": "Nenhuma peça encontrada.",
+    "todosOsLocais": "Todos os locais",
+    "vazioLocal": "Nenhuma peça neste local.",
+    "noLocal": "Saldo em {local}",
+    "totalDaEmpresa": "total da empresa: {q}",
     "inativa": "inativa",
     "desativar": "Desativar",
     "reativar": "Reativar",
@@ -3042,6 +3046,19 @@
     "ogChamada": "Orçamento, OS, equipe em campo e financeiro num sistema só. Veja funcionando, sem cadastro.",
     "ogSemRamo": "Chega de OS no WhatsApp e na planilha"
   },
+  "estoqueHistorico": {
+    "titulo": "Histórico desta peça",
+    "vazio": "Nenhuma movimentação registrada ainda.",
+    "tipos": {
+      "ENTRADA": "entrada",
+      "SAIDA": "saída",
+      "AJUSTE": "ajuste"
+    },
+    "semAutor": "sem autor",
+    "ficou": "ficou {q}",
+    "daOs": "Baixa da OS #{n}",
+    "daCompra": "Recebimento da OC #{n}"
+  },
   "estoqueLocais": {
     "titulo": "Locais de estoque",
     "subtitulo": "Onde cada peça fica. A van de um técnico é um almoxarifado que anda — sem isso, “tem 4 no estoque” não diz de que lado da cidade.",
@@ -3051,6 +3068,9 @@
     "tipo": "Tipo",
     "tipos": {
       "ALMOXARIFADO": "Almoxarifado",
+      "RECEBIMENTO": "Recebimento",
+      "PRODUCAO": "Produção",
+      "EXPEDICAO": "Expedição",
       "VEICULO": "Veículo"
     },
     "responsavel": "Técnico responsável",
@@ -3069,6 +3089,8 @@
     "para": "Para",
     "quantidade": "Quantidade",
     "disponivel": "Disponível: {q}",
+    "motivo": "Por que está transferindo? (opcional)",
+    "motivoExemplo": "Ex.: separado para a entrega de amanhã",
     "confirmar": "Transferir",
     "salvar": "Salvar",
     "cancelar": "Cancelar",
