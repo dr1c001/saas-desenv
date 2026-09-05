@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 import {
   agruparComissoes,
+  baseDaComissaoValida,
+  baseParaComissao,
   calcularComissao,
   emCentavos,
   explicarComissao,
@@ -260,5 +262,69 @@ describe("as comissões agrupadas por pessoa", () => {
     ])
     expect(r[0].iss).toBe(90)
     expect(r[0].total).toBe(171)
+  })
+})
+
+describe("sobre o que a porcentagem incide", () => {
+  const itens = [
+    { total: 1000, partId: "p1" }, // compressor, veio do estoque
+    { total: 200, partId: null }, // mão de obra
+  ]
+
+  it("no padrão, incide sobre o total da OS", () => {
+    // É o comportamento que já existia. Nenhuma empresa deve acordar com a
+    // comissão de todo mundo mudando de valor sem ter pedido.
+    expect(baseParaComissao(itens, 1200, "TOTAL")).toBe(120000)
+  })
+
+  it("configurada para mão de obra, ignora a peça revendida", () => {
+    // Numa OS de R$ 1.200 com R$ 1.000 de compressor, comissionar o total paga
+    // R$ 100 sobre uma peça que o técnico só carregou até o cliente.
+    expect(baseParaComissao(itens, 1200, "MAO_DE_OBRA")).toBe(20000)
+  })
+
+  it("valor desconhecido cai no TOTAL, e não em zero", () => {
+    // Se um dia um valor novo chegar do banco antes de o código conhecê-lo, o
+    // pior desfecho seria a comissão da empresa inteira zerar em silêncio.
+    // Cair no comportamento antigo é o erro que alguém percebe.
+    expect(baseParaComissao(itens, 1200, "COISA_NOVA")).toBe(120000)
+  })
+
+  it("OS só de peça, comissionando mão de obra, não gera comissão", () => {
+    const soPeca = [{ total: 1200, partId: "p1" }]
+    const base = baseParaComissao(soPeca, 1200, "MAO_DE_OBRA")
+    expect(base).toBe(0)
+    expect(
+      calcularComissao({ totalCentavos: base, percentual: 10, issRate: null, descontarIss: false })
+    ).toBeNull()
+  })
+
+  it("soma linha a linha, e não a soma no fim", () => {
+    // Mesma convenção de lib/cotacao.ts. Duas convenções fariam a base da
+    // comissão divergir do total da OS por um centavo.
+    const quebrados = [
+      { total: 8.625, partId: null },
+      { total: 8.625, partId: null },
+    ]
+    expect(baseParaComissao(quebrados, 17.25, "MAO_DE_OBRA")).toBe(1726)
+  })
+
+  it("as duas opções são aceitas, e o resto não", () => {
+    expect(baseDaComissaoValida("TOTAL")).toBe(true)
+    expect(baseDaComissaoValida("MAO_DE_OBRA")).toBe(true)
+    expect(baseDaComissaoValida("MARGEM")).toBe(false)
+  })
+
+  it("a explicação DIZ quando a base é só mão de obra", () => {
+    // Sem o rótulo, a pessoa lê "10% de R$ 200,00" numa OS de R$ 1.200 e
+    // conclui que o sistema errou — quando ele fez o que a empresa configurou.
+    const c = calcularComissao({
+      totalCentavos: 20000,
+      percentual: 10,
+      issRate: null,
+      descontarIss: false,
+    })!
+    expect(explicarComissao(c, 10, "MAO_DE_OBRA")).toContain("mão de obra")
+    expect(explicarComissao(c, 10, "TOTAL")).not.toContain("mão de obra")
   })
 })

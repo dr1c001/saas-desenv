@@ -399,3 +399,106 @@ describe("o reconciliador é idempotente", () => {
     expect(Number(depois?.amount)).toBe(Number(antes?.amount))
   })
 })
+
+describe("a base configurada pela empresa", () => {
+  const peca = { description: "Compressor", quantity: 1, unitPrice: 1000, partId: "" }
+  const maoDeObra = { description: "Instalação", quantity: 1, unitPrice: 200, partId: null }
+
+  async function comPeca() {
+    const c = await cenario()
+    const p = await testDb.db.part.create({
+      data: { tenantId: c.tenant.id, name: "Compressor 2HP", stock: 5 },
+    })
+    return { ...c, partId: p.id }
+  }
+
+  it("no padrão, comissiona o total — inclusive a peça revendida", async () => {
+    const { os, partId } = await comPeca()
+    const { completeServiceOrder } = await acoes()
+
+    await completeServiceOrder(os.id, "Trocado", [{ ...peca, partId }, maoDeObra], false, 10)
+
+    // 10% de R$ 1.200 — sendo R$ 100 sobre o compressor.
+    expect(Number((await comissaoDa(os.id))?.amount)).toBe(120)
+  })
+
+  it("configurada para mão de obra, ignora a peça", async () => {
+    const { os, tenant, partId } = await comPeca()
+    await testDb.db.tenant.update({
+      where: { id: tenant.id },
+      data: { commissionBase: "MAO_DE_OBRA" },
+    })
+    const { completeServiceOrder } = await acoes()
+
+    await completeServiceOrder(os.id, "Trocado", [{ ...peca, partId }, maoDeObra], false, 10)
+
+    // 10% de R$ 200. O compressor saiu da base.
+    const c = await comissaoDa(os.id)
+    expect(Number(c?.amount)).toBe(20)
+    expect(Number(c?.commissionBase)).toBe(200)
+    // E a descrição DIZ por quê — senão a pessoa lê R$ 20 numa OS de R$ 1.200
+    // e conclui que o sistema errou.
+    expect(c?.description).toContain("mão de obra")
+  })
+
+  it("trocar a configuração recalcula as comissões PENDENTES", async () => {
+    // Deixar as já lançadas com a base antiga faria a tela responder duas
+    // regras ao mesmo tempo, sem nada explicando por quê.
+    const { os, partId } = await comPeca()
+    const { completeServiceOrder } = await acoes()
+    await completeServiceOrder(os.id, "Trocado", [{ ...peca, partId }, maoDeObra], false, 10)
+    expect(Number((await comissaoDa(os.id))?.amount)).toBe(120)
+
+    const { definirBaseDaComissao } = await import("@/actions/finance")
+    await definirBaseDaComissao("MAO_DE_OBRA")
+
+    expect(Number((await comissaoDa(os.id))?.amount)).toBe(20)
+  })
+
+  it("mas NÃO recalcula as que já foram pagas", async () => {
+    // O dinheiro saiu do caixa. Reescrever faria o sistema discordar do
+    // extrato.
+    const { os, partId } = await comPeca()
+    const { completeServiceOrder } = await acoes()
+    await completeServiceOrder(os.id, "Trocado", [{ ...peca, partId }, maoDeObra], false, 10)
+    await testDb.db.expense.update({
+      where: { orderId: os.id },
+      data: { status: "PAID", paidAt: new Date() },
+    })
+
+    const { definirBaseDaComissao } = await import("@/actions/finance")
+    await definirBaseDaComissao("MAO_DE_OBRA")
+
+    expect(Number((await comissaoDa(os.id))?.amount)).toBe(120)
+  })
+
+  it("técnico não muda a base de cálculo da própria comissão", async () => {
+    // Quem recebe não decide sobre o que incide.
+    const { tenant } = await comPeca()
+    mockGetTenant.mockResolvedValue({
+      tenantId: tenant.id,
+      userId: "u-ana",
+      role: "TECHNICIAN",
+      branchId: null,
+    })
+    const { definirBaseDaComissao } = await import("@/actions/finance")
+
+    const r = await definirBaseDaComissao("MAO_DE_OBRA")
+
+    expect(r.erro).toBe("semPermissao")
+    const depois = await testDb.db.tenant.findUnique({ where: { id: tenant.id } })
+    expect(depois?.commissionBase).toBe("TOTAL")
+  })
+
+  it("valor inventado é recusado", async () => {
+    // A Action é endereço HTTP: o <select> não é a única forma de chegar aqui.
+    const { tenant } = await comPeca()
+    const { definirBaseDaComissao } = await import("@/actions/finance")
+
+    const r = await definirBaseDaComissao("MARGEM")
+
+    expect(r.erro).toBe("baseInvalida")
+    const depois = await testDb.db.tenant.findUnique({ where: { id: tenant.id } })
+    expect(depois?.commissionBase).toBe("TOTAL")
+  })
+})

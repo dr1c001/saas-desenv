@@ -1,5 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client"
-import { calcularComissao, emCentavos, explicarComissao } from "@/lib/comissao"
+import { baseParaComissao, calcularComissao, explicarComissao } from "@/lib/comissao"
 import { estadoDaNota } from "@/lib/nfse-status"
 import { formatOsNumber } from "@/lib/utils"
 
@@ -86,6 +86,8 @@ type OsParaComissao = {
   concludedAt: Date | null
   nfseStatus: string | null
   branchId: string | null
+  /** Os itens, para poder separar mão de obra de peça revendida. */
+  items: readonly { total: Prisma.Decimal | number; partId: string | null }[]
 }
 
 /**
@@ -95,9 +97,15 @@ type OsParaComissao = {
  */
 export async function sincronizarComissaoDaOs(
   tx: Tx,
-  entrada: { tenantId: string; os: OsParaComissao; issRate: number | null }
+  entrada: {
+    tenantId: string
+    os: OsParaComissao
+    issRate: number | null
+    /** "TOTAL" ou "MAO_DE_OBRA" — configuração da empresa. */
+    baseConfigurada: string
+  }
 ): Promise<ResultadoDaComissao> {
-  const { tenantId, os, issRate } = entrada
+  const { tenantId, os, issRate, baseConfigurada } = entrada
 
   const existente = await tx.expense.findUnique({
     where: { orderId: os.id },
@@ -138,10 +146,15 @@ export async function sincronizarComissaoDaOs(
   const pct = os.commissionPct === null ? null : Number(os.commissionPct)
   const conta = deveTer
     ? calcularComissao({
-        // A base é o total GRAVADO na OS, nunca a soma dos itens em memória:
-        // aquela soma não fecha centavo por linha, e a comissão calculada na
-        // conclusão não bateria com a mesma comissão recalculada depois.
-        totalCentavos: emCentavos(Number(os.totalAmount)),
+        // A base depende da configuração da empresa: o total cheio da OS, ou
+        // só os itens que não vieram do estoque. O total vem do campo GRAVADO
+        // (nunca da soma em memória, que não fecha centavo por linha); a mão de
+        // obra é somada linha a linha, na mesma convenção de lib/cotacao.ts.
+        totalCentavos: baseParaComissao(
+          os.items.map((i) => ({ total: Number(i.total), partId: i.partId })),
+          Number(os.totalAmount),
+          baseConfigurada
+        ),
         percentual: pct,
         issRate,
         descontarIss: temNota,
@@ -159,7 +172,7 @@ export async function sincronizarComissaoDaOs(
   }
 
   const dados = {
-    description: `Comissão ${formatOsNumber(os.number, os.createdAt)} — ${explicarComissao(conta, pct!)}`,
+    description: `Comissão ${formatOsNumber(os.number, os.createdAt)} — ${explicarComissao(conta, pct!, baseConfigurada)}`,
     amount: conta.valorCentavos / 100,
     // Comissão varia com o volume de serviço; não é aluguel.
     category: "VARIABLE" as const,
@@ -226,7 +239,10 @@ export async function reconciliarComissao(
         where: { id: orderId, tenantId },
         select: CAMPOS_DA_COMISSAO,
       }),
-      db.tenant.findUnique({ where: { id: tenantId }, select: { fiscalIssRate: true } }),
+      db.tenant.findUnique({
+        where: { id: tenantId },
+        select: { fiscalIssRate: true, commissionBase: true },
+      }),
     ])
     if (!os) return { acao: "nada" }
 
@@ -234,6 +250,7 @@ export async function reconciliarComissao(
       tenantId,
       os,
       issRate: empresa?.fiscalIssRate ?? null,
+      baseConfigurada: empresa?.commissionBase ?? "TOTAL",
     })
   } catch (e) {
     console.error("Falha ao sincronizar a comissão da OS:", orderId, e)
@@ -254,4 +271,7 @@ export const CAMPOS_DA_COMISSAO = {
   concludedAt: true,
   nfseStatus: true,
   branchId: true,
+  // Para separar mão de obra de peça revendida quando a empresa comissiona só
+  // o serviço. `partId` já diz de onde o item veio, e lê-lo não expõe custo.
+  items: { select: { total: true, partId: true } },
 } as const

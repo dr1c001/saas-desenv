@@ -1116,7 +1116,14 @@
       "base": "Base",
       "imposto": "Tax",
       "total": "Payable",
-      "quantasOs": "{n} orders"
+      "quantasOs": "{n} orders",
+      "baseLabel": "Commission on",
+      "baseTotal": "Order total",
+      "baseMaoDeObra": "Labour only",
+      "erros": {
+        "semPermissao": "You don't have permission to change this.",
+        "baseInvalida": "Invalid option."
+      }
     },
     "receivables": {
       "title": "Accounts Receivable",

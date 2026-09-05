@@ -50,6 +50,15 @@ model Tenant {
   fiscalCityName          String?
   fiscalStateCode         String?
   fiscalIssRate           Float?
+  /// Sobre o que a comissao do tecnico incide: "TOTAL" (o valor cheio da OS)
+  /// ou "MAO_DE_OBRA" (so os itens que nao vieram do estoque).
+  ///
+  /// Existe porque numa OS de R$ 1.200 com R$ 1.000 de compressor, comissionar
+  /// o total paga R$ 100 sobre uma peca que o tecnico so carregou — e isso e
+  /// certo para quem vende servico com pouca peca e errado para quem revende.
+  /// Texto com CHECK no banco, e nao enum do Postgres: enum nao aceita remover
+  /// nem reordenar valor, e esta lista ainda pode crescer.
+  commissionBase          String             @default("TOTAL")
   zapiInstance            String?
   zapiToken               String?
   referralCode            String?            @unique

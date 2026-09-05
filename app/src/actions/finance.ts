@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { agruparComissoes } from "@/lib/comissao"
+import { agruparComissoes, baseDaComissaoValida } from "@/lib/comissao"
+import { reconciliarComissao } from "@/lib/comissao-db"
 import { filtroDeFilialAtual, getTenant, requireActiveSubscription } from "@/lib/auth"
 import { filialParaNovo } from "@/lib/filial"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
@@ -86,7 +87,7 @@ export async function getFinanceSummary(q?: string, filial?: string | null) {
   // O financeiro é escopado: cada unidade fecha o mês dela. O que não tem
   // filial entra em todas — é despesa da empresa, não de uma unidade.
   const filtro = await filtroDeFilialAtual(filial)
-  const [allRevenues, allExpenses] = await Promise.all([
+  const [allRevenues, allExpenses, empresa] = await Promise.all([
     prisma.revenue.findMany({ where: { tenantId, ...filtro }, orderBy: { dueDate: "asc" } }),
     prisma.expense.findMany({
       where: { tenantId, ...filtro },
@@ -95,6 +96,8 @@ export async function getFinanceSummary(q?: string, filial?: string | null) {
       include: { payee: { select: { name: true } } },
       orderBy: { dueDate: "asc" },
     }),
+    // Sobre o que a comissao incide. O cartao mostra e deixa trocar.
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { commissionBase: true } }),
   ])
 
   // Início do mês em horário de Brasília, não UTC do servidor — ver
@@ -140,5 +143,51 @@ export async function getFinanceSummary(q?: string, filial?: string | null) {
       }))
   )
 
-  return { revenues, expenses, monthlyRevenue, pendingRevenues, pendingExpenses, comissoes }
+  return {
+    revenues,
+    expenses,
+    monthlyRevenue,
+    pendingRevenues,
+    pendingExpenses,
+    comissoes,
+    baseDaComissao: empresa?.commissionBase ?? "TOTAL",
+  }
+}
+
+/**
+ * Sobre o que a comissão do técnico incide: o total da OS ou só a mão de obra.
+ *
+ * ─── Por que recalcula as pendentes ──────────────────────────────────────────
+ *
+ * Trocar a configuração e deixar as comissões já lançadas com a base antiga
+ * faria a tela responder duas regras ao mesmo tempo: o dono mudaria para "só
+ * mão de obra", olharia a lista e continuaria vendo os R$ 120 da Ana calculados
+ * sobre o total, sem nada explicando por quê.
+ *
+ * O filtro por PENDING aqui é economia de trabalho, e NÃO é o que protege a
+ * comissão já paga — quem protege é o próprio reconciliador, que congela
+ * qualquer despesa PAGA antes de tocar nela. Um teste de mutação confirmou:
+ * tirar este filtro não muda resultado nenhum, só faz o laço percorrer linhas
+ * que não vão mudar.
+ */
+export async function definirBaseDaComissao(base: string): Promise<{ erro?: string; ok?: boolean }> {
+  const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
+  // Muda quanto a empresa paga a cada pessoa. Não é decisão de quem recebe.
+  if (role !== "OWNER" && role !== "ADMIN") return { erro: "semPermissao" }
+  if (!baseDaComissaoValida(base)) return { erro: "baseInvalida" }
+
+  await prisma.tenant.update({ where: { id: tenantId }, data: { commissionBase: base } })
+
+  // As comissões ainda não pagas passam a valer pela regra nova.
+  const pendentes = await prisma.expense.findMany({
+    where: { tenantId, status: "PENDING", orderId: { not: null } },
+    select: { orderId: true },
+  })
+  for (const p of pendentes) {
+    await reconciliarComissao(prisma, tenantId, p.orderId!)
+  }
+
+  revalidatePath("/finance")
+  return { ok: true }
 }

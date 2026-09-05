@@ -1116,7 +1116,14 @@
       "base": "Base",
       "imposto": "Imposto",
       "total": "A pagar",
-      "quantasOs": "{n} OS"
+      "quantasOs": "{n} OS",
+      "baseLabel": "Comissão sobre",
+      "baseTotal": "Total da OS",
+      "baseMaoDeObra": "Só mão de obra",
+      "erros": {
+        "semPermissao": "Você não tem permissão para mudar isto.",
+        "baseInvalida": "Opção inválida."
+      }
     },
     "receivables": {
       "title": "Contas a Receber",

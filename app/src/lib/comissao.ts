@@ -46,6 +46,50 @@
 export const MAX_PERCENTUAL = 100
 
 /**
+ * Sobre o que a porcentagem incide.
+ *
+ * `TOTAL` — o valor cheio da OS. É o padrão, e é o que já existia.
+ * `MAO_DE_OBRA` — só os itens que NÃO vieram do estoque.
+ *
+ * A escolha existe porque as duas estão certas, para empresas diferentes. Numa
+ * OS de R$ 1.200 com R$ 1.000 de compressor, comissionar o total paga R$ 100
+ * sobre uma peça que o técnico só carregou até o cliente — o que é justo para
+ * quem vende serviço com pouca peça, e é o lucro inteiro para quem revende.
+ *
+ * A separação sai de graça: `ServiceItem.partId` já diz se o item veio do
+ * catálogo, e ler isso não expõe custo nenhum ao técnico.
+ */
+export type BaseDaComissao = "TOTAL" | "MAO_DE_OBRA"
+
+export const BASES_DA_COMISSAO: readonly BaseDaComissao[] = ["TOTAL", "MAO_DE_OBRA"]
+
+export function baseDaComissaoValida(v: string): v is BaseDaComissao {
+  return (BASES_DA_COMISSAO as readonly string[]).includes(v)
+}
+
+/**
+ * Quanto desta OS entra na base, em centavos.
+ *
+ * Um valor desconhecido cai em TOTAL, e não em zero: a coluna tem CHECK no
+ * banco, mas se um dia um valor novo chegar antes de o código conhecê-lo, o
+ * pior desfecho é a comissão da empresa inteira zerar em silêncio. Cair no
+ * comportamento antigo é o erro que alguém percebe.
+ */
+export function baseParaComissao(
+  itens: readonly { total: number; partId: string | null }[],
+  totalDaOs: number,
+  base: string
+): number {
+  if (base !== "MAO_DE_OBRA") return emCentavos(totalDaOs)
+  // Arredonda CADA LINHA antes de somar, e não a soma no fim: é a convenção
+  // já escrita em lib/cotacao.ts, e ter duas convenções faria a base da
+  // comissão divergir do total da OS por um centavo.
+  return itens
+    .filter((i) => i.partId === null)
+    .reduce((soma, i) => soma + emCentavos(i.total), 0)
+}
+
+/**
  * A porcentagem digitada serve?
  *
  * `null` é resposta legítima e quer dizer "esta OS não comissiona" — diferente
@@ -197,13 +241,21 @@ export function agruparComissoes(linhas: readonly LinhaDeComissao[]): ComissaoPo
  * escritas junto, a pessoa refaz a conta de cabeça na hora da conversa — que é
  * exatamente quando ela é questionada.
  */
-export function explicarComissao(c: Comissao, percentual: number): string {
+export function explicarComissao(
+  c: Comissao,
+  percentual: number,
+  base: string = "TOTAL"
+): string {
   const reais = (centavos: number) =>
     (centavos / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   const pct = percentual.toLocaleString("pt-BR", { maximumFractionDigits: 2 })
+  // Quando a base é só a mão de obra, dizer isso é obrigatório: sem o rótulo, a
+  // pessoa lê "10% de R$ 200,00" numa OS de R$ 1.200 e conclui que o sistema
+  // errou — quando ele fez exatamente o que a empresa configurou.
+  const rotulo = base === "MAO_DE_OBRA" ? " de mão de obra" : ""
   if (c.issCentavos > 0) {
-    return `${pct}% de R$ ${reais(c.baseCentavos)} (R$ ${reais(c.totalCentavos)} − R$ ${reais(c.issCentavos)} de imposto)`
+    return `${pct}% de R$ ${reais(c.baseCentavos)}${rotulo} (R$ ${reais(c.totalCentavos)} − R$ ${reais(c.issCentavos)} de imposto)`
   }
-  return `${pct}% de R$ ${reais(c.baseCentavos)}`
+  return `${pct}% de R$ ${reais(c.baseCentavos)}${rotulo}`
 }

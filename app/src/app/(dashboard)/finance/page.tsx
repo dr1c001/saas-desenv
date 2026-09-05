@@ -12,6 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { TrendingUp, TrendingDown, DollarSign } from "lucide-react"
 import { ExpenseDialog } from "@/components/finance/expense-dialog"
+import { BaseDaComissao } from "@/components/finance/base-comissao"
 import { PayButton } from "@/components/finance/pay-button"
 import { SearchBar } from "@/components/shared/search-bar"
 import { StatusFilter } from "@/components/shared/status-filter"
@@ -28,7 +29,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
 
   // Cada unidade fecha o mês dela. O que não tem filial (despesa da empresa)
   // entra em todas — ver lib/filial.ts.
-  const [{ revenues, expenses, monthlyRevenue, pendingRevenues, pendingExpenses, comissoes }, filiais] =
+  const [{ revenues, expenses, monthlyRevenue, pendingRevenues, pendingExpenses, comissoes, baseDaComissao }, filiais] =
     await Promise.all([getFinanceSummary(q, filial), filiaisAtivas()])
 
   const totalPendingRevenue = pendingRevenues.reduce((s, r) => s + Number(r.amount), 0)
@@ -105,8 +106,14 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
       {comissoes.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">{t("comissoes.titulo")}</CardTitle>
-            <p className="text-xs text-muted-foreground">{t("comissoes.explicacao")}</p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle className="text-base">{t("comissoes.titulo")}</CardTitle>
+                <p className="text-xs text-muted-foreground">{t("comissoes.explicacao")}</p>
+              </div>
+              {/* A configuracao mora aqui, ao lado dos numeros que ela muda. */}
+              <BaseDaComissao atual={baseDaComissao} />
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
