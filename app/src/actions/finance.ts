@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
+import { agruparComissoes } from "@/lib/comissao"
 import { filtroDeFilialAtual, getTenant, requireActiveSubscription } from "@/lib/auth"
 import { filialParaNovo } from "@/lib/filial"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
@@ -87,7 +88,13 @@ export async function getFinanceSummary(q?: string, filial?: string | null) {
   const filtro = await filtroDeFilialAtual(filial)
   const [allRevenues, allExpenses] = await Promise.all([
     prisma.revenue.findMany({ where: { tenantId, ...filtro }, orderBy: { dueDate: "asc" } }),
-    prisma.expense.findMany({ where: { tenantId, ...filtro }, orderBy: { dueDate: "asc" } }),
+    prisma.expense.findMany({
+      where: { tenantId, ...filtro },
+      // O nome de quem recebe a comissao. Sem ele o bloco de comissoes
+      // mostraria um id, e o dono precisa ler "Ana Souza".
+      include: { payee: { select: { name: true } } },
+      orderBy: { dueDate: "asc" },
+    }),
   ])
 
   // Início do mês em horário de Brasília, não UTC do servidor — ver
@@ -113,5 +120,25 @@ export async function getFinanceSummary(q?: string, filial?: string | null) {
     ? allExpenses.filter((e) => e.description.toLowerCase().includes(ql))
     : allExpenses
 
-  return { revenues, expenses, monthlyRevenue, pendingRevenues, pendingExpenses }
+  // As comissoes a pagar, agrupadas por pessoa.
+  //
+  // Agrupadas, e nao soltas na tabela: quatro tecnicos com vinte OS no mes sao
+  // oitenta linhas novas numa tabela de quatro colunas sem paginacao. O dono
+  // abriria o Financeiro e nao acharia mais o aluguel.
+  //
+  // Calculadas sobre TODAS as pendentes, e nao sobre as filtradas pela busca:
+  // e o mesmo criterio dos outros indicadores desta tela.
+  const comissoes = agruparComissoes(
+    pendingExpenses
+      .filter((e) => e.orderId !== null && e.payeeId !== null)
+      .map((e) => ({
+        payeeId: e.payeeId!,
+        nome: e.payee?.name ?? "",
+        valor: Number(e.amount),
+        base: Number(e.commissionBase ?? 0),
+        iss: Number(e.commissionIss ?? 0),
+      }))
+  )
+
+  return { revenues, expenses, monthlyRevenue, pendingRevenues, pendingExpenses, comissoes }
 }

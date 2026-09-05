@@ -68,14 +68,14 @@ model Tenant {
   /// Sem esses sinais a lista vazia tem dois significados opostos e o sistema
   /// escolhe o errado — desmarcar tudo na tela devolvia o PADRAO. Era o caso
   /// real da permissao por aba: desmarcar as 19 abas concedia 3.
-  tabsConfigured          Boolean            @default(false)
-  actionsConfigured       Boolean            @default(false)
+  tabsConfigured         Boolean  @default(false)
+  actionsConfigured      Boolean  @default(false)
   /// QUAIS cargos ja foram configurados. Substitui os booleanos acima, que
   /// serviam quando so o tecnico era configuravel: com varios cargos, um
   /// booleano da empresa inteira faria configurar o tecnico deixar o
   /// financeiro com menu vazio. Regra em lib/cargos.ts.
-  tabsConfiguredRoles     String[]           @default([])
-  actionsConfiguredRoles  String[]           @default([])
+  tabsConfiguredRoles    String[] @default([])
+  actionsConfiguredRoles String[] @default([])
 
   /// Tetos ajustados PARA ESTA EMPRESA, por cima do que o plano da.
   ///
@@ -97,11 +97,11 @@ model Tenant {
   /// comecaria vazia e apagaria o sistema inteiro de todo mundo.
   ///
   /// Oposto de extraFeatures, que lista o que foi CONCEDIDO alem do plano.
-  disabledFeatures        String[]           @default([])
+  disabledFeatures String[] @default([])
 
-  maxUsersOverride        Int?
-  maxOrdersOverride       Int?
-  maxNfseOverride         Int?
+  maxUsersOverride  Int?
+  maxOrdersOverride Int?
+  maxNfseOverride   Int?
 
   /// Franquia mensal de comandos da assistente de voz.
   ///
@@ -114,7 +114,7 @@ model Tenant {
   /// NULL/0 = nao cobra, e e o padrao. Umas empresas cobram (combustivel e
   /// duas horas do tecnico foram gastos), outras absorvem como custo de
   /// vender — o sistema nao escolhe por elas.
-  visitFee                Decimal?           @db.Decimal(10, 2)
+  visitFee Decimal? @db.Decimal(10, 2)
 
   /// Quanto a empresa tinha em caixa/banco no dia em que comecou a usar o
   /// sistema. Sem isso o caixa do balanco e so o MOVIMENTO desde entao, e uma
@@ -123,27 +123,27 @@ model Tenant {
   ///
   /// NULL = nao informou, que e diferente de zero informado — o conferente
   /// (lib/contador-agente.ts) usa essa diferenca para escolher a mensagem.
-  openingCash             Decimal?           @db.Decimal(12, 2)
+  openingCash Decimal? @db.Decimal(12, 2)
 
   /// O que os socios puseram na empresa. Sem ele, TODO o patrimonio liquido
   /// aparece como resultado acumulado, como se a empresa tivesse nascido do
   /// nada e lucrado tudo — e e a primeira pergunta que o contador faz.
-  shareCapital            Decimal?           @db.Decimal(12, 2)
+  shareCapital Decimal? @db.Decimal(12, 2)
 
-  maxIaOverride           Int?
+  maxIaOverride   Int?
   /// Quantos comandos ja foram gastos no mes corrente.
-  iaComandosNoMes         Int                @default(0)
+  iaComandosNoMes Int     @default(0)
   /// AAAA-MM (fuso de Brasilia) a que o contador se refere. Texto, e nao data:
   /// comparar "2026-08" com "2026-08" nao tem fuso para errar.
-  iaMesDoContador         String?
+  iaMesDoContador String?
 
   /// Mensalidade combinada com esta empresa, quando difere da do plano.
   /// NULL = cobra o preco do plano. Serve ao plano customizado: recursos e
   /// tetos proprios pedem preco proprio.
-  customPriceMonthly      Decimal?           @db.Decimal(10, 2)
+  customPriceMonthly Decimal? @db.Decimal(10, 2)
 
-  createdAt               DateTime           @default(now())
-  updatedAt               DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   users             User[]
   clients           Client[]
@@ -299,15 +299,15 @@ enum BillingCycle {
 // ─── Usuários ─────────────────────────────────────────────────────────────────
 
 model User {
-  id        String   @id
-  name      String
-  email     String   @unique
-  role      UserRole @default(TECHNICIAN)
-  tenantId  String
-  document  String?
-  phone     String?
+  id       String   @id
+  name     String
+  email    String   @unique
+  role     UserRole @default(TECHNICIAN)
+  tenantId String
+  document String?
+  phone    String?
   /// A filial da pessoa. NULL = nao esta presa a nenhuma, e ve tudo.
-  branchId  String?
+  branchId String?
 
   /// Avisos que esta pessoa SILENCIOU. Catalogo em lib/notificacoes.ts.
   /// Lista vazia = recebe tudo, que e o comportamento de hoje. Guarda os
@@ -330,8 +330,8 @@ model User {
   /// qualquer payload escondido no desenho. Regra em lib/assinatura.ts.
   /// NULL = ainda nao desenhou; o documento sai com a linha para assinar a mao,
   /// como sempre saiu.
-  signatureUrl String? @db.Text
-  createdAt DateTime @default(now())
+  signatureUrl String?  @db.Text
+  createdAt    DateTime @default(now())
 
   branch            Branch?            @relation(fields: [branchId], references: [id], onDelete: SetNull)
   tenant            Tenant             @relation(fields: [tenantId], references: [id])
@@ -341,15 +341,17 @@ model User {
   userAddress       UserAddress?
   serviceContracts  ServiceContract[]
   stockMovements    StockMovement[]
+  /// As comissoes que esta pessoa tem a receber.
+  comissoes         Expense[]          @relation("ComissaoDoUsuario")
   orderEvents       OrderEvent[]
   quotesCriados     Quote[]
+  stockLocations    StockLocation[]
+  assets            Asset[]
+  supportThreads    SupportThread[]
 
   // Aba Equipe lista por tenant; seleção de técnico filtra por papel.
   @@index([tenantId, role])
   @@index([branchId])
-  stockLocations     StockLocation[]
-  assets             Asset[]
-  supportThreads     SupportThread[]
 }
 
 model UserAddress {
@@ -404,17 +406,17 @@ model Client {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  branch        Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  branch            Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
   /// SetNull, e nao Cascade: apagar a administradora nao pode levar junto
   /// trinta condominios com historico, receita e nota emitida.
-  parent        Client?           @relation("Subclientes", fields: [parentId], references: [id], onDelete: SetNull)
-  subclientes   Client[]          @relation("Subclientes")
-  ordensComoPagador ServiceOrder[] @relation("OsPagador")
-  address       Address?
-  tenant        Tenant            @relation(fields: [tenantId], references: [id])
-  serviceOrders ServiceOrder[]
-  equipments    Equipment[]
-  contracts     ServiceContract[]
+  parent            Client?           @relation("Subclientes", fields: [parentId], references: [id], onDelete: SetNull)
+  subclientes       Client[]          @relation("Subclientes")
+  ordensComoPagador ServiceOrder[]    @relation("OsPagador")
+  address           Address?
+  tenant            Tenant            @relation(fields: [tenantId], references: [id])
+  serviceOrders     ServiceOrder[]
+  equipments        Equipment[]
+  contracts         ServiceContract[]
 
   // getClients(): where tenantId [+ status] order by createdAt desc
   @@index([tenantId, createdAt])
@@ -461,35 +463,35 @@ model Address {
 // ─── Ordem de Serviço ─────────────────────────────────────────────────────────
 
 model ServiceOrder {
-  id                 String        @id @default(cuid())
-  number             Int
-  title              String
-  description        String?
-  conclusionNote     String?
-  status             ServiceStatus @default(OPEN)
-  totalAmount        Decimal       @default(0) @db.Decimal(12, 2)
-  clientId           String
+  id             String        @id @default(cuid())
+  number         Int
+  title          String
+  description    String?
+  conclusionNote String?
+  status         ServiceStatus @default(OPEN)
+  totalAmount    Decimal       @default(0) @db.Decimal(12, 2)
+  clientId       String
   /// Quem PAGA por esta OS. NULL = o padrao (contratante quando existe, senao
   /// o proprio cliente). Existe porque a administradora paga quase tudo, mas
   /// as vezes o cliente final paga direto um servico extra. Regra em
   /// lib/subcliente.ts.
-  payerId            String?
-  tenantId           String
+  payerId        String?
+  tenantId       String
   /// Herdada do CLIENTE, e nao de quem digitou: o cliente e da unidade que o
   /// atende, e um atendente da matriz abrindo OS pra cliente da filial nao
   /// muda de quem e aquele cliente. Ver lib/filial.ts.
-  branchId           String?
-  technicianId       String?
-  scheduledAt        DateTime?
-  concludedAt        DateTime?
-  nfseId             String?
+  branchId       String?
+  technicianId   String?
+  scheduledAt    DateTime?
+  concludedAt    DateTime?
+  nfseId         String?
   /// Quantas vezes ja se perguntou ao emissor pelo estado desta nota.
   ///
   /// Existe para o sistema DESISTIR. Emissao e assincrona e a nota pode ficar
   /// pendente para sempre por problema na prefeitura — sem teto, o cron
   /// perguntaria todo dia, para sempre, por uma nota que precisa de alguem
   /// olhando e nao de mais uma consulta. Regra em lib/nfse-status.ts.
-  nfseChecks         Int           @default(0)
+  nfseChecks     Int           @default(0)
 
   /// Quando a nota saiu. Existe para a COTA MENSAL de NFS-e poder ser contada:
   /// uma OS aberta em julho e faturada em agosto gasta a cota de AGOSTO, e
@@ -499,9 +501,9 @@ model ServiceOrder {
   nfseStatus         String?
   nfseUrl            String?
   clientSignatureUrl String?
-  clientToken        String?       @unique @default(uuid())
+  clientToken        String?   @unique @default(uuid())
   // Valores dos CustomField de entity=SERVICE_ORDER: { [customFieldId]: valor }
-  customValues       Json?         @db.JsonB
+  customValues       Json?     @db.JsonB
   /// Preenchido quando a OS nasceu de um contrato recorrente.
   /// Garantia desta OS em dias. Vazio = usa o padrao da empresa.
   warrantyDays       Int?
@@ -509,8 +511,15 @@ model ServiceOrder {
   npsScore           Int?
   npsFeedback        String?
   npsSentAt          DateTime?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  /// A porcentagem de comissao DESTA OS ("o tecnico ou o dono ou administrador
+  /// adiciona a porcentagem variada de cada OS").
+  ///
+  /// NULL nao e zero: NULL quer dizer "esta OS nao comissiona", que e o estado
+  /// de toda OS que ja existe — o recurso liga sozinho quando alguem digita o
+  /// primeiro numero, sem migrar dado nenhum.
+  commissionPct      Decimal?  @db.Decimal(5, 2)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   branch         Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
   client         Client           @relation(fields: [clientId], references: [id])
@@ -524,6 +533,10 @@ model ServiceOrder {
   contract       ServiceContract? @relation(fields: [contractId], references: [id], onDelete: SetNull)
   stockMovements StockMovement[]
   orderEvents    OrderEvent[]
+  /// A comissao desta OS. E no maximo UMA (Expense.orderId e unico), mas o
+  /// Prisma exige a lista do lado que nao carrega a chave.
+  expenses       Expense[]
+  quotes         Quote[]
 
   @@unique([tenantId, number])
   @@index([tenantId, branchId])
@@ -539,8 +552,6 @@ model ServiceOrder {
   // FKs: histórico do cliente, OS por técnico, e o cascade ao apagar cliente.
   @@index([clientId])
   @@index([technicianId])
-  quotes         Quote[]
-
 }
 
 model ChecklistItem {
@@ -584,17 +595,17 @@ model ServiceItem {
 }
 
 model Attachment {
-  id        String   @id @default(cuid())
-  url       String
-  name      String
+  id              String   @id @default(cuid())
+  url             String
+  name            String
   /// O dono da foto: uma OS OU um orcamento, nunca os dois e nunca nenhum.
   ///
   /// A obrigatoriedade virou um CHECK no banco (Attachment_um_dono_so), porque
   /// o Prisma nao sabe expressar "exatamente um destes". Sem ele, "opcional dos
   /// dois lados" viraria foto orfa: linha que nao aparece em tela alguma, ocupa
   /// armazenamento e ninguem consegue apagar pela interface.
-  orderId   String?
-  quoteId   String?
+  orderId         String?
+  quoteId         String?
   /// A NOTA do fornecedor, anexada a uma ordem de compra.
   ///
   /// Terceiro dono possivel deste anexo. A trava no banco passou de "um dos
@@ -604,17 +615,16 @@ model Attachment {
   /// A trava `num_nonnulls(...) = 1` cresce com um argumento a mais — foi
   /// exatamente para isto que ela deixou de ser escrita a mao.
   assetId         String?
-  createdAt DateTime @default(now())
+  createdAt       DateTime @default(now())
 
-  order ServiceOrder? @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  quote Quote?        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  order         ServiceOrder?  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  quote         Quote?         @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   asset         Asset?         @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([purchaseOrderId])
   @@index([assetId])
-
 }
 
 // ─── Financeiro ───────────────────────────────────────────────────────────────
@@ -652,17 +662,17 @@ model Revenue {
 }
 
 model Expense {
-  id          String          @id @default(cuid())
-  description String
-  amount      Decimal         @db.Decimal(12, 2)
-  dueDate     DateTime
-  paidAt      DateTime?
-  status      PaymentStatus   @default(PENDING)
-  category    ExpenseCategory @default(OTHER)
-  tenantId    String
-  recurring   Boolean         @default(false)
+  id              String          @id @default(cuid())
+  description     String
+  amount          Decimal         @db.Decimal(12, 2)
+  dueDate         DateTime
+  paidAt          DateTime?
+  status          PaymentStatus   @default(PENDING)
+  category        ExpenseCategory @default(OTHER)
+  tenantId        String
+  recurring       Boolean         @default(false)
   /// Escolhida no cadastro da despesa.
-  branchId    String?
+  branchId        String?
   /// A COMPRA que gerou esta despesa.
   ///
   /// Existe porque ate 01/09/2026 a compra entrava no estoque e nao saia do
@@ -672,17 +682,41 @@ model Expense {
   ///
   /// SetNull: apagar a ordem de compra nao pode apagar o dinheiro que saiu.
   purchaseOrderId String?
-  createdAt   DateTime        @default(now())
+  /// A OS que gerou esta despesa, quando ela e comissao.
+  ///
+  /// UNICO: e o indice do Postgres, e nao uma consulta antes do insert, que
+  /// garante "uma comissao por OS". Reconcluir uma OS e o fluxo NORMAL de
+  /// correcao na tela, e duas abas abertas fazem findFirst-antes-de-create
+  /// falhar exatamente quando importa.
+  orderId         String?         @unique
+  /// Quem RECEBE. Sem esta coluna o beneficiario so existiria como texto na
+  /// descricao — e trocar o tecnico de uma OS mudaria o dono da conta a pagar
+  /// em silencio.
+  payeeId         String?
+  /// Sobre quanto a porcentagem incidiu. Congelado aqui, e nao so no texto:
+  /// "quanto de ISS saiu das comissoes deste mes" e uma consulta, nao um LIKE.
+  commissionBase  Decimal?        @db.Decimal(12, 2)
+  /// A porcentagem que valeu no momento do calculo.
+  commissionPct   Decimal?        @db.Decimal(5, 2)
+  /// Quanto de imposto saiu da base. Zero/NULL quando nao havia nota emitida.
+  commissionIss   Decimal?        @db.Decimal(12, 2)
+  createdAt       DateTime        @default(now())
 
-  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
   purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  /// SetNull, igual a Revenue: apagar a OS nao pode apagar o dinheiro que a
+  /// empresa ficou devendo a uma pessoa.
+  order         ServiceOrder?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  payee         User?          @relation("ComissaoDoUsuario", fields: [payeeId], references: [id], onDelete: SetNull)
 
   // Mesma forma da Revenue: gráfico do dashboard e listagem do Financeiro.
   @@index([tenantId, status, paidAt])
   @@index([tenantId, status, dueDate])
   @@index([purchaseOrderId])
-
+  /// "Quanto a empresa deve de comissao para a Ana este mes" e a consulta do
+  /// fechamento; sem isto ela varre a tabela inteira de despesas.
+  @@index([payeeId, status])
 }
 
 enum PaymentStatus {
@@ -750,7 +784,6 @@ model MaintenanceOrder {
   @@index([tenantId, status])
   @@index([providerId])
   @@index([assetId])
-
 }
 
 model MaintenanceItem {
@@ -812,22 +845,20 @@ model Quote {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  tenant    Tenant @relation(fields: [tenantId], references: [id])
-  createdBy User?  @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  tenant    Tenant        @relation(fields: [tenantId], references: [id])
+  createdBy User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
   /// Fotos do que sera feito. E no orcamento que a foto mais trabalha: e o
   /// documento que o cliente le para DECIDIR.
   fotos     Attachment[]
+  order     ServiceOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, number])
   // getQuotes(): where tenantId [+ status] order by createdAt desc
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
   @@index([createdById])
-  order         ServiceOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
-
   // Buscar o orcamento de uma visita.
   @@index([orderId])
-
 }
 
 // ─── Equipamentos do Cliente ──────────────────────────────────────────────────
@@ -922,13 +953,13 @@ model TabPermission {
 /// WhatsApp vaza, troca-se o token; se um certificado vaza, so existe revogar
 /// na certificadora e comprar outro.
 model FiscalCertificate {
-  id        String   @id @default(cuid())
-  tenantId  String   @unique
+  id       String @id @default(cuid())
+  tenantId String @unique
 
   /// O .pfx cifrado. Formato: iv.tag.dados, tudo em base64.
-  arquivo   String   @db.Text
+  arquivo String @db.Text
   /// A senha cifrada, no mesmo formato.
-  senha     String   @db.Text
+  senha   String @db.Text
 
   /// Nome do arquivo enviado, so para a tela mostrar o que esta la.
   nomeArquivo String?
@@ -936,7 +967,7 @@ model FiscalCertificate {
   /// certificado vencido para de emitir NOTA, e ninguem descobre ate tentar.
   validoAte   DateTime?
 
-  enviadoEm DateTime @default(now())
+  enviadoEm  DateTime @default(now())
   enviadoPor String?
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1258,14 +1289,14 @@ model GeocodeBatch {
 /// a ficha para corrigir o telefone e teria de preencher CEP e razao social
 /// antes de salvar. Cadastro pobre e melhor que cadastro impossivel de corrigir.
 model Supplier {
-  id        String   @id @default(cuid())
-  tenantId  String
+  id                String  @id @default(cuid())
+  tenantId          String
   /// Como a empresa CHAMA o fornecedor. Nome fantasia.
-  name      String
+  name              String
   /// A razao social, que e o que sai na nota.
-  legalName String?
+  legalName         String?
   /// CNPJ ou CPF como a pessoa digitou, com mascara — e o que ela reconhece.
-  document  String?
+  document          String?
   /// So os digitos do mesmo documento. Serve para descobrir que
   /// "12.345.678/0001-99" e "12345678000199" sao o MESMO fornecedor cadastrado
   /// duas vezes. Derivado de `document`, sempre pela mesma funcao.
@@ -1273,10 +1304,10 @@ model Supplier {
   stateRegistration String?
   cityRegistration  String?
   /// Ramo, em texto livre. Enum obrigaria migration a cada ramo novo.
-  category  String?
+  category          String?
 
-  email     String?
-  phone     String?
+  email        String?
+  phone        String?
   /// Quem atende. O telefone da empresa e uma coisa; o celular do vendedor que
   /// resolve e outra, e e esse que o dono liga.
   contactName  String?
@@ -1312,15 +1343,14 @@ model Supplier {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  tenant         Tenant                 @relation(fields: [tenantId], references: [id])
   purchaseOrders PurchaseOrder[]
+  quotations     QuotationParticipant[]
 
   @@index([tenantId, name])
   // Listagem filtra por ativo; a busca de duplicata casa pelos digitos.
   @@index([tenantId, active])
   @@index([tenantId, documentDigits])
-  quotations QuotationParticipant[]
-
 }
 
 /// Peca de estoque.
@@ -1349,12 +1379,12 @@ model Part {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant        Tenant          @relation(fields: [tenantId], references: [id])
-  movements     StockMovement[]
-  balances      StockBalance[]
-  purchaseItems PurchaseItem[]
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  movements      StockMovement[]
+  balances       StockBalance[]
+  purchaseItems  PurchaseItem[]
   quotationItems QuotationItem[]
-  serviceItems  ServiceItem[]
+  serviceItems   ServiceItem[]
 
   // Listagem e busca por nome; a de escolha filtra por active.
   @@index([tenantId, name])
@@ -1386,41 +1416,41 @@ enum StockMovementType {
 /// Depreciacao e regras em lib/patrimonio.ts. Os numeros sao GERENCIAIS: o
 /// balanco com valor legal e peca que o contador assina.
 model Asset {
-  id             String        @id @default(cuid())
-  tenantId       String
-  name           String
-  category       AssetCategory @default(OUTRO)
-  brand          String?
-  model          String?
+  id            String        @id @default(cuid())
+  tenantId      String
+  name          String
+  category      AssetCategory @default(OUTRO)
+  brand         String?
+  model         String?
   /// Numero de serie, placa do veiculo, patrimonio colado na etiqueta.
-  serialNumber   String?
+  serialNumber  String?
   /// Quanto custou, e quando. Sao a base da depreciacao inteira.
-  purchaseValue  Decimal       @db.Decimal(12, 2)
-  purchasedAt    DateTime
+  purchaseValue Decimal       @db.Decimal(12, 2)
+  purchasedAt   DateTime
   /// Taxa anual PROPRIA, quando difere da padrao da categoria.
   /// NULL usa a da tabela da Receita (lib/patrimonio.ts).
-  annualRate     Decimal?      @db.Decimal(5, 2)
+  annualRate    Decimal?      @db.Decimal(5, 2)
   /// Quanto se espera receber ao vender no fim da vida util. Nao deprecia.
-  residualValue  Decimal?      @db.Decimal(12, 2)
-  status         AssetStatus   @default(ATIVO)
+  residualValue Decimal?      @db.Decimal(12, 2)
+  status        AssetStatus   @default(ATIVO)
   /// Quando saiu do patrimonio (venda, perda, descarte). Depois dela o bem
   /// PARA de depreciar — continuar inventaria despesa que nao existe.
-  disposedAt     DateTime?
-  disposalNotes  String?
+  disposedAt    DateTime?
+  disposalNotes String?
   /// ONDE ele esta. Reaproveita os locais de estoque: a rotativa que esta na
   /// van do Carlos responde a mesma pergunta que "onde esta a peca".
   /// SetNull: apagar o local nao pode apagar o bem que estava nele.
-  locationId     String?
+  locationId    String?
   /// QUEM responde por ele. Util para o que nao mora em local nenhum — o
   /// notebook esta com a Ana, e nao no almoxarifado.
-  responsibleId  String?
-  notes          String?       @db.Text
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  responsibleId String?
+  notes         String?       @db.Text
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  location    StockLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  responsible User?          @relation(fields: [responsibleId], references: [id], onDelete: SetNull)
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location    StockLocation?     @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  responsible User?              @relation(fields: [responsibleId], references: [id], onDelete: SetNull)
   attachments Attachment[]
   maintenance MaintenanceOrder[]
 
@@ -1493,12 +1523,12 @@ model StockLocation {
   active    Boolean           @default(true)
   createdAt DateTime          @default(now())
 
-  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user      User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
-  balances  StockBalance[]
-  assets    Asset[]
-  saidas    StockMovement[] @relation("MovimentoNoLocal")
-  entradas  StockMovement[] @relation("MovimentoParaLocal")
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  balances StockBalance[]
+  assets   Asset[]
+  saidas   StockMovement[] @relation("MovimentoNoLocal")
+  entradas StockMovement[] @relation("MovimentoParaLocal")
 
   /// Dois locais com o mesmo nome na mesma empresa seriam indistinguiveis na
   /// hora de escolher — e a escolha errada move peca de verdade.
@@ -1605,21 +1635,21 @@ enum PurchaseStatus {
 ///
 /// Regras de comparacao em lib/cotacao.ts.
 model Quotation {
-  id          String          @id @default(cuid())
-  tenantId    String
-  number      Int
-  title       String
-  status      QuotationStatus @default(ABERTA)
+  id        String          @id @default(cuid())
+  tenantId  String
+  number    Int
+  title     String
+  status    QuotationStatus @default(ABERTA)
   /// Ate quando os fornecedores tem para responder. So informativo — nada
   /// fecha sozinho, porque fornecedor atrasado que responde bem ainda ganha.
-  deadline    DateTime?
-  notes       String?         @db.Text
+  deadline  DateTime?
+  notes     String?         @db.Text
   /// Quem venceu, quando a cotacao foi fechada. Guardado para o historico
   /// continuar legivel depois de a compra ter sido gerada.
-  winnerId    String?
-  closedAt    DateTime?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  winnerId  String?
+  closedAt  DateTime?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
   tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   items        QuotationItem[]
@@ -1711,11 +1741,11 @@ model PurchaseOrder {
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 
-  tenant    Tenant          @relation(fields: [tenantId], references: [id])
-  supplier  Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  items     PurchaseItem[]
-  movements StockMovement[]
-  expenses  Expense[]
+  tenant      Tenant          @relation(fields: [tenantId], references: [id])
+  supplier    Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  items       PurchaseItem[]
+  movements   StockMovement[]
+  expenses    Expense[]
   attachments Attachment[]
 
   @@unique([tenantId, number])
@@ -1950,14 +1980,14 @@ model SupportThread {
 }
 
 model SupportMessage {
-  id       String            @id @default(cuid())
-  threadId String
-  kind     SupportAuthorKind
-  body     String
+  id          String            @id @default(cuid())
+  threadId    String
+  kind        SupportAuthorKind
+  body        String
   /// Retrato tambem aqui: quem respondeu pode nao estar mais na equipe.
   authorName  String
   authorEmail String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime          @default(now())
 
   thread SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 

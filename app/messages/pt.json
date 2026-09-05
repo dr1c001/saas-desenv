@@ -1109,6 +1109,15 @@
         "description": "{count, plural, one {# despesa pendente} other {# despesas pendentes}}"
       }
     },
+    "comissoes": {
+      "titulo": "Comissões a pagar",
+      "explicacao": "Geradas pelas OS concluídas. O valor sai do contas a pagar quando você marcar como paga.",
+      "pessoa": "Pessoa",
+      "base": "Base",
+      "imposto": "Imposto",
+      "total": "A pagar",
+      "quantasOs": "{n} OS"
+    },
     "receivables": {
       "title": "Contas a Receber",
       "empty": "Nenhum recebimento cadastrado."
@@ -2503,6 +2512,10 @@
     "checklist": {
       "progressLabel": "{done}/{total} itens concluídos",
       "addPlaceholder": "Adicionar item ao checklist..."
+    },
+    "comissao": {
+      "rotulo": "Comissão desta OS",
+      "ajuda": "Vira uma conta a pagar assim que a OS for concluída. Deixe vazio para não comissionar."
     },
     "concludeDialog": {
       "trigger": "Concluir",

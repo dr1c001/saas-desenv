@@ -25,11 +25,16 @@ type Props = {
   podeStatus?: boolean
   podeConcluir?: boolean
   podeEditar?: boolean
+  /** A porcentagem de comissao ja gravada nesta OS. */
+  commissionPct?: number | null
+  /** Ha responsavel? Sem alguem a quem pagar, comissao nao faz sentido. */
+  temResponsavel?: boolean
 }
 
 export function OsActionsRow({
   id, title, status, conclusionNote, items, pecas,
   podeStatus = true, podeConcluir = true, podeEditar = true,
+  commissionPct = null, temResponsavel = false,
 }: Props) {
   const t = useTranslations("serviceOrdersComponents")
   const tCommon = useTranslations("common")
@@ -79,6 +84,8 @@ export function OsActionsRow({
           initialConclusionNote={conclusionNote}
           initialItems={items}
           pecas={pecas}
+          initialCommissionPct={commissionPct}
+          temResponsavel={temResponsavel}
         />
       )}
       {/* Editar direto da lista: antes era preciso abrir a OS pra achar o

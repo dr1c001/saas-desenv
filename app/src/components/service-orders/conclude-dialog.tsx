@@ -54,6 +54,10 @@ type Props = {
   initialItems?: Item[]
   /** Vazio quando a empresa não tem o recurso de estoque. */
   pecas?: PecaDisponivel[]
+  /** A porcentagem de comissão já gravada nesta OS. Nulo = não comissiona. */
+  initialCommissionPct?: number | null
+  /** Há responsável? Sem alguém a quem pagar, comissão não faz sentido. */
+  temResponsavel?: boolean
 }
 
 export function ConcluirDialog({
@@ -63,6 +67,8 @@ export function ConcluirDialog({
   initialConclusionNote,
   initialItems,
   pecas = [],
+  initialCommissionPct = null,
+  temResponsavel = false,
 }: Props) {
   const t = useTranslations("serviceOrdersComponents")
   const tc = useTranslations("common")
@@ -74,8 +80,26 @@ export function ConcluirDialog({
     initialItems && initialItems.length > 0 ? initialItems : [{ description: "", quantity: 1, unitPrice: 0 }]
   )
   const [error, setError] = useState<string | null>(null)
+  const [commissionPct, setCommissionPct] = useState(
+    initialCommissionPct === null ? "" : String(initialCommissionPct)
+  )
 
   const total = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+
+  // A comissão, calculada ao vivo enquanto a pessoa digita.
+  //
+  // Aparece ANTES de concluir de propósito: quem lança a base é o próprio
+  // técnico (ele digita quantidade e preço item a item), e ver
+  // "R$ 1.200,00 → 10% → R$ 120,00" na mesma tela é a conferência que evita a
+  // descoberta desagradável no dia do pagamento.
+  //
+  // O imposto NÃO entra nesta prévia: aqui ainda não há nota, e mostrar um
+  // desconto que talvez nunca aconteça seria pior do que não mostrar nada.
+  const pctNumero = commissionPct.trim() === "" ? null : Number(commissionPct.replace(",", "."))
+  const comissao =
+    pctNumero !== null && Number.isFinite(pctNumero) && pctNumero > 0 && pctNumero <= 100 && total > 0
+      ? Math.round((Math.round(total * 100) * pctNumero) / 100) / 100
+      : null
 
   function addItem() { setItems((p) => [...p, { description: "", quantity: 1, unitPrice: 0 }]) }
   function removeItem(i: number) { setItems((p) => p.filter((_, idx) => idx !== i)) }
@@ -131,7 +155,15 @@ export function ConcluirDialog({
       }
 
       try {
-        await completeServiceOrder(orderId, conclusionNote, items, invoice)
+        await completeServiceOrder(
+          orderId,
+          conclusionNote,
+          items,
+          invoice,
+          // String vazia vira null: apagar o campo é como se desliga a comissão
+          // desta OS, e o reconciliador apaga a conta a pagar junto.
+          commissionPct.trim() === "" ? null : Number(commissionPct.replace(",", "."))
+        )
         setOpen(false)
       } catch (e) {
         setError(e instanceof Error ? e.message : t("concludeDialog.concludeError"))
@@ -270,6 +302,35 @@ export function ConcluirDialog({
               <p className="font-semibold text-sm">{t("items.totalLabel")} <span className="text-base">{formatCurrency(total)}</span></p>
             </div>
           </div>
+
+          {/* A comissão desta OS.
+              Só aparece quando há responsável: sem alguém a quem pagar, o
+              campo seria uma pergunta sem resposta possível. */}
+          {temResponsavel && (
+            <div className="space-y-1.5 rounded-lg border p-3">
+              <Label htmlFor="commissionPct" className="text-xs">
+                {t("comissao.rotulo")}
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="commissionPct"
+                  inputMode="decimal"
+                  className="w-24"
+                  placeholder="0"
+                  value={commissionPct}
+                  onChange={(e) => setCommissionPct(e.target.value)}
+                />
+                <span className="text-sm text-muted-foreground">%</span>
+                {comissao !== null && (
+                  <span className="ml-auto text-sm">
+                    <span className="text-muted-foreground">{formatCurrency(total)} → </span>
+                    <span className="font-semibold">{formatCurrency(comissao)}</span>
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">{t("comissao.ajuda")}</p>
+            </div>
+          )}
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 

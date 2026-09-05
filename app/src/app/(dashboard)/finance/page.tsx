@@ -28,7 +28,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
 
   // Cada unidade fecha o mês dela. O que não tem filial (despesa da empresa)
   // entra em todas — ver lib/filial.ts.
-  const [{ revenues, expenses, monthlyRevenue, pendingRevenues, pendingExpenses }, filiais] =
+  const [{ revenues, expenses, monthlyRevenue, pendingRevenues, pendingExpenses, comissoes }, filiais] =
     await Promise.all([getFinanceSummary(q, filial), filiaisAtivas()])
 
   const totalPendingRevenue = pendingRevenues.reduce((s, r) => s + Number(r.amount), 0)
@@ -95,6 +95,60 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
           </CardContent>
         </Card>
       </div>
+
+      {/* Comissões a pagar, por pessoa.
+          ACIMA das tabelas de propósito: é o número que o dono confere no
+          fechamento, e agrupado por pessoa porque quatro técnicos com vinte OS
+          são oitenta linhas que tornariam a tabela de despesas ilegível.
+          Só aparece quando existe comissão — empresa que não comissiona não
+          ganha um cartão vazio. */}
+      {comissoes.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t("comissoes.titulo")}</CardTitle>
+            <p className="text-xs text-muted-foreground">{t("comissoes.explicacao")}</p>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="px-4 py-2 text-left font-medium">{t("comissoes.pessoa")}</th>
+                    <th className="px-4 py-2 text-right font-medium">{t("comissoes.base")}</th>
+                    <th className="px-4 py-2 text-right font-medium">{t("comissoes.imposto")}</th>
+                    <th className="px-4 py-2 text-right font-medium">{t("comissoes.total")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comissoes.map((c) => (
+                    <tr key={c.payeeId} className="border-b last:border-0">
+                      <td className="px-4 py-2">
+                        <p className="font-medium">{c.nome}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t("comissoes.quantasOs", { n: c.quantidade })}
+                        </p>
+                      </td>
+                      {/* A BASE ao lado do valor: quem digita a base é o
+                          próprio técnico, item a item, ao concluir. Ver os dois
+                          números juntos é o que faz um zero a mais saltar aos
+                          olhos antes de o dinheiro sair. */}
+                      <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">
+                        {formatCurrency(c.base)}
+                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">
+                        {c.iss > 0 ? `− ${formatCurrency(c.iss)}` : "—"}
+                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums font-semibold">
+                        {formatCurrency(c.total)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Contas a receber */}

@@ -197,6 +197,8 @@ export default async function ServiceOrdersPage({ searchParams }: { searchParams
                         podeStatus={pode("os.status")}
                         podeConcluir={pode("os.concluir")}
                         podeEditar={pode("os.editar")}
+                        commissionPct={os.commissionPct === null ? null : Number(os.commissionPct)}
+                        temResponsavel={os.technicianId !== null}
                       />
                     </TableCell>
                   </TableRow>

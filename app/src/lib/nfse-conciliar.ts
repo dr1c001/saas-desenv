@@ -12,6 +12,7 @@
 import { prisma } from "@/lib/prisma"
 import { nfeio } from "@/lib/nfeio"
 import { notificar } from "@/lib/notificar"
+import { reconciliarComissao } from "@/lib/comissao-db"
 import {
   devePerguntar,
   estadoDaNota,
@@ -78,6 +79,15 @@ export async function conciliarNotasPendentes(): Promise<ResumoDaConciliacao> {
           nfseChecks: { increment: 1 },
         },
       })
+
+      // A comissao do responsavel muda AQUI, e nao na emissao.
+      //
+      // `nfseIssuedAt` e carimbado no ENVIO, antes de a prefeitura responder.
+      // Descontar o ISS naquele instante deixaria a comissao liquida de um
+      // imposto que ninguem vai recolher toda vez que a nota fosse rejeitada —
+      // e sempre contra o funcionario. Aqui ja se sabe o que a prefeitura
+      // decidiu, e o reconciliador converge para o valor certo nos dois casos.
+      await reconciliarComissao(prisma, os.tenantId, os.id)
 
       if (estado === "emitida") resumo.emitidas++
 

@@ -7,6 +7,8 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { checarAcao, filtroDeFilialAtual, getTenant, requireActiveSubscription } from "@/lib/auth"
 import { baixarPecasDaOs } from "@/lib/estoque-db"
+import { reconciliarComissao } from "@/lib/comissao-db"
+import { percentualValido } from "@/lib/comissao"
 import {
   autorAtual,
   registrarCriacao,
@@ -146,6 +148,14 @@ export async function createServiceOrder(
   // que aconteceu, nao parte do que esta acontecendo.
   await registrarCriacao(tenantId, criada.id, await autorAtual(userId))
 
+  // Uma OS pode NASCER concluida — o formulario aceita status DONE/INVOICED.
+  // Sem esta linha, esse caminho geraria servico concluido sem comissao
+  // nenhuma, em silencio. (Na pratica so faz algo quando a OS nasce com
+  // porcentagem, o que hoje nao acontece pela tela; esta aqui porque o
+  // reconciliador precisa cobrir TODO caminho que grava status concluido, e
+  // nao so os que existem hoje.)
+  await reconciliarComissao(prisma, tenantId, criada.id)
+
   await notificar({
     tenantId,
     evento: "osAtribuida",
@@ -242,6 +252,12 @@ export async function updateOrderStatus(id: string, status: string) {
     await baixarPecasDaOs(prisma, tenantId, id, userId)
   }
 
+  // A comissão do responsável. Chamada em TODA troca de status, e não só nas
+  // que geram comissão: reabrir uma OS concluída também precisa desfazer a
+  // conta a pagar que a conclusão criou, e é o mesmo reconciliador que faz as
+  // duas coisas.
+  await reconciliarComissao(prisma, tenantId, id)
+
   // Avisa o cliente final, se a empresa tiver ligado isso. Depois da gravação
   // e sem await no caminho crítico de erro: a função nunca lança, mas ainda
   // assim o aviso é acessório e a OS já está salva.
@@ -272,7 +288,11 @@ export async function completeServiceOrder(
   // partId opcional: item digitado na hora (mao de obra, taxa) continua sendo
   // o caminho normal de quem nao controla estoque.
   items: { description: string; quantity: number; unitPrice: number; partId?: string | null }[],
-  invoiceImmediately: boolean
+  invoiceImmediately: boolean,
+  // A porcentagem de comissao DESTA OS. `undefined` = nao mexe no que ja
+  // estava gravado (a fila offline e a assistente de IA chamam sem isso, e
+  // apagar a comissao por omissao seria pior do que nao ter o campo).
+  commissionPct?: number | null
 ) {
   const { tenantId, userId } = await getTenant()
   await requireActiveSubscription(tenantId)
@@ -329,6 +349,9 @@ export async function completeServiceOrder(
         concludedAt: new Date(),
         conclusionNote: conclusionNote || null,
         totalAmount: total,
+        ...(commissionPct === undefined
+          ? {}
+          : { commissionPct: percentualValido(commissionPct) ? commissionPct : null }),
       },
     })
     if (invoiceImmediately && total > 0) {
@@ -348,6 +371,12 @@ export async function completeServiceOrder(
         })
       }
     }
+
+    // DENTRO da transacao, e depois do update: a comissao le o totalAmount que
+    // acabou de ser gravado, e ou as duas coisas existem ou nenhuma existe.
+    // (`reconciliarComissao` nao lanca — uma comissao que falha nao pode
+    // desfazer a conclusao de uma OS que o tecnico acabou de fechar na rua.)
+    await reconciliarComissao(tx, tenantId, id)
   })
 
   // Depois da transacao: a OS concluida ja esta gravada, e o estoque nao pode
@@ -480,6 +509,11 @@ export async function updateServiceOrder(
       },
     }),
   ])
+
+  // Editar a OS mexe em DUAS coisas de que a comissao depende: o total e o
+  // responsavel. Trocar o tecnico de uma OS concluida mudaria o dono da conta
+  // a pagar; sem esta linha, a despesa continuaria no nome de quem saiu.
+  await reconciliarComissao(prisma, tenantId, id)
 
   // O responsavel novo pelo NOME: guardar id faria a linha do tempo virar
   // "responsavel mudou para cmr04..." no dia em que a pessoa saisse.

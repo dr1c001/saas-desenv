@@ -1,6 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
+import { reconciliarComissao } from "@/lib/comissao-db"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { requireCotaDeNfse, requireRecurso } from "@/lib/plan"
 import { nfeio } from "@/lib/nfeio"
@@ -179,7 +180,18 @@ export async function emitNfse(orderId: string) {
     },
   })
 
+  // A OS acabou de virar FATURADA por um caminho que nao passa por
+  // updateOrderStatus nem por completeServiceOrder. Sem esta linha, faturar
+  // pelo botao de nota fiscal nunca geraria comissao — justo no unico fluxo em
+  // que existe imposto para descontar.
+  //
+  // O desconto do ISS ainda nao acontece agora: `nfseStatus` aqui e o estado
+  // do ENVIO, e a prefeitura ainda nao respondeu. Quem aplica o desconto e a
+  // conciliacao diaria, quando a nota realmente e aceita.
+  await reconciliarComissao(prisma, tenantId, orderId)
+
   revalidatePath("/service-orders")
+  revalidatePath("/finance")
   return invoice
 }
 
