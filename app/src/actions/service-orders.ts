@@ -212,7 +212,7 @@ export async function updateOrderStatus(id: string, status: string) {
     where: { id, tenantId },
     data,
     select: {
-      number: true, title: true, totalAmount: true, createdAt: true,
+      number: true, title: true, totalAmount: true, createdAt: true, concludedAt: true,
       // A receita criada a partir desta OS herda a filial dela.
       branchId: true,
       status: true, scheduledAt: true, conclusionNote: true, warrantyDays: true,
@@ -239,6 +239,15 @@ export async function updateOrderStatus(id: string, status: string) {
           description: `${osNum} — ${order.title}`,
           amount: order.totalAmount,
           dueDate: new Date(),
+          // Competência na CONCLUSÃO, e não no faturamento: o serviço foi
+          // entregue naquele mês e o resultado é dele, mesmo que o cliente só
+          // pague no mês seguinte. Uma OS concluída em setembro e faturada em
+          // outubro é receita de SETEMBRO.
+          //
+          // `createdAt` é a reserva: uma OS que nasceu faturada nunca teve
+          // conclusão, e sem ela o lançamento cairia no vencimento — que aqui
+          // é hoje, e daria no mesmo.
+          accrualDate: order.concludedAt ?? order.createdAt,
           tenantId,
           // A receita é da unidade que executou o serviço. Sem herdar, o
           // faturamento apareceria no fechamento de todas as filiais.
@@ -332,6 +341,11 @@ export async function completeServiceOrder(
   // meio (ex: rede caindo no celular do técnico em campo) deixava itens
   // apagados sem os novos persistidos e sem o total/status atualizado.
   // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
+  // Uma data só para a conclusão e para a competência da receita: duas chamadas
+  // a `new Date()` na mesma transação dariam instantes diferentes, e o teste que
+  // compara os dois passaria a falhar por milissegundos.
+  const concluidaEm = new Date()
+
   await prisma.$transaction(async (tx) => {
     await tx.serviceItem.deleteMany({ where: { orderId: id } })
     if (items.length > 0) {
@@ -350,7 +364,7 @@ export async function completeServiceOrder(
       where: { id, tenantId },
       data: {
         status,
-        concludedAt: new Date(),
+        concludedAt: concluidaEm,
         conclusionNote: conclusionNote || null,
         totalAmount: total,
         ...(commissionPct === undefined
@@ -368,6 +382,9 @@ export async function completeServiceOrder(
             description: `${osNum} — ${order.title}`,
             amount: total,
             dueDate: new Date(),
+            // Competência na CONCLUSÃO — que é agora: esta transação está
+            // gravando `concludedAt: new Date()` logo acima.
+            accrualDate: concluidaEm,
             tenantId,
             branchId: order.branchId,
             orderId: id,

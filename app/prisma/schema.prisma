@@ -656,6 +656,19 @@ model Revenue {
   description String
   amount      Decimal       @db.Decimal(12, 2)
   dueDate     DateTime
+  /// A data de COMPETENCIA: quando o fato aconteceu, e nao quando o dinheiro
+  /// se moveu.
+  ///
+  /// Existe porque o DRE somava tudo por data de PAGAMENTO. Um servico feito e
+  /// recebido em janeiro cuja comissao vence dia 5 de fevereiro punha a receita
+  /// em janeiro e o custo dela em fevereiro: janeiro fechava com lucro inflado
+  /// e fevereiro com prejuizo artificial, todo mes, e ninguem percebia porque
+  /// os dois numeros sao plausiveis.
+  ///
+  /// NULL nos lancamentos anteriores a 07/09/2026 e nos digitados a mao sem
+  /// data propria — nesse caso vale o vencimento. Ver dataDeCompetencia em
+  /// lib/competencia.ts.
+  accrualDate DateTime?
   paidAt      DateTime?
   status      PaymentStatus @default(PENDING)
   tenantId    String
@@ -679,6 +692,9 @@ model Revenue {
   @@index([tenantId, status, paidAt])
   // Contador de vencidas e listagem do Financeiro, por dueDate.
   @@index([tenantId, status, dueDate])
+  /// O DRE em regime de competencia: sem isto, trocar de regime varreria a
+  /// tabela inteira em toda troca de periodo.
+  @@index([tenantId, accrualDate])
   // Anti-join do dashboard (`revenues: { none: {} }`) e receita da OS.
   @@index([orderId])
 }
@@ -688,6 +704,19 @@ model Expense {
   description     String
   amount          Decimal         @db.Decimal(12, 2)
   dueDate         DateTime
+  /// A data de COMPETENCIA: quando o fato aconteceu, e nao quando o dinheiro
+  /// se moveu.
+  ///
+  /// Existe porque o DRE somava tudo por data de PAGAMENTO. Um servico feito e
+  /// recebido em janeiro cuja comissao vence dia 5 de fevereiro punha a receita
+  /// em janeiro e o custo dela em fevereiro: janeiro fechava com lucro inflado
+  /// e fevereiro com prejuizo artificial, todo mes, e ninguem percebia porque
+  /// os dois numeros sao plausiveis.
+  ///
+  /// NULL nos lancamentos anteriores a 07/09/2026 e nos digitados a mao sem
+  /// data propria — nesse caso vale o vencimento. Ver dataDeCompetencia em
+  /// lib/competencia.ts.
+  accrualDate     DateTime?
   paidAt          DateTime?
   status          PaymentStatus   @default(PENDING)
   category        ExpenseCategory @default(OTHER)
@@ -735,6 +764,9 @@ model Expense {
   // Mesma forma da Revenue: gráfico do dashboard e listagem do Financeiro.
   @@index([tenantId, status, paidAt])
   @@index([tenantId, status, dueDate])
+  /// O DRE em regime de competencia: sem isto, trocar de regime varreria a
+  /// tabela inteira em toda troca de periodo.
+  @@index([tenantId, accrualDate])
   @@index([purchaseOrderId])
   /// "Quanto a empresa deve de comissao para a Ana este mes" e a consulta do
   /// fechamento; sem isto ela varre a tabela inteira de despesas.

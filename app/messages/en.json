@@ -1238,7 +1238,13 @@
         "ratingCount": "{n, plural, one {# response} other {# responses}}",
         "noRating": "not rated"
       },
-      "baixarPdf": "Download PDF"
+      "baixarPdf": "Download PDF",
+      "regime": {
+        "caixa": "Cash",
+        "competencia": "Accrual",
+        "explicaCaixa": "What came in and went out in the period.",
+        "explicaCompetencia": "What the period earned, even if the money arrives later."
+      }
     }
   },
   "fotos": {

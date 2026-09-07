@@ -3,12 +3,13 @@
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { brtMidnightUTC, todayInBRT } from "@/lib/utils"
+import { REGIME_PADRAO, regimeValido, type Regime } from "@/lib/competencia"
 import { temRecurso } from "@/lib/plan"
 import { agruparPorProfissional } from "@/lib/relatorio-profissional"
 import { getTranslations } from "next-intl/server"
 import { quemPaga, somarPorPagador } from "@/lib/subcliente"
 
-export async function getReportData(from: string, to: string) {
+export async function getReportData(from: string, to: string, regimePedido?: string) {
   const { tenantId, role } = await getTenant()
   // Auto-defesa: mesmo padrão do getFinanceSummary() em finance.ts — Action
   // tem Action ID próprio, despachável independente da página que redireciona
@@ -44,15 +45,35 @@ export async function getReportData(from: string, to: string) {
   const start = brtMidnightUTC(fromY, fromM - 1, fromD)
   const end = brtMidnightUTC(toY, toM - 1, toD + 1)
 
+  // Caixa continua sendo o padrão. Trocá-lo faria todos os meses que o dono já
+  // conferiu mudarem de valor de um dia para o outro, sem ele ter pedido — e o
+  // relatório é justamente o número em que ele mais confia.
+  const regime: Regime =
+    regimePedido && regimeValido(regimePedido) ? regimePedido : REGIME_PADRAO
+
+  // Em COMPETÊNCIA o lançamento entra pelo fato, tenha o dinheiro se movido ou
+  // não — então a consulta não pode filtrar por `status: PAID` nem por `paidAt`.
+  // O recorte do período é feito depois, em memória, pela mesma regra dos dois
+  // lados (ver lib/competencia.ts): somar receita por um critério e despesa por
+  // outro é exatamente o defeito que este regime existe para consertar.
+  const janelaCaixa = { status: "PAID" as const, paidAt: { gte: start, lt: end } }
+  const janelaCompetencia = {
+    OR: [
+      { accrualDate: { gte: start, lt: end } },
+      { accrualDate: null, dueDate: { gte: start, lt: end } },
+    ],
+  }
+  const janela = regime === "caixa" ? janelaCaixa : janelaCompetencia
+
   const [revenues, expenses, orders, topClients, concluidas, equipe] = await Promise.all([
     prisma.revenue.findMany({
-      where: { tenantId, status: "PAID", paidAt: { gte: start, lt: end } },
+      where: { tenantId, ...janela },
       include: { order: { select: { number: true, title: true, createdAt: true } } },
-      orderBy: { paidAt: "asc" },
+      orderBy: { dueDate: "asc" },
     }),
     prisma.expense.findMany({
-      where: { tenantId, status: "PAID", paidAt: { gte: start, lt: end } },
-      orderBy: { paidAt: "asc" },
+      where: { tenantId, ...janela },
+      orderBy: { dueDate: "asc" },
     }),
     prisma.serviceOrder.findMany({
       where: {
@@ -159,6 +180,10 @@ export async function getReportData(from: string, to: string) {
       to: new Date(end.getTime() - 86400000).toISOString().slice(0, 10),
     },
     // Totais e CONTAGENS fazem parte do básico — são o "como foi meu mês".
+    // Qual regime respondeu. A tela PRECISA dizer isto: os dois números são
+    // plausíveis, e um relatório que não diz qual pergunta respondeu é o
+    // defeito de origem outra vez, só que com duas respostas.
+    regime,
     totalRevenue,
     totalExpense,
     result,

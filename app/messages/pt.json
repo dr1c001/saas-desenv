@@ -1238,7 +1238,13 @@
         "ratingCount": "{n, plural, one {# resposta} other {# respostas}}",
         "noRating": "sem avaliação"
       },
-      "baixarPdf": "Baixar PDF"
+      "baixarPdf": "Baixar PDF",
+      "regime": {
+        "caixa": "Caixa",
+        "competencia": "Competência",
+        "explicaCaixa": "O que entrou e saiu no período.",
+        "explicaCompetencia": "O que o período gerou, mesmo que o dinheiro entre depois."
+      }
     }
   },
   "fotos": {

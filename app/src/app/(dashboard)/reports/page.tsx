@@ -14,8 +14,9 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { TrendingUp, TrendingDown, DollarSign, Lock, FileDown } from "lucide-react"
 import { PeriodPicker } from "@/components/reports/period-picker"
+import { RegimePicker } from "@/components/reports/regime-picker"
 
-type SearchParams = Promise<{ from?: string; to?: string }>
+type SearchParams = Promise<{ from?: string; to?: string; regime?: string }>
 
 function defaultDates() {
   const now = new Date()
@@ -54,7 +55,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
   const from = sp.from ?? defFrom
   const to = sp.to ?? defTo
 
-  const data = await getReportData(from, to)
+  const data = await getReportData(from, to, sp.regime)
 
   return (
     <div className="space-y-6">
@@ -78,7 +79,12 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
             seletor aqui evita oferecer um controle que não teria efeito. */}
         {data.avancado ? (
           <Suspense>
-            <PeriodPicker defaultFrom={from} defaultTo={to} />
+            <div className="flex flex-wrap items-center gap-3">
+              <PeriodPicker defaultFrom={from} defaultTo={to} />
+              {/* Caixa ou competência. Fica junto do período porque as duas
+                  escolhas decidem a mesma coisa: quais lançamentos entram. */}
+              <RegimePicker atual={data.regime} />
+            </div>
           </Suspense>
         ) : (
           <p className="text-sm text-muted-foreground">{t("reports.currentMonthOnly")}</p>

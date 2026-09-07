@@ -196,6 +196,9 @@ export async function sincronizarComissaoDaOs(
     // Comissão varia com o volume de serviço; não é aluguel.
     category: "VARIABLE" as const,
     dueDate: vencimentoDaComissao(os.concludedAt ?? os.createdAt),
+    // A competência é a CONCLUSÃO, e não o vencimento. É o que faz a comissão
+    // cair no mesmo mês da receita que a gerou, em vez de no mês seguinte.
+    accrualDate: os.concludedAt ?? os.createdAt,
     payeeId: os.technicianId,
     branchId: os.branchId,
     // Congelados na linha, e não só no texto da descrição: no primeiro
