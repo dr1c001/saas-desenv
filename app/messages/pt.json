@@ -3614,7 +3614,18 @@
       "entradaMaiorQueTotal": "A entrada é maior que o valor do serviço.",
       "semSaldoAParcelar": "A entrada cobre o serviço inteiro — não sobra saldo para parcelar.",
       "parcelasInvalidas": "Informe de 1 a 24 parcelas.",
-      "prazoInvalido": "Informe um prazo de 1 a 365 dias."
-    }
+      "prazoInvalido": "Informe um prazo de 1 a 365 dias.",
+      "semParcelas": "Gere ou acrescente ao menos uma parcela.",
+      "parcelasDemais": "São no máximo 24 parcelas.",
+      "somaNaoBate": "As parcelas não somam o valor do serviço.",
+      "dataInvalida": "Há uma data inválida, ou anterior à execução do serviço.",
+      "dataMuitoLonge": "Há um vencimento a mais de três anos daqui."
+    },
+    "gerar": "Gerar parcelas",
+    "jaRecebida": "recebida",
+    "remover": "remover",
+    "adicionar": "Acrescentar parcela",
+    "fecha": "Fecha com {total}",
+    "falta": "{sinal}{valor} para fechar"
   }
 }

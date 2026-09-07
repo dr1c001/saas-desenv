@@ -17,7 +17,13 @@ import {
 } from "@/components/ui/dialog"
 import { parcelarRecebimento } from "@/actions/parcelamento"
 import { lerDinheiro, paraCampo } from "@/lib/dinheiro"
-import { montarPlano, problemaNoPlano, PRAZOS_USUAIS, rotuloDaParcela } from "@/lib/plano-de-pagamento"
+import {
+  faltaParaFechar,
+  montarPlano,
+  PRAZOS_USUAIS,
+  problemaNasParcelas,
+  problemaNoPlano,
+} from "@/lib/plano-de-pagamento"
 import { formatCurrency } from "@/lib/utils"
 
 // "O cliente paga R$ 500 à vista e pede prazo para o resto."
@@ -28,8 +34,15 @@ import { formatCurrency } from "@/lib/utils"
 // valores exatos ANTES de gravar — inclusive o centavo que sobra, que vai para
 // a primeira parcela e sempre gera a pergunta "por que esta é R$ 0,01 maior?".
 //
-// A prévia usa a MESMA função que o servidor usa para gravar. Duas contas
-// diferentes fariam a tela prometer um valor e o boleto sair com outro.
+// ─── Por que as linhas são EDITÁVEIS ────────────────────────────────────────
+//
+// "A empresa combina qualquer data para o pagamento." Entrada mais parcelas
+// iguais espaçadas por um prazo resolve 7, 15, 30, 60 e 90 — e não resolve o
+// cliente que paga R$ 800 no dia 15 e R$ 700 no dia 3 do mês seguinte.
+//
+// Então o gerador vira ATALHO: ele monta as linhas em dois cliques, e a pessoa
+// ajusta data e valor onde o combinado foi outro. O total tem de fechar com o
+// serviço, e a tela diz quanto falta enquanto não fecha.
 
 export function ParcelarDialog({
   orderId,
@@ -53,17 +66,43 @@ export function ParcelarDialog({
   const [pendente, iniciar] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
 
-  const dados = useMemo(() => {
+  type Linha = { valor: string; vencimento: string; recebida: boolean }
+  const [linhas, setLinhas] = useState<Linha[]>([])
+
+  const paraCampoData = (d: Date) => d.toISOString().slice(0, 10)
+
+  /** Gera as linhas a partir do atalho. A pessoa ajusta depois. */
+  function gerar() {
     const e = lerDinheiro(entrada) ?? 0
     const n = Number(parcelas)
     const d = Number(prazo)
-    const problema = problemaNoPlano({ total, entrada: e, parcelas: n, prazoDias: d })
-    if (problema) return { problema, plano: [] as ReturnType<typeof montarPlano> }
-    return {
-      problema: null,
-      plano: montarPlano({ total, entrada: e, parcelas: n, prazoDias: d }, new Date(execucao)),
-    }
-  }, [entrada, parcelas, prazo, total, execucao])
+    if (problemaNoPlano({ total, entrada: e, parcelas: n, prazoDias: d })) return
+    setLinhas(
+      montarPlano({ total, entrada: e, parcelas: n, prazoDias: d }, new Date(execucao)).map((p) => ({
+        valor: paraCampo(p.valor),
+        vencimento: paraCampoData(p.vencimento),
+        recebida: p.entrada && recebida,
+      }))
+    )
+  }
+
+  const comoLista = useMemo(
+    () =>
+      linhas.map((l) => ({
+        valor: lerDinheiro(l.valor) ?? 0,
+        vencimento: new Date(`${l.vencimento}T12:00:00`),
+        recebida: l.recebida,
+      })),
+    [linhas]
+  )
+
+  // A MESMA validação que o servidor roda. Duas regras diferentes fariam a tela
+  // aceitar um plano que o servidor recusa depois — ou pior, o contrário.
+  const problema = useMemo(
+    () => (linhas.length === 0 ? null : problemaNasParcelas(comoLista, total, new Date(execucao))),
+    [comoLista, total, execucao, linhas.length]
+  )
+  const falta = faltaParaFechar(comoLista, total)
 
   const data = (d: Date) =>
     d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
@@ -151,26 +190,87 @@ export function ParcelarDialog({
             </label>
           )}
 
-          {/* A prévia. É ela que a pessoa confere antes de o boleto existir. */}
-          {dados.problema ? (
-            <p className="text-sm text-destructive">
-              {t(`erros.${dados.problema}` as "erros.totalInvalido")}
-            </p>
-          ) : (
-            <ul className="space-y-1 rounded-lg border p-3 text-sm">
-              {dados.plano.map((p) => (
-                <li key={p.numero} className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">
-                    {p.entrada ? t("rotuloEntrada") : t("rotuloParcela", {
-                      r: rotuloDaParcela(p, Number(parcelas)),
-                    })}
-                    {" · "}
-                    {data(p.vencimento)}
-                  </span>
-                  <span className="font-medium tabular-nums">{formatCurrency(p.valor)}</span>
+          <div className="flex items-center justify-between gap-3 border-t pt-3">
+            <Button type="button" size="sm" variant="secondary" onClick={gerar}>
+              {t("gerar")}
+            </Button>
+            {linhas.length > 0 && (
+              <span className={`text-xs ${falta === 0 ? "text-muted-foreground" : "text-amber-600"}`}>
+                {falta === 0
+                  ? t("fecha", { total: formatCurrency(total) })
+                  : t("falta", { valor: formatCurrency(Math.abs(falta)), sinal: falta > 0 ? "+" : "-" })}
+              </span>
+            )}
+          </div>
+
+          {/* As linhas COMBINADAS. Editáveis: o gerador acima resolve o caso
+              comum, e aqui a pessoa ajusta a data e o valor onde o cliente
+              combinou outra coisa. */}
+          {linhas.length > 0 && (
+            <ul className="space-y-2">
+              {linhas.map((l, i) => (
+                <li key={i} className="flex flex-wrap items-center gap-2">
+                  <span className="w-10 text-xs text-muted-foreground">{i + 1}/{linhas.length}</span>
+                  <Input
+                    type="date"
+                    className="w-40"
+                    value={l.vencimento}
+                    onChange={(e) =>
+                      setLinhas((ls) => ls.map((x, k) => (k === i ? { ...x, vencimento: e.target.value } : x)))
+                    }
+                  />
+                  <Input
+                    inputMode="decimal"
+                    className="w-28"
+                    value={l.valor}
+                    onChange={(e) =>
+                      setLinhas((ls) => ls.map((x, k) => (k === i ? { ...x, valor: e.target.value } : x)))
+                    }
+                  />
+                  <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={l.recebida}
+                      onChange={(e) =>
+                        setLinhas((ls) => ls.map((x, k) => (k === i ? { ...x, recebida: e.target.checked } : x)))
+                      }
+                    />
+                    {t("jaRecebida")}
+                  </label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    disabled={linhas.length === 1}
+                    onClick={() => setLinhas((ls) => ls.filter((_, k) => k !== i))}
+                  >
+                    {t("remover")}
+                  </Button>
                 </li>
               ))}
+              <li>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setLinhas((ls) => [
+                      ...ls,
+                      { valor: "", vencimento: ls[ls.length - 1]?.vencimento ?? "", recebida: false },
+                    ])
+                  }
+                >
+                  {t("adicionar")}
+                </Button>
+              </li>
             </ul>
+          )}
+
+          {problema && (
+            <p className="text-sm text-destructive">
+              {t(`erros.${problema}` as "erros.somaNaoBate")}
+            </p>
           )}
 
           {erro && <p className="text-sm text-destructive">{t(`erros.${erro}` as "erros.semPermissao")}</p>}
@@ -179,16 +279,17 @@ export function ParcelarDialog({
         <DialogFooter>
           <Button
             type="button"
-            disabled={pendente || !!dados.problema}
+            disabled={pendente || !!problema || linhas.length === 0}
             onClick={() =>
               iniciar(async () => {
                 setErro(null)
                 const r = await parcelarRecebimento(
                   orderId,
-                  lerDinheiro(entrada) ?? 0,
-                  Number(parcelas),
-                  Number(prazo),
-                  recebida
+                  comoLista.map((l) => ({
+                    valor: l.valor,
+                    vencimento: l.vencimento.toISOString(),
+                    recebida: l.recebida,
+                  }))
                 )
                 if (r?.erro) setErro(r.erro)
                 else setAberto(false)

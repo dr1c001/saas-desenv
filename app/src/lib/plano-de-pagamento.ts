@@ -148,12 +148,114 @@ export function somaDoPlano(parcelas: readonly Parcela[]): number {
 }
 
 /**
- * O rótulo da parcela na descrição da receita.
+ * Os rótulos das parcelas, na ordem: "entrada", "1/3", "2/3", "3/3".
  *
- * "Entrada" e "2/3" — e não "parcela 2". O cliente lê isto no extrato e no
- * boleto, e "2/3" diz quantas faltam sem obrigar ninguém a contar.
+ * ─── Por que derivado da DATA, e não de um campo ────────────────────────────
+ *
+ * Com datas combinadas à mão não existe mais uma "entrada" declarada — existe
+ * uma lista. Mas parcela que vence NO DIA DA EXECUÇÃO é a entrada, por
+ * definição: é o que o cliente pagou na hora.
+ *
+ * Derivar em vez de guardar um sinalizador é o que mantém o rótulo verdadeiro
+ * depois de a pessoa editar as datas. Um campo `entrada: true` gravado na
+ * geração continuaria dizendo "entrada" numa linha que ela empurrou para dali a
+ * trinta dias.
+ *
+ * As numeradas contam só entre elas: "entrada, 1/3, 2/3, 3/3" é como se fala, e
+ * "entrada, 2/4" faria o cliente procurar a parcela 1.
  */
-export function rotuloDaParcela(p: Parcela, totalDeParcelas: number): string {
-  if (p.entrada) return "entrada"
-  return `${p.numero}/${totalDeParcelas}`
+export function rotularParcelas(
+  parcelas: readonly { vencimento: Date }[],
+  execucao: Date
+): string[] {
+  const ehEntrada = (d: Date) => mesmoDia(d, execucao)
+  const quantasNumeradas = parcelas.filter((p) => !ehEntrada(p.vencimento)).length
+
+  let n = 0
+  return parcelas.map((p) => {
+    if (ehEntrada(p.vencimento)) return "entrada"
+    n += 1
+    return `${n}/${quantasNumeradas}`
+  })
+}
+
+/** Mesmo dia no calendário de Brasília — a hora não entra na conta. */
+function mesmoDia(a: Date, b: Date): boolean {
+  const fmt = (d: Date) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(d)
+  return fmt(a) === fmt(b)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// O plano COMBINADO, linha a linha.
+//
+// `montarPlano` cobre o caso comum — entrada mais parcelas iguais espaçadas por
+// um prazo — e é o que resolve 7, 15, 30, 60 e 90 em dois cliques.
+//
+// Mas "a empresa combina qualquer data para o pagamento": o cliente que paga
+// R$ 800 no dia 15 e R$ 700 no dia 3 do mês seguinte não cabe em intervalo fixo
+// com valores iguais. Então o gerador passa a ser um ATALHO, e o que vale de
+// verdade é a lista — a pessoa gera e ajusta.
+//
+// Isso desloca a validação para cá: quem grava recebe uma lista pronta e
+// precisa conferi-la inteira, porque ela vem da tela e a Action é endereço HTTP.
+
+export type ProblemaDasParcelas =
+  | "semParcelas"
+  | "parcelasDemais"
+  | "valorInvalido"
+  | "somaNaoBate"
+  | "dataInvalida"
+  | "dataMuitoLonge"
+
+/** Uma linha do plano, como a tela manda. */
+export type ParcelaCombinada = {
+  valor: number
+  vencimento: Date
+  /** Já foi recebida (o caso da entrada paga na hora). */
+  recebida?: boolean
+}
+
+/** Nenhum vencimento além disto: é engano de digitação, não combinado. */
+const MAX_DIAS_ADIANTE = 365 * 3
+
+/**
+ * A lista combinada serve? `null` quando sim.
+ *
+ * A checagem que importa é a SOMA: as parcelas têm de fechar com o valor do
+ * serviço, ao centavo. Uma lista que soma menos deixaria dinheiro sem cobrar, e
+ * uma que soma mais cobraria do cliente algo que ninguém combinou — e as duas
+ * passariam despercebidas, porque cada linha isolada parece plausível.
+ */
+export function problemaNasParcelas(
+  parcelas: readonly ParcelaCombinada[],
+  total: number,
+  execucao: Date
+): ProblemaDasParcelas | null {
+  if (!Number.isFinite(total) || total <= 0) return "valorInvalido"
+  if (parcelas.length === 0) return "semParcelas"
+  if (parcelas.length > MAX_PARCELAS) return "parcelasDemais"
+
+  let soma = 0
+  for (const p of parcelas) {
+    if (!Number.isFinite(p.valor) || p.valor <= 0) return "valorInvalido"
+    soma += Math.round(p.valor * 100)
+
+    const t = p.vencimento?.getTime?.()
+    if (t === undefined || !Number.isFinite(t)) return "dataInvalida"
+    // Vencimento ANTES da execução é engano: não se combina pagar um serviço
+    // antes de ele existir. Um dia de folga porque a execução tem hora e o
+    // vencimento não.
+    if (t < execucao.getTime() - DIA_EM_MS) return "dataInvalida"
+    if (t > execucao.getTime() + MAX_DIAS_ADIANTE * DIA_EM_MS) return "dataMuitoLonge"
+  }
+
+  if (soma !== Math.round(total * 100)) return "somaNaoBate"
+  return null
+}
+
+/** Quanto falta (ou sobra) para a lista fechar com o total. Para a tela mostrar. */
+export function faltaParaFechar(parcelas: readonly ParcelaCombinada[], total: number): number {
+  const soma = parcelas.reduce((s, p) => s + Math.round((Number(p.valor) || 0) * 100), 0)
+  return (Math.round(total * 100) - soma) / 100
 }

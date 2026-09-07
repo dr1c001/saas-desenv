@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest"
 import {
+  faltaParaFechar,
   MAX_PARCELAS,
   montarPlano,
+  problemaNasParcelas,
   problemaNoPlano,
-  rotuloDaParcela,
+  rotularParcelas,
   somaDoPlano,
 } from "@/lib/plano-de-pagamento"
 
@@ -138,9 +140,35 @@ describe("o que é recusado", () => {
 describe("o rótulo que o cliente lê", () => {
   it("diz entrada, e diz quantas faltam", () => {
     const p = montarPlano({ total: 2000, entrada: 500, parcelas: 3, prazoDias: 7 }, execucao)
-    expect(rotuloDaParcela(p[0], 3)).toBe("entrada")
-    expect(rotuloDaParcela(p[1], 3)).toBe("1/3")
-    expect(rotuloDaParcela(p[3], 3)).toBe("3/3")
+    expect(rotularParcelas(p, execucao)).toEqual(["entrada", "1/3", "2/3", "3/3"])
+  })
+
+  it("sem entrada, começa em 1", () => {
+    const p = montarPlano({ total: 900, entrada: 0, parcelas: 3, prazoDias: 30 }, execucao)
+    expect(rotularParcelas(p, execucao)).toEqual(["1/3", "2/3", "3/3"])
+  })
+
+  it("as numeradas contam só entre elas", () => {
+    // "entrada, 2/4" faria o cliente procurar a parcela 1.
+    const p = montarPlano({ total: 2000, entrada: 500, parcelas: 1, prazoDias: 7 }, execucao)
+    expect(rotularParcelas(p, execucao)).toEqual(["entrada", "1/1"])
+  })
+
+  it("a entrada é derivada da DATA, e sobrevive à edição", () => {
+    // Um sinalizador gravado na geração continuaria dizendo "entrada" numa
+    // linha que a pessoa empurrou para dali a trinta dias.
+    const empurrada = [
+      { vencimento: new Date(execucao.getTime() + 30 * dia) },
+      { vencimento: new Date(execucao.getTime() + 60 * dia) },
+    ]
+    expect(rotularParcelas(empurrada, execucao)).toEqual(["1/2", "2/2"])
+  })
+
+  it("a hora do dia não decide nada", () => {
+    // A execução tem hora; o vencimento combinado, não. Comparar instante
+    // faria a entrada deixar de ser entrada por causa de três horas.
+    const deManha = [{ vencimento: new Date("2026-09-10T03:30:00Z") }]
+    expect(rotularParcelas(deManha, execucao)).toEqual(["entrada"])
   })
 })
 
@@ -183,5 +211,72 @@ describe("os prazos longos que o cliente pede", () => {
     expect(problemaNoPlano({ total: 100, entrada: 0, parcelas: 1, prazoDias: 366 })).toBe(
       "prazoInvalido"
     )
+  })
+})
+
+describe("qualquer data combinada", () => {
+  // "a empresa combina qualquer data combinada para o pagamento". O gerador de
+  // parcelas iguais espaçadas por um prazo resolve 7/15/30/60/90 e não resolve
+  // isto — quem manda é a lista, e o gerador virou atalho para montá-la.
+  const lista = (v: [number, number][]) =>
+    v.map(([valor, dias]) => ({ valor, vencimento: new Date(execucao.getTime() + dias * dia) }))
+
+  it("valores e datas irregulares passam, desde que SOMEM o serviço", () => {
+    // R$ 500 à vista, R$ 800 no dia 35 e R$ 700 no dia 54 — nada disso é
+    // intervalo fixo nem parcela igual.
+    const p = lista([[500, 0], [800, 35], [700, 54]])
+    expect(problemaNasParcelas(p, 2000, execucao)).toBeNull()
+  })
+
+  it("lista que soma MENOS é recusada", () => {
+    // Deixaria dinheiro sem cobrar, e cada linha isolada parece plausível.
+    expect(problemaNasParcelas(lista([[500, 0], [800, 30]]), 2000, execucao)).toBe("somaNaoBate")
+  })
+
+  it("lista que soma MAIS é recusada", () => {
+    // Cobraria do cliente algo que ninguém combinou.
+    expect(problemaNasParcelas(lista([[500, 0], [1800, 30]]), 2000, execucao)).toBe("somaNaoBate")
+  })
+
+  it("erra por UM CENTAVO e ainda é recusada", () => {
+    // É o caso que passa despercebido numa conferência a olho.
+    expect(problemaNasParcelas(lista([[999.99, 0], [1000, 30]]), 2000, execucao)).toBe("somaNaoBate")
+    expect(problemaNasParcelas(lista([[1000, 0], [1000, 30]]), 2000, execucao)).toBeNull()
+  })
+
+  it("parcela sem valor não passa", () => {
+    expect(problemaNasParcelas(lista([[0, 0], [2000, 30]]), 2000, execucao)).toBe("valorInvalido")
+    expect(problemaNasParcelas(lista([[-100, 0], [2100, 30]]), 2000, execucao)).toBe("valorInvalido")
+  })
+
+  it("vencimento ANTES da execução não passa", () => {
+    // Não se combina pagar um serviço antes de ele existir.
+    expect(problemaNasParcelas(lista([[2000, -5]]), 2000, execucao)).toBe("dataInvalida")
+  })
+
+  it("mas o mesmo dia da execução passa", () => {
+    // É a entrada à vista.
+    expect(problemaNasParcelas(lista([[2000, 0]]), 2000, execucao)).toBeNull()
+  })
+
+  it("data inválida não passa", () => {
+    const p = [{ valor: 2000, vencimento: new Date("nao-e-data") }]
+    expect(problemaNasParcelas(p, 2000, execucao)).toBe("dataInvalida")
+  })
+
+  it("vencimento absurdamente longe é engano de digitação", () => {
+    expect(problemaNasParcelas(lista([[2000, 365 * 4]]), 2000, execucao)).toBe("dataMuitoLonge")
+    // Três anos ainda passa: prazo longo existe.
+    expect(problemaNasParcelas(lista([[2000, 365 * 2]]), 2000, execucao)).toBeNull()
+  })
+
+  it("lista vazia não passa", () => {
+    expect(problemaNasParcelas([], 2000, execucao)).toBe("semParcelas")
+  })
+
+  it("a tela sabe quanto falta para fechar", () => {
+    expect(faltaParaFechar(lista([[500, 0], [800, 30]]), 2000)).toBe(700)
+    expect(faltaParaFechar(lista([[500, 0], [1800, 30]]), 2000)).toBe(-300)
+    expect(faltaParaFechar(lista([[2000, 0]]), 2000)).toBe(0)
   })
 })

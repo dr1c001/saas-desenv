@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { createTestDatabase, type TestDatabase } from "@/test-utils/pglite-db"
+import { montarPlano } from "@/lib/plano-de-pagamento"
 
 // Parcelar o recebimento de uma OS, pela ação de verdade.
 //
@@ -72,6 +73,22 @@ async function cenario(opts: { total?: number; comReceita?: boolean } = {}) {
 
 const acao = () => import("@/actions/parcelamento")
 
+/**
+ * O que a TELA manda: a lista pronta.
+ *
+ * O gerador de parcelas iguais mora na tela, e a ação recebe a lista já
+ * montada. Este ajudante faz o mesmo caminho, para os testes continuarem
+ * legíveis em "entrada, parcelas, prazo" sem esconder que a ação não sabe nada
+ * disso.
+ */
+function plano(entrada: number, parcelas: number, prazoDias: number, recebida: boolean, total = 2000) {
+  return montarPlano({ total, entrada, parcelas, prazoDias }, execucao).map((p) => ({
+    valor: p.valor,
+    vencimento: p.vencimento.toISOString(),
+    recebida: p.entrada && recebida,
+  }))
+}
+
 async function recebimentos(orderId: string) {
   return testDb.db.revenue.findMany({ where: { orderId }, orderBy: { dueDate: "asc" } })
 }
@@ -84,7 +101,7 @@ describe("o caso do dono: R$ 500 à vista e o resto em 7 dias", () => {
     const { os } = await cenario()
     const { parcelarRecebimento } = await acao()
 
-    const r = await parcelarRecebimento(os.id, 500, 1, 7, true)
+    const r = await parcelarRecebimento(os.id, plano(500, 1, 7, true))
 
     expect(r.ok).toBe(true)
     const linhas = await recebimentos(os.id)
@@ -96,7 +113,7 @@ describe("o caso do dono: R$ 500 à vista e o resto em 7 dias", () => {
     const { os } = await cenario()
     const { parcelarRecebimento } = await acao()
 
-    await parcelarRecebimento(os.id, 500, 1, 7, true)
+    await parcelarRecebimento(os.id, plano(500, 1, 7, true))
 
     const [entrada, saldo] = await recebimentos(os.id)
     expect(Number(entrada.amount)).toBe(500)
@@ -111,7 +128,7 @@ describe("o caso do dono: R$ 500 à vista e o resto em 7 dias", () => {
     const { os } = await cenario()
     const { parcelarRecebimento } = await acao()
 
-    await parcelarRecebimento(os.id, 500, 1, 7, true)
+    await parcelarRecebimento(os.id, plano(500, 1, 7, true))
 
     const [entrada, saldo] = await recebimentos(os.id)
     expect(entrada.status).toBe("PAID")
@@ -123,7 +140,7 @@ describe("o caso do dono: R$ 500 à vista e o resto em 7 dias", () => {
     const { os } = await cenario()
     const { parcelarRecebimento } = await acao()
 
-    await parcelarRecebimento(os.id, 500, 1, 7, false)
+    await parcelarRecebimento(os.id, plano(500, 1, 7, false))
 
     expect((await recebimentos(os.id))[0].status).toBe("PENDING")
   })
@@ -134,7 +151,7 @@ describe("o caso do dono: R$ 500 à vista e o resto em 7 dias", () => {
     const { os } = await cenario()
     const { parcelarRecebimento } = await acao()
 
-    await parcelarRecebimento(os.id, 500, 3, 15, true)
+    await parcelarRecebimento(os.id, plano(500, 3, 15, true))
 
     const d = (await recebimentos(os.id)).map((l) => l.description)
     expect(d[0]).toContain("entrada")
@@ -153,7 +170,7 @@ describe("a competência mantém o mês inteiro", () => {
     const { os } = await cenario()
     const { parcelarRecebimento } = await acao()
 
-    await parcelarRecebimento(os.id, 500, 3, 30, true)
+    await parcelarRecebimento(os.id, plano(500, 3, 30, true))
 
     const linhas = await recebimentos(os.id)
     expect(linhas).toHaveLength(4)
@@ -171,9 +188,9 @@ describe("o que não pode acontecer", () => {
     // entrou. Refazer por cima é conversa entre pessoas.
     const { os } = await cenario()
     const { parcelarRecebimento } = await acao()
-    await parcelarRecebimento(os.id, 500, 2, 15, true)
+    await parcelarRecebimento(os.id, plano(500, 2, 15, true))
 
-    const r = await parcelarRecebimento(os.id, 1000, 3, 30, true)
+    const r = await parcelarRecebimento(os.id, plano(1000, 3, 30, true))
 
     expect(r.erro).toBe("jaTemRecebimento")
     // E nada mudou.
@@ -185,9 +202,9 @@ describe("o que não pode acontecer", () => {
     // dono a apagar receita a mão.
     const { os } = await cenario()
     const { parcelarRecebimento } = await acao()
-    await parcelarRecebimento(os.id, 0, 2, 15, false)
+    await parcelarRecebimento(os.id, plano(0, 2, 15, false))
 
-    const r = await parcelarRecebimento(os.id, 500, 3, 30, false)
+    const r = await parcelarRecebimento(os.id, plano(500, 3, 30, false))
 
     expect(r.ok).toBe(true)
     const linhas = await recebimentos(os.id)
@@ -205,7 +222,7 @@ describe("o que não pode acontecer", () => {
     })
     const { parcelarRecebimento } = await acao()
 
-    expect((await parcelarRecebimento(os.id, 500, 1, 7, true)).erro).toBe("semPermissao")
+    expect((await parcelarRecebimento(os.id, plano(500, 1, 7, true))).erro).toBe("semPermissao")
     expect(await recebimentos(os.id)).toHaveLength(1)
   })
 
@@ -215,19 +232,26 @@ describe("o que não pode acontecer", () => {
     mockGetTenant.mockResolvedValue({ tenantId: outra.id, userId: "x", role: "OWNER", branchId: null })
     const { parcelarRecebimento } = await acao()
 
-    expect((await parcelarRecebimento(os.id, 500, 1, 7, true)).erro).toBe("naoEncontrada")
+    expect((await parcelarRecebimento(os.id, plano(500, 1, 7, true))).erro).toBe("naoEncontrada")
     expect(await recebimentos(os.id)).toHaveLength(1)
   })
 
-  it("plano inválido não apaga a receita que existia", async () => {
-    // A ação apaga as pendentes antes de criar as novas. Uma validação que
+  it("lista que não SOMA o serviço é recusada, e não apaga o que existia", async () => {
+    // A checagem que mais importa: uma lista que soma menos deixa dinheiro sem
+    // cobrar, uma que soma mais cobra do cliente algo que ninguém combinou — e
+    // as duas passam despercebidas, porque cada linha isolada parece plausível.
+    //
+    // E a ação apaga as pendentes antes de criar as novas: uma validação que
     // passasse batido deixaria a OS sem recebimento nenhum.
     const { os } = await cenario()
     const { parcelarRecebimento } = await acao()
 
-    const r = await parcelarRecebimento(os.id, 5000, 1, 7, true)
+    const r = await parcelarRecebimento(os.id, [
+      { valor: 500, vencimento: execucao.toISOString() },
+      { valor: 800, vencimento: new Date(execucao.getTime() + 30 * dia).toISOString() },
+    ])
 
-    expect(r.erro).toBe("entradaMaiorQueTotal")
+    expect(r.erro).toBe("somaNaoBate")
     expect(await recebimentos(os.id)).toHaveLength(1)
   })
 
@@ -235,7 +259,11 @@ describe("o que não pode acontecer", () => {
     const { os } = await cenario({ total: 0, comReceita: false })
     const { parcelarRecebimento } = await acao()
 
-    expect((await parcelarRecebimento(os.id, 0, 3, 30, false)).erro).toBe("totalInvalido")
+    const r = await parcelarRecebimento(os.id, [
+      { valor: 100, vencimento: execucao.toISOString() },
+    ])
+
+    expect(r.erro).toBe("valorInvalido")
   })
 })
 
@@ -256,7 +284,7 @@ describe("as parcelas aparecem no FINANCEIRO", () => {
   it("cada parcela vira uma linha no contas a receber", async () => {
     const { os } = await cenario()
     const { parcelarRecebimento } = await acao()
-    await parcelarRecebimento(os.id, 500, 3, 30, true)
+    await parcelarRecebimento(os.id, plano(500, 3, 30, true))
 
     const f = await financeiro()
 
@@ -272,7 +300,7 @@ describe("as parcelas aparecem no FINANCEIRO", () => {
     // recebida não pode estar nele.
     const { os } = await cenario()
     const { parcelarRecebimento } = await acao()
-    await parcelarRecebimento(os.id, 500, 3, 30, true)
+    await parcelarRecebimento(os.id, plano(500, 3, 30, true))
 
     const f = await financeiro()
 
@@ -286,7 +314,7 @@ describe("as parcelas aparecem no FINANCEIRO", () => {
   it("a entrada recebida entra na receita DO MÊS", async () => {
     const { os } = await cenario()
     const { parcelarRecebimento } = await acao()
-    await parcelarRecebimento(os.id, 500, 3, 30, true)
+    await parcelarRecebimento(os.id, plano(500, 3, 30, true))
 
     const f = await financeiro()
 
@@ -298,7 +326,7 @@ describe("as parcelas aparecem no FINANCEIRO", () => {
   it("cada linha diz qual parcela é, para o dono conferir na tela", async () => {
     const { os } = await cenario()
     const { parcelarRecebimento } = await acao()
-    await parcelarRecebimento(os.id, 500, 3, 30, true)
+    await parcelarRecebimento(os.id, plano(500, 3, 30, true))
 
     const f = await financeiro()
 
@@ -313,7 +341,7 @@ describe("as parcelas aparecem no FINANCEIRO", () => {
     // combinou pagar hoje.
     const { os } = await cenario()
     const { parcelarRecebimento } = await acao()
-    await parcelarRecebimento(os.id, 500, 3, 30, true)
+    await parcelarRecebimento(os.id, plano(500, 3, 30, true))
 
     const f = await financeiro()
 
@@ -322,5 +350,58 @@ describe("as parcelas aparecem no FINANCEIRO", () => {
       .map((r) => Math.round((r.dueDate.getTime() - execucao.getTime()) / dia))
       .sort((a, b) => a - b)
     expect(vencimentos).toEqual([30, 60, 90])
+  })
+})
+
+describe("qualquer data combinada", () => {
+  // "a empresa combina qualquer data combinada para o pagamento."
+  it("aceita valores e datas irregulares que somam o serviço", async () => {
+    // R$ 500 à vista, R$ 800 no dia 35, R$ 700 no dia 54. Nada disso é
+    // intervalo fixo nem parcela igual.
+    const { os } = await cenario()
+    const { parcelarRecebimento } = await acao()
+
+    const r = await parcelarRecebimento(os.id, [
+      { valor: 500, vencimento: execucao.toISOString(), recebida: true },
+      { valor: 800, vencimento: new Date(execucao.getTime() + 35 * dia).toISOString() },
+      { valor: 700, vencimento: new Date(execucao.getTime() + 54 * dia).toISOString() },
+    ])
+
+    expect(r.ok).toBe(true)
+    const linhas = await recebimentos(os.id)
+    expect(linhas.map((l) => Number(l.amount))).toEqual([500, 800, 700])
+    expect(linhas.map((l) => Math.round((l.dueDate.getTime() - execucao.getTime()) / dia))).toEqual([
+      0, 35, 54,
+    ])
+    // A que vence no dia da execução é a entrada; as outras contam entre elas.
+    expect(linhas[0].description).toContain("entrada")
+    expect(linhas[1].description).toContain("1/2")
+    expect(linhas[2].description).toContain("2/2")
+  })
+
+  it("e mesmo assim a competência de TODAS é a execução", async () => {
+    const { os } = await cenario()
+    const { parcelarRecebimento } = await acao()
+
+    await parcelarRecebimento(os.id, [
+      { valor: 900, vencimento: new Date(execucao.getTime() + 12 * dia).toISOString() },
+      { valor: 1100, vencimento: new Date(execucao.getTime() + 47 * dia).toISOString() },
+    ])
+
+    for (const l of await recebimentos(os.id)) {
+      expect(l.accrualDate?.getTime()).toBe(execucao.getTime())
+    }
+  })
+
+  it("vencimento anterior à execução é recusado", async () => {
+    const { os } = await cenario()
+    const { parcelarRecebimento } = await acao()
+
+    const r = await parcelarRecebimento(os.id, [
+      { valor: 2000, vencimento: new Date(execucao.getTime() - 10 * dia).toISOString() },
+    ])
+
+    expect(r.erro).toBe("dataInvalida")
+    expect(await recebimentos(os.id)).toHaveLength(1)
   })
 })
