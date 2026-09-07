@@ -2313,6 +2313,11 @@
       "copied": "Copiado!",
       "receiver": "Recebedor",
       "openAmount": "O valor não está definido no código — digite no seu aplicativo."
+    },
+    "parcelas": {
+      "title": "Parcelas combinadas",
+      "paga": "paga",
+      "emAberto": "Em aberto: {total}"
     }
   },
   "primeirosPassos": {
@@ -2989,6 +2994,14 @@
         "venceu": "Conta vencida — {empresa}",
         "insistente": "Conta em aberto — {empresa}",
         "final": "Conta em aberto — {empresa}"
+      },
+      "linhaDaLista": "• {descricao} — {valor}, vencimento {vencimento}",
+      "totalEmAberto": "Total em aberto: {total}",
+      "agrupado": {
+        "lembrete": "{empresa}: você tem {n} contas com vencimento próximo.",
+        "venceu": "{empresa}: você tem {n} contas em aberto.",
+        "insistente": "{empresa}: você tem {n} contas em aberto e vencidas.",
+        "final": "{empresa}: constam {n} contas em aberto e vencidas há bastante tempo."
       }
     }
   },

@@ -6,12 +6,17 @@ import { sendDunningEmail } from "@/lib/resend"
 import { hasActiveSubscription } from "@/lib/auth"
 import { temRecurso } from "@/lib/plan"
 import { quemPaga } from "@/lib/subcliente"
+import { emailDaEmpresa, urlPublica } from "@/lib/envio-db"
 import {
+  agruparPorPagador,
+  type ContaParaCobrar,
+  type GrupoDeCobranca,
   canaisDaCobranca,
   decidirCobranca,
   DEGRAUS_DA_REGUA,
   diasDesdeVencimento,
   lerRegua,
+  textoAgrupado,
   textoDaCobranca,
 } from "@/lib/regua-cobranca"
 
@@ -116,6 +121,10 @@ export async function cobrarVencidas(agora: Date): Promise<ResultadoDaRegua> {
           amount: true,
           dueDate: true,
           remindersSent: true,
+          // Ha quantos dias a conta EXISTE. Uma conta pode nascer ja vencida
+          // (faturar grava dueDate de hoje; parcelar usa a data da execucao), e
+          // sem isto a primeira mensagem sairia no tom mais duro da escada.
+          createdAt: true,
           // Revenue não tem cliente próprio: quem se cobra vem da OS que
           // gerou a receita. Receita lançada à mão (sem OS) não tem a quem
           // cobrar, e a régua a ignora — ver `destinatario`.
@@ -127,6 +136,8 @@ export async function cobrarVencidas(agora: Date): Promise<ResultadoDaRegua> {
           order: {
             select: {
               payerId: true,
+              // O token do portal publico: e o "onde clicar" da mensagem.
+              clientToken: true,
               client: {
                 select: {
                   id: true,
@@ -144,35 +155,72 @@ export async function cobrarVencidas(agora: Date): Promise<ResultadoDaRegua> {
         },
       })
 
-      for (const conta of contas) {
+      // ─── Agrupa por QUEM PAGA antes de decidir ──────────────────────────
+      //
+      // Um serviço parcelado em três, todo vencido, disparava TRÊS mensagens
+      // quase idênticas no mesmo minuto para o mesmo WhatsApp. E a coincidência
+      // é a regra: os prazos que a tela de parcelamento sugere (7, 15, 30)
+      // batem com os degraus da régua (1, 7, 15, 30).
+      //
+      // Três mensagens seguidas não cobram melhor — fazem o cliente silenciar o
+      // número, e podem derrubar a conta de WhatsApp da empresa.
+      const comPagador = contas
+        .map((c) => {
+          const alvo = destinatario(c)
+          return alvo
+            ? {
+                id: c.id,
+                valor: Number(c.amount),
+                vencimento: c.dueDate,
+                descricao: c.description,
+                jaEnviadas: c.remindersSent,
+                idadeEmDias: diasDesdeVencimento(c.createdAt, agora),
+                pagadorId: alvo.id,
+                conta: c,
+                alvo,
+              }
+            : null
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null)
+
+      for (const grupo of agruparPorPagador(comPagador)) {
         if (resultado.enviadas >= MAX_POR_EXECUCAO) break
 
         const decisao = decidirCobranca({
-          dias: diasDesdeVencimento(conta.dueDate, agora),
-          jaEnviadas: conta.remindersSent,
+          // O TOM e o degrau saem da conta MAIS ATRASADA do grupo: uma dívida
+          // com parcela vencida há trinta dias não vira lembrete gentil porque
+          // há outra vencendo amanhã.
+          dias: diasDesdeVencimento(grupo.principal.vencimento, agora),
+          jaEnviadas: grupo.principal.jaEnviadas,
           paga: false,
-          valor: Number(conta.amount),
+          // O mínimo passa a valer contra o que a pessoa DEVE, e não contra a
+          // linha. Mínimo de R$ 300 com um serviço de R$ 2.000 em dez vezes de
+          // R$ 200 silenciava a dívida inteira.
+          valor: grupo.total,
           config,
+          idadeEmDias: grupo.principal.idadeEmDias,
         })
 
-        // Grava o contador mesmo quando NÃO envia. `decidirCobranca` devolve
-        // sempre o total certo, inclusive nos caminhos silenciosos (degrau
-        // desligado, vencimento renegociado) — e é isso que faz a régua andar
-        // sem depender de a mensagem ter saído.
-        if (decisao.total !== conta.remindersSent) {
-          await prisma.revenue.update({
-            where: { id: conta.id },
-            data: { remindersSent: decisao.total },
-          })
+        // Grava o contador em TODAS as contas do grupo, mesmo quando não envia.
+        // `decidirCobranca` devolve sempre o total certo, inclusive nos
+        // caminhos silenciosos (degrau desligado, vencimento renegociado) — e é
+        // isso que faz a régua andar sem depender de a mensagem ter saído.
+        for (const c of grupo.contas) {
+          if (decisao.total !== c.jaEnviadas) {
+            await prisma.revenue.update({
+              where: { id: c.id },
+              data: { remindersSent: decisao.total },
+            })
+          }
         }
 
         if (!decisao.enviar || !decisao.tom) continue
 
         try {
-          const foi = await mandar(conta, empresa, config, decisao.tom)
+          const foi = await mandar(grupo, empresa, config, decisao.tom)
           if (foi) resultado.enviadas++
         } catch (err) {
-          console.error(`[régua] falhou na receita ${conta.id}:`, err)
+          console.error(`[régua] falhou no pagador ${grupo.pagadorId}:`, err)
           resultado.erros++
         }
       }
@@ -199,6 +247,7 @@ function limiteDaJanela(agora: Date): Date {
 }
 
 type Empresa = {
+  id: string
   name: string
   locale: string
   zapiInstance: string | null
@@ -207,12 +256,20 @@ type Empresa = {
 
 type Contato = { whatsapp: string | null; phone: string | null; email: string | null }
 
+/** Uma conta pronta para agrupar, carregando a linha do banco e quem paga. */
+type ContaComAlvo = ContaParaCobrar & {
+  conta: Conta
+  alvo: Contato & { id: string }
+}
+
 type Conta = {
   description: string
   amount: Prisma.Decimal
   dueDate: Date
   order: {
     payerId: string | null
+    /** O token do portal publico: o "onde clicar" da mensagem de cobranca. */
+    clientToken: string | null
     client: (Contato & { id: string; parentId: string | null; parent: (Contato & { id: string }) | null }) | null
   } | null
 }
@@ -227,7 +284,7 @@ type Conta = {
  *
  * `null` quando não há a quem cobrar: receita lançada à mão, sem OS.
  */
-function destinatario(conta: Conta): Contato | null {
+function destinatario(conta: Conta): (Contato & { id: string }) | null {
   const cliente = conta.order?.client
   if (!cliente) return null
 
@@ -240,13 +297,14 @@ function destinatario(conta: Conta): Contato | null {
 
 /** Manda por onde der. `false` quando não havia canal aberto. */
 async function mandar(
-  conta: Conta,
+  grupo: GrupoDeCobranca<ContaComAlvo>,
   empresa: Empresa,
   config: ReturnType<typeof lerRegua>,
   tom: NonNullable<ReturnType<typeof decidirCobranca>["tom"]>
 ): Promise<boolean> {
-  const alvo = destinatario(conta)
-  if (!alvo) return false
+  // Todas as contas do grupo tem o MESMO pagador — e agrupar por pagador e
+  // exatamente o que garante isso.
+  const alvo = grupo.principal.alvo
 
   const numero = alvo.whatsapp || alvo.phone
   const canais = canaisDaCobranca(config, {
@@ -260,25 +318,60 @@ async function mandar(
   const t = getTranslator(locale, "whatsapp")
   const moeda = locale === "en" ? "USD" : "BRL"
 
-  const texto = textoDaCobranca(
-    tom,
-    {
-      empresa: empresa.name,
-      descricao: conta.description,
-      valor: new Intl.NumberFormat(locale === "en" ? "en-US" : "pt-BR", {
-        style: "currency",
-        currency: moeda,
-      }).format(Number(conta.amount)),
-      // Data no fuso de quem lê. Sem `timeZone`, um vencimento gravado como
-      // meia-noite UTC vira o dia anterior em Brasília — e a mensagem cobraria
-      // uma data um dia diferente da que está na tela do sistema.
-      vencimento: new Intl.DateTimeFormat(locale === "en" ? "en-US" : "pt-BR", {
-        dateStyle: "short",
-        timeZone: locale === "en" ? "UTC" : "America/Sao_Paulo",
-      }).format(conta.dueDate),
-    },
-    (chave, vals) => t(chave as "reguaCobranca.lembrete", vals)
-  )
+  const dinheiro = (v: number) =>
+    new Intl.NumberFormat(locale === "en" ? "en-US" : "pt-BR", {
+      style: "currency",
+      currency: moeda,
+    }).format(v)
+
+  // Data no fuso de quem lê. Sem `timeZone`, um vencimento gravado como
+  // meia-noite UTC vira o dia anterior em Brasília — e a mensagem cobraria uma
+  // data um dia diferente da que está na tela do sistema.
+  const dataDe = (d: Date) =>
+    new Intl.DateTimeFormat(locale === "en" ? "en-US" : "pt-BR", {
+      dateStyle: "short",
+      timeZone: locale === "en" ? "UTC" : "America/Sao_Paulo",
+    }).format(d)
+
+  // O LINK do portal do cliente.
+  //
+  // `textoDaCobranca` aceitava `portalUrl` e montava a linha "Detalhes: <url>"
+  // desde que foi escrita — e ninguém nunca passava o campo. A chave de tradução
+  // existia, a linha existia, e o cliente recebia "venceu R$ 500" sem ter para
+  // onde clicar. É a diferença entre avisar e cobrar.
+  const token = grupo.principal.conta.order?.clientToken
+  const portalUrl = token ? `${urlPublica()}/p/${token}` : null
+
+  const traduz = (chave: string, vals?: Record<string, string>) =>
+    t(chave as "reguaCobranca.lembrete", vals)
+
+  const texto =
+    grupo.contas.length > 1
+      ? textoAgrupado(
+          tom,
+          {
+            empresa: empresa.name,
+            linhas: grupo.contas.map((c) => ({
+              descricao: c.descricao,
+              valor: dinheiro(c.valor),
+              vencimento: dataDe(c.vencimento),
+            })),
+            total: dinheiro(grupo.total),
+            portalUrl,
+          },
+          traduz
+        )
+      : textoDaCobranca(
+          tom,
+          {
+            empresa: empresa.name,
+            descricao: grupo.principal.descricao,
+            valor: dinheiro(grupo.principal.valor),
+            vencimento: dataDe(grupo.principal.vencimento),
+            portalUrl,
+          },
+          traduz
+        )
 
   const assunto = `${empresa.name} — ${t(`reguaCobranca.assunto.${tom}` as "reguaCobranca.assunto.lembrete")}`
 
@@ -289,7 +382,10 @@ async function mandar(
       ? sendWhatsApp(empresa.zapiInstance!, empresa.zapiToken!, numero, texto)
       : Promise.resolve(false),
     canais.email && alvo.email
-      ? sendDunningEmail(alvo.email, empresa.name, assunto, texto)
+      ? // A RESPOSTA do cliente vai para a empresa, e não para o suporte do
+        // ServiçoOS. Quem responde "já paguei, segue o comprovante" precisa
+        // chegar em quem dá a baixa.
+        sendDunningEmail(alvo.email, empresa.name, assunto, texto, await emailDaEmpresa(empresa.id))
       : Promise.resolve(false),
   ])
 

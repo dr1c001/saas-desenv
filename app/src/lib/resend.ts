@@ -417,9 +417,15 @@ export async function sendDunningEmail(
   to: string,
   companyName: string,
   subject: string,
-  texto: string
+  texto: string,
+  // Para onde vai a RESPOSTA do cliente.
+  //
+  // Cobrança é a mensagem que MAIS gera resposta: "já paguei, segue o
+  // comprovante", "posso pagar dia 20?". Com o padrão, tudo isso caía no
+  // suporte do ServiçoOS em vez de chegar em quem dá a baixa.
+  responderPara?: string | null
 ) {
-  return emailEmNomeDaEmpresa(to, companyName, subject, texto)
+  return emailEmNomeDaEmpresa(to, companyName, subject, texto, responderPara)
 }
 
 /**

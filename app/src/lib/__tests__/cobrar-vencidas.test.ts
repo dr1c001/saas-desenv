@@ -61,6 +61,10 @@ async function empresaComRegua(config: object = { ...REGUA_PADRAO, ativo: true }
 async function contaDe(
   tenantId: string,
   opcoes: {
+    /** Quando a conta foi lancada. Por padrao, na data do vencimento. */
+    criadaEm?: Date
+    /** Reaproveita um cliente ja criado, para as contas cairem no mesmo pagador. */
+    clienteExistente?: string
     diasAtras: number
     status?: "PENDING" | "PAID" | "OVERDUE"
     paidAt?: Date | null
@@ -72,15 +76,17 @@ async function contaDe(
     semOs?: boolean
   }
 ) {
-  const cliente = await testDb.db.client.create({
-    data: {
-      tenantId,
-      name: "Condomínio Aurora",
-      email: opcoes.clienteEmail === undefined ? "aurora@ex.com" : opcoes.clienteEmail,
-      whatsapp: "11988887777",
-      parentId: opcoes.parentId ?? null,
-    },
-  })
+  const cliente = opcoes.clienteExistente
+    ? (await testDb.db.client.findUnique({ where: { id: opcoes.clienteExistente } }))!
+    : await testDb.db.client.create({
+        data: {
+          tenantId,
+          name: "Condomínio Aurora",
+          email: opcoes.clienteEmail === undefined ? "aurora@ex.com" : opcoes.clienteEmail,
+          whatsapp: "11988887777",
+          parentId: opcoes.parentId ?? null,
+        },
+      })
 
   let orderId: string | null = null
   if (!opcoes.semOs) {
@@ -106,6 +112,14 @@ async function contaDe(
       status: opcoes.status ?? "PENDING",
       paidAt: opcoes.paidAt ?? null,
       remindersSent: opcoes.remindersSent ?? 0,
+      // A conta EXISTE desde o vencimento, e nao desde agora.
+      //
+      // E o que acontece em producao: faturar uma OS grava a receita com
+      // vencimento de hoje, entao uma conta vencida ha sete dias tem sete dias
+      // de idade. Sem isto a fixture criaria uma conta impossivel — nascida
+      // agora, ja vencida ha uma semana — e a regua a trataria como o caso
+      // novo que ela virou: "nao esta mais atrasada do que existe".
+      createdAt: opcoes.criadaEm ?? vencimento(opcoes.diasAtras),
     },
   })
   return { cliente, receita }
@@ -448,5 +462,66 @@ describe("uma empresa não cobra pela outra", () => {
 
     expect(mockWhats).toHaveBeenCalledTimes(1)
     expect((await releu(daOutra.receita.id))!.remindersSent).toBe(0)
+  })
+})
+
+describe("três parcelas vencidas viram UMA mensagem", () => {
+  // "a empresa fez um serviço, parcelou, o cliente não pagou." Um 3x todo
+  // vencido disparava três mensagens quase idênticas no mesmo minuto para o
+  // mesmo WhatsApp — e a coincidência é a regra, não a exceção: os prazos que a
+  // tela de parcelamento sugere (7, 15, 30) batem com os degraus (1, 7, 15, 30).
+  //
+  // Três mensagens seguidas não cobram melhor: fazem o cliente silenciar o
+  // número, e podem derrubar a conta de WhatsApp da empresa.
+
+  it("uma mensagem só, listando as parcelas e o total", async () => {
+    const empresa = await empresaComRegua()
+    const { cliente } = await contaDe(empresa.id, { diasAtras: 30, amount: 500 })
+    await contaDe(empresa.id, { diasAtras: 23, amount: 500, clienteExistente: cliente.id })
+    await contaDe(empresa.id, { diasAtras: 16, amount: 500, clienteExistente: cliente.id })
+
+    const r = await rodar(HOJE)
+
+    expect(r.enviadas).toBe(1)
+    expect(mockWhats).toHaveBeenCalledTimes(1)
+    const texto = mockWhats.mock.calls[0][3] as string
+    // O total é o número que faz o cliente resolver — três mensagens de R$ 500
+    // escondem que a dívida é de R$ 1.500.
+    expect(texto).toContain("1.500")
+  })
+
+  it("mas o contador anda em TODAS as parcelas do grupo", async () => {
+    // Senão a segunda rodada acharia que as outras duas nunca foram cobradas.
+    const empresa = await empresaComRegua()
+    const { cliente, receita } = await contaDe(empresa.id, { diasAtras: 30 })
+    const outra = await contaDe(empresa.id, { diasAtras: 23, clienteExistente: cliente.id })
+
+    await rodar(HOJE)
+
+    expect((await releu(receita.id))!.remindersSent).toBeGreaterThan(0)
+    expect((await releu(outra.receita.id))!.remindersSent).toBeGreaterThan(0)
+  })
+
+  it("clientes DIFERENTES continuam recebendo cada um a sua", async () => {
+    const empresa = await empresaComRegua()
+    await contaDe(empresa.id, { diasAtras: 30 })
+    await contaDe(empresa.id, { diasAtras: 30 })
+
+    const r = await rodar(HOJE)
+
+    expect(r.enviadas).toBe(2)
+  })
+
+  it("a mensagem leva o LINK do portal do cliente", async () => {
+    // A linha "Detalhes: <url>" existia no código desde sempre e ninguém
+    // passava o campo. O cliente lia "venceu R$ 500" e não tinha onde clicar —
+    // é a diferença entre avisar e cobrar.
+    const empresa = await empresaComRegua()
+    await contaDe(empresa.id, { diasAtras: 7 })
+
+    await rodar(HOJE)
+
+    const texto = mockWhats.mock.calls[0][3] as string
+    expect(texto).toContain("/p/")
   })
 })

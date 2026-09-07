@@ -47,6 +47,13 @@ export default async function ClientPortalPage({
       },
       client: { select: { name: true } },
       technician: { select: { name: true } },
+      // As parcelas combinadas. Sem elas o portal cobraria o valor CHEIO de um
+      // serviço parcelado — o cliente que combinou pagar R$ 500 abriria o link
+      // e veria um QR de R$ 2.000.
+      revenues: {
+        select: { id: true, description: true, amount: true, dueDate: true, status: true },
+        orderBy: { dueDate: "asc" },
+      },
     },
   })
 
@@ -81,7 +88,21 @@ export default async function ClientPortalPage({
   //
   // Cancelada nunca cobra. INVOICED continua cobrando: nota emitida não quer
   // dizer paga.
-  const totalPix = Number(order.totalAmount)
+  // ─── Quanto o cliente deve AGORA ───────────────────────────────────────────
+  //
+  // Sem parcelamento, é o total da OS — como sempre foi.
+  //
+  // COM parcelamento, é a soma do que ainda está em aberto. Cobrar o valor
+  // cheio de um serviço parcelado é pedir ao cliente um dinheiro que ele não
+  // combinou pagar hoje: ele paga a mais, ou desiste de pagar, e sobra acerto
+  // manual para os dois lados.
+  const parcelas = order.revenues
+  const emAberto = parcelas.filter((r) => r.status !== "PAID")
+  const totalPix =
+    parcelas.length > 0
+      ? emAberto.reduce((s, r) => s + Math.round(Number(r.amount) * 100), 0) / 100
+      : Number(order.totalAmount)
+
   const cobranca = isDone && totalPix > 0 ? cobrancaPix(order.tenant, totalPix, osNum) : null
 
   return (
@@ -168,6 +189,48 @@ export default async function ClientPortalPage({
                   </tr>
                 </tbody>
               </table>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* As PARCELAS combinadas, quando há. Vêm antes do PIX porque a
+            pergunta "quanto eu devo?" vem antes de "como pago?" — e sem esta
+            lista o cliente que combinou três vezes veria um valor só e não
+            saberia se é a parcela ou o total. */}
+        {parcelas.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t("parcelas.title")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1.5">
+              {parcelas.map((r) => (
+                <div key={r.id} className="flex items-center justify-between gap-3 text-sm">
+                  <span className={r.status === "PAID" ? "text-muted-foreground line-through" : ""}>
+                    {r.description}
+                  </span>
+                  <span className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-muted-foreground">
+                      {new Intl.DateTimeFormat(locale === "en" ? "en-US" : "pt-BR", {
+                        dateStyle: "short",
+                        timeZone: locale === "en" ? "UTC" : "America/Sao_Paulo",
+                      }).format(r.dueDate)}
+                    </span>
+                    <span className="font-medium tabular-nums">
+                      {formatCurrency(Number(r.amount))}
+                    </span>
+                    {r.status === "PAID" && (
+                      <span className="text-xs text-emerald-600">{t("parcelas.paga")}</span>
+                    )}
+                  </span>
+                </div>
+              ))}
+              {emAberto.length > 0 && emAberto.length < parcelas.length && (
+                <p className="border-t pt-1.5 text-sm font-semibold">
+                  {t("parcelas.emAberto", { total: formatCurrency(totalPix) })}
+                </p>
+              )}
             </CardContent>
           </Card>
         )}

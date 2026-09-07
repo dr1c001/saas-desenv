@@ -2313,6 +2313,11 @@
       "copied": "Copied!",
       "receiver": "Receiver",
       "openAmount": "The amount is not set in the code — type it in your app."
+    },
+    "parcelas": {
+      "title": "Agreed instalments",
+      "paga": "paid",
+      "emAberto": "Outstanding: {total}"
     }
   },
   "primeirosPassos": {
@@ -2989,6 +2994,14 @@
         "venceu": "Payment overdue — {empresa}",
         "insistente": "Outstanding balance — {empresa}",
         "final": "Outstanding balance — {empresa}"
+      },
+      "linhaDaLista": "• {descricao} — {valor}, due {vencimento}",
+      "totalEmAberto": "Total outstanding: {total}",
+      "agrupado": {
+        "lembrete": "{empresa}: you have {n} bills coming due.",
+        "venceu": "{empresa}: you have {n} outstanding bills.",
+        "insistente": "{empresa}: you have {n} bills outstanding and overdue.",
+        "final": "{empresa}: {n} bills remain outstanding and long overdue."
       }
     }
   },

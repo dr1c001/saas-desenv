@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { reconciliarComissao } from "@/lib/comissao-db"
+import { formatOsNumber } from "@/lib/utils"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { requireCotaDeNfse, requireRecurso } from "@/lib/plan"
 import { nfeio } from "@/lib/nfeio"
@@ -179,6 +180,38 @@ export async function emitNfse(orderId: string) {
       status: "INVOICED",
     },
   })
+
+  // ─── A conta a RECEBER ─────────────────────────────────────────────────────
+  //
+  // Emitir a nota deixava a OS FATURADA e nao criava receita nenhuma. E os
+  // outros dois caminhos de faturamento nao consertam depois: `updateOrderStatus`
+  // recusa OS que ja esta INVOICED, entao a receita nunca mais nascia.
+  //
+  // O resultado era o pior possivel: nota fiscal emitida de verdade, documento
+  // na mao do cliente, e o servico invisivel no contas a receber — logo, mudo
+  // para a regua de cobranca. O servico mais real que existe era justamente o
+  // unico que ninguem cobrava.
+  //
+  // Idempotente pelo mesmo molde dos outros dois: consulta antes de criar. Duas
+  // emissoes na mesma OS nao podem virar duas cobrancas.
+  if (Number(order.totalAmount) > 0) {
+    const jaTem = await prisma.revenue.findFirst({ where: { orderId, tenantId } })
+    if (!jaTem) {
+      await prisma.revenue.create({
+        data: {
+          tenantId,
+          orderId,
+          branchId: order.branchId,
+          description: `${formatOsNumber(order.number, order.createdAt)} — ${order.title}`,
+          amount: order.totalAmount,
+          dueDate: new Date(),
+          // Competencia na CONCLUSAO: o servico foi entregue naquele mes, e o
+          // resultado e dele — mesmo que a nota so saia depois.
+          accrualDate: order.concludedAt ?? order.createdAt,
+        },
+      })
+    }
+  }
 
   // A OS acabou de virar FATURADA por um caminho que nao passa por
   // updateOrderStatus nem por completeServiceOrder. Sem esta linha, faturar

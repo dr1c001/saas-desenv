@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest"
 import {
+  DEGRAUS_DA_REGUA,
+  REGUA_PADRAO,
+  agruparPorPagador,
   canaisDaCobranca,
   decidirCobranca,
-  DEGRAUS_DA_REGUA,
   diasDesdeVencimento,
   lerRegua,
-  REGUA_PADRAO,
+  textoAgrupado,
   tomDoDegrau,
   type ConfigRegua,
 } from "@/lib/regua-cobranca"
@@ -314,5 +316,194 @@ describe("leitura do que está gravado", () => {
     expect(lerRegua({ valorMinimo: "abc" }).valorMinimo).toBe(0)
     expect(lerRegua({ valorMinimo: -50 }).valorMinimo).toBe(0)
     expect(lerRegua({ valorMinimo: 100 }).valorMinimo).toBe(100)
+  })
+})
+
+describe("a conta não está mais atrasada do que existe", () => {
+  // O defeito: uma conta pode NASCER vencida, e nasce o tempo todo. Parcelar
+  // uma OS concluída há quarenta dias cria a entrada vencendo na execução.
+  //
+  // Sem o limite, a PRIMEIRA mensagem que aquele cliente recebe na vida sai no
+  // degrau 30 — "conta em aberto", o tom mais duro — para quem nunca foi
+  // avisado de nada. Não cobra de menos: cobra MAL, e com o cliente certo.
+  const config = { ...REGUA_PADRAO, ativo: true }
+
+  it("parcela criada hoje, vencida há 40 dias, começa no PRIMEIRO degrau", () => {
+    const d = decidirCobranca({
+      dias: 40,
+      jaEnviadas: 0,
+      paga: false,
+      valor: 500,
+      config,
+      idadeEmDias: 0,
+    })
+
+    expect(d.total).toBe(1)
+    expect(d.degrau).toBe(DEGRAUS_DA_REGUA[0])
+    expect(d.tom).toBe("lembrete")
+  })
+
+  it("no dia seguinte ela anda UM degrau, e não a escada toda", () => {
+    const d = decidirCobranca({
+      dias: 41,
+      jaEnviadas: 1,
+      paga: false,
+      valor: 500,
+      config,
+      idadeEmDias: 1,
+    })
+
+    expect(d.total).toBe(2)
+    expect(d.degrau).toBe(1)
+  })
+
+  it("mas a conta ANTIGA de verdade continua pulando para o degrau certo", () => {
+    // O cron ficou dias fora do ar. A conta existe há 40 dias e está vencida há
+    // 40: aqui o salto é correto, e mandar a escada inteira seria pior.
+    const d = decidirCobranca({
+      dias: 40,
+      jaEnviadas: 0,
+      paga: false,
+      valor: 500,
+      config,
+      idadeEmDias: 40,
+    })
+
+    expect(d.total).toBe(5)
+    expect(d.degrau).toBe(30)
+  })
+
+  it("sem a idade informada, nada muda", () => {
+    // A regra antiga continua valendo para quem não passa o campo — é o que
+    // permitiu ligar isto sem reescrever os chamadores todos de uma vez.
+    const d = decidirCobranca({ dias: 40, jaEnviadas: 0, paga: false, valor: 500, config })
+    expect(d.total).toBe(5)
+  })
+
+  it("rodar DUAS VEZES no mesmo dia continua dando o mesmo degrau", () => {
+    // A régua anda pelo CALENDÁRIO, e não por execução do cron. A primeira
+    // versão desta regra limitava a `jaEnviadas + 1` e fazia a escada andar um
+    // degrau por RODADA — duas rodadas no mesmo dia mandavam duas mensagens.
+    const primeira = decidirCobranca({
+      dias: 40, jaEnviadas: 0, paga: false, valor: 500, config, idadeEmDias: 0,
+    })
+    const segunda = decidirCobranca({
+      dias: 40, jaEnviadas: primeira.total, paga: false, valor: 500, config, idadeEmDias: 0,
+    })
+
+    expect(primeira.enviar).toBe(true)
+    expect(segunda.enviar).toBe(false)
+    expect(segunda.total).toBe(primeira.total)
+  })
+})
+
+describe("agrupar por quem paga", () => {
+  const conta = (id: string, pagadorId: string, dias: number, valor = 500) => ({
+    id,
+    valor,
+    vencimento: new Date(2026, 8, 10 + dias),
+    descricao: `OS20260042 (${id})`,
+    jaEnviadas: 0,
+    idadeEmDias: 30,
+    pagadorId,
+  })
+
+  it("três parcelas do mesmo pagador viram UM grupo", () => {
+    // Sem isto, um 3x vencido dispara três mensagens quase idênticas no mesmo
+    // minuto para o mesmo WhatsApp — e a coincidência é a regra: os prazos que
+    // a tela de parcelamento sugere (7, 15, 30) batem com os degraus (1, 7,
+    // 15, 30).
+    const g = agruparPorPagador([conta("a", "p1", 0), conta("b", "p1", 7), conta("c", "p1", 14)])
+
+    expect(g).toHaveLength(1)
+    expect(g[0].contas).toHaveLength(3)
+    expect(g[0].total).toBe(1500)
+  })
+
+  it("o TOM sai da conta mais atrasada", () => {
+    // Uma dívida com parcela vencida há trinta dias não vira lembrete gentil
+    // porque há outra vencendo amanhã.
+    const g = agruparPorPagador([conta("nova", "p1", 20), conta("velha", "p1", 0)])
+    expect(g[0].principal.id).toBe("velha")
+  })
+
+  it("pagadores diferentes NÃO se misturam", () => {
+    const g = agruparPorPagador([conta("a", "p1", 0), conta("b", "p2", 0)])
+    expect(g).toHaveLength(2)
+  })
+
+  it("os grupos saem do mais antigo para o mais novo", () => {
+    // É a ordem em que a empresa cobra, e a que importa quando o teto do cron
+    // corta a fila no meio.
+    const g = agruparPorPagador([conta("a", "p1", 20), conta("b", "p2", 0)])
+    expect(g.map((x) => x.pagadorId)).toEqual(["p2", "p1"])
+  })
+
+  it("o total soma em centavos, sem sobra binária", () => {
+    const g = agruparPorPagador([conta("a", "p1", 0, 0.1), conta("b", "p1", 1, 0.2)])
+    expect(g[0].total).toBe(0.3)
+  })
+
+  it("o mínimo passa a valer contra a DÍVIDA, e não contra a linha", () => {
+    // Empresa com mínimo de R$ 300 e serviço de R$ 2.000 em dez vezes de
+    // R$ 200 deixava de cobrar TODAS as parcelas — dívida de dois mil reais,
+    // silêncio total.
+    const config = { ...REGUA_PADRAO, ativo: true, valorMinimo: 300 }
+    const g = agruparPorPagador(Array.from({ length: 10 }, (_, i) => conta(`p${i}`, "p1", 0, 200)))
+
+    expect(g[0].total).toBe(2000)
+    const d = decidirCobranca({
+      dias: 1, jaEnviadas: 0, paga: false, valor: g[0].total, config, idadeEmDias: 30,
+    })
+    expect(d.enviar).toBe(true)
+
+    // E a linha sozinha continuaria sendo silenciada, que era o defeito.
+    const linha = decidirCobranca({
+      dias: 1, jaEnviadas: 0, paga: false, valor: 200, config, idadeEmDias: 30,
+    })
+    expect(linha.enviar).toBe(false)
+  })
+})
+
+describe("o texto com várias parcelas", () => {
+  const t = (chave: string, vals?: Record<string, string>) =>
+    vals ? `${chave}:${JSON.stringify(vals)}` : chave
+
+  it("lista as parcelas E diz o total em aberto", () => {
+    // Mandar três mensagens de R$ 500 esconde que a dívida é de R$ 1.500 — que
+    // é justamente o número que faz o cliente resolver.
+    const texto = textoAgrupado(
+      "venceu",
+      {
+        empresa: "Polar Clima",
+        linhas: [
+          { descricao: "OS20260042 (1/3)", valor: "R$ 500,00", vencimento: "10/09/2026" },
+          { descricao: "OS20260042 (2/3)", valor: "R$ 500,00", vencimento: "17/09/2026" },
+        ],
+        total: "R$ 1.000,00",
+      },
+      t
+    )
+
+    expect(texto).toContain("1/3")
+    expect(texto).toContain("2/3")
+    expect(texto).toContain("totalEmAberto")
+    expect(texto).toContain("R$ 1.000,00")
+    // O perdão continua em toda mensagem: baixa de pagamento atrasa.
+    expect(texto).toContain("desconsidere")
+  })
+
+  it("leva o LINK do portal quando há", () => {
+    // A linha "Detalhes: <url>" existia no código desde sempre e ninguém
+    // passava o campo — o cliente lia "venceu R$ 500" e não tinha onde clicar.
+    const comLink = textoAgrupado(
+      "venceu",
+      { empresa: "X", linhas: [], total: "R$ 0,00", portalUrl: "https://x/p/tok" },
+      t
+    )
+    expect(comLink).toContain("https://x/p/tok")
+
+    const semLink = textoAgrupado("venceu", { empresa: "X", linhas: [], total: "R$ 0,00" }, t)
+    expect(semLink).not.toContain("detalhes")
   })
 })
