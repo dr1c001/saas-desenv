@@ -3592,5 +3592,29 @@
       "naoAssinada": "The order must be completed and signed by the client before sending.",
       "falhaNoEnvio": "Couldn't send the e-mail right now. Try again in a few minutes."
     }
+  },
+  "parcelamento": {
+    "botao": "Split payment",
+    "titulo": "How the client will pay",
+    "subtitulo": "Service of {total}, performed on {data}. Terms are counted from that date.",
+    "entrada": "Down payment",
+    "parcelas": "Instalments",
+    "prazo": "Days between instalments",
+    "dias": "{n} days",
+    "entradaRecebida": "Down payment already received",
+    "rotuloEntrada": "Down payment",
+    "rotuloParcela": "Instalment {r}",
+    "confirmar": "Save plan",
+    "erros": {
+      "semPermissao": "You don't have permission to change receivables.",
+      "naoEncontrada": "Order not found.",
+      "jaTemRecebimento": "This order already has a received instalment. Redoing the plan over money that came in has to be sorted out by hand.",
+      "totalInvalido": "This order has no amount to split.",
+      "entradaNegativa": "The down payment can't be negative.",
+      "entradaMaiorQueTotal": "The down payment is larger than the service amount.",
+      "semSaldoAParcelar": "The down payment covers the whole service — nothing left to split.",
+      "parcelasInvalidas": "Enter 1 to 24 instalments.",
+      "prazoInvalido": "Enter a term of 1 to 365 days."
+    }
   }
 }

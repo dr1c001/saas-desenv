@@ -652,6 +652,9 @@ export async function getServiceOrder(id: string) {
         take: 1,
       },
       checklist: { orderBy: { position: "asc" } },
+      // Os recebimentos, para a tela saber se ainda da para montar um plano de
+      // parcelas: dinheiro que ja entrou nao se refaz.
+      revenues: { select: { id: true, status: true } },
     },
   })
 }

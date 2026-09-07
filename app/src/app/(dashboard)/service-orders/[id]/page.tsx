@@ -17,6 +17,7 @@ import { historicoDaOs } from "@/lib/historico-os-db"
 import { HistoricoOs } from "@/components/service-orders/historico-os"
 import { WhatsAppButton } from "@/components/service-orders/whatsapp-button"
 import { EnviarPorEmail } from "@/components/shared/enviar-por-email"
+import { ParcelarDialog } from "@/components/service-orders/parcelar-dialog"
 import { enviarOsPorEmail } from "@/actions/service-orders"
 import { osPodeSerEnviada } from "@/lib/envio-documento"
 import { Badge } from "@/components/ui/badge"
@@ -98,6 +99,16 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
             PDF
           </Link>
           <WhatsAppButton type="os" id={id} />
+          {/* "o cliente pediu prazo": entrada a vista mais saldo em 7/15/30
+              dias. So faz sentido depois de haver valor e conclusao. */}
+          {Number(os.totalAmount) > 0 && (os.status === "DONE" || os.status === "INVOICED") && (
+            <ParcelarDialog
+              orderId={id}
+              total={Number(os.totalAmount)}
+              execucao={(os.concludedAt ?? os.createdAt).toISOString()}
+              jaTemRecebimento={os.revenues.some((r) => r.status === "PAID")}
+            />
+          )}
           {/* "quando estiver completa e assinada, enviar direto por email do
               cliente". O botao aparece sempre, mas desligado com o motivo
               escrito quando a condicao nao foi cumprida — some-lo faria a

@@ -3592,5 +3592,29 @@
       "naoAssinada": "A OS precisa estar concluída e assinada pelo cliente antes de ser enviada.",
       "falhaNoEnvio": "Não foi possível enviar o e-mail agora. Tente novamente em alguns minutos."
     }
+  },
+  "parcelamento": {
+    "botao": "Parcelar recebimento",
+    "titulo": "Como o cliente vai pagar",
+    "subtitulo": "Serviço de {total}, executado em {data}. Os prazos são contados dessa data.",
+    "entrada": "Entrada à vista",
+    "parcelas": "Parcelas do saldo",
+    "prazo": "Prazo entre parcelas",
+    "dias": "{n} dias",
+    "entradaRecebida": "A entrada já foi recebida",
+    "rotuloEntrada": "Entrada",
+    "rotuloParcela": "Parcela {r}",
+    "confirmar": "Gravar plano",
+    "erros": {
+      "semPermissao": "Você não tem permissão para mexer no contas a receber.",
+      "naoEncontrada": "OS não encontrada.",
+      "jaTemRecebimento": "Já há parcela recebida nesta OS. Refazer o plano por cima de dinheiro que entrou tem de ser resolvido a mão.",
+      "totalInvalido": "Esta OS não tem valor para parcelar.",
+      "entradaNegativa": "A entrada não pode ser negativa.",
+      "entradaMaiorQueTotal": "A entrada é maior que o valor do serviço.",
+      "semSaldoAParcelar": "A entrada cobre o serviço inteiro — não sobra saldo para parcelar.",
+      "parcelasInvalidas": "Informe de 1 a 24 parcelas.",
+      "prazoInvalido": "Informe um prazo de 1 a 365 dias."
+    }
   }
 }
