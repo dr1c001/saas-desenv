@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { TrendingUp, TrendingDown, DollarSign } from "lucide-react"
 import { ExpenseDialog } from "@/components/finance/expense-dialog"
 import { BaseDaComissao } from "@/components/finance/base-comissao"
+import { PagarComissoes } from "@/components/finance/pagar-comissoes"
 import { PayButton } from "@/components/finance/pay-button"
 import { SearchBar } from "@/components/shared/search-bar"
 import { StatusFilter } from "@/components/shared/status-filter"
@@ -29,7 +30,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
 
   // Cada unidade fecha o mês dela. O que não tem filial (despesa da empresa)
   // entra em todas — ver lib/filial.ts.
-  const [{ revenues, expenses, monthlyRevenue, pendingRevenues, pendingExpenses, comissoes, baseDaComissao }, filiais] =
+  const [{ revenues, expenses, monthlyRevenue, pendingRevenues, pendingExpenses, comissoes, baseDaComissao, pagamentoEmLote }, filiais] =
     await Promise.all([getFinanceSummary(q, filial), filiaisAtivas()])
 
   const totalPendingRevenue = pendingRevenues.reduce((s, r) => s + Number(r.amount), 0)
@@ -112,7 +113,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
                 <p className="text-xs text-muted-foreground">{t("comissoes.explicacao")}</p>
               </div>
               {/* A configuracao mora aqui, ao lado dos numeros que ela muda. */}
-              <BaseDaComissao atual={baseDaComissao} />
+              <BaseDaComissao atual={baseDaComissao} emLote={pagamentoEmLote} />
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -124,6 +125,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
                     <th className="px-4 py-2 text-right font-medium">{t("comissoes.base")}</th>
                     <th className="px-4 py-2 text-right font-medium">{t("comissoes.imposto")}</th>
                     <th className="px-4 py-2 text-right font-medium">{t("comissoes.total")}</th>
+                    {pagamentoEmLote && <th className="px-4 py-2" />}
                   </tr>
                 </thead>
                 <tbody>
@@ -148,6 +150,18 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
                       <td className="px-4 py-2 text-right tabular-nums font-semibold">
                         {formatCurrency(c.total)}
                       </td>
+                      {/* Pagar as vinte de uma vez. Sem isto, o fechamento e
+                          oitenta cliques e o dono volta para o caderno. */}
+                      {pagamentoEmLote && (
+                        <td className="px-4 py-2">
+                          <PagarComissoes
+                            payeeId={c.payeeId}
+                            nome={c.nome}
+                            quantidade={c.quantidade}
+                            total={c.total}
+                          />
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

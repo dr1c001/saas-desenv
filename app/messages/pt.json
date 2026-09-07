@@ -1122,8 +1122,15 @@
       "baseMaoDeObra": "Só mão de obra",
       "erros": {
         "semPermissao": "Você não tem permissão para mudar isto.",
-        "baseInvalida": "Opção inválida."
-      }
+        "baseInvalida": "Opção inválida.",
+        "loteDesligado": "O pagamento em lote está desligado para esta empresa.",
+        "nadaAPagar": "Não há comissão pendente para esta pessoa."
+      },
+      "pagarTodas": "Pagar todas",
+      "confirmarPagamento": "Pagar {n} comissões da {nome}, {valor}?",
+      "confirmar": "Confirmar",
+      "cancelar": "Cancelar",
+      "pagarEmLoteLabel": "pagar em lote"
     },
     "receivables": {
       "title": "Contas a Receber",
@@ -2058,6 +2065,9 @@
     },
     "duvidaRespondida": {
       "title": "Sua dúvida foi respondida"
+    },
+    "comissaoDivergente": {
+      "title": "Comissão diferente do esperado"
     }
   },
   "offline": {

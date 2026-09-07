@@ -34,6 +34,7 @@ export type Evento =
   | "notaRejeitada"
   | "certificadoVencendo"
   | "duvidaRespondida"
+  | "comissaoDivergente"
 
 export type Definicao = {
   evento: Evento
@@ -59,6 +60,12 @@ export const EVENTOS: readonly Definicao[] = [
   // Insistente: certificado vencido para de emitir nota, e sem aviso ninguém
   // descobre até precisar faturar — que é sempre a pior hora.
   { evento: "certificadoVencendo", publico: "escritorio", insistente: true },
+
+  // O conferente diario achou comissao diferente do que a regra diz. Insistente:
+  // comissao ERRADA e o unico defeito desta area que ninguem reclama sozinho —
+  // os dois numeros sao plausiveis. Se o aviso some da tela, some com ele a
+  // unica chance de alguem olhar.
+  { evento: "comissaoDivergente", publico: "escritorio", insistente: true },
 
   // Para QUEM PERGUNTOU, e so para ela: publico "responsavel" mira uma pessoa.
   // Insistente porque ela esta esperando — perguntou e parou de trabalhar por

@@ -91,6 +91,52 @@ type OsParaComissao = {
 }
 
 /**
+ * Quanto esta OS DEVERIA gerar de comissão, agora.
+ *
+ * Extraída de dentro do reconciliador para o CONFERENTE poder fazer a mesma
+ * pergunta sem escrever nada. As duas chamando a mesma função é o que impede o
+ * conferente de discordar da regra que ele confere — um conferente com regra
+ * própria acusaria divergência onde não há, todo dia, até alguém desligá-lo.
+ *
+ * `null` quando não deve haver comissão nenhuma.
+ */
+export function decidirComissao(
+  os: OsParaComissao,
+  issRate: number | null,
+  baseConfigurada: string
+) {
+  const deveTer = GERAM_COMISSAO.includes(os.status) && os.technicianId !== null
+  if (!deveTer) return null
+
+  // O imposto sai da base apenas quando existe NOTA EMITIDA — não quando o
+  // status é "faturada".
+  //
+  // A distinção decide o valor: o status FATURADA é alcançável sem emitir nota
+  // nenhuma, e é assim que trabalha quem cobra sem nota. Descontar ISS ali
+  // tiraria dinheiro do funcionário para pagar um tributo que ninguém
+  // recolheu. E usar `nfseIssuedAt` no lugar do estado seria pior ainda: ele é
+  // carimbado no envio, antes de a prefeitura aceitar — uma nota REJEITADA
+  // deixaria a comissão descontada para sempre.
+  const temNota = estadoDaNota(os.nfseStatus) === "emitida"
+  const pct = os.commissionPct === null ? null : Number(os.commissionPct)
+
+  return calcularComissao({
+    // A base depende da configuração da empresa: o total cheio da OS, ou só os
+    // itens que não vieram do estoque. O total vem do campo GRAVADO (nunca da
+    // soma em memória, que não fecha centavo por linha); a mão de obra é somada
+    // linha a linha, na mesma convenção de lib/cotacao.ts.
+    totalCentavos: baseParaComissao(
+      os.items.map((i) => ({ total: Number(i.total), partId: i.partId })),
+      Number(os.totalAmount),
+      baseConfigurada
+    ),
+    percentual: pct,
+    issRate,
+    descontarIss: temNota,
+  })
+}
+
+/**
  * Faz a comissão desta OS bater com o estado atual dela.
  *
  * Devolve o que fez, para quem chama poder decidir se avisa alguém.
@@ -129,37 +175,10 @@ export async function sincronizarComissaoDaOs(
     return { acao: "congelada", motivo: "jaPaga" }
   }
 
-  const deveTer =
-    GERAM_COMISSAO.includes(os.status) && os.technicianId !== null
-
-  // O imposto sai da base apenas quando existe NOTA EMITIDA — não quando o
-  // status é "faturada".
-  //
-  // A distinção decide o valor: o status FATURADA é alcançável sem emitir nota
-  // nenhuma, e é assim que trabalha quem cobra sem nota. Descontar ISS ali
-  // tiraria dinheiro do funcionário para pagar um tributo que ninguém
-  // recolheu. E usar `nfseIssuedAt` no lugar do estado seria pior ainda: ele é
-  // carimbado no envio, antes de a prefeitura aceitar — uma nota REJEITADA
-  // deixaria a comissão descontada para sempre.
-  const temNota = estadoDaNota(os.nfseStatus) === "emitida"
-
-  const pct = os.commissionPct === null ? null : Number(os.commissionPct)
-  const conta = deveTer
-    ? calcularComissao({
-        // A base depende da configuração da empresa: o total cheio da OS, ou
-        // só os itens que não vieram do estoque. O total vem do campo GRAVADO
-        // (nunca da soma em memória, que não fecha centavo por linha); a mão de
-        // obra é somada linha a linha, na mesma convenção de lib/cotacao.ts.
-        totalCentavos: baseParaComissao(
-          os.items.map((i) => ({ total: Number(i.total), partId: i.partId })),
-          Number(os.totalAmount),
-          baseConfigurada
-        ),
-        percentual: pct,
-        issRate,
-        descontarIss: temNota,
-      })
-    : null
+  const conta = decidirComissao(os, issRate, baseConfigurada)
+  // A porcentagem para a descrição e para a coluna congelada. Vem do mesmo
+  // lugar que a decisão leu — se `conta` existe, ela é um número válido.
+  const pct = Number(os.commissionPct)
 
   if (!conta) {
     // Não deve ter comissão. Se existe uma pendente, ela some — é o caso da OS
@@ -172,7 +191,7 @@ export async function sincronizarComissaoDaOs(
   }
 
   const dados = {
-    description: `Comissão ${formatOsNumber(os.number, os.createdAt)} — ${explicarComissao(conta, pct!, baseConfigurada)}`,
+    description: `Comissão ${formatOsNumber(os.number, os.createdAt)} — ${explicarComissao(conta, pct, baseConfigurada)}`,
     amount: conta.valorCentavos / 100,
     // Comissão varia com o volume de serviço; não é aluguel.
     category: "VARIABLE" as const,
@@ -183,7 +202,7 @@ export async function sincronizarComissaoDaOs(
     // fechamento o dono pergunta "quanto de ISS saiu das comissões deste mês",
     // e isso é uma consulta — não um LIKE em descrição.
     commissionBase: conta.baseCentavos / 100,
-    commissionPct: pct!,
+    commissionPct: pct,
     commissionIss: conta.issCentavos / 100,
   }
 

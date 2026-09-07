@@ -16,6 +16,7 @@ import { DIAS_DE_ANTECEDENCIA } from "@/lib/contrato-recorrente"
 import { gravarRetratoDoMes } from "@/lib/snapshot"
 import { temFuncao } from "@/lib/plan"
 import { conciliarNotasPendentes } from "@/lib/nfse-conciliar"
+import { conferirComissoes, resumirDivergencias } from "@/lib/comissao-conferente"
 import { notificar } from "@/lib/notificar"
 import { cobrarVencidas } from "@/lib/cobrar-vencidas"
 
@@ -63,7 +64,7 @@ export async function GET(req: NextRequest) {
     .create({ data: { name: "daily" }, select: { id: true } })
     .catch(() => null)
 
-  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, cobrancasEnviadas: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, retrato: "", errors: 0 }
+  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, cobrancasEnviadas: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, comissoesConferidas: 0, comissoesDivergentes: 0, comissoesForaDaJanela: 0, retrato: "", errors: 0 }
 
   // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
   // Em 07/08/2026 uma cliente pagou e ficou sem acesso por ~1 dia: os webhooks
@@ -315,6 +316,49 @@ export async function GET(req: NextRequest) {
     results.errors += notas.erros
   } catch (e) {
     console.error("[cron] conciliação de notas fiscais falhou:", e)
+    results.errors++
+  }
+
+  // ── Conferente das comissões ────────────────────────────────────────────────
+  //
+  // A comissão é mantida por um reconciliador chamado de cinco pontos. O
+  // problema não é nenhum dos cinco: é o SEXTO caminho, que ainda não existe.
+  // E o reconciliador engole erro de propósito, para não impedir o técnico de
+  // fechar a OS na rua — então uma falha some no log.
+  //
+  // A assimetria que torna isto necessário: comissão FALTANDO alguém reclama
+  // (o técnico cobra no dia 5); comissão ERRADA ninguém nota, porque os dois
+  // números são plausíveis.
+  //
+  // Ele AVISA e não corrige. Corrigir sozinho reescreveria um número que a
+  // pessoa já viu, e — se o reconciliador tiver defeito — espalharia o defeito
+  // em silêncio em vez de revelá-lo.
+  try {
+    // Só as empresas com estoque/comissão em uso: varrer quem nunca digitou
+    // uma porcentagem é trabalho garantido para achar nada.
+    const comComissao = await prisma.tenant.findMany({
+      where: { orders: { some: { commissionPct: { not: null } } } },
+      select: { id: true },
+    })
+    for (const t of comComissao) {
+      const r = await conferirComissoes(prisma, t.id, now)
+      results.comissoesConferidas += r.conferidas
+      if (r.divergencias.length > 0) {
+        results.comissoesDivergentes += r.divergencias.length
+        await notificar({
+          tenantId: t.id,
+          evento: "comissaoDivergente",
+          corpo: resumirDivergencias(r.divergencias),
+          url: "/finance",
+        })
+      }
+      // Dito, e não escondido: o conferente olha 45 dias para trás, e o que
+      // ficou fora precisa aparecer em algum lugar — senão "0 divergências"
+      // passa a significar "não olhei" sem ninguém saber.
+      results.comissoesForaDaJanela += r.foraDaJanela
+    }
+  } catch (e) {
+    console.error("[cron] conferência das comissões falhou:", e)
     results.errors++
   }
   } catch (e) {

@@ -1122,8 +1122,15 @@
       "baseMaoDeObra": "Labour only",
       "erros": {
         "semPermissao": "You don't have permission to change this.",
-        "baseInvalida": "Invalid option."
-      }
+        "baseInvalida": "Invalid option.",
+        "loteDesligado": "Bulk payment is turned off for this company.",
+        "nadaAPagar": "No pending commission for this person."
+      },
+      "pagarTodas": "Pay all",
+      "confirmarPagamento": "Pay {n} commissions for {nome}, {valor}?",
+      "confirmar": "Confirm",
+      "cancelar": "Cancel",
+      "pagarEmLoteLabel": "bulk pay"
     },
     "receivables": {
       "title": "Accounts Receivable",
@@ -2058,6 +2065,9 @@
     },
     "duvidaRespondida": {
       "title": "Your question was answered"
+    },
+    "comissaoDivergente": {
+      "title": "Commission differs from expected"
     }
   },
   "offline": {

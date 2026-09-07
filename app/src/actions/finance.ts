@@ -97,7 +97,10 @@ export async function getFinanceSummary(q?: string, filial?: string | null) {
       orderBy: { dueDate: "asc" },
     }),
     // Sobre o que a comissao incide. O cartao mostra e deixa trocar.
-    prisma.tenant.findUnique({ where: { id: tenantId }, select: { commissionBase: true } }),
+    prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { commissionBase: true, commissionBulkPay: true },
+    }),
   ])
 
   // Início do mês em horário de Brasília, não UTC do servidor — ver
@@ -151,6 +154,7 @@ export async function getFinanceSummary(q?: string, filial?: string | null) {
     pendingExpenses,
     comissoes,
     baseDaComissao: empresa?.commissionBase ?? "TOTAL",
+    pagamentoEmLote: empresa?.commissionBulkPay ?? true,
   }
 }
 
@@ -188,6 +192,83 @@ export async function definirBaseDaComissao(base: string): Promise<{ erro?: stri
     await reconciliarComissao(prisma, tenantId, p.orderId!)
   }
 
+  revalidatePath("/finance")
+  return { ok: true }
+}
+
+/**
+ * Paga TODAS as comissões pendentes de uma pessoa, de uma vez.
+ *
+ * ─── Por que existe ──────────────────────────────────────────────────────────
+ *
+ * `markExpensePaid` paga uma despesa por chamada, e o botão é por linha. Quatro
+ * técnicos com vinte OS são oitenta cliques no fechamento. No primeiro mês o
+ * dono faz; no segundo ele volta para o caderno — e o recurso morre
+ * funcionando.
+ *
+ * ─── Por que é opção da empresa ──────────────────────────────────────────────
+ *
+ * Um clique passa a mover muito dinheiro de uma vez. Quem prefere conferir OS a
+ * OS tem motivo, e desliga.
+ *
+ * ─── Por que numa transação só ───────────────────────────────────────────────
+ *
+ * Vinte `update` soltos podem falhar no décimo, e aí metade das comissões da
+ * Ana ficaria paga e metade não — sem nada na tela dizendo onde parou. Ou todas
+ * ou nenhuma.
+ */
+export async function pagarComissoesDe(
+  payeeId: string
+): Promise<{ erro?: string; ok?: boolean; pagas?: number; total?: number }> {
+  const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
+  // Pagar move dinheiro. Não é gesto de quem recebe.
+  if (role !== "OWNER" && role !== "ADMIN") return { erro: "semPermissao" }
+
+  const empresa = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { commissionBulkPay: true },
+  })
+  // A trava mora AQUI, e não só no botão: a Action é endereço HTTP, e esconder
+  // o botão não impede ninguém de chamá-la.
+  if (!empresa?.commissionBulkPay) return { erro: "loteDesligado" }
+
+  // `payeeId` é conferido contra o tenant junto com o resto do filtro: um id de
+  // fora simplesmente não casa com despesa nenhuma desta empresa.
+  const pendentes = await prisma.expense.findMany({
+    where: { tenantId, payeeId, status: "PENDING", orderId: { not: null } },
+    select: { id: true, amount: true },
+  })
+  if (pendentes.length === 0) return { erro: "nadaAPagar" }
+
+  const agora = new Date()
+  await prisma.$transaction(
+    pendentes.map((e) =>
+      prisma.expense.update({
+        where: { id: e.id },
+        // O `where` do updateMany não caberia: cada linha precisa do mesmo
+        // paidAt, e o status muda de PENDING para PAID apenas nas que ainda
+        // estavam pendentes quando a lista foi lida.
+        data: { status: "PAID", paidAt: agora },
+      })
+    )
+  )
+
+  const total = pendentes.reduce((s, e) => s + Number(e.amount), 0)
+
+  revalidatePath("/finance")
+  return { ok: true, pagas: pendentes.length, total: Math.round(total * 100) / 100 }
+}
+
+/** Liga e desliga o pagamento em lote das comissões. */
+export async function definirPagamentoEmLote(
+  ligado: boolean
+): Promise<{ erro?: string; ok?: boolean }> {
+  const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
+  if (role !== "OWNER" && role !== "ADMIN") return { erro: "semPermissao" }
+
+  await prisma.tenant.update({ where: { id: tenantId }, data: { commissionBulkPay: ligado } })
   revalidatePath("/finance")
   return { ok: true }
 }

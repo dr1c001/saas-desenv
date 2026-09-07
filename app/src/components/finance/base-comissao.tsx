@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
 import { Loader2 } from "lucide-react"
-import { definirBaseDaComissao } from "@/actions/finance"
+import { definirBaseDaComissao, definirPagamentoEmLote } from "@/actions/finance"
 
 // Sobre o que a comissão incide: o total da OS, ou só a mão de obra.
 //
@@ -12,11 +12,12 @@ import { definirBaseDaComissao } from "@/actions/finance"
 // pergunta "por que a Ana recebeu R$ 120 numa OS que era quase toda peça?"
 // aparece na cabeça dele.
 
-export function BaseDaComissao({ atual }: { atual: string }) {
+export function BaseDaComissao({ atual, emLote }: { atual: string; emLote: boolean }) {
   const t = useTranslations("finance.comissoes")
   const [base, setBase] = useState(atual)
   const [pendente, iniciar] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
+  const [lote, setLote] = useState(emLote)
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -49,6 +50,29 @@ export function BaseDaComissao({ atual }: { atual: string }) {
       </select>
       {pendente && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
       {erro && <span className="text-destructive">{t(`erros.${erro}` as "erros.semPermissao")}</span>}
+
+      {/* Pagar em lote: opção, e não padrão fixo. Um clique passa a mover o mês
+          inteiro de alguém, e quem prefere conferir OS a OS desliga. */}
+      <label className="ml-2 flex items-center gap-1.5 text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={lote}
+          disabled={pendente}
+          onChange={(e) => {
+            const novo = e.target.checked
+            const anterior = lote
+            setLote(novo)
+            iniciar(async () => {
+              const r = await definirPagamentoEmLote(novo)
+              if (r?.erro) {
+                setLote(anterior)
+                setErro(r.erro)
+              }
+            })
+          }}
+        />
+        {t("pagarEmLoteLabel")}
+      </label>
     </div>
   )
 }

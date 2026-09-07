@@ -59,6 +59,13 @@ model Tenant {
   /// Texto com CHECK no banco, e nao enum do Postgres: enum nao aceita remover
   /// nem reordenar valor, e esta lista ainda pode crescer.
   commissionBase          String             @default("TOTAL")
+  /// Deixa pagar TODAS as comissoes de uma pessoa de uma vez.
+  ///
+  /// Existe como opcao porque um clique so move muito dinheiro: quatro tecnicos
+  /// com vinte OS sao oitenta linhas, e quem prefere conferir uma a uma desliga.
+  /// Ligado por padrao — sem isso o fechamento custa oitenta cliques, e no
+  /// segundo mes o dono volta para o caderno.
+  commissionBulkPay       Boolean            @default(true)
   zapiInstance            String?
   zapiToken               String?
   referralCode            String?            @unique
