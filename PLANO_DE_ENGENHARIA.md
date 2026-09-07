@@ -3379,6 +3379,37 @@ Estes pontos custaram tempo real de debug — não repetir os mesmos caminhos:
 - **Textos de marketing em inglês nunca revisados por falante nativo.** O EN
   foi traduzido por IA. Aceitável pra funcionar, arriscado pra copy de vendas.
 
+**Da comissão por OS (04/09/2026) — conhecidos e deixados de fora de propósito:**
+
+- **Não existe conferente da comissão.** `reconciliarComissao` é chamada de
+  cinco pontos, e nada no código, no tipo ou no banco obriga um sexto caminho a
+  chamá-la. Comissão FALTANDO alguém reclama; comissão ERRADA (a OS virou
+  R$ 1.800 e a conta a pagar continua sendo 10% de R$ 1.200) ninguém nota,
+  porque os dois números são plausíveis. A defesa seria rodar o reconciliador em
+  modo somente-leitura no cron diário e avisar a divergência sem corrigir.
+- **Pagar comissão é um clique por linha.** `markExpensePaid` atualiza uma
+  despesa por chamada. Quatro técnicos com vinte OS são oitenta cliques no
+  fechamento — e no segundo mês o dono volta para o caderno. Falta "pagar todas
+  as comissões da Ana".
+- **A comissão cai no mês errado no DRE.** `getReportData` soma despesa por
+  `paidAt` e receita por `paidAt`; a comissão de janeiro vence dia 5 e é paga em
+  fevereiro, contra uma receita que entrou em janeiro. Todo mês fecha com lucro
+  inflado e o seguinte com prejuízo, sistematicamente, e ninguém percebe porque
+  os dois números são plausíveis.
+- **Pagamento parcial de comissão não existe.** Adiantamento ("metade no dia
+  20") é prática corriqueira em prestadora pequena e não tem representação: o
+  dono vai marcar como paga uma linha que pagou pela metade, e sistema e caderno
+  voltam a divergir — que é o que o recurso existia para acabar.
+- **`fiscalIssRate` não é "a taxa da nota fiscal" inteira.** Numa NFS-e com
+  tomador PJ há retenção de IRRF, INSS e PIS/COFINS/CSLL além do ISS, e o
+  sistema não modela nenhuma. O emissor devolve `servicesAmount`, e a
+  conciliação lê apenas `flowStatus`, `number` e `pdf.url` — o valor que a
+  prefeitura de fato apurou nunca volta.
+- **Comissão só pode ser de quem é usuário do sistema.** Ela pendura em
+  `ServiceOrder.technicianId → User`, e o Starter tem 3 assentos. Uma empresa
+  com 6 técnicos num plano de 3 não consegue comissionar os outros 3: o limite
+  de assentos vira, em silêncio, limite de quem pode ser comissionado.
+
 **Pendências operacionais — não são código, e só o dono resolve:**
 
 - **Monitor externo não contratado.** Toda a instrumentação de 7.2.23 está

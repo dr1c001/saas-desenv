@@ -16,6 +16,9 @@ import { podeFazer } from "@/lib/acoes"
 import { historicoDaOs } from "@/lib/historico-os-db"
 import { HistoricoOs } from "@/components/service-orders/historico-os"
 import { WhatsAppButton } from "@/components/service-orders/whatsapp-button"
+import { EnviarPorEmail } from "@/components/shared/enviar-por-email"
+import { enviarOsPorEmail } from "@/actions/service-orders"
+import { osPodeSerEnviada } from "@/lib/envio-documento"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -95,6 +98,20 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
             PDF
           </Link>
           <WhatsAppButton type="os" id={id} />
+          {/* "quando estiver completa e assinada, enviar direto por email do
+              cliente". O botao aparece sempre, mas desligado com o motivo
+              escrito quando a condicao nao foi cumprida — some-lo faria a
+              pessoa procurar um botao que existe. */}
+          <EnviarPorEmail
+            enviar={enviarOsPorEmail.bind(null, id)}
+            jaEnviadoPara={os.sentTo}
+            jaEnviadoEm={os.sentAt}
+            desabilitado={
+              osPodeSerEnviada({ status: os.status, assinaturaUrl: os.clientSignatureUrl })
+                ? null
+                : t("detail.precisaAssinatura")
+            }
+          />
           {os.clientToken && (
             <Link
               href={`/p/${os.clientToken}`}

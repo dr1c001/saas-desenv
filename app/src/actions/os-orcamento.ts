@@ -44,6 +44,9 @@ export async function gerarOrcamentoDaOs(orderId: string): Promise<EstadoGerar> 
       status: true,
       client: {
         select: {
+          // O id, para o orcamento nascer ligado ao cliente CADASTRADO. Este
+          // caminho sempre teve um Client de verdade na mao e nunca o gravou.
+          id: true,
           name: true,
           phone: true,
           whatsapp: true,
@@ -81,6 +84,7 @@ export async function gerarOrcamentoDaOs(orderId: string): Promise<EstadoGerar> 
         tenantId,
         orderId,
         createdById: userId,
+        clientId: os.client.id,
         clientName: os.client.name,
         clientAddress: endereco,
         clientContact: contato,

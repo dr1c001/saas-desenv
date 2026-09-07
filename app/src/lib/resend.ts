@@ -340,10 +340,23 @@ export async function sendPasswordResetEmail(to: string, name: string, resetUrl:
  * precisar de um assunto por tom: duplicar o HTML duplicaria junto o escape de
  * `& < >`, que é a única coisa aqui que, esquecida, vira defeito de verdade.
  */
-function emailEmNomeDaEmpresa(to: string, companyName: string, subject: string, texto: string) {
+function emailEmNomeDaEmpresa(
+  to: string,
+  companyName: string,
+  subject: string,
+  texto: string,
+  // Para onde a RESPOSTA do cliente vai.
+  //
+  // O padrão manda para o suporte do ServiçoOS, e para aviso automático de
+  // status isso está certo — não há nada a responder. Mas um ORÇAMENTO é
+  // conversa comercial: o cliente responde "pode fazer, quando vocês vêm?", e
+  // essa mensagem tem de chegar na empresa que mandou, não no nosso suporte.
+  // Quem chama passa o e-mail da empresa quando o documento pede resposta.
+  responderPara?: string | null
+) {
   return send({
     from: FROM,
-    replyTo: REPLY_TO,
+    replyTo: responderPara?.trim() || REPLY_TO,
     to,
     subject,
     html: `
@@ -365,6 +378,34 @@ export async function sendClientNoticeEmail(
 ) {
   const t = getTranslator(locale, "emails")
   return emailEmNomeDaEmpresa(to, companyName, `${companyName} — ${t("clientNotice.subject")}`, texto)
+}
+
+/**
+ * O orçamento indo para o cliente final.
+ *
+ * Assunto com o NÚMERO na frente: é assim que o cliente acha de novo na caixa
+ * de entrada duas semanas depois, e é assim que ele diferencia dois orçamentos
+ * da mesma empresa.
+ */
+export async function sendQuoteEmail(
+  to: string,
+  companyName: string,
+  numero: string,
+  texto: string,
+  responderPara: string | null
+) {
+  return emailEmNomeDaEmpresa(to, companyName, `${numero} — ${companyName}`, texto, responderPara)
+}
+
+/** A OS concluída e assinada indo para o cliente final. */
+export async function sendOsEmail(
+  to: string,
+  companyName: string,
+  numero: string,
+  texto: string,
+  responderPara: string | null
+) {
+  return emailEmNomeDaEmpresa(to, companyName, `${numero} — ${companyName}`, texto, responderPara)
 }
 
 /**

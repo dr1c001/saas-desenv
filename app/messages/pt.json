@@ -2429,11 +2429,19 @@
       "notesLabel": "Observações",
       "notesPlaceholder": "Condições de pagamento, prazo de execução, garantia...",
       "submitCreate": "Criar orçamento",
-      "submitUpdate": "Salvar alterações"
+      "submitUpdate": "Salvar alterações",
+      "clientLabel": "Cliente",
+      "clientPlaceholder": "Escolha um cliente cadastrado",
+      "semEmail": "sem e-mail",
+      "clienteNaoCadastrado": "Cliente ainda não cadastrado?",
+      "cadastrarCliente": "Cadastrar agora",
+      "orcamentoAntigo": "Este orçamento foi feito para «{nome}» antes de o cliente virar cadastro. Escolha o cliente acima para vinculá-lo."
     },
     "validation": {
       "clientNameRequired": "Nome do cliente obrigatório",
-      "descriptionRequired": "Descrição do serviço obrigatória"
+      "descriptionRequired": "Descrição do serviço obrigatória",
+      "clientRequired": "Escolha um cliente cadastrado.",
+      "clientNotFound": "Cliente não encontrado nesta empresa."
     }
   },
   "schedule": {
@@ -2624,7 +2632,8 @@
       },
       "contratanteLabel": "Contratante: ",
       "localLabel": "Local do serviço: ",
-      "cobrancaNoLocal": "cobrança no cliente final"
+      "cobrancaNoLocal": "cobrança no cliente final",
+      "precisaAssinatura": "Disponível quando a OS estiver concluída e assinada."
     },
     "edit": {
       "title": "Editar Ordem de Serviço"
@@ -3550,6 +3559,22 @@
       "muitasAbertas": "Você já tem {max} perguntas em aberto. Encerre uma que já foi resolvida para abrir outra.",
       "conversaCheia": "Esta conversa ficou longa. Vamos resolver por telefone — a gente te liga.",
       "naoEncontrado": "Pergunta não encontrada."
+    }
+  },
+  "envioPorEmail": {
+    "enviar": "Enviar por e-mail",
+    "reenviar": "Enviar de novo",
+    "enviado": "Enviado para {destino}.",
+    "jaEnviado": "Enviado para {destino} em {quando}.",
+    "erros": {
+      "semPermissao": "Você não tem permissão para enviar documentos ao cliente.",
+      "naoEncontrado": "Documento não encontrado.",
+      "semEmail": "Este cliente não tem e-mail cadastrado. Cadastre o e-mail na ficha dele e tente de novo.",
+      "emailInvalido": "O e-mail cadastrado deste cliente não parece válido. Confira na ficha dele.",
+      "semLink": "Este documento não tem link público. Salve-o novamente e tente de novo.",
+      "enviadoAgoraMesmo": "Já foi enviado agora há pouco. Espere um instante antes de mandar de novo.",
+      "naoAssinada": "A OS precisa estar concluída e assinada pelo cliente antes de ser enviada.",
+      "falhaNoEnvio": "Não foi possível enviar o e-mail agora. Tente novamente em alguns minutos."
     }
   }
 }

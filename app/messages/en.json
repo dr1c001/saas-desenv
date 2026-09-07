@@ -2429,11 +2429,19 @@
       "notesLabel": "Notes",
       "notesPlaceholder": "Payment terms, execution deadline, warranty...",
       "submitCreate": "Create quote",
-      "submitUpdate": "Save changes"
+      "submitUpdate": "Save changes",
+      "clientLabel": "Client",
+      "clientPlaceholder": "Choose a registered client",
+      "semEmail": "no e-mail",
+      "clienteNaoCadastrado": "Client not registered yet?",
+      "cadastrarCliente": "Register now",
+      "orcamentoAntigo": "This quote was made for «{nome}» before clients became records. Pick the client above to link it."
     },
     "validation": {
       "clientNameRequired": "Client name is required",
-      "descriptionRequired": "Service description is required"
+      "descriptionRequired": "Service description is required",
+      "clientRequired": "Choose a registered client.",
+      "clientNotFound": "Client not found in this company."
     }
   },
   "schedule": {
@@ -2624,7 +2632,8 @@
       },
       "contratanteLabel": "Contracted by: ",
       "localLabel": "Service location: ",
-      "cobrancaNoLocal": "billed to the end client"
+      "cobrancaNoLocal": "billed to the end client",
+      "precisaAssinatura": "Available once the order is completed and signed."
     },
     "edit": {
       "title": "Edit Service Order"
@@ -3550,6 +3559,22 @@
       "muitasAbertas": "You already have {max} open questions. Close one that is resolved to open another.",
       "conversaCheia": "This conversation got long. Let us sort it out by phone — we will call you.",
       "naoEncontrado": "Question not found."
+    }
+  },
+  "envioPorEmail": {
+    "enviar": "Send by e-mail",
+    "reenviar": "Send again",
+    "enviado": "Sent to {destino}.",
+    "jaEnviado": "Sent to {destino} on {quando}.",
+    "erros": {
+      "semPermissao": "You don't have permission to send documents to clients.",
+      "naoEncontrado": "Document not found.",
+      "semEmail": "This client has no e-mail on file. Add one to their record and try again.",
+      "emailInvalido": "This client's e-mail doesn't look valid. Check their record.",
+      "semLink": "This document has no public link. Save it again and retry.",
+      "enviadoAgoraMesmo": "Just sent. Wait a moment before sending again.",
+      "naoAssinada": "The order must be completed and signed by the client before sending.",
+      "falhaNoEnvio": "Couldn't send the e-mail right now. Try again in a few minutes."
     }
   }
 }

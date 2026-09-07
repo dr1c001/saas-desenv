@@ -12,9 +12,12 @@ import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
 import type { QuoteFormState } from "@/actions/quotes"
 
+export type ClienteDaLista = { id: string; name: string; email: string | null }
+
 type Quote = {
   id: string
   number: number
+  clientId: string | null
   clientName: string
   clientAddress: string | null
   clientContact: string | null
@@ -29,9 +32,11 @@ type Quote = {
 type Props = {
   action: (prev: QuoteFormState, form: FormData) => Promise<QuoteFormState>
   quote?: Quote
+  /** Os clientes cadastrados desta empresa. */
+  clientes: ClienteDaLista[]
 }
 
-export function QuoteForm({ action, quote }: Props) {
+export function QuoteForm({ action, quote, clientes }: Props) {
   const t = useTranslations("quotes")
   const tc = useTranslations("common")
   const [state, formAction, isPending] = useActionState<QuoteFormState, FormData>(action, {})
@@ -58,21 +63,48 @@ export function QuoteForm({ action, quote }: Props) {
           <CardTitle className="text-base">{t("form.clientDataTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* O cliente CADASTRADO, e não mais três campos de texto livre.
+              Nome, contato e endereço passam a ser copiados do cadastro no
+              servidor — digitá-los aqui deixaria o orçamento discordar da ficha
+              do cliente no dia seguinte. */}
           <div className="space-y-1.5">
-            <Label htmlFor="clientName">{t("form.clientNameLabel")}</Label>
-            <Input id="clientName" name="clientName" defaultValue={quote?.clientName ?? ""} placeholder={t("form.clientNamePlaceholder")} />
-            {state.errors?.clientName && <p className="text-sm text-destructive">{fieldError(state.errors.clientName)}</p>}
+            <Label htmlFor="clientId">{t("form.clientLabel")}</Label>
+            <select
+              id="clientId"
+              name="clientId"
+              defaultValue={quote?.clientId ?? ""}
+              className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+            >
+              <option value="">{t("form.clientPlaceholder")}</option>
+              {clientes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {c.email ? "" : ` — ${t("form.semEmail")}`}
+                </option>
+              ))}
+            </select>
+            {state.errors?.clientId && <p className="text-sm text-destructive">{fieldError(state.errors.clientId)}</p>}
+
+            {/* O caminho de escape, no lugar onde ele é necessário.
+                Sem isto, "o cliente ligou pedindo preço" vira: sair da tela,
+                cadastrar, voltar, redigitar tudo — e o dono volta a fazer
+                orçamento por WhatsApp. */}
+            <p className="text-xs text-muted-foreground">
+              {t("form.clienteNaoCadastrado")}{" "}
+              <Link href="/clients/new" className="underline">
+                {t("form.cadastrarCliente")}
+              </Link>
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="clientContact">{t("form.clientContactLabel")}</Label>
-              <Input id="clientContact" name="clientContact" defaultValue={quote?.clientContact ?? ""} placeholder={t("form.clientContactPlaceholder")} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="clientAddress">{t("form.clientAddressLabel")}</Label>
-              <Input id="clientAddress" name="clientAddress" defaultValue={quote?.clientAddress ?? ""} placeholder={t("form.clientAddressPlaceholder")} />
-            </div>
-          </div>
+
+          {/* O orçamento ANTIGO, feito antes de o cliente ser obrigatório,
+              mostra para quem ele foi — senão a pessoa abre a edição e não
+              reconhece o documento que está mexendo. */}
+          {quote && !quote.clientId && (
+            <p className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2.5 text-xs">
+              {t("form.orcamentoAntigo", { nome: quote.clientName })}
+            </p>
+          )}
         </CardContent>
       </Card>
 

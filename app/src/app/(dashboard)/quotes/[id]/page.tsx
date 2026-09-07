@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
-import { getQuote, updateQuote, deleteQuote, updateQuoteStatus } from "@/actions/quotes"
+import { getQuote, updateQuote, deleteQuote, updateQuoteStatus, clientesParaOrcamento, enviarOrcamentoPorEmail } from "@/actions/quotes"
+import { EnviarPorEmail } from "@/components/shared/enviar-por-email"
 import { QuoteForm } from "@/components/quotes/quote-form"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -47,6 +48,7 @@ export default async function QuoteDetailPage({ params, searchParams }: Props) {
   const boundUpdate = updateQuote.bind(null, id)
 
   if (isEditing) {
+    const clientes = await clientesParaOrcamento()
     return (
       <div className="max-w-3xl space-y-6">
         <div className="flex items-center gap-3">
@@ -57,6 +59,7 @@ export default async function QuoteDetailPage({ params, searchParams }: Props) {
         </div>
         <QuoteForm
           action={boundUpdate}
+          clientes={clientes}
           quote={{
             ...quote,
             amount: quote.amount.toString(),
@@ -88,6 +91,12 @@ export default async function QuoteDetailPage({ params, searchParams }: Props) {
             <FileDown className="size-3.5 mr-1.5" />
             {t("detail.generatePdfButton")}
           </a>
+          {/* "poder enviar direto para o email do cliente cadastrado". */}
+          <EnviarPorEmail
+            enviar={enviarOrcamentoPorEmail.bind(null, id)}
+            jaEnviadoPara={quote.sentTo}
+            jaEnviadoEm={quote.sentAt}
+          />
           <Link href={`/quotes/${id}?edit=1`} className={buttonVariants({ variant: "outline", size: "sm" })}>
             <Pencil className="size-3.5 mr-1.5" />
             {tc("edit")}

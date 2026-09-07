@@ -9,6 +9,10 @@ import { checarAcao, filtroDeFilialAtual, getTenant, requireActiveSubscription }
 import { baixarPecasDaOs } from "@/lib/estoque-db"
 import { reconciliarComissao } from "@/lib/comissao-db"
 import { percentualValido } from "@/lib/comissao"
+import { osPodeSerEnviada, problemaNoEnvio, textoDaOs } from "@/lib/envio-documento"
+import { emailDaEmpresa, urlPublica } from "@/lib/envio-db"
+import { sendOsEmail } from "@/lib/resend"
+import { formatOsNumber } from "@/lib/utils"
 import {
   autorAtual,
   registrarCriacao,
@@ -633,4 +637,75 @@ export async function getServiceOrder(id: string) {
       checklist: { orderBy: { position: "asc" } },
     },
   })
+}
+
+/** O que a tela mostra depois de clicar em enviar. */
+export type EstadoDeEnvioDaOs = { erro?: string; ok?: boolean; destino?: string }
+
+/**
+ * Manda a OS concluída e assinada para o e-mail do cliente cadastrado.
+ *
+ * "quando estiver completa E ASSINADA" é condição, não enfeite: a OS assinada é
+ * o comprovante do serviço aceito. Mandar antes entrega ao cliente um documento
+ * que ainda vai mudar — e o sistema deixa concluir de novo, então mudaria mesmo.
+ *
+ * Vai o link da página pública `/p/{token}`, pelo mesmo motivo do orçamento: o
+ * PDF é renderizado dentro de uma rota autenticada por sessão de navegador, e
+ * embute as fotos em base64.
+ */
+export async function enviarOsPorEmail(id: string): Promise<EstadoDeEnvioDaOs> {
+  const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
+  if (role !== "OWNER" && role !== "ADMIN") return { erro: "semPermissao" }
+
+  const os = await prisma.serviceOrder.findFirst({
+    where: { id, tenantId },
+    select: {
+      id: true,
+      number: true,
+      createdAt: true,
+      status: true,
+      clientToken: true,
+      clientSignatureUrl: true,
+      sentAt: true,
+      client: { select: { name: true, email: true } },
+      tenant: { select: { name: true } },
+    },
+  })
+  if (!os) return { erro: "naoEncontrado" }
+
+  if (!osPodeSerEnviada({ status: os.status, assinaturaUrl: os.clientSignatureUrl })) {
+    return { erro: "naoAssinada" }
+  }
+
+  const problema = problemaNoEnvio({
+    email: os.client?.email,
+    token: os.clientToken,
+    enviadoEm: os.sentAt,
+    agora: new Date(),
+  })
+  if (problema) return { erro: problema }
+
+  const destino = os.client!.email!.trim()
+  const numero = formatOsNumber(os.number, os.createdAt)
+  const texto = textoDaOs({
+    empresa: os.tenant.name,
+    numero,
+    cliente: os.client?.name ?? "",
+    link: `${urlPublica()}/p/${os.clientToken}`,
+  })
+
+  try {
+    await sendOsEmail(destino, os.tenant.name, numero, texto, await emailDaEmpresa(tenantId))
+  } catch {
+    return { erro: "falhaNoEnvio" }
+  }
+
+  await prisma.serviceOrder.update({
+    where: { id },
+    data: { sentAt: new Date(), sentTo: destino },
+  })
+
+  revalidatePath(`/service-orders/${id}`)
+  return { ok: true, destino }
 }

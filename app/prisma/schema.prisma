@@ -424,6 +424,8 @@ model Client {
   address           Address?
   tenant            Tenant            @relation(fields: [tenantId], references: [id])
   serviceOrders     ServiceOrder[]
+  /// Os orcamentos feitos para este cliente.
+  quotes            Quote[]
   equipments        Equipment[]
   contracts         ServiceContract[]
 
@@ -520,6 +522,10 @@ model ServiceOrder {
   npsScore           Int?
   npsFeedback        String?
   npsSentAt          DateTime?
+  /// Quando a OS assinada foi enviada por e-mail ao cliente, e para qual
+  /// endereco. Mesmo molde do orcamento.
+  sentAt             DateTime?
+  sentTo             String?
   /// A porcentagem de comissao DESTA OS ("o tecnico ou o dono ou administrador
   /// adiciona a porcentagem variada de cada OS").
   ///
@@ -820,6 +826,14 @@ enum MaintenanceStatus {
 model Quote {
   id            String      @id @default(cuid())
   number        Int
+  /// O cliente CADASTRADO. Nulo so nos orcamentos anteriores a 05/09/2026,
+  /// quando o cliente era texto livre — orcamento novo exige um de verdade.
+  clientId      String?
+  /// Continua existindo como RETRATO do cliente no dia do orcamento, copiado
+  /// de Client na hora de gravar. Nao e redundancia: o orcamento e um
+  /// documento que sai da empresa, e mudar o endereco do cliente meses depois
+  /// nao pode reescrever o papel que ja foi enviado. Tambem e o que mantem os
+  /// orcamentos antigos legiveis sem cliente nenhum.
   clientName    String
   clientAddress String?
   clientContact String?
@@ -840,6 +854,12 @@ model Quote {
   orderId       String?
   validUntil    DateTime?
   tenantId      String
+  /// Quando o orcamento foi enviado por e-mail, e para qual endereco.
+  /// Duas colunas em vez de tabela de log: e o mesmo molde ja usado por
+  /// ServiceOrder.npsSentAt e Revenue.remindersSent, e a pergunta que a tela
+  /// precisa responder e "ja mandei? para quem? quando?".
+  sentAt        DateTime?
+  sentTo        String?
   clientToken   String?     @unique @default(uuid())
   /// Quem emitiu o orcamento.
   ///
@@ -854,7 +874,10 @@ model Quote {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  tenant    Tenant        @relation(fields: [tenantId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  /// SetNull: apagar o cliente nao pode apagar o orcamento que foi enviado a ele.
+  client    Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
   createdBy User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
   /// Fotos do que sera feito. E no orcamento que a foto mais trabalha: e o
   /// documento que o cliente le para DECIDIR.
