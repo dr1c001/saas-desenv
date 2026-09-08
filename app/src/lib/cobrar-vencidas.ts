@@ -8,6 +8,7 @@ import { temRecurso } from "@/lib/plan"
 import { quemPaga } from "@/lib/subcliente"
 import { emailDaEmpresa, urlPublica } from "@/lib/envio-db"
 import { baixarNotaFiscal, gerarFatura } from "@/lib/fatura"
+import { baixarArquivo } from "@/lib/storage"
 import { estadoDaNota } from "@/lib/nfse-status"
 import { formatOsNumber } from "@/lib/utils"
 import {
@@ -147,6 +148,7 @@ export async function cobrarVencidas(agora: Date): Promise<ResultadoDaRegua> {
               createdAt: true,
               nfseUrl: true,
               nfseStatus: true,
+              nfsePdfPath: true,
               client: {
                 select: {
                   id: true,
@@ -285,6 +287,8 @@ type Conta = {
     /** O PDF da nota fiscal, quando a prefeitura ja aceitou. */
     nfseUrl: string | null
     nfseStatus: string | null
+    /** O PDF ARQUIVADO no nosso storage, quando ja foi baixado do emissor. */
+    nfsePdfPath: string | null
     client: (Contato & { id: string; parentId: string | null; parent: (Contato & { id: string }) | null }) | null
   } | null
 }
@@ -412,8 +416,15 @@ async function mandar(
       console.error("[régua] falhou ao gerar a fatura:", e)
     }
 
-    if (os?.nfseUrl && estadoDaNota(os.nfseStatus) === "emitida") {
-      const nota = await baixarNotaFiscal(os.nfseUrl)
+    if (os && estadoDaNota(os.nfseStatus) === "emitida") {
+      // Prefere o arquivo GUARDADO. Baixar do emissor a cada cobranca e uma
+      // chamada HTTP externa dentro do cron, repetida a cada degrau da regua
+      // para a mesma nota — e some no dia em que a empresa trocar de emissor.
+      const nota = os.nfsePdfPath
+        ? await baixarArquivo(os.nfsePdfPath)
+        : os.nfseUrl
+          ? await baixarNotaFiscal(os.nfseUrl)
+          : null
       if (nota) {
         anexos.push({
           filename: `nota-fiscal-${formatOsNumber(os.number, os.createdAt)}.pdf`,

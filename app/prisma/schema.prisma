@@ -518,6 +518,16 @@ model ServiceOrder {
   nfseNumber         String?
   nfseStatus         String?
   nfseUrl            String?
+  /// O PDF e o XML da nota ARQUIVADOS no nosso storage.
+  ///
+  /// `nfseUrl` aponta para o servidor do emissor: o dia em que a empresa sair
+  /// da nfe.io, ou o link expirar, as notas dela ficam inacessiveis pelo
+  /// sistema. E a lei manda a empresa guardar documento fiscal por cinco anos.
+  ///
+  /// O XML importa mais que o PDF: juridicamente e ele que vale, e o PDF e so
+  /// uma representacao. Ate 07/09/2026 nenhum dos dois era guardado.
+  nfsePdfPath        String?
+  nfseXmlPath        String?
   clientSignatureUrl String?
   clientToken        String?   @unique @default(uuid())
   // Valores dos CustomField de entity=SERVICE_ORDER: { [customFieldId]: valor }

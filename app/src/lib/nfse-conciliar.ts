@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma"
 import { nfeio } from "@/lib/nfeio"
 import { notificar } from "@/lib/notificar"
 import { reconciliarComissao } from "@/lib/comissao-db"
+import { arquivarNota } from "@/lib/arquivo-da-nota"
 import {
   devePerguntar,
   estadoDaNota,
@@ -89,7 +90,24 @@ export async function conciliarNotasPendentes(): Promise<ResumoDaConciliacao> {
       // decidiu, e o reconciliador converge para o valor certo nos dois casos.
       await reconciliarComissao(prisma, os.tenantId, os.id)
 
-      if (estado === "emitida") resumo.emitidas++
+      if (estado === "emitida") {
+        resumo.emitidas++
+        // ARQUIVA o documento no instante em que a prefeitura aceita.
+        //
+        // É o único momento em que ele é final: uma nota pendente ainda vai
+        // mudar, e uma rejeitada não tem PDF que preste. E o XML só existe
+        // aqui — ele não é guardado em campo nenhum, então se não for baixado
+        // agora, some.
+        //
+        // Nunca lança: a conciliação das outras notas não pode cair por causa
+        // do storage de uma.
+        await arquivarNota({
+          tenantId: os.tenantId,
+          orderId: os.id,
+          pdfUrl: nota.pdf?.url,
+          xmlUrl: nota.xml?.url,
+        })
+      }
 
       if (estado === "rejeitada") {
         resumo.rejeitadas++

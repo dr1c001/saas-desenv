@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { buttonVariants } from "@/components/ui/button"
-import { FileText, ExternalLink, Loader2 } from "lucide-react"
+import { FileText, ExternalLink, Loader2, Download } from "lucide-react"
 
 type Props = {
   orderId: string
@@ -26,11 +26,31 @@ export function NfseButton({ orderId, nfseId, nfseStatus, nfseUrl, nfseNumber }:
           <FileText className="size-3.5" />
           NFS-e {nfseNumber ? `#${nfseNumber}` : ""} — {nfseStatus ?? t("nfseButton.statusEmitted")}
         </span>
+        {/* A nota GUARDADA por nós. É esta que responde "o cliente pediu a
+            nota de novo": o link do emissor expira e some no dia em que a
+            empresa trocar de fornecedor. */}
+        <a
+          href={`/api/nota/${orderId}`}
+          target="_blank"
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+        >
+          <FileText className="size-3.5 mr-1" />
+          {t("nfseButton.baixarPdf")}
+        </a>
+        {/* O XML vai para a contabilidade, e juridicamente é ELE que vale — o
+            PDF é uma representação dele. */}
+        <a
+          href={`/api/nota/${orderId}?tipo=xml`}
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+        >
+          <Download className="size-3.5 mr-1" />
+          {t("nfseButton.baixarXml")}
+        </a>
         {nfseUrl && (
           <a
             href={nfseUrl}
             target="_blank"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             <ExternalLink className="size-3.5 mr-1" />
             {t("nfseButton.viewLink")}

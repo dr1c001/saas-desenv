@@ -2602,7 +2602,9 @@
       "statusEmitted": "emitida",
       "viewLink": "Ver NFS-e",
       "confirmEmit": "Emitir NFS-e para est[[osFim]] [[os]]?",
-      "emitButton": "Emitir NFS-e"
+      "emitButton": "Emitir NFS-e",
+      "baixarPdf": "Nota (PDF)",
+      "baixarXml": "XML"
     },
     "signaturePad": {
       "emptyError": "Por favor, assine antes de salvar.",

@@ -2602,7 +2602,9 @@
       "statusEmitted": "issued",
       "viewLink": "View NFS-e",
       "confirmEmit": "Issue an e-invoice for this [[os]]?",
-      "emitButton": "Issue NFS-e"
+      "emitButton": "Issue NFS-e",
+      "baixarPdf": "Invoice (PDF)",
+      "baixarXml": "XML"
     },
     "signaturePad": {
       "emptyError": "Please sign before saving.",
