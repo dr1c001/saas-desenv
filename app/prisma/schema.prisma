@@ -42,6 +42,12 @@ model Tenant {
   address                 String?
   subscriptionStatus      SubscriptionStatus @default(TRIAL)
   trialEndsAt             DateTime?
+  /// Quantos avisos de "seu teste esta acabando" ja sairam.
+  ///
+  /// POSICAO na escada, e nao contagem de e-mails — mesma regra da regua de
+  /// cobranca: um aviso perdido (cron fora do ar) nao pode deslocar os
+  /// seguintes, e rodar duas vezes no mesmo dia nao pode mandar dois e-mails.
+  trialWarningsSent       Int                @default(0)
   planId                  String?
   asaasCustomerId         String?
   nfeioCompanyId          String?

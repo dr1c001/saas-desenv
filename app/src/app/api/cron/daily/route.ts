@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import {
   sendOnboardingDay3Email,
+  sendTrialEndingEmail,
   sendNpsEmail,
   sendPastDueWarningEmail,
   avisarFalhaDoCron,
@@ -17,6 +18,7 @@ import { gravarRetratoDoMes } from "@/lib/snapshot"
 import { temFuncao } from "@/lib/plan"
 import { conciliarNotasPendentes } from "@/lib/nfse-conciliar"
 import { conferirComissoes, resumirDivergencias } from "@/lib/comissao-conferente"
+import { AVISOS_DE_FIM, decidirAvisoDeFim, diasRestantes } from "@/lib/teste-gratis"
 import { notificar } from "@/lib/notificar"
 import { cobrarVencidas } from "@/lib/cobrar-vencidas"
 
@@ -64,7 +66,7 @@ export async function GET(req: NextRequest) {
     .create({ data: { name: "daily" }, select: { id: true } })
     .catch(() => null)
 
-  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, cobrancasEnviadas: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, comissoesConferidas: 0, comissoesDivergentes: 0, comissoesForaDaJanela: 0, retrato: "", errors: 0 }
+  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, cobrancasEnviadas: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, avisosDeTeste: 0, comissoesConferidas: 0, comissoesDivergentes: 0, comissoesForaDaJanela: 0, retrato: "", errors: 0 }
 
   // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
   // Em 07/08/2026 uma cliente pagou e ficou sem acesso por ~1 dia: os webhooks
@@ -319,6 +321,69 @@ export async function GET(req: NextRequest) {
     results.errors++
   }
 
+  // ── Teste grátis chegando ao fim ────────────────────────────────────────────
+  //
+  // Quem perde acesso sem aviso trata como defeito do sistema, e não como prazo
+  // que acabou. É o mesmo raciocínio do aviso de inadimplência — e aqui é ainda
+  // mais caro, porque a pessoa está justamente decidindo se compra.
+  //
+  // Três avisos (7, 3 e 1 dia). Um só, no último dia, não dá tempo de decidir,
+  // falar com sócio nem passar no cartão.
+  try {
+    const testando = await prisma.tenant.findMany({
+      where: {
+        subscriptionStatus: "TRIAL",
+        trialEndsAt: { not: null, gt: now },
+        trialWarningsSent: { lt: AVISOS_DE_FIM.length },
+      },
+      select: {
+        id: true,
+        name: true,
+        locale: true,
+        trialEndsAt: true,
+        trialWarningsSent: true,
+        users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } },
+      },
+    })
+
+    for (const empresa of testando) {
+      const decisao = decidirAvisoDeFim(
+        diasRestantes(empresa.trialEndsAt, now),
+        empresa.trialWarningsSent
+      )
+
+      // Grava o contador mesmo quando não envia: ele conta POSIÇÃO na escada, e
+      // não mensagens. Sem isso, um dia perdido deslocaria todos os avisos
+      // seguintes.
+      if (decisao.total !== empresa.trialWarningsSent) {
+        await prisma.tenant.update({
+          where: { id: empresa.id },
+          data: { trialWarningsSent: decisao.total },
+        })
+      }
+      if (!decisao.enviar) continue
+
+      const dono = empresa.users[0]
+      if (!dono?.email) continue
+      try {
+        await sendTrialEndingEmail(
+          dono.email,
+          dono.name,
+          empresa.name,
+          decisao.diasRestantes,
+          empresa.locale === "en" ? "en" : "pt"
+        )
+        results.avisosDeTeste++
+      } catch (e) {
+        console.error("[cron] falha ao avisar fim do teste:", empresa.id, e)
+        results.errors++
+      }
+    }
+  } catch (e) {
+    console.error("[cron] avisos de fim de teste falharam:", e)
+    results.errors++
+  }
+
   // ── Conferente das comissões ────────────────────────────────────────────────
   //
   // A comissão é mantida por um reconciliador chamado de cinco pontos. O
@@ -546,6 +611,7 @@ export async function GET(req: NextRequest) {
             `${results.errors} erro(s)`,
             `assinaturas ${results.reconciled} conciliadas/${results.stuckPending} presas`,
             `avisos de atraso ${results.avisosAtraso}`,
+            `avisos de fim de teste ${results.avisosDeTeste}`,
             `onboarding ${results.day3}`,
             `nps ${results.nps}`,
             `contratos ${results.contratos}`,

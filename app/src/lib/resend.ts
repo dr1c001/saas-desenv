@@ -388,6 +388,47 @@ export async function sendClientNoticeEmail(
 }
 
 /**
+ * "Seu teste está acabando."
+ *
+ * Vai para o DONO da empresa que está testando, e não para o cliente final —
+ * por isso não passa por `emailEmNomeDaEmpresa`: quem fala aqui é o ServiçoOS.
+ *
+ * O assunto muda com a urgência. "Faltam 7 dias" e "seu acesso termina amanhã"
+ * não podem chegar com o mesmo título: é no assunto que a pessoa decide se
+ * abre, e no último dia ela precisa abrir.
+ */
+export async function sendTrialEndingEmail(
+  to: string,
+  name: string,
+  companyName: string,
+  diasRestantes: number,
+  locale: "pt" | "en"
+) {
+  const t = getTranslator(locale, "emails")
+  const chave = diasRestantes <= 1 ? "ultimoDia" : "faltam"
+  return send({
+    from: FROM,
+    replyTo: REPLY_TO,
+    to,
+    subject: t(`trialEnding.subject.${chave}` as "trialEnding.subject.faltam", {
+      n: String(diasRestantes),
+    }),
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
+        <h2 style="margin:0 0 16px">${t(`trialEnding.title.${chave}` as "trialEnding.title.faltam", { n: String(diasRestantes) })}</h2>
+        <p style="line-height:1.6">${t("trialEnding.body", { name, company: companyName })}</p>
+        <p style="margin:24px 0">
+          <a href="${APP_URL}/billing"
+             style="background:#7c3aed;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;display:inline-block">
+            ${t("trialEnding.cta")}
+          </a>
+        </p>
+        <p style="color:#666;font-size:13px;line-height:1.6">${t("trialEnding.semCobranca")}</p>
+      </div>`,
+  })
+}
+
+/**
  * O orçamento indo para o cliente final.
  *
  * Assunto com o NÚMERO na frente: é assim que o cliente acha de novo na caixa

@@ -905,6 +905,19 @@
     },
     "clientNotice": {
       "subject": "atualização do seu serviço"
+    },
+    "trialEnding": {
+      "subject": {
+        "faltam": "Faltam {n} dias do seu teste no ServiçoOS",
+        "ultimoDia": "Seu teste no ServiçoOS termina amanhã"
+      },
+      "title": {
+        "faltam": "Faltam {n} dias de teste",
+        "ultimoDia": "Seu teste termina amanhã"
+      },
+      "body": "Olá, {name}. O teste grátis da {company} está chegando ao fim. Para continuar usando o sistema sem interrupção, escolha um plano — leva menos de dois minutos.",
+      "cta": "Escolher um plano",
+      "semCobranca": "Nada é cobrado automaticamente. Se você não escolher um plano, o acesso simplesmente pausa e seus dados continuam aqui."
     }
   },
   "errors": {
@@ -1463,7 +1476,7 @@
       "items": [
         {
           "q": "Existe período de teste grátis?",
-          "a": "Não — para usar o sistema é preciso assinar um dos planos. Aceitamos boleto ou cartão de crédito, com pagamento processado com segurança pelo Asaas."
+          "a": "Sim — 15 dias grátis, sem pedir cartão. No fim do prazo você escolhe um plano; nada é cobrado automaticamente."
         },
         {
           "q": "Posso cancelar a qualquer momento?",
@@ -1475,7 +1488,7 @@
         },
         {
           "q": "Quantos usuários posso ter?",
-          "a": "No Starter até 3, no Pro até 10, e no Enterprise ilimitados. Cada usuário pode ter permissões diferentes (proprietário, admin ou técnico)."
+          "a": "No Starter até 3, no Pro até 10 e no Enterprise até 30. Precisa de mais? A gente monta um plano sob medida. Cada usuário pode ter permissões diferentes (proprietário, admin ou técnico)."
         },
         {
           "q": "A emissão de NFS-e funciona para qual município?",
@@ -3657,5 +3670,10 @@
     "adicionar": "Acrescentar parcela",
     "fecha": "Fecha com {total}",
     "falta": "{sinal}{valor} para fechar"
+  },
+  "testeGratis": {
+    "faltamDias": "Faltam {n} dias do seu teste grátis.",
+    "ultimoDia": "Hoje é o último dia do seu teste grátis.",
+    "assinar": "Escolher um plano"
   }
 }

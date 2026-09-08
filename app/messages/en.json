@@ -905,6 +905,19 @@
     },
     "clientNotice": {
       "subject": "update on your service"
+    },
+    "trialEnding": {
+      "subject": {
+        "faltam": "{n} days left in your ServiçoOS trial",
+        "ultimoDia": "Your ServiçoOS trial ends tomorrow"
+      },
+      "title": {
+        "faltam": "{n} days of trial left",
+        "ultimoDia": "Your trial ends tomorrow"
+      },
+      "body": "Hi {name}. The free trial for {company} is coming to an end. To keep using the system without interruption, pick a plan — it takes under two minutes.",
+      "cta": "Choose a plan",
+      "semCobranca": "Nothing is charged automatically. If you don't pick a plan, access simply pauses and your data stays here."
     }
   },
   "errors": {
@@ -1463,7 +1476,7 @@
       "items": [
         {
           "q": "Is there a free trial period?",
-          "a": "No — you need to subscribe to one of our plans to use the system. We accept boleto or credit card, with payments processed securely through Asaas."
+          "a": "Yes — 15 days free, no card required. When it ends you pick a plan; nothing is charged automatically."
         },
         {
           "q": "Can I cancel anytime?",
@@ -1475,7 +1488,7 @@
         },
         {
           "q": "How many users can I have?",
-          "a": "Up to 3 on Starter, up to 10 on Pro, and unlimited on Enterprise. Each user can have different permissions (owner, admin, or technician)."
+          "a": "Up to 3 on Starter, 10 on Pro and 30 on Enterprise. Need more? We'll put together a custom plan. Each user can have different permissions (owner, admin or technician)."
         },
         {
           "q": "Which municipalities does e-invoice (NFS-e) issuance support?",
@@ -3657,5 +3670,10 @@
     "adicionar": "Add instalment",
     "fecha": "Adds up to {total}",
     "falta": "{sinal}{valor} to balance"
+  },
+  "testeGratis": {
+    "faltamDias": "{n} days left in your free trial.",
+    "ultimoDia": "Today is the last day of your free trial.",
+    "assinar": "Choose a plan"
   }
 }

@@ -7,6 +7,7 @@ import { ACOES, acoesValendo, ehAcao, podeFazer, type Acao } from "@/lib/acoes"
 import { escopoDe, filtroDeFilial, type Escopo } from "@/lib/filial"
 import { tenantImpersonado, isSuperAdmin } from "@/lib/admin"
 import { PAST_DUE_GRACE_DAYS } from "@/lib/past-due"
+import { fimDoTeste, testeAtivo } from "@/lib/teste-gratis"
 import { redirect } from "next/navigation"
 import { after } from "next/server"
 import { sendWelcomeEmail } from "@/lib/resend"
@@ -134,10 +135,16 @@ export const getTenant = cache(async function getTenant() {
       if (referrer) referralDiscountPercent = NEW_SIGNUP_DISCOUNT_PERCENT
     }
 
-    // Sem trial: o tenant nasce sem acesso, bloqueado até a primeira assinatura
-    // ser confirmada (ver gating em (dashboard)/layout.tsx).
+    // O teste grátis de 15 dias, de volta em 08/09/2026. O tenant nasce em
+    // TRIAL (padrão do schema) com a data de fim carimbada aqui — o campo
+    // existia e ninguém o preenchia desde que o trial foi removido em julho.
     const tenant = await prisma.tenant.create({
-      data: { name: companyName, referredByCode: refCode ?? null, referralDiscountPercent },
+      data: {
+        name: companyName,
+        referredByCode: refCode ?? null,
+        referralDiscountPercent,
+        trialEndsAt: fimDoTeste(new Date()),
+      },
     })
     const tenantId = tenant.id
     const role = "OWNER" as const
@@ -239,9 +246,17 @@ export const hasActiveSubscription = cache(async function hasActiveSubscription(
 ): Promise<boolean> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
-    select: { subscriptionStatus: true },
+    select: { subscriptionStatus: true, trialEndsAt: true },
   })
   if (tenant?.subscriptionStatus === "ACTIVE") return true
+
+  // O teste grátis. `trialEndsAt` nulo NÃO dá acesso: é o estado das empresas
+  // criadas enquanto não havia trial, e liberá-las agora reabriria o sistema de
+  // graça para quem parou de pagar.
+  if (tenant?.subscriptionStatus === "TRIAL") {
+    return testeAtivo(tenant.trialEndsAt, new Date())
+  }
+
   if (tenant?.subscriptionStatus !== "PAST_DUE") return false
 
   // A carência olha só pra Subscription que está de fato PAST_DUE — pegar "a
