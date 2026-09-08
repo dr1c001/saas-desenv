@@ -352,11 +352,18 @@ function emailEmNomeDaEmpresa(
   // conversa comercial: o cliente responde "pode fazer, quando vocês vêm?", e
   // essa mensagem tem de chegar na empresa que mandou, não no nosso suporte.
   // Quem chama passa o e-mail da empresa quando o documento pede resposta.
-  responderPara?: string | null
+  responderPara?: string | null,
+  // Arquivos que vão junto.
+  //
+  // Só o e-mail carrega anexo — o WhatsApp do Z-API manda texto. Quem chama
+  // decide o que anexar, e a mensagem tem de fazer sentido SEM os anexos: eles
+  // podem falhar em silêncio (ver baixarNotaFiscal em lib/fatura.ts).
+  anexos?: { filename: string; content: Buffer }[]
 ) {
   return send({
     from: FROM,
     replyTo: responderPara?.trim() || REPLY_TO,
+    ...(anexos && anexos.length > 0 ? { attachments: anexos } : {}),
     to,
     subject,
     html: `
@@ -423,9 +430,11 @@ export async function sendDunningEmail(
   // Cobrança é a mensagem que MAIS gera resposta: "já paguei, segue o
   // comprovante", "posso pagar dia 20?". Com o padrão, tudo isso caía no
   // suporte do ServiçoOS em vez de chegar em quem dá a baixa.
-  responderPara?: string | null
+  responderPara?: string | null,
+  /** A fatura e a nota fiscal, quando existem. */
+  anexos?: { filename: string; content: Buffer }[]
 ) {
-  return emailEmNomeDaEmpresa(to, companyName, subject, texto, responderPara)
+  return emailEmNomeDaEmpresa(to, companyName, subject, texto, responderPara, anexos)
 }
 
 /**

@@ -2176,6 +2176,20 @@
       "scan": "Point your bank app's camera at the code",
       "orCopy": "Or pay using the PIX key:",
       "receiver": "Receiver"
+    },
+    "fatura": {
+      "titulo": "INVOICE",
+      "cliente": "Client",
+      "nome": "Name",
+      "documento": "Tax ID",
+      "servico": "Service",
+      "parcelas": "Instalments",
+      "descricao": "Description",
+      "vencimento": "Due date",
+      "valor": "Amount",
+      "totalEmAberto": "Total outstanding",
+      "pix": "Pay by PIX (copy and paste)",
+      "desconsidere": "If you have already paid, please disregard this document."
     }
   },
   "pix": {
@@ -2654,7 +2668,8 @@
       "contratanteLabel": "Contracted by: ",
       "localLabel": "Service location: ",
       "cobrancaNoLocal": "billed to the end client",
-      "precisaAssinatura": "Available once the order is completed and signed."
+      "precisaAssinatura": "Available once the order is completed and signed.",
+      "fatura": "Invoice"
     },
     "edit": {
       "title": "Edit Service Order"

@@ -2176,6 +2176,20 @@
       "scan": "Aponte a câmera do seu banco para o código",
       "orCopy": "Ou pague usando a chave PIX:",
       "receiver": "Recebedor"
+    },
+    "fatura": {
+      "titulo": "FATURA",
+      "cliente": "Cliente",
+      "nome": "Nome",
+      "documento": "CPF/CNPJ",
+      "servico": "Serviço",
+      "parcelas": "Parcelas",
+      "descricao": "Descrição",
+      "vencimento": "Vencimento",
+      "valor": "Valor",
+      "totalEmAberto": "Total em aberto",
+      "pix": "Pague por PIX (copia e cola)",
+      "desconsidere": "Se você já efetuou o pagamento, por favor desconsidere este documento."
     }
   },
   "pix": {
@@ -2654,7 +2668,8 @@
       "contratanteLabel": "Contratante: ",
       "localLabel": "Local do serviço: ",
       "cobrancaNoLocal": "cobrança no cliente final",
-      "precisaAssinatura": "Disponível quando a OS estiver concluída e assinada."
+      "precisaAssinatura": "Disponível quando a OS estiver concluída e assinada.",
+      "fatura": "Fatura"
     },
     "edit": {
       "title": "Editar Ordem de Serviço"

@@ -15,12 +15,20 @@ import { REGUA_PADRAO } from "@/lib/regua-cobranca"
 let testDb: TestDatabase
 const mockWhats = vi.fn()
 const mockEmail = vi.fn()
+const mockFatura = vi.fn()
+const mockNota = vi.fn()
 
 beforeAll(async () => {
   testDb = await createTestDatabase()
   vi.doMock("@/lib/prisma", () => ({ prisma: testDb.db }))
   vi.doMock("@/lib/whatsapp", () => ({ sendWhatsApp: mockWhats }))
   vi.doMock("@/lib/resend", () => ({ sendDunningEmail: mockEmail }))
+  // Os anexos: o PDF de verdade e testado em lib/__tests__/fatura.test.ts.
+  // Aqui o que importa e QUANDO eles sao montados e anexados.
+  vi.doMock("@/lib/fatura", () => ({
+    gerarFatura: mockFatura,
+    baixarNotaFiscal: mockNota,
+  }))
   // A régua não pode depender de sessão: o cron roda sem usuário nenhum.
   vi.doMock("@/lib/auth", () => ({ hasActiveSubscription: async () => true }))
 })
@@ -33,6 +41,10 @@ beforeEach(async () => {
   await testDb.reset()
   mockWhats.mockReset().mockResolvedValue(true)
   mockEmail.mockReset().mockResolvedValue(true)
+  mockFatura
+    .mockReset()
+    .mockResolvedValue({ buffer: Buffer.alloc(2048), nomeArquivo: "fatura-OS20260042.pdf", numero: "OS20260042" })
+  mockNota.mockReset().mockResolvedValue(Buffer.alloc(4096))
 })
 
 /** Importa depois dos mocks — doMock não é içado. */
@@ -47,7 +59,7 @@ const vencimento = (diasAtras: number) =>
   new Date(HOJE.getTime() - diasAtras * 86_400_000)
 
 async function empresaComRegua(config: object = { ...REGUA_PADRAO, ativo: true }) {
-  return testDb.db.tenant.create({
+  const t = await testDb.db.tenant.create({
     data: {
       name: "Desentupidora Silva",
       dunningConfig: config,
@@ -56,6 +68,13 @@ async function empresaComRegua(config: object = { ...REGUA_PADRAO, ativo: true }
       zapiToken: "tok",
     },
   })
+  // O DONO. E o e-mail dele que recebe a resposta do cliente a cobranca —
+  // "ja paguei, segue o comprovante" precisa chegar em quem da a baixa.
+  // Empresa sem dono e dado quebrado, e a fixture nao devia inventar isso.
+  await testDb.db.user.create({
+    data: { id: `dono-${t.id}`, tenantId: t.id, name: "Silva", email: "silva@ex.com", role: "OWNER" },
+  })
+  return t
 }
 
 async function contaDe(
@@ -65,6 +84,9 @@ async function contaDe(
     criadaEm?: Date
     /** Reaproveita um cliente ja criado, para as contas cairem no mesmo pagador. */
     clienteExistente?: string
+    /** O PDF da nota fiscal e o que a prefeitura respondeu. */
+    nfseUrl?: string | null
+    nfseStatus?: string | null
     diasAtras: number
     status?: "PENDING" | "PAID" | "OVERDUE"
     paidAt?: Date | null
@@ -97,6 +119,8 @@ async function contaDe(
         number: Math.floor(Math.random() * 100000),
         title: "Desentupimento",
         payerId: opcoes.payerId ?? null,
+        nfseUrl: opcoes.nfseUrl ?? null,
+        nfseStatus: opcoes.nfseStatus ?? null,
       },
     })
     orderId = os.id
@@ -523,5 +547,101 @@ describe("três parcelas vencidas viram UMA mensagem", () => {
 
     const texto = mockWhats.mock.calls[0][3] as string
     expect(texto).toContain("/p/")
+  })
+})
+
+describe("os anexos: a fatura e a nota fiscal", () => {
+  it("o e-mail leva a FATURA em PDF", async () => {
+    const empresa = await empresaComRegua()
+    await contaDe(empresa.id, { diasAtras: 7 })
+
+    await rodar(HOJE)
+
+    const anexos = mockEmail.mock.calls[0][5] as { filename: string }[]
+    expect(anexos.map((a) => a.filename)).toContain("fatura-OS20260042.pdf")
+  })
+
+  it("com nota EMITIDA, ela vai junto", async () => {
+    const empresa = await empresaComRegua()
+    await contaDe(empresa.id, {
+      diasAtras: 7,
+      nfseUrl: "https://emissor/nota.pdf",
+      nfseStatus: "Issued",
+    })
+
+    await rodar(HOJE)
+
+    const anexos = mockEmail.mock.calls[0][5] as { filename: string }[]
+    expect(anexos).toHaveLength(2)
+    expect(anexos.some((a) => a.filename.startsWith("nota-fiscal-"))).toBe(true)
+  })
+
+  it("com nota REJEITADA, ela NÃO vai — nem que a URL exista", async () => {
+    // O defeito que isto evita: `nfseUrl` é gravado no envio, antes de a
+    // prefeitura responder. Anexar o PDF de uma nota rejeitada seria mandar ao
+    // cliente, em nome da empresa, um documento que não vale nada.
+    const empresa = await empresaComRegua()
+    await contaDe(empresa.id, {
+      diasAtras: 7,
+      nfseUrl: "https://emissor/nota.pdf",
+      nfseStatus: "Cancelled",
+    })
+
+    await rodar(HOJE)
+
+    expect(mockNota).not.toHaveBeenCalled()
+    const anexos = mockEmail.mock.calls[0][5] as { filename: string }[]
+    expect(anexos.some((a) => a.filename.startsWith("nota-fiscal-"))).toBe(false)
+  })
+
+  it("sem nota nenhuma, só a fatura", async () => {
+    const empresa = await empresaComRegua()
+    await contaDe(empresa.id, { diasAtras: 7 })
+
+    await rodar(HOJE)
+
+    expect(mockNota).not.toHaveBeenCalled()
+    expect((mockEmail.mock.calls[0][5] as unknown[]).length).toBe(1)
+  })
+
+  it("se a fatura falhar, a cobrança SAI mesmo assim", async () => {
+    // Uma cobrança que não sai é muito pior que uma cobrança sem anexo. E o
+    // texto é montado para fazer sentido sem eles.
+    mockFatura.mockRejectedValueOnce(new Error("render quebrou"))
+    const empresa = await empresaComRegua()
+    await contaDe(empresa.id, { diasAtras: 7 })
+
+    const r = await rodar(HOJE)
+
+    expect(r.enviadas).toBe(1)
+    expect(mockEmail).toHaveBeenCalledTimes(1)
+    expect((mockEmail.mock.calls[0][5] as unknown[]).length).toBe(0)
+  })
+
+  it("se a nota falhar ao baixar, a cobrança sai com a fatura só", async () => {
+    mockNota.mockResolvedValueOnce(null)
+    const empresa = await empresaComRegua()
+    await contaDe(empresa.id, {
+      diasAtras: 7,
+      nfseUrl: "https://emissor/nota.pdf",
+      nfseStatus: "Issued",
+    })
+
+    await rodar(HOJE)
+
+    const anexos = mockEmail.mock.calls[0][5] as { filename: string }[]
+    expect(anexos).toHaveLength(1)
+    expect(anexos[0].filename).toContain("fatura")
+  })
+
+  it("a RESPOSTA do cliente vai para a empresa", async () => {
+    // Cobrança é a mensagem que mais gera resposta. "Já paguei, segue o
+    // comprovante" precisa chegar em quem dá a baixa.
+    const empresa = await empresaComRegua()
+    await contaDe(empresa.id, { diasAtras: 7 })
+
+    await rodar(HOJE)
+
+    expect(mockEmail.mock.calls[0][4]).toBeTruthy()
   })
 })

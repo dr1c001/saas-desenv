@@ -99,6 +99,19 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
             PDF
           </Link>
           <WhatsAppButton type="os" id={id} />
+          {/* A FATURA em PDF: as parcelas em aberto, o total e o PIX da
+              empresa. Só aparece quando há o que cobrar — não existe fatura de
+              conta já quitada. */}
+          {os.revenues.some((r) => r.status !== "PAID") && (
+            <Link
+              href={`/api/pdf/fatura/${id}`}
+              target="_blank"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              <FileDown className="size-4 mr-2" />
+              {t("detail.fatura")}
+            </Link>
+          )}
           {/* "o cliente pediu prazo": entrada a vista mais saldo em 7/15/30
               dias. So faz sentido depois de haver valor e conclusao. */}
           {Number(os.totalAmount) > 0 && (os.status === "DONE" || os.status === "INVOICED") && (

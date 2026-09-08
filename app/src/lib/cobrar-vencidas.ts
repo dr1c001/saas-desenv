@@ -7,6 +7,9 @@ import { hasActiveSubscription } from "@/lib/auth"
 import { temRecurso } from "@/lib/plan"
 import { quemPaga } from "@/lib/subcliente"
 import { emailDaEmpresa, urlPublica } from "@/lib/envio-db"
+import { baixarNotaFiscal, gerarFatura } from "@/lib/fatura"
+import { estadoDaNota } from "@/lib/nfse-status"
+import { formatOsNumber } from "@/lib/utils"
 import {
   agruparPorPagador,
   type ContaParaCobrar,
@@ -138,6 +141,12 @@ export async function cobrarVencidas(agora: Date): Promise<ResultadoDaRegua> {
               payerId: true,
               // O token do portal publico: e o "onde clicar" da mensagem.
               clientToken: true,
+              // Para montar a FATURA em PDF e anexar a NOTA FISCAL.
+              id: true,
+              number: true,
+              createdAt: true,
+              nfseUrl: true,
+              nfseStatus: true,
               client: {
                 select: {
                   id: true,
@@ -267,9 +276,15 @@ type Conta = {
   amount: Prisma.Decimal
   dueDate: Date
   order: {
+    id: string
+    number: number
+    createdAt: Date
     payerId: string | null
     /** O token do portal publico: o "onde clicar" da mensagem de cobranca. */
     clientToken: string | null
+    /** O PDF da nota fiscal, quando a prefeitura ja aceitou. */
+    nfseUrl: string | null
+    nfseStatus: string | null
     client: (Contato & { id: string; parentId: string | null; parent: (Contato & { id: string }) | null }) | null
   } | null
 }
@@ -375,6 +390,39 @@ async function mandar(
 
   const assunto = `${empresa.name} — ${t(`reguaCobranca.assunto.${tom}` as "reguaCobranca.assunto.lembrete")}`
 
+  // ─── Os ANEXOS: a fatura e a nota fiscal ──────────────────────────────────
+  //
+  // Só o e-mail carrega anexo — o Z-API manda texto, e por isso o WhatsApp
+  // continua levando só o link do portal.
+  //
+  // A mensagem é montada para fazer sentido SEM eles: os dois podem falhar em
+  // silêncio (o render do PDF, a rede até o emissor fiscal), e uma cobrança que
+  // não sai é muito pior que uma cobrança sem anexo.
+  //
+  // A NOTA só é baixada quando ela EXISTE de verdade — `estadoDaNota` conta o
+  // que a prefeitura respondeu, e não o que foi enviado. Anexar o PDF de uma
+  // nota rejeitada seria mandar ao cliente um documento que não vale nada.
+  const anexos: { filename: string; content: Buffer }[] = []
+  if (canais.email) {
+    const os = grupo.principal.conta.order
+    try {
+      const fatura = os ? await gerarFatura(empresa.id, os.id) : null
+      if (fatura) anexos.push({ filename: fatura.nomeArquivo, content: fatura.buffer })
+    } catch (e) {
+      console.error("[régua] falhou ao gerar a fatura:", e)
+    }
+
+    if (os?.nfseUrl && estadoDaNota(os.nfseStatus) === "emitida") {
+      const nota = await baixarNotaFiscal(os.nfseUrl)
+      if (nota) {
+        anexos.push({
+          filename: `nota-fiscal-${formatOsNumber(os.number, os.createdAt)}.pdf`,
+          content: nota,
+        })
+      }
+    }
+  }
+
   // Os dois canais em paralelo e independentes: falha de um não impede o
   // outro. allSettled porque o objetivo é nunca lançar por causa de um canal.
   const saidas = await Promise.allSettled([
@@ -385,7 +433,14 @@ async function mandar(
       ? // A RESPOSTA do cliente vai para a empresa, e não para o suporte do
         // ServiçoOS. Quem responde "já paguei, segue o comprovante" precisa
         // chegar em quem dá a baixa.
-        sendDunningEmail(alvo.email, empresa.name, assunto, texto, await emailDaEmpresa(empresa.id))
+        sendDunningEmail(
+          alvo.email,
+          empresa.name,
+          assunto,
+          texto,
+          await emailDaEmpresa(empresa.id),
+          anexos
+        )
       : Promise.resolve(false),
   ])
 
