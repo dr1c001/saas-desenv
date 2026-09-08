@@ -1,0 +1,22 @@
+import Link from "next/link"
+import { buttonVariants } from "@/components/ui/button"
+import { ChevronLeft } from "lucide-react"
+import { ProviderForm } from "@/components/providers/provider-form"
+import { createProvider } from "@/actions/providers"
+import { getTranslations } from "next-intl/server"
+
+export default async function NewProviderPage() {
+  const t = await getTranslations("providers")
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Link href="/providers" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+          <ChevronLeft className="size-4" />
+        </Link>
+        <h1 className="text-2xl font-bold">{t("new.title")}</h1>
+      </div>
+      <ProviderForm action={createProvider} />
+    </div>
+  )
+}

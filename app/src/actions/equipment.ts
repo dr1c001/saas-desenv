@@ -1,0 +1,52 @@
+"use server"
+
+import { prisma } from "@/lib/prisma"
+import { checarAcao, getTenant, requireActiveSubscription } from "@/lib/auth"
+import { revalidatePath } from "next/cache"
+import { getTranslations } from "next-intl/server"
+
+export async function getClientEquipments(clientId: string) {
+  const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
+  return prisma.equipment.findMany({
+    where: { clientId, tenantId },
+    orderBy: { createdAt: "desc" },
+  })
+}
+
+export async function createEquipment(clientId: string, formData: FormData) {
+  const { tenantId } = await getTenant()
+  await requireActiveSubscription(tenantId)
+  if (await checarAcao("cliente.equipamento")) return
+  const client = await prisma.client.findUnique({ where: { id: clientId, tenantId } })
+  if (!client) throw new Error((await getTranslations("errors"))("clientNotFound"))
+
+  const installDateRaw = formData.get("installDate") as string
+  const warrantyRaw = formData.get("warrantyUntil") as string
+
+  await prisma.equipment.create({
+    data: {
+      tenantId,
+      clientId,
+      name: (formData.get("name") as string).trim(),
+      brand: (formData.get("brand") as string) || null,
+      model: (formData.get("model") as string) || null,
+      serialNumber: (formData.get("serialNumber") as string) || null,
+      notes: (formData.get("notes") as string) || null,
+      installDate: installDateRaw ? new Date(installDateRaw) : null,
+      warrantyUntil: warrantyRaw ? new Date(warrantyRaw) : null,
+    },
+  })
+  revalidatePath(`/clients/${clientId}`)
+}
+
+export async function deleteEquipment(equipmentId: string, clientId: string) {
+  const { tenantId, role } = await getTenant()
+  await requireActiveSubscription(tenantId)
+  // createEquipment fica sem checagem (technician cadastra equipamento em
+  // campo, fluxo legítimo), mas exclusão permanente sem confirmação exige
+  // OWNER/ADMIN. (Achado em revisão de segurança 2026-07-19.)
+  if (role !== "OWNER" && role !== "ADMIN") return
+  await prisma.equipment.deleteMany({ where: { id: equipmentId, tenantId } })
+  revalidatePath(`/clients/${clientId}`)
+}

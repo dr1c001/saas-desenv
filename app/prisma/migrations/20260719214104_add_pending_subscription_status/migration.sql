@@ -1,0 +1,12 @@
+-- Adiciona o estado PENDING ao enum SubscriptionStatus.
+--
+-- Usado por Subscription.status entre a criação da assinatura no Asaas e a
+-- confirmação do primeiro pagamento via webhook — antes desta mudança,
+-- subscribeToPlan() marcava a assinatura como ACTIVE imediatamente, dando
+-- acesso pago completo mesmo se o cliente nunca pagasse (achado em revisão
+-- de segurança 2026-07-19). Aplicado ao banco via `prisma db push` porque o
+-- histórico de migrations estava com drift em relação ao schema real
+-- (tabelas/enums já existentes na produção sem migration correspondente
+-- registrada) — este arquivo documenta a mudança para manter o histórico
+-- coerente, mesmo sem ter passado por `prisma migrate deploy`.
+ALTER TYPE "SubscriptionStatus" ADD VALUE 'PENDING';

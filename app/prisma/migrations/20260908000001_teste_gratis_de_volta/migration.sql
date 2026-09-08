@@ -1,0 +1,29 @@
+-- O teste grátis de 15 dias, de volta.
+--
+-- ─── Ele existiu, foi removido, e volta agora ────────────────────────────────
+--
+-- Até 21/07/2026 havia trial. Foi tirado por decisão de produto ("chega de
+-- acesso grátis: o cadastro passa a não dar acesso nenhum"), e a limpeza levou
+-- junto o banner, os avisos do cron, o e-mail de expiração e os textos do site.
+--
+-- Volta em 08/09/2026, com o produto focado num nicho só. O campo `trialEndsAt`
+-- nunca chegou a ser removido do banco — ele ficou lá, sem ninguém preencher,
+-- desde julho.
+--
+-- ─── O que NÃO volta ────────────────────────────────────────────────────────
+--
+-- O programa de indicação em "dias extras de trial". Ele nunca foi de fato
+-- aplicado em lugar nenhum (era um número calculado para mostrar na tela),
+-- virou desconto percentual de verdade, e o desconto funciona.
+--
+-- ─── O contador ─────────────────────────────────────────────────────────────
+--
+-- Guarda POSIÇÃO na escada de avisos (7, 3 e 1 dia antes do fim), e não
+-- quantidade de e-mails enviados. É a mesma regra da régua de cobrança, pelo
+-- mesmo motivo: um aviso perdido não pode deslocar os seguintes, e o cron
+-- rodando duas vezes no mesmo dia não pode mandar dois e-mails.
+--
+-- Zero em todo mundo: as empresas que existem hoje ou já assinaram, ou têm
+-- `trialEndsAt` nulo e não recebem aviso nenhum.
+
+ALTER TABLE "Tenant" ADD COLUMN "trialWarningsSent" INTEGER NOT NULL DEFAULT 0;

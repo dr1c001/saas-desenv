@@ -1,0 +1,3537 @@
+# Plano de Engenharia — ServiçoOS
+
+> Última atualização: 24/08/2026
+> Este documento é a referência técnica viva do projeto. Deve ser atualizado sempre que uma decisão de arquitetura importante for tomada.
+
+---
+
+## 1. Visão geral do produto
+
+**ServiçoOS** é um SaaS de gestão para pequenas e médias empresas prestadoras de serviço (desentupidoras, assistências técnicas, elétrica, refrigeração, etc.) no mercado brasileiro.
+
+**Proposta de valor:** substituir o controle manual via WhatsApp/planilha/papel por um sistema único que cobre todo o ciclo — orçamento, ordem de serviço, execução em campo, financeiro e nota fiscal.
+
+**Modelo de negócio:** SaaS multi-tenant por assinatura, 3 planos pagos (Starter/Pro/Enterprise) cobrados via Asaas. **Sem trial gratuito** — cadastro não dá acesso; é preciso assinar (boleto ou cartão) para usar o sistema (ver seção 1.1).
+
+### 1.1 Mudança de modelo: fim do trial gratuito (21/07/2026)
+
+Decisão de produto: o trial gratuito de 15 dias foi removido. Cadastro não dá mais acesso — o tenant nasce bloqueado e só libera com uma assinatura `ACTIVE` confirmada pelo webhook do Asaas. Vale pra todo mundo, inclusive os clientes piloto que já estavam usando de graça (decisão explícita, não descuido).
+
+**Gating simplificado** (`(dashboard)/layout.tsx`): de "trial dentro do prazo, não cancelado, não inadimplente" pra só `subscriptionStatus === ACTIVE`. Única exceção: `PAST_DUE` (falha numa renovação) ganha 3 dias de carência antes de bloquear de vez, reaproveitando o `currentPeriodEnd` que já existia na `Subscription` (sem campo novo) — evita perder cliente por uma falha pontual de cobrança que uma nova tentativa resolveria. `TRIAL` (nunca assinou), `PENDING` (aguardando confirmação) e `CANCELLED` bloqueiam na hora, sem carência. `/billing` continua acessível pra um tenant bloqueado poder se pagar e se desbloquear sozinho.
+
+**Programa de indicação redesenhado.** O bônus antigo ("dias extra de trial") nunca tinha sido de fato aplicado em lugar nenhum — `extraDaysEarned` era só um número calculado (`converted * 30`) pra mostrar na tela do `/referral`, sem nenhum trigger real que estendesse o trial de ninguém. Sem trial pra estender, virou um campo `referralDiscountPercent` de verdade no `Tenant`: quem indica ganha 20% (acumulável, até 100%) por indicado convertido — creditado no webhook do Asaas, na primeira confirmação de pagamento de cada indicado (não em renovações); quem se cadastra com código ganha 10% no primeiro pagamento. Aplicado ao preço e consumido (zerado) dentro de `subscribeToPlan`.
+
+**Limpeza decorrente:** banner de contagem regressiva do trial (removido, tinha virado código morto), stats/alerta de "trial expirando" no `/admin`, os 2 blocos do cron diário que buscavam trial expirando em 3/1 dias (nunca mais achariam nada), e-mail de trial expirando (sem chamador depois disso, removido), e-mail de onboarding do dia 3 (linkava pra `/service-orders/new` — quem não assinou não acessa mais essa rota; reescrito pra apontar pra `/billing`), e todos os textos de "15 dias grátis sem cartão" na landing page, registro e plano de marketing.
+
+**Pendência que tinha virado ainda mais crítica, resolvida em 21/07/2026:** `ASAAS_WEBHOOK_SECRET` estava sem configurar no Asaas/Vercel (seção 7.1) — sem isso, ninguém seria liberado depois de pagar, o único caminho de entrada no sistema inteiro. Configurado e verificado (ver seção 7.1).
+
+---
+
+## 2. Stack tecnológico
+
+| Camada | Tecnologia | Versão |
+|---|---|---|
+| Framework | Next.js (App Router, Turbopack) | 16.2.9 |
+| UI runtime | React | 19.2.4 |
+| Linguagem | TypeScript | ^5 |
+| Estilo | Tailwind CSS | v4 |
+| Componentes | shadcn/ui sobre `@base-ui/react` | — |
+| ORM | Prisma (`@prisma/adapter-pg`) | ^7.8.0 |
+| Banco de dados | PostgreSQL (Supabase) | — |
+| Autenticação | Supabase Auth (`@supabase/ssr`) | — |
+| Formulários | react-hook-form + zod | ^7.78 / ^4.4 |
+| Gráficos | recharts | ^3.8 |
+| PDF | @react-pdf/renderer | ^4.5 |
+| Push notifications | web-push (VAPID) | ^3.6 |
+| Assistente de voz | `@anthropic-ai/sdk` + Web Speech API | ^0.120 |
+| E-mail transacional | Resend | ^6.16 |
+| Monitoramento de erros | Sentry (`@sentry/nextjs`) | — |
+| Pagamentos | Asaas (gateway BR) | API v3 |
+| Nota fiscal | nfe.io | API |
+| Hospedagem | Vercel (região `gru1` — São Paulo) | — |
+
+**Nota importante sobre esta versão do Next.js:** o arquivo de middleware se chama `proxy.ts` (não `middleware.ts`) e exporta uma função `proxy`, não `middleware` — convenção mudou na v16. Ver `AGENTS.md` no repo.
+
+---
+
+## 3. Arquitetura
+
+```
+Cliente (navegador/PWA)
+        │
+        ▼
+  Vercel Edge (gru1 — São Paulo)
+   ├─ proxy.ts (auth guard + injeta header x-pathname)
+   ├─ Server Components / Server Actions
+   └─ API Routes (webhooks, cron, PDF, push)
+        │
+        ├──► Supabase (Postgres + Auth) — sa-east-1, mesma região da Vercel
+        ├──► Asaas (pagamentos, boleto/cartão)
+        ├──► Resend (e-mails transacionais)
+        ├──► nfe.io (emissão de NFS-e)
+        ├──► Sentry (erros, source maps)
+        └──► Z-API (WhatsApp — integração parcial, ver seção 9)
+```
+
+**Decisão de região:** funções da Vercel rodam propositalmente em `gru1` (São Paulo), mesma região do banco Supabase (`sa-east-1`). Antes disso as funções rodavam em `iad1` (EUA), causando latência real e perceptível em toda navegação — cada clique fazia idas e voltas transatlânticas ao banco. Corrigido e confirmado como ganho real de performance.
+
+**Multi-tenancy:** isolamento lógico por `tenantId` em todas as tabelas (não há isolamento físico/schema por cliente). Todo acesso a dados passa por `getTenant()`, que resolve o tenant do usuário autenticado.
+
+---
+
+## 4. Modelo de dados
+
+21 modelos Prisma, organizados em 4 domínios:
+
+**Conta e cobrança:** `Tenant`, `User`, `UserAddress`, `Plan`, `Subscription`, `TabPermission`
+
+**Operação (CRM/OS):** `Client`, `Address`, `ServiceOrder`, `ChecklistItem`, `ServiceItem`, `Attachment`, `Quote`, `Equipment`
+
+**Financeiro:** `Revenue`, `Expense`
+
+**Prestadores/manutenção interna:** `Provider`, `MaintenanceOrder`, `MaintenanceItem`
+
+**Infra de app:** `PushSubscription`, `UserLocation`
+
+**Relações que valem destaque (24/08/2026):**
+- `Client.parentId` → `Client` — subcliente. Uma administradora contrata, o
+  serviço é feito em cada condomínio. **Um nível só** (ver 7.2.42).
+- `ServiceOrder.payerId` → `Client` — quem paga *aquela* OS. `NULL` = o padrão
+  (contratante quando existe, senão o próprio cliente).
+- `Tenant.tabsConfiguredRoles` / `actionsConfiguredRoles` — quais **cargos** já
+  foram configurados. Substituem os booleanos, que só serviam quando havia um
+  cargo configurável (ver 7.2.39).
+- `Tenant.maxIaOverride` / `iaComandosNoMes` / `iaMesDoContador` — cota da
+  assistente de voz (ver 7.2.38).
+
+---
+
+## 5. Módulos funcionais implementados
+
+| Módulo | Rota | Observação |
+|---|---|---|
+| Landing page pública | `/` | Hero, dores, como funciona, features, planos, FAQ |
+| Cadastro / Login | `/register`, `/login` | Supabase Auth |
+| Recuperação de senha | `/forgot-password`, `/reset-password` | Via `generate_link` do Supabase (não `/admin/invite`, descontinuado) |
+| Dashboard | `/dashboard` | KPIs, gráfico de receita, OS ativas |
+| CRM de Clientes | `/clients` | CRUD, busca, status |
+| Orçamentos | `/quotes` | PDF, link de aprovação pública (`/q/[token]`) |
+| Ordens de Serviço | `/service-orders` | PDF, checklist, assinatura digital, GPS, NFS-e |
+| Histórico | `/history` | OS concluídas/faturadas |
+| Manutenção interna | `/maintenance` | Frota/equipamentos próprios |
+| Prestadores | `/providers` | Terceirizados |
+| Recibos | `/receipts` | Gerados após pagamento |
+| Agendamento | `/schedule` | Calendário mensal |
+| Financeiro | `/finance` | Receitas/despesas, alertas de vencimento |
+| Relatórios | `/reports` | DRE, top clientes, OS por status/período |
+| Equipe | `/team` | Convite por e-mail, RBAC (Owner/Admin/Técnico) |
+| Mapa GPS | `/map` | Localização de técnicos em tempo real |
+| Assinatura/Billing | `/billing` | Asaas, redireciona pro checkout hospedado |
+| Indicação (referral) | `/referral` | Link único, desconto percentual (não mais dias de trial — ver seção 1.1) |
+| Painel admin | `/admin` | Visão de todos os tenants, MRR (acesso restrito ao dono) |
+| Configurações | `/settings`, `/settings/fiscal`, `/settings/permissions` | Dados da empresa, config fiscal (NFS-e), RBAC por aba |
+| Bloqueio de acesso | `/expired` | Bloqueia tudo exceto `/billing` — cobre "nunca assinou", pagamento em confirmação, cancelado e inadimplente |
+| Termos e Privacidade | `/terms`, `/privacy` | LGPD |
+| Busca na sidebar | — | Filtra abas por nome |
+
+**E-mails automáticos (via cron diário, 09h BRT):** boas-vindas (aponta pra escolher um plano, não mais "seu teste começa agora"), lembrete no dia 3 pra quem se cadastrou e ainda não assinou, pagamento confirmado, convite de equipe, recuperação de senha, NPS pós-OS concluída.
+
+---
+
+## 6. Integrações externas
+
+| Serviço | Uso | Observação |
+|---|---|---|
+| Supabase | Auth + Postgres | `sa-east-1`, mesma região das funções |
+| Asaas | Cobrança recorrente | `billingType: UNDEFINED` (PIX não é permitido para assinaturas nesta conta — só boleto/cartão). Webhook autenticado por `ASAAS_WEBHOOK_SECRET` (header `asaas-access-token` — ver seção 7.1) |
+| Resend | E-mail transacional | Todos os e-mails do sistema |
+| Sentry | Monitoramento de erros | Captura server+client, source maps via `SENTRY_AUTH_TOKEN` |
+| nfe.io | Emissão de NFS-e | Configurado por tenant em `/settings/fiscal` |
+| Z-API | WhatsApp | **Parcial** — campos `zapiInstance`/`zapiToken` existem no schema, botão de envio existe, mas a instância nunca foi configurada de ponta a ponta (ver roadmap) |
+
+---
+
+## 7. Segurança e conformidade
+
+- Autenticação via Supabase, sessão em cookie, verificada em `proxy.ts` a cada requisição
+- RBAC por `role` (OWNER/ADMIN/TECHNICIAN) + `TabPermission` para customizar abas de técnicos — aplicado tanto na UI (abas/seções visíveis) quanto no servidor (Server Actions e rotas sensíveis validam `role` de novo, não confiam só na UI escondida)
+- Painel `/admin` restrito por e-mail hardcoded (dono do sistema)
+- Chave do Asaas armazenada em base64 na env var (não em texto puro — ver seção 9)
+- Webhook do Asaas autenticado por header `asaas-access-token` contra `ASAAS_WEBHOOK_SECRET` (mesmo padrão do webhook do Supabase, que já usava `x-webhook-secret`)
+- Termos de Uso e Política de Privacidade publicados, com aceite obrigatório no cadastro
+- Rate limiting em login/cadastro/recuperação de senha (por IP e por e-mail, Postgres) — login/cadastro passaram a chamar o Supabase Auth via Server Action em vez de direto do browser, já que um rate limit só numa rota nossa não protegia nada enquanto a chamada real ia direto pra API do Supabase
+- Exportação self-service de dados (LGPD art. 18) em Configurações, restrita a OWNER
+
+### 7.1 Auditoria de segurança — 19/07/2026
+
+Revisão completa do app: 5 frentes paralelas (auth/sessão, pagamentos/webhooks, isolamento entre tenants, rotas públicas, PDF/integrações) e cada achado verificado de forma adversarial e independente antes de virar correção. 14 vulnerabilidades confirmadas — nenhum falso positivo. Todas corrigidas no commit `4039c67`.
+
+**Críticas:**
+
+| Achado | Correção |
+|---|---|
+| `getTenant()` confiava em `user.user_metadata.tenantId`/`role` do Supabase (editável pelo próprio usuário via SDK client-side) para decidir tenant/papel no primeiro login — permitia se declarar OWNER de qualquer tenant, inclusive reentrar num tenant após ser removido | Primeiro login sempre cria tenant novo; nunca mais junta a um tenant existente via metadata. `removeTeamMember` limpa o metadata no Supabase ao remover alguém (defesa extra) |
+| Webhook do Asaas processava `PAYMENT_RECEIVED`/`SUBSCRIPTION_DELETED`/etc. sem verificar origem — qualquer um podia forjar eventos | Exige header `asaas-access-token` batendo com `ASAAS_WEBHOOK_SECRET` |
+| `subscribeToPlan` marcava a assinatura `ACTIVE` (acesso pago completo) antes de qualquer pagamento confirmado | Novo estado `PENDING` no enum `SubscriptionStatus`; só o webhook, ao confirmar pagamento real, marca `ACTIVE` |
+
+**Escalação de privilégio / RBAC:**
+- `updateTeamMemberRole` só validava o papel em compile-time (ADMIN podia se auto-promover a OWNER) → validação em runtime + bloqueio de alterar quem já é OWNER
+- `/settings` (dados da empresa + WhatsApp) e `/finance` sem checagem de papel nenhuma — technician via até o token do WhatsApp em texto puro → ambos exigem OWNER/ADMIN, no servidor e na UI
+- `deleteClient` e as mutações de `providers`/`maintenance orders` sem checagem de papel → exigem OWNER/ADMIN
+
+**Isolamento entre tenants (multi-tenancy):**
+- `updateServiceOrder` apagava/recriava itens da OS antes de validar que ela pertencia ao tenant do usuário → validação de posse roda antes, tudo dentro de uma transação
+- `clientId`/`technicianId` (ordens de serviço) e `providerId` (manutenção) aceitos sem checar se pertenciam ao tenant do usuário — inclusive a notificação push de atribuição de OS, que buscava inscrições por `userId` sem nenhum filtro de tenant → todos validados contra o tenant antes de usar
+- XSS armazenado nos popups do mapa GPS (Leaflet `bindPopup()` usa `innerHTML`) — nome de cliente/OS/técnico entravam sem escapar → todos os campos de usuário escapados antes de montar o popup
+
+**Outros:**
+- `/api/referral/join` sem sessão e sem idempotência — permitia estender o trial indefinidamente → exige sessão (tenant vem dela, nunca do corpo da requisição) e é idempotente
+- `/api/nps` e `/api/quote-approval` autenticavam só pelo `id` bruto do registro (que vaza em URLs internas do dashboard) em vez do `clientToken` do link público → exigem o `clientToken`
+- `/api/push/subscribe` aceitava qualquer endpoint sem validar o host (SSRF cego via `web-push`) → allowlist de hosts de push reais (FCM, Mozilla, Apple, Windows)
+- `/api/auth/callback`: open redirect via truque de userinfo na URL (`next=@evil.com/x`) → `next` validado como caminho relativo simples
+
+**Pendências — ação manual fora do código (resolvidas em 21/07/2026):**
+- ~~Configurar `ASAAS_WEBHOOK_SECRET` no dashboard do Asaas~~ — feito
+- ~~Adicionar `ASAAS_WEBHOOK_SECRET` nas env vars de produção da Vercel~~ — feito via `vercel env add` + redeploy. Verificado em produção: `POST /api/webhooks/asaas` sem o header retorna 401, com o token correto retorna 200
+
+### 7.1.1 Domínio próprio e e-mail transacional — 05/08/2026
+
+O sistema rodava em `app-olive-six-67.vercel.app`. Descoberto ao investigar
+"e-mail de recuperação de senha não chega": o Resend nunca conseguiu enviar
+nenhum e-mail do sistema (boas-vindas, convite, pagamento, NPS, recuperação de
+senha) desde sempre — 403 "domain is not verified", porque um subdomínio
+`*.vercel.app` pertence à Vercel e nunca pode ser verificado como domínio de
+envio. Comprado `servicoos.com.br` (registro.br), configurado DNS (DKIM +
+MX/SPF do Resend, A record pra Vercel) e migrado `NEXT_PUBLIC_APP_URL` e todos
+os 8 fallbacks hardcoded no código. E-mail confirmado funcionando (envio de
+teste real via API do Resend).
+
+**Certificado SSL não emitido automaticamente.** Depois do DNS propagado
+corretamente (`nslookup` confirmando o A record), o site novo continuou de
+fora por ~7 horas — `vercel certs ls` mostrava "No certificates found", ou
+seja, a Vercel nunca sequer tentou emitir o certificado sozinha (não é só
+demora normal). Resolvido forçando na mão: `vercel certs issue <domínio>`.
+
+### 7.2 Segunda auditoria de segurança — 20/07/2026
+
+Pedido explícito de reverificar tudo depois da 7.1. Metodologia: 6 revisões paralelas (4 focadas em atacar adversarialmente as próprias correções da 7.1, 2 fazendo varredura fresca no resto do app) + verificação adversarial independente por achado. 12 vulnerabilidades novas confirmadas — nenhuma sobreposta com a 7.1, nenhuma refutada. Corrigidas no commit `2dfe2a1`.
+
+**Altas:**
+
+| Achado | Correção |
+|---|---|
+| `billing.ts` (`subscribeToPlan`/`cancelSubscription`) sem checagem de papel — qualquer technician cancelava a assinatura paga da empresa toda navegando direto pra `/billing` | Guard OWNER/ADMIN em ambas |
+| `cancelSubscription()` marcava o tenant `CANCELLED` incondicionalmente (mesmo sem assinatura ativa) e engolia falhas do cancelamento no Asaas em silêncio | Só marca `CANCELLED` se achou e cancelou de verdade; loga falha e mostra erro em vez de fingir sucesso |
+| `nfse.ts` (`emitNfse`/`registerFiscalCompany`) sem checagem de papel — technician emitia NFS-e real (e a função de cancelar nota existe na lib mas nunca é chamada em lugar nenhum) | `emitNfse` exige OWNER/ADMIN; `registerFiscalCompany` exige OWNER (mesma restrição já aplicada à página) |
+| `quotes.ts` sem checagem de papel — technician deletava ou forjava aprovação de qualquer orçamento | Guard OWNER/ADMIN em create/update/status/delete |
+| SSRF via URL do logo da empresa — `@react-pdf/renderer` busca a URL no servidor a cada PDF gerado, sem validar host | Bloqueia IPs privados/loopback/link-local e exige `https`. Não cobre DNS rebinding (domínio que resolve pra IP público na validação e pra IP privado no fetch real) — mitigação completa exigiria buscar a imagem nós mesmos com IP pinning, fora do escopo desta correção |
+| `/api/location/list` e `/api/location/orders` sem checagem de papel — a página `/map` já é OWNER/ADMIN-only, as APIs por trás não eram | Guard OWNER/ADMIN nas duas rotas |
+
+**Médias:**
+- Webhook do Asaas podia reativar (`PAYMENT_RECEIVED`) uma assinatura já `CANCELLED` via pagamento atrasado/duplicado, sobrescrevendo o plano do tenant → guard `sub.status !== "CANCELLED"` (PENDING/PAST_DUE → ACTIVE continuam permitidos)
+- `getFinanceSummary` sem checagem de papel — o Action ID já existe registrado e é despachável pelo Next.js independente de quem importa a função hoje, então não dava pra confiar só no redirect da página → auto-defesa igual ao `getSettings()`
+- `clients.ts`: `updateClient` sem checagem (permite marcar cliente como `DEFAULTER`); `createClient` ficou de fora da correção — technician cadastra cliente em campo, fluxo legítimo
+- `equipment.ts`: `deleteEquipment` sem checagem nem confirmação; `createEquipment` ficou de fora — technician cadastra equipamento em campo
+
+**Baixa:**
+- Race condition no `/api/referral/join` (check-then-act, não atômico) → trocado por `updateMany` condicionado a `referredByCode: null`
+
+**Não corrigido (decisão consciente, não esquecimento):** o bônus de indicação também é concedido via `user_metadata.ref_code` no cadastro (`/register?ref=CODE` → `auth.ts`), caminho totalmente separado do `/api/referral/join` e sem rate-limit. Mas o cadastro em si já não tem rate-limit/captcha nenhum independente de indicação — corrigir isso de verdade exigiria CAPTCHA ou redesenhar o mecanismo de indicação, uma decisão de produto, não um patch de segurança pontual.
+
+**Lição arquitetural confirmada nesta rodada** (ver seção 9, item 12): toda função exportada de um arquivo `"use server"` vira um endpoint despachável pelo Next.js assim que é exportada — não quando alguém a chama do client. Um redirect na página que chama a função **não protege a função em si**. Cada Server Action sensível precisa se defender sozinha.
+
+### 7.2.1 Incidente: primeira cliente pagante sem acesso — 07/08/2026
+
+**Sintoma reportado:** cliente pagou (R$ 97, PIX, 06/08) e continuou vendo
+"Aguardando confirmação do pagamento"; junto disso, "todas as abas do sistema
+estão dando erro".
+
+**Causa raiz (uma só, para os dois sintomas):** na migração de
+`app-olive-six-67.vercel.app` para `servicoos.com.br` (seção 7.1.1) o código,
+o DNS e as env vars foram atualizados, mas **a URL dos webhooks no painel da
+Asaas não** — os dois webhooks continuaram apontando pro domínio antigo. Após
+as falhas consecutivas a Asaas os marcou `"interrupted": true` e parou de
+entregar. Sem o `PAYMENT_RECEIVED`, a `Subscription` ficou `PENDING`.
+
+E `PENDING` **bloqueia todas as abas**: `(dashboard)/layout.tsx` redireciona
+pra `/expired` tudo que não seja `/billing` ou `/settings`. Ou seja, uma falha
+de webhook não se apresenta como "pagamento pendente" — se apresenta como
+"o sistema inteiro quebrou", que foi exatamente como a cliente descreveu.
+
+**Correções:**
+1. Webhooks apontados pra `https://servicoos.com.br/api/webhooks/asaas`,
+   `interrupted` limpo e `authToken` reconfigurado. Os dois eram duplicados
+   com eventos sobrepostos (a Asaas rejeita URL igual com eventos iguais) —
+   consolidados num só, com `SUBSCRIPTION_DELETED` incluído, e o segundo
+   desativado.
+2. Acesso da cliente liberado **reenviando o evento real pelo próprio
+   webhook** (`pay_ulhdt0rtag3oafpc`) em vez de editar o banco na mão — assim
+   a correção também serviu de teste de ponta a ponta do fluxo.
+3. Rede de segurança no cron diário: reconcilia contra a Asaas qualquer
+   `Subscription` `PENDING` cujo pagamento já esteja `RECEIVED`/`CONFIRMED`,
+   loga o caso e ativa. Idempotente, mesmo caminho do webhook.
+
+**Lição:** trocar de domínio exige uma varredura em **todos os serviços
+externos que apontam de volta pra nós**, não só nos que nós chamamos. Nesta
+migração o Resend foi lembrado (DKIM/SPF) e o Asaas não. Vale reler a lista de
+integrações da seção 6 a cada troca de domínio. Pior ainda: um webhook morto é
+**silencioso por natureza** — ninguém erra, nada loga, e o primeiro sinal é o
+cliente reclamando. Daí a reconciliação diária.
+
+**Erro de diagnóstico que custou tempo (registrar pra não repetir):** ao
+investigar as "abas com erro" pelo navegador headless, todas apareciam presas
+num esqueleto de carregamento, com o conteúdo real dentro de `<template>` sem
+ser aplicado. Cheguei a fazer rollback de produção achando que era regressão
+do i18n. Não era: o painel do navegador não estava sendo exibido, então a aba
+**não compõe frames** e os scripts inline finais do streaming do React nunca
+executam. O servidor estava saudável o tempo todo (18/18 abas em 200, 15
+requisições concorrentes sem falha, em ambas as versões). **Antes de suspeitar
+do código, confirmar o sintoma por um caminho que não dependa de renderização**
+— `fetch()` do HTML e conferência de status/tamanho já teria descartado a
+hipótese em um passo.
+
+### 7.2.2 Capacidade medida e auditoria rodada 4 — 08/08/2026
+
+**Capacidade (medida, não estimada).** Rajadas de requisições simultâneas em
+produção, na landing (pública) e no `/dashboard` (autenticado, com sessão
+real):
+
+| Simultâneas | p50 | p95 | Falhas |
+|---|---|---|---|
+| 5 | 1378ms | 1729ms | 0 |
+| 20 | 519ms | 1685ms | 0 |
+| 40 | 477ms | 2328ms | 0 |
+| 80 | 911ms | 2646ms | 0 |
+| 120 | 1329ms | 1805ms | 0 |
+
+Zero falhas até 120 requisições simultâneas. **Requisição simultânea ≠
+usuário**: alguém usando o sistema dispara uma requisição a cada 10-30s, então
+120 simultâneas correspondem a algo na casa de centenas de pessoas usando ao
+mesmo tempo. O teto conhecido não é a aplicação: é `max_connections = 60` no
+Postgres do Supabase (13 em uso em repouso). Como a conexão vai pelo pooler em
+modo transação (porta 6543), que multiplexa, e cada instância da Vercel abre
+só 1 conexão (`lib/prisma.ts`, `max: 1`), esse limite não foi alcançado nos
+testes. **Ressalva honesta:** o teste saiu de um único cliente/IP; carga real
+distribuída sobe mais instâncias na Vercel — provavelmente melhor, mas não
+medido.
+
+**Auditoria rodada 4.** Varredura sistemática das 47 Server Actions,
+classificando cada uma por: é mutação? checa papel? checa assinatura? Dois
+achados reais:
+
+| Achado | Correção |
+|---|---|
+| O aviso de "link já usado" (adicionado horas antes, ver 7.2.3) viajava como **texto** na URL e era renderizado dentro da caixa de aviso oficial do login — qualquer um montaria `/login?error=<mensagem convincente>` e aplicaria um golpe com a cara do sistema | Passa um **código** (`invite_used`/`recovery_used`/`invalid_link`); a tela só reconhece esses três e ignora o resto |
+| `getReferralInfo` sem checagem de papel — TECHNICIAN via o código de indicação e o saldo de desconto da empresa, e a função ainda **escreve** (gera o código na primeira leitura) | Exige OWNER/ADMIN, mesma régua de `/billing` e `/finance`; a página trata a recusa em vez de mostrar campo vazio |
+
+Os demais casos sem checagem de papel foram confirmados como **intencionais e
+documentados**: técnico precisa criar cliente, marcar checklist e concluir OS
+em campo; `updateProfile` só altera o próprio usuário (`where: { id: userId }`).
+
+**Nota sobre "blindar pra ninguém hackear":** não existe. O que dá pra fazer é
+reduzir superfície e impacto — e é o que estas 4 rodadas fizeram. O ponto
+frágil que permanece não é código: são credenciais (as chaves de serviço no
+`.env`/Vercel) e o fato de `/admin` ser liberado por e-mail hardcoded.
+
+### 7.2.3 Convidado caindo em "cadastrar nova empresa" — 08/08/2026
+
+**Sintoma:** integrante de equipe convidado relatou receber "o link para
+cadastrar uma nova empresa".
+
+**O convite em si estava certo** — link, domínio e criação do `User` no tenant
+correto, tudo verificado nos dados (o convidado inclusive aceitou e entrou com
+sucesso: `invited_at` 01:13, `last_sign_in_at` 01:44, metadata com o
+`tenantId` e papel certos).
+
+**A falha é no segundo clique.** Links do Supabase são de **uso único**. Ao
+reabrir o e-mail, `/api/auth/confirm` falha e redireciona pra
+`/login?error=...` — só que **a tela de login nunca leu esse parâmetro**. O
+convidado via uma tela de login limpa, sem explicação nenhuma, tendo
+"Cadastrar empresa" como link mais visível. Daí criar empresa nova em vez de
+entrar na do empregador.
+
+Corrigido nos dois lados: a tela passou a exibir o aviso (`useSearchParams` +
+Suspense) e a mensagem virou específica por tipo de link — a de convite manda
+entrar ou usar "Esqueci minha senha" com o e-mail convidado, e desaconselha
+explicitamente criar outra empresa.
+
+**Lição:** redirecionar com uma mensagem de erro na query string não serve de
+nada se a página de destino não a lê. Vale conferir o par (quem manda, quem
+exibe) sempre que um fluxo de erro atravessa páginas — e preferir código a
+texto livre, senão o parâmetro vira vetor de golpe (foi o achado 1 da 7.2.2).
+
+### 7.2.4 OS sumindo do mapa e trabalho sumindo do dashboard — 10/08/2026
+
+Dois relatos do usuário no mesmo dia, com a mesma raiz: **o sistema descartava
+dado em silêncio em vez de mostrar o que sabia.**
+
+**1. "As OS abertas e em andamento não aparecem no mapa."**
+
+O mapa filtra por `client.address.latitude != null`. A geocodificação
+(`lib/geocode.ts`, Nominatim/OpenStreetMap) rodava **uma tentativa só**, com o
+endereço completo, e falha em silêncio (`catch {}` + `return null`). Qualquer
+abreviação ou erro de digitação na rua derrubava a tentativa inteira — e o
+cliente ficava sem coordenada **para sempre**, porque só criar/editar o cliente
+dispara nova geocodificação.
+
+Medido em produção: **4 dos 5 endereços cadastrados** estavam nesse estado.
+Testado direto na API: `av abel fraancisco pereira, Piracicaba` → `[]`;
+`avenida abel francisco pereira, Piracicaba` → acha na hora. Ou seja: a
+abreviação "av" e um "fraancisco" bastavam.
+
+Três correções:
+- **Cascata** em `geocodeAddress()`: rua+número → rua → só cidade/estado, com
+  abreviações brasileiras expandidas (`av`→`avenida`, `r`→`rua`, etc.). Pino
+  aproximado no bairro certo é muito melhor que pino nenhum.
+- **Backfill** no cron diário (lote de 10, orçamento de 25s, respeitando o
+  limite de 1 req/s do Nominatim) — conserta o passivo sem ninguém mexer.
+  Exigiu `maxDuration = 60` na rota.
+- **Aviso na tela**: OS abertas cujo cliente não tem coordenada agora aparecem
+  num bloco "N OS fora do mapa", com link direto pra editar o endereço. Antes
+  elas não apareciam em lugar nenhum — nem no mapa, nem no contador.
+
+Os 4 endereços foram corrigidos em produção na mesma sessão (5/5 com
+coordenada). Um deles caiu no nível cidade por causa do "fraancisco".
+
+**2. "OS concluídas também têm que aparecer no valor do dashboard, porque não
+são todas as OSs [que] precisam ser faturadas."**
+
+`Revenue` só nasce na transição pra `INVOICED` (`updateOrderStatus` e
+`completeServiceOrder` com `invoiceImmediately`). Quem conclui o serviço,
+recebe na hora e não emite nota deixa a OS em `DONE` — e o card "Faturado no
+mês", que somava só `Revenue.status = PAID`, ignorava esse trabalho por
+completo.
+
+O card passou a somar `PAID` + total das OS `DONE` concluídas no mês, filtradas
+por `revenues: { none: {} }` pra não contar duas vezes uma receita lançada à
+mão (quando a OS é faturada ela sai deste filtro e entra pelo agregado de
+receitas). Como um número só esconderia a origem do valor, o rodapé do card
+mostra a composição sempre que houver OS concluída sem faturar. Em produção:
+R$ 4.339,00 pagas + R$ 350,00 concluídas = R$ 4.689,00 (antes: R$ 4.339,00).
+
+Aproveitando o mesmo arquivo: o card usava `new Date(ano, mês, 1)`
+(meia-noite **UTC** do servidor da Vercel) enquanto o gráfico logo abaixo já
+usava `brtMidnightUTC` — o mês do card começava às 21h do último dia do mês
+anterior. Unificado. Removida também uma `count()` de OS `DONE` calculada a
+cada carregamento e nunca renderizada.
+
+**Lição:** filtro de exibição que descarta linha incompleta precisa contar o
+que descartou. "Nenhuma OS no mapa" e "nenhuma OS no mapa que eu consiga
+posicionar" parecem iguais na tela e são problemas completamente diferentes —
+o usuário concluiu, com razão, que o mapa estava quebrado.
+
+### 7.2.5 PWA morto e banco sem índice nenhum — 10/08/2026
+
+Achados respondendo a duas perguntas do usuário ("o que falta pra aguentar 30
+mil simultâneos?" e "dá pra virar aplicativo?"). Nenhum dos dois era sintoma
+relatado — os dois estavam quebrados em silêncio.
+
+**1. O middleware engolia todo arquivo estático.**
+
+O `matcher` do proxy excluía nominalmente só `_next/static`, `_next/image`,
+`favicon.ico` e `api/auth`. Tudo o mais em `public/` caía no redirect pra
+`/login`. Quatro arquivos de uma vez, todos com efeito invisível:
+
+| Arquivo | Consequência |
+|---|---|
+| `/sw.js` | `serviceWorker.register()` recebia o HTML do login em vez de JS. **As notificações push nunca funcionaram em produção** — a funcionalidade constava como pronta desde o início. |
+| `/manifest.json` | Sem manifest, o navegador não oferece "instalar app". |
+| `/robots.txt` | O Google nunca leu. |
+| `/sitemap.xml` | Idem — os dois foram criados na tarefa de SEO e nunca chegaram a ser acessíveis. |
+
+Somando: os ícones `icon-192.png` e `icon-512.png`, referenciados no manifest,
+**nunca existiram** — `public/` só tinha os SVGs padrão do Next.
+
+Corrigido excluindo qualquer caminho com extensão de arquivo
+(`.*\..*`), em vez de manter uma lista nominal que já provou não escalar.
+Isso não afrouxa segurança: o proxy só faz redirect de conveniência; a
+proteção real é o `getTenant()` de cada página e Server Action. Ícones gerados
+com `sharp` a partir do glifo de chave inglesa do lucide — o mesmo que já
+identifica OS na interface —, mais `src/app/apple-icon.png` pela convenção do
+App Router.
+
+**Conclusão sobre "virar aplicativo":** já é um PWA; faltava só ele funcionar.
+Com isso instala na tela inicial de Android e iPhone. O que ainda **não** tem é
+modo offline — o service worker só trata push, não guarda nada em cache. Para
+técnico em campo sem sinal, esse é o próximo passo que importa. Loja de
+aplicativos exigiria empacotar com Capacitor (2–4 semanas, sem reescrever
+tela).
+
+**2. O schema não tinha um único `@@index`.**
+
+Só chaves primárias e 13 `@unique`. Duas consequências:
+
+- Toda consulta do produto é `WHERE tenantId = ? [+ status] ORDER BY createdAt
+  DESC`. `Client`, `Revenue` e `Expense` não tinham nem cobertura parcial —
+  varriam a tabela inteira de todos os tenants. (`ServiceOrder` e `Quote`
+  tinham o prefixo salvo por acidente, via o `@@unique([tenantId, number])`.)
+- **O Postgres não indexa chave estrangeira automaticamente** (ao contrário do
+  MySQL). Todo JOIN e todo `onDelete: Cascade` varria a tabela filha inteira.
+
+Adicionados 28 índices, escolhidos consulta a consulta a partir do código real
+em `actions/` e `app/`, não por precaução. Migration puramente aditiva (28
+`CREATE INDEX`, nenhum `DROP`/`ALTER`).
+
+Verificação: com 12 registros o planejador prefere varredura mesmo tendo
+índice, então rodei `EXPLAIN` com `enable_seqscan = off` — as 14 consultas
+quentes do sistema são atendidas por índice. Entre índices que compartilham as
+colunas iniciais o planejador escolhe arbitrariamente nesse volume; com dados
+de verdade ele passa a escolher pela coluna final.
+
+**Lição:** os dois problemas eram do mesmo tipo — **coisa que não dá erro**.
+Push que nunca registra não aparece no Sentry; consulta sem índice em tabela de
+12 linhas não aparece em lugar nenhum. Só apareceram porque alguém perguntou
+"isso funciona?" em vez de esperar quebrar. Vale repetir a pergunta de tempos
+em tempos sobre funcionalidade que ninguém usa ainda.
+
+### 7.2.6 Modo offline para campo — 10/08/2026
+
+Pedido do usuário logo depois de o PWA voltar a funcionar (7.2.5): sem sinal, o
+app era inútil — o técnico num subsolo ou em zona rural via a tela de "sem
+internet" do navegador e pronto.
+
+**O que foi feito** (`public/sw.js`, versão `v2`):
+
+- **Precache do essencial** na instalação: `/offline`, ícones e manifest. Um a
+  um, com `catch` por item — `addAll()` aborta a instalação inteira do service
+  worker se um único arquivo falhar.
+- **Navegação: rede primeiro, cache depois.** Online o comportamento é
+  idêntico ao de hoje; sem rede, entrega a última cópia daquela página.
+- **Estáticos do Next: cache primeiro.** Têm hash no nome, são imutáveis.
+- **Tela `/offline`** como último recurso, quando não há nem rede nem cópia.
+  Fica fora do grupo `(dashboard)` — aquele layout consulta banco, que é
+  exatamente o que não funciona aqui — e entrou na lista de rotas públicas do
+  proxy, senão o service worker guardaria um redirect pro `/login` no lugar
+  dela.
+- **Aviso visual** no topo do dashboard quando `navigator.onLine` é falso: dado
+  velho passando por dado atual é pior que erro visível.
+- **Limpeza no logout.** O cache guarda HTML renderizado com dados da empresa;
+  num celular compartilhado entre técnicos, sair da conta precisa levar isso
+  junto.
+
+**Decisões de recusa, que importam tanto quanto o que entrou:**
+
+- **Nada de POST no service worker.** Server Actions são POST; uma escrita
+  respondida pelo cache seria pior que um erro de rede honesto.
+- **Payload de navegação do App Router (`?_rsc=`) fica de fora.** A mesma URL
+  devolve conteúdo diferente conforme os cabeçalhos de roteamento do Next —
+  guardar por URL serviria a resposta errada. Consequência assumida: offline,
+  clicar num link do menu falha; recarregar entrega a versão guardada.
+- **Só guarda resposta 200 e não-redirecionada.** Um 307 pro `/login` guardado
+  no lugar de uma página quebra a navegação seguinte de um jeito difícil de
+  diagnosticar (o navegador recusa resposta redirecionada em navegação).
+- **`/api/`, telas de autenticação e `/admin` nunca entram no cache.**
+
+**O que NÃO está incluído: gravar offline.** Criar ou concluir OS ainda exige
+conexão. Fila de escrita com sincronização posterior é um projeto à parte —
+envolve interceptar Server Actions (POST), persistir a intenção, e resolver
+conflito de edição quando duas pessoas mexem na mesma OS. O aviso de tela e a
+página `/offline` dizem isso ao técnico com todas as letras, em vez de deixar
+ele achar que salvou.
+
+**Correção achada no caminho:** o registro do service worker morava dentro do
+`PushSubscriber`, atrás de `if (!("PushManager" in window)) return`. No iPhone
+o `PushManager` só existe depois que o app é instalado na tela inicial — ou
+seja, no Safari comum o service worker nunca era registrado. O registro virou
+componente próprio (`ServiceWorkerRegistrar`): offline não deveria depender de
+notificação estar disponível.
+
+**Verificação:** servidor de desenvolvimento derrubado de verdade (`fetch` a
+uma URL nova falhando, confirmado antes de concluir qualquer coisa). Com o
+servidor morto: página já visitada abriu do cache com conteúdo íntegro; URL
+nunca visitada caiu na tela `/offline` com o texto explicativo. As duas
+metades do `navegacao()` exercidas de ponta a ponta.
+
+### 7.2.7 Planos não entregavam o que a tela vendia — 10/08/2026
+
+Pedido do usuário: "certifique que cada plano será liberado o que estamos
+prometendo na assinatura". A auditoria encontrou o pior resultado possível.
+
+**Não existia nenhuma verificação de plano no sistema.** `plan.slug` e
+`maxUsers` não apareciam em lugar nenhum do código fora da própria tela de
+preços. `hasActiveSubscription()` verificava apenas se `subscriptionStatus`
+era `ACTIVE` — nunca **qual** plano. Na prática, **quem pagava R$ 97 recebia
+exatamente o mesmo que quem pagava R$ 397.**
+
+| Promessa da tela | Estava verificado? |
+|---|---|
+| Até 3 / 10 / ∞ usuários | ✗ dava pra convidar sem limite em qualquer plano |
+| 50 OS por mês (Starter) | ✗ nada contava |
+| Mapa GPS (Pro+) | ✗ o comentário no código dizia "feature paga (Pro+)" desde julho, mas a trava nunca existiu |
+| Checklist + Assinatura (Pro+) | ✗ |
+| Emissão de NFS-e (Pro+) | ✗ |
+| Relatórios básicos × avançados | ✗ não havia distinção nenhuma |
+| API de integração (Enterprise) | ✗ **o recurso não existe no produto** |
+
+**O que foi construído:** `lib/plan.ts` como fonte única, com os limites em
+código e chaveados por `Plan.slug`. Os limites não vieram de `Plan.features` do
+banco de propósito — aquele campo é texto de vitrine ("Até 3 usuários"), serve
+pra mostrar na tela, não pra decidir permissão.
+
+Travas aplicadas em: convite de equipe, criação de OS, Mapa GPS (página + as
+duas rotas de API), NFS-e (2 Server Actions + página fiscal), assinatura
+digital (rota, nos dois ramos), checklist e relatórios. A aba some do menu via
+`getAllowedTabs`, mas **cada página e rota se defende sozinha** — menu
+escondido nunca foi proteção, a URL continua digitável.
+
+**Decisões que exigiram julgamento:**
+
+- **Relatórios básicos × avançados** não estava definido em lugar nenhum.
+  Linha adotada: básico responde "como foi o meu mês" (resumo de receita,
+  despesa, resultado e OS por status); avançado responde "como foi o período X
+  e quem são meus melhores clientes" (período personalizado, ranking de
+  clientes, detalhamento de receitas e despesas). O período é forçado no
+  servidor, não escondido na tela — a Action é despachável direto com
+  qualquer `from`/`to`.
+
+- **Cliente existente perdendo recurso.** A primeira cliente pagante estava no
+  Starter e já havia coletado 2 assinaturas digitais — recurso que a tela vende
+  como Pro. Ligar a trava tiraria da mão de quem já paga e já usa. Decisão do
+  dono do produto: manter pra ela. Daí o campo `Tenant.extraFeatures`, que soma
+  recursos ao que o plano dá. Clientes novos seguem a regra.
+
+- **Slug desconhecido cai no permissivo.** Troca deliberada: um plano novo mal
+  cadastrado libera recurso a mais; o inverso — travar quem está pagando por
+  causa de um slug que o código não conhece — é muito pior. Tenant sem plano
+  nenhum também cai aí, e não é brecha: sem assinatura ACTIVE o layout do
+  dashboard já manda pra `/expired` antes de qualquer coisa.
+
+- **Checklist: só a criação é barrada.** Marcar ou apagar item existente
+  continua livre, senão quem trocasse de plano ficaria com um checklist preso
+  na tela, sem como limpar.
+
+- **Assinatura digital vale para os dois ramos da rota**, inclusive o portal
+  público. Isso é diferente do bloqueio por assinatura vencida que já existia
+  ali: lá, o cliente final não pode ser punido por um pagamento atrasado da
+  empresa no meio de um serviço; aqui, a empresa nunca comprou o recurso, então
+  ele não deveria nem ter sido oferecido ao cliente dela.
+
+- **"API de integração" saiu da vitrine.** Vendida no Enterprise por R$ 397 e
+  inexistente — sem rota pública, sem chave de API, nada. Não dá pra "travar" o
+  que não existe. Removida da tela por decisão do dono do produto; construir
+  fica como projeto à parte (chaves por empresa, autenticação, endpoints,
+  controle de uso, documentação).
+
+**Também corrigido:** `Plan.features` no banco estava fora de sincronia com a
+vitrine — o Pro não listava "Checklist + Assinatura digital" nem "Emissão de
+NFS-e", e o Enterprise ainda listava a API. Sincronizado com o i18n.
+
+**Verificação:** 14 testes novos em `lib/__tests__/plan.test.ts`, cobrindo os
+três planos, o efeito do `extraFeatures`, o isolamento do contador de usuários
+entre tenants e — o caso que quebraria mais silenciosamente — OS de meses
+anteriores **não** consumirem a cota do mês corrente (contar tudo desde sempre
+transformaria "50 por mês" em "50 pra vida inteira"). Conferido também contra
+os dados reais de produção, tenant por tenant.
+
+**Lição:** um comentário dizendo "feature paga (plano Pro+)" ficou três semanas
+no código sem nenhuma trava embaixo dele. Intenção escrita em comentário não é
+regra aplicada — e regra de cobrança que não existe não gera erro, não aparece
+no Sentry e não aparece em teste nenhum. Só aparece na margem.
+
+### 7.2.8 Etapa 1 de capacidade: consulta repetida — 10/08/2026
+
+Continuação da 7.2.5 (índices). Medido antes de mexer: **um carregamento do
+dashboard disparava ~25 consultas ao banco.**
+
+| Origem | Antes | Depois |
+|---|---|---|
+| `getTenant()` | 1 | 1 |
+| `hasActiveSubscription()` | 2 | 1 |
+| `getLimites()` | 1 | 1 |
+| Alertas de vencidos | 2 | 2 |
+| Cards do dashboard | 7 | 7 |
+| Gráfico de 6 meses | 12 | **2** |
+| **Total** | **~25** | **~14** |
+
+**Duas causas, duas correções:**
+
+**1. Só o `getTenant()` estava embrulhado em `cache()` do React.** O
+`hasActiveSubscription()` e o `getLimites()` não estavam — e ambos leem a
+mesma linha de `Tenant`. Como `requireActiveSubscription()` aparece de 4 a 6
+vezes por arquivo de actions, a mesma informação era buscada várias vezes na
+mesma requisição.
+
+Antes de cachear, foi verificado que nada altera assinatura/plano e relê no
+mesmo request: `subscribeToPlan` escreve `PENDING` e redireciona sem reler, e
+o webhook da Asaas nunca chama essas funções. Essa checagem não é preciosismo
+— servir estado de assinatura velho foi exatamente o que deixou uma cliente
+sem acesso em 07/08/2026 (seção 7.2.1).
+
+**2. O gráfico fazia 2 consultas por mês, num laço de 6.** Virou 2 consultas
+agrupadas no banco, com `date_trunc` + `GROUP BY`.
+
+O detalhe que quase passou: `paidAt` é `timestamp without time zone` guardando
+UTC. Agrupar direto em UTC jogaria um pagamento das 22h de 31/07 (BRT) para
+agosto — sem erro, sem exceção, só o dinheiro no mês errado. A conversão
+correta é `AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo'`.
+
+Segundo detalhe: a chave do mês volta como **texto** (`'AAAA-MM'`), não como
+data. Se voltasse como data, o driver interpretaria o timestamp sem fuso usando
+o fuso do processo Node — UTC na Vercel, BRT na máquina local. Resultado
+diferente conforme onde roda.
+
+**Verificação:** as duas implementações foram rodadas lado a lado contra o
+banco de produção, tenant por tenant — zero divergência, incluindo os tenants
+com R$ 4.339 e R$ 2.580 no período. As quatro fronteiras de mês foram testadas
+diretamente no Postgres (01:00, 02:59, 03:00 UTC e fim de mês). Ficaram 5
+testes de regressão em `actions/__tests__/dashboard.test.ts`, sendo um
+especificamente para o pagamento das 22h da virada.
+
+**Lição:** o gargalo de capacidade mais barato quase nunca é infraestrutura —
+é trabalho repetido que ninguém contou. Antes de aumentar instância, vale
+medir quantas vezes a mesma linha é lida na mesma requisição.
+
+### 7.2.9 Painel do dono da plataforma — 10/08/2026
+
+O `/admin` existia desde o início, mas com quatro problemas — e o usuário só
+perguntou onde administrava o negócio porque **não havia link nenhum para ele
+em lugar algum do sistema**; só se chegava digitando a URL.
+
+| Problema | Correção |
+|---|---|
+| Nenhum link na interface | Item no rodapé da barra lateral, visível só pro dono |
+| Somente leitura — nenhum botão | 4 ações, cada uma com confirmação |
+| `PENDING` invisível nos cartões | Cartão próprio + aviso destacado |
+| MRR errado no plano anual | `priceYearly / 12` |
+
+**O MRR tinha um ternário morto:**
+
+```ts
+sub?.billingCycle === "YEARLY" ? price : price   // os dois lados iguais
+```
+
+Não aparecia porque a única assinante é mensal. No primeiro assinante anual, o
+painel contaria R$ 97 em vez de R$ 80,83 — MRR inflado em 20%, justo o número
+que orienta decisão de negócio.
+
+**Segurança.** A regra de quem é o dono saiu do `app/admin/layout.tsx` para
+`lib/admin.ts`, e **toda Server Action do painel chama `requireSuperAdmin()`
+por conta própria** — layout não protege Action despachável, lição que já
+custou caro aqui (7.1, 7.2). A verificação usa `getUser()`, que valida o token
+junto ao Supabase, e não `getSession()`, que só lê cookie: para o resto do
+sistema o cookie basta; para a conta que pode entrar na conta dos outros, não.
+
+**Entrar na conta do cliente (impersonation)** é a funcionalidade mais
+perigosa do produto. Desenho:
+
+- Cookie `admin_ver_como`, `httpOnly`, expira em 1 hora.
+- **O cookie sozinho não concede nada.** `tenantImpersonado()` só devolve algo
+  se a sessão real — verificada no Supabase — for a do dono. Forjar o cookie
+  em outra conta não tem efeito nenhum.
+- **Custo zero no caminho normal:** sem o cookie, a função retorna antes de
+  qualquer verificação. Sem isso, seria uma ida de rede ao Supabase por
+  carregamento de tela — regressão de capacidade disfarçada de segurança,
+  logo depois da 7.2.8 ter reduzido consultas.
+- Faixa vermelha permanente no topo, saída em um clique.
+- Devolve o papel e o id do OWNER daquela empresa, então o suporte enxerga
+  exatamente o que o cliente enxerga, inclusive bloqueio por assinatura
+  vencida.
+- Tudo registrado em `AdminAuditLog` — entrada, saída e cada ação. Acesso a
+  dado de terceiro sem registro é problema de LGPD, não só de organização.
+
+**Uma limitação assumida:** durante a impersonação, uma escrita fica atribuída
+ao OWNER da empresa, não ao admin. Impedir isso exigiria bloquear toda mutação
+(muito mais invasivo) ou criar um usuário fantasma no tenant do cliente (pior:
+polui a equipe dele). O log de auditoria é o que amarra a ação ao suporte.
+
+**Gráficos** (12 meses): novas empresas × total pagante, MRR e usuários
+cadastrados. O histórico de pagantes é **reconstruído** das datas de
+`Subscription` (criação e cancelamento) porque não existe histórico de
+mudanças de status guardado — o mês corrente é exato, o passado é
+aproximação. Se isso vier a importar, o caminho é uma tabela de snapshot
+mensal.
+
+**Verificação:** 9 testes em `lib/__tests__/admin.test.ts`, sendo os três mais
+importantes: cookie sem sessão de dono não impersona; cookie com sessão de
+outro usuário não impersona; e sem cookie a sessão nem chega a ser consultada
+(prova de que não há custo no caminho normal).
+
+### 7.2.10 Retrato mensal, relatório PDF e o buraco na reconciliação — 10/08/2026
+
+**Bloqueio automático de inadimplente: já existia.** O usuário pediu como
+novidade; a verificação mostrou o ciclo inteiro funcionando —
+`PAYMENT_OVERDUE` põe o tenant em `PAST_DUE`, `hasActiveSubscription` só
+libera dentro da carência, o redirect do layout **não olha papel** (bloqueia
+técnico junto), e o webhook de pagamento devolve pra `ACTIVE`. Só a carência
+mudou: 3 → 5 dias.
+
+**Mas havia um buraco na rede de segurança.** A reconciliação diária, criada
+depois do incidente de 07/08, cobria apenas `PENDING`. Um cliente
+**inadimplente** que paga e cujo webhook se perde ficava bloqueado
+indefinidamente — o mesmo defeito, só que na renovação, e agora com a equipe
+inteira parada em vez de um cadastro novo travado.
+
+A extensão para `PAST_DUE` exigiu um cuidado que o caso `PENDING` não tem:
+
+| Estado | O que serve como prova de pagamento |
+|---|---|
+| `PENDING` | Qualquer pagamento liquidado — nunca pagou nada antes |
+| `PAST_DUE` | Só pagamento **não processado** e com vencimento a partir do ciclo vencido |
+
+Sem essa distinção, a rede de segurança reativaria de graça quem parou de
+pagar: os pagamentos dos ciclos antigos continuam `RECEIVED` para sempre na
+Asaas, e um `find(p => p.status === "RECEIVED")` acharia um deles todo dia.
+
+**Retrato mensal (`MonthlySnapshot`).** Os gráficos do painel nasceram
+deduzindo o passado das datas de assinatura. Isso apaga inadimplência: uma
+empresa que ficou dois meses sem pagar e voltou aparecia como pagante o tempo
+todo, porque só existem as datas das pontas. Agora o cron grava o retrato do
+mês corrente todos os dias (upsert pela chave `AAAA-MM`), então meses passados
+congelam com o último valor real que tiveram e o mês atual é calculado ao vivo
+no painel — sem job de virada de mês, que seria mais uma coisa para falhar
+calada.
+
+**Decisão: não fabricar histórico.** Seria fácil semear os 12 meses anteriores
+com a reconstrução antiga, e o gráfico ficaria bonito hoje. Mas esses números
+entrariam na tabela indistinguíveis dos reais — exatamente a mentira silenciosa
+que motivou a mudança. Só entram meses de fato fotografados; o gráfico começa
+curto e cresce.
+
+**Relatório em PDF** (`/api/pdf/admin-report`): resumo, evolução mensal, tabela
+de empresas e últimas ações do painel, respeitando o filtro da busca. Checa
+super admin por conta própria — junta dados de **todas** as empresas num
+arquivo feito para ser encaminhado; se vazar, vaza tudo de uma vez. `no-store`
+no cache e rodapé dizendo que é documento interno.
+
+**Busca** por nome e CNPJ, via GET: o termo fica na URL, então dá para
+recarregar e mandar o link já filtrado para alguém da equipe.
+
+**Verificação:** 5 testes gerando o PDF de verdade (inclusive lista vazia,
+empresa sem plano e 120 empresas com quebra de página), e em produção o
+endpoint responde 403 sem sessão — confirmado que o corpo devolvido **não** é
+um PDF, não bastando olhar o código de status.
+
+### 7.2.11 Aviso antes do corte por inadimplência — 10/08/2026
+
+Até aqui o cliente inadimplente era bloqueado **sem aviso nenhum**: a primeira
+notícia do problema era a equipe inteira parada na tela de acesso expirado.
+Quem perde acesso sem aviso trata como defeito do sistema, não como cobrança
+pendente — e cancela.
+
+Agora saem dois e-mails: **1º e 3º dia de atraso**, com o corte no 5º.
+
+**A regra virou módulo puro** (`lib/past-due.ts`), com `PAST_DUE_GRACE_DAYS`
+morando lá dentro. Antes o número de dias vivia em `lib/auth.ts` e o e-mail
+teria que recalcular "faltam X dias" por conta própria — dois lugares, e um dia
+o aviso diria "faltam 2 dias" com o bloqueio chegando no dia seguinte.
+
+**Contador, não data.** `Subscription.pastDueWarningsSent` guarda quantos
+avisos já saíram no ciclo vencido. A alternativa óbvia — comparar se hoje é
+exatamente o dia 1 ou o dia 3 — tem um defeito que este projeto já pagou: se o
+cron não rodar naquele dia exato, o marco some para sempre (foi o que
+aconteceu com o cron de NPS, seção 9). Com contador, o cron que falha nos dias
+1 e 2 manda **um** e-mail no dia 3 — o mais urgente — e segue.
+
+**Marca antes de enviar.** Se o envio falhar, o cliente perde aquele aviso;
+recuperável no marco seguinte. Marcar depois e falhar no meio faria o mesmo
+e-mail sair todo dia até o corte, o que é pior.
+
+**Zera nos três caminhos que reativam:** webhook da Asaas, reconciliação do
+cron e liberação manual no painel. Sem isso, um cliente que atrasou uma vez
+nunca mais receberia aviso nos atrasos seguintes.
+
+**Conteúdo do e-mail**, além do prazo: diz que **nada é apagado**, que o
+bloqueio pega **toda a equipe** (inclusive técnicos em campo), que o acesso
+**volta sozinho** quando o pagamento cair, e trata o caso de quem já pagou e
+está esperando a confirmação. O tom muda no segundo aviso — assunto e cor
+diferentes.
+
+**Verificação:** 19 testes novos. 11 na regra (incluindo cron fora do ar por
+uma semana, e uma checagem de que nenhum marco de aviso é ≥ à carência — um
+e-mail que chega depois do corte é pior que não avisar) e 8 montando o e-mail
+de verdade com o Resend trocado por espião, conferindo plural, idioma e
+conteúdo. O cron de produção **não** foi disparado para testar: ele também
+manda NPS e onboarding, e chamaria e-mail real para cliente real. A consulta
+foi simulada em leitura — hoje ela devolve zero inadimplentes.
+
+### 7.2.12 Equipe de administração da plataforma — 10/08/2026
+
+Até aqui o painel aceitava **um único e-mail**, fixo em código: não havia como
+adicionar ninguém sem substituir o dono. Agora a equipe é dado, com área.
+
+**Matriz de permissões** (mora inteira em `lib/admin.ts`, legível de cima a
+baixo):
+
+| | Dono | Financeiro | Comercial | Logística | TI |
+|---|---|---|---|---|---|
+| Ver painel e empresas | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Ver faturamento e MRR | ✓ | ✓ | ✓ | — | — |
+| Relatório em PDF | ✓ | ✓ | ✓ | — | — |
+| Liberar acesso | ✓ | ✓ | — | — | ✓ |
+| Cancelar acesso | ✓ | ✓ | — | — | — |
+| Trocar plano | ✓ | ✓ | ✓ | — | — |
+| Entrar na conta do cliente | ✓ | — | — | ✓ | ✓ |
+| Administrar a equipe | ✓ | — | — | — | — |
+
+O raciocínio de cada recusa importa mais que o de cada permissão:
+**financeiro e comercial não entram na conta de cliente** porque não precisam
+dos dados dele pra fazer o trabalho, e acesso a mais é exposição a mais
+perante a LGPD; **logística e TI não veem faturamento** pelo mesmo motivo
+invertido; **TI libera acesso** porque destravar cliente preso por falha
+técnica (o caso do webhook em 07/08) é trabalho de TI, não de financeiro.
+
+**Decisões que evitam armadilha:**
+
+- **O fundador é DONO no código, não na tabela.** Se ele se remover por
+  engano, ou a tabela ficar vazia, o painel não pode trancar sem ninguém
+  dentro. É a chave reserva.
+- **DONO não é atribuível pela tela.** Só as quatro áreas aparecem no
+  formulário — conceder "dono" por formulário seria conceder o poder de
+  remover o próprio dono.
+- **Desativar, nunca apagar.** O `AdminAuditLog` guarda o e-mail de quem fez
+  cada ação; apagar a linha deixaria o histórico órfão.
+- **Convite não cria empresa fantasma.** Sem cuidado, o primeiro acesso de um
+  funcionário ao `/dashboard` cairia na branch de `getTenant()` que cria
+  tenant, e ele viraria uma "empresa cliente" na lista, nos gráficos de
+  crescimento e no relatório em PDF. Uma guarda nessa branch — e só nela,
+  onde não custa nada no caminho normal — manda o funcionário pro `/admin`.
+- **Esconder botão é cortesia, não proteção.** Toda Server Action chama
+  `requireSuperAdmin(permissao)` por conta própria, porque tem ID próprio e é
+  despachável sem passar por tela nenhuma.
+- **A tela explica o que cada área libera** antes de convidar, não depois.
+
+**Verificação:** 19 testes em `lib/__tests__/admin.test.ts`. A matriz inteira
+é testada célula a célula contra uma tabela-espelho — se alguém mudar quem
+pode o quê sem querer, quebra. Os mais importantes são os de recusa: membro
+desativado não entra nem com cookie válido; o financeiro, mesmo estando na
+equipe e com cookie legítimo, não entra na conta de cliente; e comercial
+disparando `cancelarAcesso` direto (sem passar pela tela) é barrado.
+
+### 7.2.13 Parecer jurídico aplicado — contrato v1.1 — 10/08/2026
+
+O contrato v1.0, gerado por cliente e anexado ao e-mail de confirmação de
+pagamento, foi submetido a revisão jurídica junto com um roteiro de 11 pontos
+sobre os quais havia dúvida. O parecer confirmou 2 e mandou ajustar 9.
+
+**Confirmados, mantidos sem alteração:**
+- **Legítimo interesse (5.3)** — não exige LIA prévia como condição de
+  validade; a ANPD pode pedir *a posteriori*. Documentar internamente é
+  recomendação de compliance, não redação contratual.
+- **Suboperadores por função (5.7)** — a LGPD, diferente do art. 28 do GDPR,
+  não exige nomeação individualizada no corpo do contrato.
+
+**Ajustados, com a redação literal proposta pelo parecer:**
+
+| Cláusula | O que mudou |
+|---|---|
+| 2.3 | Reajuste ganhou índice objetivo (IPCA/IBGE) — antes era discricionário |
+| 3.4 (nova) | Rescisão pela CONTRATADA: não existia hipótese nenhuma |
+| 5.1 | Segregado: nos dados do assinante o ServiçoOS é **controlador**, não operador |
+| 5.8 | Cláusulas-Padrão da Resolução CD/ANPD nº 19/2024, no lugar de redação genérica |
+| 5.9 | Prazo objetivo de 24h operador→controlador (a ANPD dá 3 dias úteis ao controlador) |
+| 5.10 | Ressalva de guarda fiscal — conflitava com a eliminação em 30 dias |
+| 8.4 (nova) | Teto de responsabilidade não vale para dolo, culpa grave ou arts. 42-45 da LGPD |
+| 11 | Foro da comarca da CONTRATADA para PJ, preservando o do consumidor (art. 101, I, CDC) |
+| 12 (nova) | Prevalência do contrato sobre os Termos de Uso em caso de divergência |
+| — | Aceite eletrônico: fundamento trocado para art. 107 do CC + art. 10, §2º da MP 2.200-2/2001 |
+
+**Dois achados que importam além do texto:**
+
+1. **A limitação de responsabilidade sem exceções era risco de nulidade
+   total**, não de afastamento pontual: cláusula que limita indiscriminadamente
+   qualquer dano — inclusive dolo — pode ser declarada nula por inteiro
+   (arts. 421, 422 e 424 do CC, este último para contratos de adesão).
+2. **A eleição de foro cobria só a exceção.** Escrevi foro do consumidor
+   "quando a CONTRATANTE for consumidora" — mas pela teoria finalista a maioria
+   dos clientes é PJ contratando insumo para a atividade-fim, ou seja, *não*
+   consumidora. A regra ficou sem foro; só a exceção tinha.
+
+**Fora do contrato, pendente de ação:** o período de adoção das Cláusulas-Padrão
+da ANPD encerrou em 23/08/2025. Referenciá-las no contrato não basta — é preciso
+**firmá-las com cada fornecedor estrangeiro**. Registrado como pendência
+operacional, não de código.
+
+**Verificação:** além dos testes de geração, um teste lê o código-fonte do
+contrato e confere que as citações exigidas pelo parecer continuam lá (artigos
+42-45, Resolução 19/2024, Resolução 15/2024, art. 101 I, IPCA, e outras), e
+que a Lei 14.063/2020 — apontada como fundamento errado — não voltou. Cláusula
+legal apagada por engano não gera erro em lugar nenhum: o PDF continua saindo
+bonito, só que sem a proteção.
+
+### 7.3 Auditoria completa pré-venda — 05/08/2026
+
+Pedido explícito de revisar o código inteiro (não só o diff), todas as abas,
+os 6 e-mails e a segurança, antes da primeira venda real. Como o branch já
+estava 100% sincronizado com o `origin` (sem diff pra revisar), a revisão foi
+feita lendo a árvore inteira na mão — todo `lib/*.ts`, `actions/*.ts`,
+`app/api/**/route.ts`, `proxy.ts`, e as páginas/componentes de maior risco
+(portal público, PDFs, mapa, sidebar) — mais um teste funcional navegando
+pelas 16 abas do dashboard com um tenant de teste descartável (criado e
+apagado direto no banco, sem tocar em dado real).
+
+**Achados corrigidos:**
+
+| Achado | Correção |
+|---|---|
+| `getReferralInfo()` não exigia assinatura ativa (único de leitura sem essa checagem) | `requireActiveSubscription` adicionado |
+| `updateOrderStatus()` sem checagem de papel — TECHNICIAN faturava uma OS direto (cria Revenue) e dava pra "desfaturar" mudando o status de novo | Exige OWNER/ADMIN pra ir pra `INVOICED`; bloqueia qualquer mudança de status numa OS já `INVOICED` |
+| `getMonthlyRevenueChart()` sem checagem de papel — expunha receita/despesa (financeiro é OWNER/ADMIN em todo o resto do sistema) pra qualquer TECHNICIAN no `/dashboard` | Exige OWNER/ADMIN; página só busca/renderiza o gráfico se for admin |
+| `nextOrderNumber`/`nextQuoteNumber`/`nextOmNumber` sem lock — duas criações simultâneas podiam calcular o mesmo número (protegido por `@@unique([tenantId, number])`, mas a segunda falhava com erro cru em vez de tentar de novo) | `retryOnUniqueConflict` (novo, `lib/retry.ts`) recalcula e tenta de novo até 5x num P2002 |
+| `getTenant()`: colisão de unique constraint na criação do `User` assumia sempre ser no `id` (corrida esperada) — se fosse no `email` (linha órfã com outro id), `findUniqueOrThrow` por id quebrava com "not found" | Distingue via `err.meta.target`; colisão de e-mail vira erro claro em vez de crash genérico |
+| `/settings/fiscal` (config. de NFS-e) sem nenhum link na UI — nem sidebar, nem dentro de `/settings` — apesar da própria mensagem de erro do `emitNfse` dizer "Configurações → Fiscal" | Item "Config. Fiscal" adicionado à sidebar |
+| Link de nota do e-mail de NPS (GET, grava direto) vulnerável a scanner de e-mail corporativo pré-buscando os 11 links e gravando nota aleatória sem o cliente clicar | GET não grava mais — só pré-seleciona a nota no widget do portal (`?prefillScore=`); gravação exige o clique em "Enviar avaliação" (POST de verdade) |
+| Aprovar orçamento e responder NPS no portal público mostravam "sucesso" mesmo quando a chamada ao servidor falhava (sem checar `res.ok`) | Ambos checam a resposta e mostram erro se falhar |
+| E-mails de boas-vindas/onboarding convidam "responda este e-mail" mas o remetente é `noreply@` sem reply-to | `reply-to: suporte@servicoos.com.br` em todos os envios — endereço com hospedagem de verdade configurada no mesmo dia (Zoho Mail, ver seção 7.3.1) |
+| `nfeio.ts` lia a API key no escopo do módulo (padrão diferente do resto, que adia a leitura de propósito) | Movido pra dentro da função |
+| Cron do dia-3 calculava a janela com hora local do servidor (UTC), não horário de Brasília — mesma classe de bug já corrigida em dashboard/finance/reports | `todayInBRT`/`brtMidnightUTC` aplicados |
+| Portal público permitia reassinar (trocar a assinatura) de uma OS já faturada | Bloqueado, mesmo padrão de `completeServiceOrder`/`updateServiceOrder` |
+| Typo "ordems" (em vez de "ordens") na contagem de OS/OM — plural de "ordem" no PT-BR não é regular | Corrigido |
+| `id` HTML duplicado (`name`, `document`, `phone`) entre `TenantForm` e `ProfileForm`, ambos renderizados juntos em `/settings` — quebra a associação `label for=` (clicar no label focava o campo errado) | `id`s do `ProfileForm` prefixados (`profile-name`, etc.) |
+
+### 7.3.1 Hospedagem de e-mail pra suporte@servicoos.com.br — 06/08/2026
+
+Resolvido no mesmo dia do achado acima. Duas tentativas:
+
+1. **ImprovMX (grátis) + Gmail "enviar como"** — funcionou pro recebimento
+   (encaminha pro Gmail pessoal), mas o Gmail exigiu configurar um servidor
+   SMTP de verdade pra poder *enviar* como esse endereço, e o plano grátis do
+   ImprovMX só recebe/encaminha, não manda — sem credencial de SMTP válida
+   pra usar ali. Abandonado só pro envio (o domínio nunca chegou a ficar sem
+   receber).
+2. **Zoho Mail (plano grátis)** — caixa de e-mail de verdade, com SMTP
+   próprio. MX/SPF/DKIM do ImprovMX trocados pelos do Zoho (`mx.zoho.com`,
+   `mx2.zoho.com`, `mx3.zoho.com`, prioridades 10/20/50 — ver DNS abaixo). A
+   tabela de "e-mails transacionais" que o Zoho mostra durante o setup
+   (CNAME `bounce-zem` + DKIM `52056._domainkey`, produto ZeptoMail) foi
+   ignorada de propósito — é redundante com o Resend, que já cobre isso.
+
+**Cuidado real durante a configuração:** ao adicionar o TXT `zmail._domainkey`
+(chave do Zoho), o registro **`resend._domainkey`** (chave do Resend, já
+existente) acabou sendo sobrescrito por engano com o mesmo valor da chave do
+Zoho — os dois registros ficaram idênticos por um tempo. Não chegou a
+propagar (pego e corrigido antes do TTL de 1h expirar), mas seria um jeito
+sorrateiro de quebrar a verificação DKIM do Resend (e-mails de boas-vindas,
+recuperação de senha, etc. começarem a cair em spam ou serem rejeitados) sem
+nenhum erro óbvio no momento da mudança. **Lição:** ao adicionar um DKIM novo
+num domínio que já tem outro (padrão comum: `<algumacoisa>._domainkey`),
+conferir com cuidado que não se está editando/duplicando o valor de um
+registro `_domainkey` diferente que já existia.
+
+Fluxo final: Gmail manda usando o SMTP do Zoho (`smtp.zoho.com:587`,
+usuário/senha da caixa `suporte@`) — não é mais "tratar como alias" (esse
+caminho simples parou de funcionar pro Google mesmo com a caixa marcada,
+provavelmente restrição recente do Gmail pra contas pessoais). Testado de
+ponta a ponta: recebimento (e-mail externo → chega na caixa do Zoho) e envio
+(Gmail → sai como `suporte@servicoos.com.br`, cópia fica no enviados do Zoho)
+confirmados funcionando.
+
+**Achado confirmado e resolvido — 06/08/2026:** `api/webhooks/supabase/route.ts` era mesmo um SEGUNDO caminho de criação de tenant/usuário, e estava ativo. Confirmado direto no banco (Database Webhooks do Supabase viram triggers reais no Postgres) — `information_schema.triggers` mostrou `auth.users → INSERT → supabase_functions.on_auth_user_created()`, a assinatura exata de um Database Webhook configurado pelo painel apontando pro INSERT de `auth.users`. Como o `getTenant()` (lib/auth.ts) já cobre 100% dessa criação sozinho, o trigger foi removido (`DROP TRIGGER on_auth_user_created ON auth.users`) — confirmado sem nenhum trigger restante na tabela. A rota HTTP (já desativada como no-op desde a auditoria) pode ser deletada do código numa limpeza futura.
+
+---
+
+### 7.2.14 Posicionamento horizontal e importação de planilha — 11/08/2026
+
+**O gatilho.** O dono corrigiu uma premissa que eu vinha repetindo: o ServiçoOS
+não é para desentupidoras e assistências técnicas, é para **qualquer** empresa
+prestadora de serviço, pequena ou média. A premissa errada tinha vazado para o
+produto.
+
+**Landing.** Os três depoimentos eram de refrigeração, assistência técnica e
+elétrica — todos do mesmo nicho. Quem tem empresa de limpeza, jardinagem, TI,
+consultoria ou eventos chegava ali e se auto-excluía. Trocados por uma seção de
+12 segmentos atendidos.
+
+No caminho, dois problemas de veracidade no mesmo bloco: os depoimentos eram
+**inventados** (nomes fabricados, 5 estrelas cada) sob o título "Empresas reais,
+resultados reais", e o topo dizia "mais de 50 empresas". Substituídos por
+afirmações verificáveis (sem fidelidade, sem taxa de instalação, exportação dos
+dados) — tudo que já existe no contrato e em Configurações. Vocabulário de
+"técnicos" para "equipe em campo" onde era público-alvo, mantido onde é o nome
+do cargo no sistema.
+
+Corrigido também o botão flutuante do WhatsApp, fixo em `5511999999999` (número
+de exemplo): agora vem de `SUPPORT_WHATSAPP` e, sem a variável, não renderiza.
+**Pendência operacional:** definir essa env var na Vercel — o plano Enterprise
+promete "Suporte 24h via WhatsApp" e hoje o botão está ausente.
+
+**Importação de planilha (CSV e .xlsx), sem dependência nova.**
+
+Por que não usar biblioteca: o `xlsx` (SheetJS) do npm parou em 2022 e carrega
+CVEs; o `exceljs` traz 90 pacotes, incluindo o `archiver` — que *escreve* zip,
+sendo que aqui só se lê. Um `.xlsx` é um zip com dois XMLs e o Node já tem
+`zlib`, então `lib/planilha.ts` lê os dois formatos direto.
+
+Três armadilhas que um parser genérico erra:
+
+| Armadilha | Consequência se ignorada |
+|---|---|
+| Excel-BR salva CSV com `;` e em Windows-1252 | Planilha inteira vira uma coluna só, com acentos quebrados |
+| No `.xlsx` a célula vazia é **omitida** do XML | Telefone sobe pra coluna do e-mail; todos os dados deslocados |
+| Texto com formatação parcial vira vários `<t>` no mesmo `<si>` | Nome do cliente truncado |
+
+Validado contra arquivo de ferramenta real (openpyxl) e contra `.xlsx` feito
+pelo Excel de verdade: 830 células, 47 com acento, sem perda.
+
+Decisões de produto: nome inválido é **erro** (pula a linha), e-mail inválido é
+**aviso** (importa sem o e-mail) — perder o cliente inteiro por um erro de
+digitação é pior. Duplicidade por documento (só dígitos) ou e-mail, nunca por
+nome: "João Silva" repetido é legítimo.
+
+**Gravação:** escrita aninhada, não `createMany` + `createMany`.
+`createManyAndReturn` não garante que a ordem devolvida bate com a de entrada, e
+casar endereço com cliente por posição erraria em silêncio — cada um com o
+endereço do vizinho. Há teste com três cidades distintas cobrindo isso.
+
+**Limite conhecido — geocodificação.** A importação não geocodifica: o Nominatim
+(OpenStreetMap, gratuito) aceita 1 requisição por segundo, então centenas de
+endereços não cabem no tempo da função. O backfill do cron diário pega quem está
+sem coordenada, mas processa ~10 por dia — importar 800 clientes significa meses
+até o mapa encher. A tela avisa que o preenchimento é gradual. **A correção real
+é trocar de provedor de geocodificação** (LocationIQ, Mapbox, Google) — decisão
+com custo, do dono. Este é o gargalo que a importação expôs, não criou.
+
+`normalizar()` usa `\p{Diacritic}` em vez de uma classe com os caracteres
+combinantes literais: como literal, eles ficam invisíveis no arquivo e qualquer
+editor ou merge pode comer sem ninguém notar.
+
+94 → 153 testes.
+
+---
+
+### 7.2.15 Campos personalizados por empresa — 11/08/2026
+
+Continuação direta do posicionamento horizontal (7.2.14): o sistema atende
+qualquer prestador de serviço, mas o cadastro era o mesmo para todo mundo. Um
+pet shop precisa de "raça/porte", uma empresa de limpeza de "metragem", uma de
+TI de "número de série". Sem isso, cada segmento novo esbarra numa parede e o
+posicionamento fica só no discurso.
+
+Cinco tipos (texto, número, data, lista de opções, sim/não), com obrigatoriedade
+e ordem definidas pela empresa, para cadastro de cliente e ordem de serviço.
+
+**Onde ficam os valores.** Num `Json` no próprio registro (`Client.customValues`
+/ `ServiceOrder.customValues`), não numa tabela de valores com chave estrangeira
+polimórfica. Dois motivos concretos:
+
+- Apagar um campo não deixa valor órfão na tela: a exibição percorre as
+  **definições**, não as chaves do Json. O valor continua guardado — recriar o
+  campo traz tudo de volta — mas some de todo lugar.
+- A exportação de dados (LGPD) leva os valores junto sem precisar lembrar de
+  incluir mais uma relação. É exatamente o tipo de coisa que se esquece e vira
+  dado faltando num pedido de titular.
+
+Contrapartida assumida: não dá para filtrar por campo personalizado com índice.
+Quando for pedido, o caminho é um índice GIN no Json, não remodelar.
+
+**Guardas que a validação puxou:**
+
+| Guarda | O que evita |
+|---|---|
+| Prefixo `cf_` no nome do input | Campo chamado "email" sobrescrevendo o e-mail do cliente |
+| Descarta id de campo inexistente | Server Action é endpoint HTTP; dá para montar a requisição na mão |
+| Recusa valor fora da lista | Ficaria gravado para sempre num campo que a tela apresenta como fechado |
+| Número aceita vírgula decimal | `<input type="number">` recusa "1,5" em pt-BR sem explicar |
+| `deleteMany` com `tenantId` no where | `delete` por id apagaria campo de outra empresa se o id vazasse |
+| Reordenar regrava a sequência inteira | `position` tinha buracos e repetições de criações/remoções anteriores |
+| Criar e editar usam o mesmo helper | Campo obrigatório cobrado num lugar e ignorado no outro |
+
+153 → 194 testes.
+
+**Gotcha novo (Prisma 7):** `migrate diff --to-schema-datamodel` foi renomeado
+para `--to-schema`. E `npx vitest run` pula o hook `pretest` que regenera
+`src/test-utils/test-schema.sql` — depois de mexer no schema, rodar `npm test`,
+senão os testes batem num banco sem a tabela nova.
+
+---
+
+### 7.2.16 Vocabulário adaptável — 11/08/2026
+
+Par do item anterior: campos personalizados adaptam os **dados**, este adapta as
+**palavras**. Uma empresa de limpeza faz "visitas", uma de TI atende "chamados",
+uma consultoria toca "projetos" — nenhuma fala "ordem de serviço". A empresa
+configura dois termos (o que se abre para cada trabalho, e quem executa) em
+Configurações → Vocabulário.
+
+**Duas armadilhas que a medição revelou antes de escrever código.**
+
+*1. Substituição cega destruiria os documentos jurídicos.* Dos 76 textos que
+pareciam citar "OS", boa parte era o **artigo** "os" — "os dados", "os Termos".
+Trocar por texto corromperia a política de privacidade. Por isso a marcação é
+explícita (`[[...]]`), colocada à mão só onde é a entidade; 17 textos da landing
+e dos documentos legais ficaram deliberadamente fora, com teste garantindo que
+continuem fora.
+
+*2. Português cobra concordância.* "a ordem de serviço" mas "o chamado";
+"concluída" mas "concluído". Sem tratar isso, a tela diria "a chamado".
+
+**Erro meu que o teste pegou:** eu tratava artigo e desinência de adjetivo como
+a mesma coisa. São iguais no feminino ("a"), mas no masculino o adjetivo termina
+em "o" (*cadastrado*) e o determinante irregular termina em **nada** (*nenhum*).
+`Nenhum[[osFim]]` produzia "Nenhumo". Hoje há marcador próprio para cada papel,
+e as frases com determinante irregular foram reescritas em construção neutra
+("Sem …", "Ainda não há …").
+
+| Marcador | Vale para | Exemplo |
+|---|---|---|
+| `[[os]]` / `[[Os]]` | singular, minúsculo / capitalizado | ordem de serviço |
+| `[[osP]]` / `[[OsP]]` | plural | ordens de serviço |
+| `[[osC]]` | forma curta, como a empresa escreveu | OS |
+| `[[osArt]]` / `[[osArtP]]` | artigo | a / as |
+| `[[osFim]]` / `[[osFimP]]` | desinência de adjetivo regular | concluíd**a** |
+
+**Por que `[[...]]` e não `{...}`:** `{...}` é sintaxe do ICU — o next-intl
+exigiria passar os valores em **toda** chamada de tradução, em ~59 pontos do
+código. Aqui a troca acontece uma vez, ao carregar as mensagens, com cache por
+idioma + vocabulário. O vocabulário vem na **mesma consulta** que já buscava o
+idioma do tenant: zero query a mais em qualquer página.
+
+"Voltar ao padrão" grava NULL, não o objeto de hoje — assim uma melhoria futura
+no texto padrão alcança quem restaurou, em vez de congelar.
+
+203 → 236 testes. Dois deles só falham em produção se faltarem: todo marcador
+usado existe na tabela (erro de digitação apareceria cru na tela do cliente) e
+nenhum marcador invadiu área proibida.
+
+**Gotchas novos:**
+
+- `Prisma.DbNull`, não `null`, para gravar NULL em coluna Json — em Json, `null`
+  é ambíguo (pode ser "o valor JSON null") e o Prisma exige desambiguar.
+- **Nunca use `JSON.stringify(...).includes("[[")` para procurar marcador não
+  substituído:** `[[` aparece sozinho sempre que uma lista tem outra lista
+  dentro. Isso gerou falso positivo no teste e de novo na verificação da página
+  publicada, onde o `[[` era do payload interno do Next (`__next_f.push`). A
+  checagem certa percorre texto por texto.
+- `vercel env pull` devolve valor **vazio** para toda variável criptografada,
+  inclusive `DATABASE_URL`. Não serve para conferir se uma variável foi gravada.
+
+---
+
+### 7.2.17 Ambiente de teste, com travas — 11/08/2026
+
+Até hoje não havia **nenhum passo** entre "o código mudou" e "o cliente está
+usando": todo deploy ia direto para o domínio onde a assinante trabalha.
+
+**A parte difícil não é a infraestrutura, é a contenção.** O risco de um
+ambiente de teste não é ele ser ruim — é ele ser *bom demais*. O banco de teste
+é uma cópia, e uma cópia tem os e-mails e telefones **reais** dos clientes
+finais. Testar o aviso de inadimplência dispararia cobrança para gente que não
+deve nada. Um staging que faz isso é pior que nenhum staging.
+
+Quem decide o ambiente é a própria Vercel (`VERCEL_ENV`), não uma variável que
+alguém pode esquecer de trocar. **Lista de permissão, não de bloqueio:** só o
+que for comprovadamente produção toca o mundo real; valor desconhecido,
+ambiente novo ou variável faltando ficam contidos.
+
+| Integração | Fora de produção | Por quê |
+|---|---|---|
+| E-mail | Desviado para o dono, com `[TESTE]` no assunto. Sem endereço seguro, **aborta** | Banco de cópia tem e-mail real do cliente final |
+| Nota fiscal | **Bloqueada** | Não existe modo de teste; nota emitida é documento fiscal com número e cancelamento tem prazo |
+| Cobrança | Sempre sandbox | Chave de produção vazada para o teste cobraria cartão de verdade |
+| WhatsApp | Não dispara, registra no log | Devolve sucesso para o fluxo seguir testável |
+| Cron diário | Não roda | Manda e-mail de cobrança e reconcilia Asaas |
+| Google | Não indexa | Cópia indexada compete com o site real |
+
+Mais faixa amarela fixa no topo fora de produção — o jeito mais caro de errar é
+achar que se está no teste quando se está em produção.
+
+**A trava provou o valor antes do deploy:** derrubou `past-due-email.test.ts`,
+que inspeciona o e-mail que o **cliente** recebe e portanto precisa declarar
+ambiente de produção. Corrigido no teste, não na trava.
+
+Fluxo novo: `npm run deploy:teste` → conferir → `npm run deploy:prod`. E
+`npm run db:ensaio` mostra o SQL exato que rodaria em produção, sem subir nada.
+
+236 → 253 testes. Falta só o banco de teste no Supabase, que exige login no
+painel — passo a passo em [AMBIENTE_DE_TESTE.md](AMBIENTE_DE_TESTE.md). Até lá
+o preview não tem credencial nenhuma, então não alcança dado real.
+
+**Verificado em produção após o deploy:** sem faixa, `robots.txt` continua
+liberando a landing, seção de segmentos intacta.
+
+---
+
+### 7.2.18 Geocodificação: troca de provedor e lote — 18/08/2026
+
+**O gargalo.** A importação de planilha não geocodifica, e o backfill do cron
+processava ~10 endereços por dia (limite de 1 req/s do Nominatim, dentro de um
+orçamento de 25s). Uma empresa que importasse 800 clientes esperaria meses até
+o mapa encher — e o mapa é um dos motivos de assinar. Este era o único item do
+Nível 1 ainda aberto.
+
+**Por que Geoapify, e por que Google está fora.** O decisivo não é preço, é o
+direito de GUARDAR a coordenada: o sistema grava lat/long no `Address` e desenha
+num Leaflet com tiles do OpenStreetMap.
+
+| Provedor | Guardar | Mapa de terceiro | Situação |
+|---|---|---|---|
+| Google | não (cache restrito) | exige mapa do Google | inviável sem reescrever o mapa |
+| HERE / TomTom | 30 dias | ok | inviável |
+| Azure Maps | só com conta ativa | restringe | inviável |
+| Geocodio | sim, irrestrito | ok | só EUA/Canadá |
+| Mapbox permanente | sim | "preferencialmente mapa Mapbox" | US$ 5/mil |
+| **Geoapify** | **sim** | **ok** | **grátis até 3.000 créditos/dia** |
+
+O que se ganha é o LIMITE, não a precisão: Geoapify, LocationIQ e OpenCage são
+todos OpenStreetMap — o mesmo dado do Nominatim. Se um dia a queixa for "o pino
+cai na rua errada", nenhum deles resolve; o caminho seria o CNEFE do IBGE
+(base do pacote `geocodebr`, do IPEA).
+
+**Custo real medido:** 1 requisição = 1 crédito, lote custa metade. O grátis
+comporta ~1.500 endereços/dia com a cascata. Para estourar seria preciso
+geocodificar 1.500 endereços TODO dia — cerca de 5 empresas novas por dia.
+
+**O lote é assíncrono**, e é isso que molda o desenho: uma execução envia, a
+seguinte colhe. O job fica em `GeocodeBatch`; sem guardá-lo, um lote mais
+demorado que o orçamento da função seria abandonado e reenviado todo dia para
+sempre — o mapa nunca encheria e nada avisaria ninguém. Um lote em voo por vez,
+de propósito: o pior caso vira "demora mais um dia", nunca "gastou a cota do mês
+numa madrugada".
+
+**Inanição da fila** (achado ao revisar o próprio desenho): endereço que nunca
+resolve — cidade digitada errada — ficaria na frente da fila para sempre,
+ocupando as vagas do lote e impedindo endereço NOVO de ser processado. Daí
+`Address.geocodeTries`: a fila ordena por ele, e há teto de 6 tentativas.
+Editar o endereço zera o contador, então corrigir a digitação devolve o cliente
+para a fila.
+
+**Defeito de produção corrigido junto.** `updateClient` geocodificava em TODA
+edição e, quando a consulta falhava (tempo limite, provedor fora do ar),
+gravava `null` — **apagando a coordenada que já existia**. Trocar o telefone de
+um cliente podia tirá-lo do mapa, sem erro nenhum na tela. Agora só consulta
+quando rua/número/cidade/UF mudam, e nunca sobrescreve coordenada boa com nula.
+
+**Reserva:** sem `GEOAPIFY_API_KEY` tudo continua no Nominatim, um a um. Trocar
+de provedor não pode ser um degrau onde o sistema fica sem geocodificação.
+
+**Pendência operacional do dono:** criar conta no Geoapify e definir
+`GEOAPIFY_API_KEY` na Vercel (Production e Preview), depois redeploy — env var
+nova só vale em deploy novo (seção 9, item 18). Enquanto isso o sistema roda no
+Nominatim, como antes. Vale também confirmar por escrito com o suporte deles a
+cláusula de armazenamento permanente: está na documentação e no material
+comercial, não em cláusula nominal dos Termos.
+
+399 testes.
+
+---
+
+### 7.2.19 Recurso avulso pelo painel e primeiros passos guiados — 18/08/2026
+
+**Conceder recurso sem tocar no banco.** Liberar um item pago para uma empresa
+específica só era possível editando `extraFeatures` direto em produção. Isso
+aconteceu duas vezes com a mesma cliente — assinatura digital (10/08) e Mapa
+GPS (18/08) — e nenhuma das duas ficou registrada em lugar nenhum. Agora é o
+botão **Recursos** na linha da empresa, com permissão própria
+(`concederRecurso`, dada a quem já podia trocar plano — é estritamente menos
+poderoso) e log de auditoria dizendo o que entrou e o que saiu.
+
+A ação recebe o estado FINAL, não um incremento: conceder e revogar viram a
+mesma operação, e não existe caminho em que a tela e o banco discordem sobre o
+que foi tirado. Valor desconhecido é peneirado, o que o plano já dá não é
+duplicado nos extras, e "nada mudou" não gera linha de log.
+
+**Sobre "liberar todas as abas".** Levantado ao atender o pedido: das 17 abas,
+**15 já aparecem** para todo OWNER/ADMIN de qualquer empresa. Só Mapa e Fiscal
+dependem de recurso. E esconder uma aba hoje seria **cosmético** —
+`getAllowedTabs` alimenta só o menu, e a URL continua digitável (as duas
+páginas travadas se defendem por conta própria, via `requireRecurso`). Por
+isso o diálogo mostra a lista de abas como INFORMAÇÃO, reagindo ao vivo aos
+recursos marcados, e não como controle falso. Controle de aba por empresa de
+verdade exigiria bloqueio em ~15 páginas — e tem armadilha: esconder
+Assinatura tranca o cliente sem poder pagar.
+
+**Primeiros passos guiados** (item 3 do Nível 1, o último em aberto). A empresa
+assinava e encontrava tela vazia — e boa parte do que ela paga nasce
+DESLIGADA por decisão nossa: PIX, termos, garantia, aviso ao cliente, campos
+personalizados, vocabulário. Cada recurso somado aumentou a distância entre
+"assinei" e "está configurado".
+
+Os seis passos são DETECTADOS do banco, nunca marcados à mão: lista com
+caixinha mente, some da tela sem o trabalho ter sido feito. Por consequência,
+empresa que já roda não vê nada — não há exceção pra "cliente antigo", e
+ninguém veterano é convidado a criar sua primeira OS. Um passo em destaque por
+vez, com botão; os outros listados apagados — seis botões competindo viram
+lista de tarefas, e lista de tarefas se ignora.
+
+**Dois problemas achados no caminho, ambos invisíveis:**
+
+| Achado | Sintoma |
+|---|---|
+| `reset()` dos testes truncava lista escrita à mão, defasada em 6 tabelas | Teste não quebra: passa a ver linhas do teste anterior, e o resultado depende da ORDEM de execução |
+| `lib/plan.ts` importa Prisma; componente de cliente que só queria o nome dos recursos arrastava o driver do Postgres pro navegador | Build falha com `Can't resolve 'dns'`, que não diz nada sobre a causa |
+
+O primeiro virou consulta ao catálogo do banco. O segundo motivou separar os
+catálogos puros: `lib/recursos.ts` e `lib/abas.ts`, sem nenhum import de
+servidor — `lib/plan.ts` e `lib/auth.ts` reexportam pra não quebrar quem já
+importava de lá.
+
+409 → 419 testes.
+
+---
+
+### 7.2.20 Estoque de peças e ordens de compra — 18/08/2026
+
+Item 8 do Nível 2. Fecha o Nível 2 inteiro.
+
+**A regra que sustenta o modelo: `Part.stock` NUNCA é editado direto.** Toda
+mudança passa por um `StockMovement`, na mesma transação. Sem isso, histórico e
+saldo passam a discordar e não há como saber qual dos dois está certo — que é
+exatamente o momento em que a empresa para de confiar no estoque e volta pro
+caderno.
+
+`StockMovement.quantity` guarda a **variação com sinal** (+5 numa entrada, -2
+numa saída, -3 num ajuste de 10 pra 7). Assim a soma dos movimentos de uma peça
+tem que ser igual ao saldo dela — invariante testável, que um campo "quantidade
+sempre positiva + tipo" não daria sem recalcular sinal em toda leitura.
+
+Três decisões que mudam o comportamento:
+
+| Decisão | Por quê |
+|---|---|
+| **AJUSTE define o saldo, não soma** | Quem conta a prateleira e acha 7 quer que fique 7. É o erro mais comum de sistema de estoque, e a tela mostra o saldo resultante antes de confirmar |
+| **Saldo negativo é permitido** | O serviço aconteceu no mundo real. Recusar o registro porque o cadastro estava desatualizado só faz a empresa parar de registrar. O negativo fica visível como pendência |
+| **Ajuste exige motivo** | Correção sem rastro é indistinguível de erro seis meses depois |
+
+**Baixa pela OS.** `ServiceItem` ganhou `partId` opcional — item digitado na
+hora (mão de obra, taxa) continua sendo o caminho normal. A peça sai do estoque
+na **conclusão**, não na criação: antes disso ela ainda está fisicamente na
+prateleira. É **idempotente** (a guarda é "já existe movimento desta OS?", pelo
+índice `StockMovement.orderId`) porque a conclusão pode disparar mais de uma vez
+— botão clicado duas vezes, OS reaberta. E **nunca lança**: OS concluída não
+pode ser travada porque o estoque não fechou.
+
+**Ordens de compra.** `Supplier` é separado de `Provider` de propósito: aquele é
+prestador terceirizado que executa serviço; este é quem vende peça. Recebimento
+é **parcial por item** — fornecedor mandar 8 de 10 é a regra, não a exceção, e
+um sistema que só aceita "tudo ou nada" faz a empresa parar de registrar. Cada
+item recebido vira ENTRADA na mesma transação em que o recebido é atualizado, e
+o custo da peça é atualizado com o que foi pago agora.
+
+Compra já recebida (total ou parcial) **não se cancela**: o estoque já entrou, e
+desfazer daqui deixaria saldo e histórico discordando. Devolver ao fornecedor é
+um movimento de saída, que fica registrado como tal.
+
+**Plano.** Recurso novo `stock`, Pro+, destravando as duas abas juntas — ordem
+de compra sem catálogo não tem o que comprar, e catálogo sem compra vira
+digitação manual eterna. Concedível avulso a qualquer cliente pelo botão
+Recursos do painel (7.2.19).
+
+Um teste de plano que travava a contagem em 5 recursos foi reescrito: agora
+compara com o catálogo inteiro, e ganhou o contraponto "Starter NÃO ganha
+recurso novo por descuido" — o alarme que impede a diferença entre R$ 97 e
+R$ 397 de evaporar em silêncio.
+
+419 → 451 testes.
+
+---
+
+### 7.2.21 Histórico de alteração da OS — 18/08/2026
+
+Item 9 do Nível 3.
+
+Até aqui existia log de auditoria do painel da plataforma (`AdminAuditLog`,
+7.2.9) mas **nenhum** dos dados do cliente. Quando aparecesse discussão — "esse
+valor não era esse", "quem cancelou?", "o técnico era outro" — não havia como
+saber quem mudou o quê nem quando. Numa empresa de serviço isso não é
+curiosidade: é a diferença entre resolver em um minuto e perder o cliente.
+
+**Nem toda mudança vira evento.** Registrar cada campo enterraria os que
+importam no meio de ruído, e histórico que ninguém lê é o mesmo que não ter
+histórico. Entram seis: status, responsável, agendamento, valor, conclusão e
+garantia. Salvar a OS sem tocar em nada não gera linha nenhuma.
+
+Três decisões que aparecem no comportamento:
+
+| Decisão | Por quê |
+|---|---|
+| **`actorName` é texto, não só FK** | O registro precisa continuar legível depois que a pessoa sai da empresa. Guardar só o id faria a linha do tempo virar "responsável mudou para cmr04…" justamente quando alguém for consultá-la |
+| **Valor comparado como número** | `"100"` e `"100.00"` são o mesmo dinheiro; comparar como texto geraria um evento a cada gravação e em um mês o histórico ficaria ilegível |
+| **Da conclusão guarda só QUE mudou** | São parágrafos inteiros. Duplicá-los incharia a tabela sem ajudar ninguém — o texto atual está na própria OS |
+
+Status é o único campo cujo valor guardado é um **código**, traduzido na tela —
+senão o histórico ficaria em português numa conta em inglês. Os demais já são
+gravados legíveis.
+
+A gravação **nunca lança**: histórico é registro do que aconteceu, não parte do
+que está acontecendo. Falhar aqui não pode impedir o técnico de concluir a OS
+no meio da rua — um histórico com buraco ainda é melhor que uma OS que não
+fecha.
+
+Ganchos em `createServiceOrder`, `updateOrderStatus`, `completeServiceOrder` e
+`updateServiceOrder`.
+
+451 → 463 testes.
+
+---
+
+### 7.2.22 Backup testado — 18/08/2026
+
+Item 12 do Nível 3, e o único da lista cuja falha é irreversível.
+
+O ponto de partida: "o Supabase faz backup, mas ninguém nunca tentou
+restaurar". Backup não testado não é backup — é um arquivo que ninguém sabe se
+presta, e a hora de descobrir é a pior hora possível.
+
+**O que existe agora**, três comandos:
+
+| Comando | O quê |
+|---|---|
+| `npm run backup` | Exporta o banco inteiro para `backups/<data>/`: um `.jsonl` por tabela e um `manifest.json` com contagem por tabela e a última migration |
+| `npm run backup:provar <pasta>` | Sobe um Postgres **descartável em memória**, aplica o schema, carrega o backup e confere linha a linha. Sem risco, sem credencial, sem banco de ensaio |
+| `npm run backup:restaurar <pasta>` | Restauração num banco de verdade, com trava contra escrever em produção e confirmação digitada |
+
+**A ordem de carga vem do catálogo do banco**, nunca de lista escrita à mão.
+Essa lição já custou caro aqui: o `reset()` dos testes usava lista fixa e ficou
+defasado em seis tabelas sem ninguém notar (7.2.19). Num restore o sintoma
+seria pior — a carga falha por chave estrangeira, ou alguém desliga a checagem
+"pra funcionar" e restaura dado órfão.
+
+**Um defeito de corrupção silenciosa, achado pelo próprio teste.** A primeira
+versão devolvia toda data **três horas adiantada** — exatamente o fuso de
+Brasília. Causa: o driver lê coluna `timestamp` (sem fuso) interpretando no
+fuso LOCAL, mas grava de volta em UTC. Cada ciclo de backup e restauração
+deslocaria todas as datas do sistema. A correção é ler data/hora como TEXTO no
+próprio Postgres (`selectDeColunas`), tirando o fuso da conta. É a prova de que
+o teste de ida e volta se paga: sem ele, isso só apareceria numa restauração de
+emergência, com as datas erradas e ninguém entendendo por quê.
+
+**Executado de verdade**: backup de produção com 34 tabelas e 125 linhas,
+verificado com sucesso. Não é mais "temos backup" — é "o backup restaura, e
+está provado".
+
+Por que não `pg_dump`: não está instalado em toda máquina, e a versão do
+cliente precisa casar com a do servidor. O custo de não usá-lo é não trazer
+objetos de banco além de dados — aceitável porque o schema já é reproduzível
+pelas migrations (reparadas em 12/06) e isso é verificado pelo próprio ciclo.
+
+`backups/` e `.env.restore` entraram no `.gitignore`: o arquivo contém dados
+pessoais de clientes finais de terceiros.
+
+463 → 483 testes.
+
+**O que continua sendo do dono**, e nenhum script resolve:
+
+- Confirmar no painel do Supabase qual retenção o plano atual dá.
+- Guardar uma cópia FORA do Supabase — se a conta for perdida, o backup dele
+  vai junto.
+- Rodar `npm run backup` com alguma regularidade. Um backup de três meses atrás
+  restaura, mas restaura o negócio de três meses atrás.
+
+---
+
+### 7.2.23 Monitoramento ativo — 19/08/2026
+
+Item 11 do Nível 3. Fecha o Nível 3, exceto a página de status pública (13).
+
+O ponto de partida: o Sentry pega exceção, mas ninguém é avisado quando o site
+simplesmente para de responder às 2h da manhã — nem quando o cron diário morre
+em silêncio. **Silêncio é indistinguível de sucesso**, e essa é a pior
+propriedade que um sistema de fundo pode ter.
+
+**O que decide o desenho:** um monitor que roda na mesma infraestrutura que
+monitora não serve. Se a Vercel cair, um cron da Vercel não avisa ninguém. A
+checagem de fora é, obrigatoriamente, serviço de terceiro. O que este trabalho
+faz é dar a ela algo honesto para encontrar.
+
+**`GET /api/health`** — pública (monitor não faz login), sem nenhum dado de
+negócio no corpo. Verifica dois sinais:
+
+| Sinal | Como |
+|---|---|
+| Banco | Uma consulta trivial. Se não responde, degradado |
+| Cron | Última execução BEM-SUCEDIDA. Mais velha que 26h, degradado |
+
+O detalhe que faz tudo funcionar: **503 quando degradado**. Monitor de uptime
+alerta em resposta não-2xx e não lê corpo por padrão — devolver 200 com
+`{"estado":"degradado"}` seria bonito e completamente inútil.
+
+O cron é o sinal que de fora ninguém consegue enxergar: o site responde, tudo
+parece bem, e há três dias ninguém recebe aviso de cobrança, contrato
+recorrente não gera OS e coordenada não é preenchida. Por isso a tabela
+`CronRun` registra cada execução, e `ok = false` quando houve **qualquer**
+erro — cron que falha metade e conta como sucesso é pior que cron que não
+roda, porque ninguém investiga.
+
+**Tolerância de 26h, não 24.** A Vercel não garante o minuto exato, e um
+atraso de meia hora não é queda. Alarme que dispara por atraso normal é alarme
+que a pessoa aprende a ignorar — e aí ele deixa de funcionar justamente no dia
+real. Pelo mesmo motivo, sistema recém-implantado que ainda não teve um cron
+**não** nasce vermelho: só vira problema depois de ter passado tempo
+suficiente para um cron ter acontecido.
+
+**E-mail ao dono quando o cron falha.** Até aqui o erro era contado numa
+variável e esquecido — o resultado ficava no corpo de uma resposta HTTP que
+ninguém lê.
+
+483 → 494 testes.
+
+**O que só o dono pode fazer**, e sem o que nada disto alerta:
+
+1. Contratar um monitor externo (UptimeRobot, Better Stack e similares têm
+   plano grátis suficiente para isto).
+2. Apontar para `https://servicoos.com.br/api/health`, intervalo de 5 minutos.
+3. Configurar o alerta para o **celular**, não só e-mail — às 2h da manhã o
+   e-mail não acorda ninguém.
+4. Conferir que `SUPER_ADMIN_EMAIL` está definida em Production, senão o aviso
+   de falha do cron não tem para onde ir.
+
+Enquanto o passo 1 não for feito, a rota existe e ninguém a consulta — o que
+é exatamente o mesmo que não ter monitoramento.
+
+---
+
+### 7.2.24 Página de status pública — 19/08/2026
+
+Item 13 do Nível 3. **Fecha os três níveis da lista.**
+
+`/status`, pública, sem login — é justamente quando algo quebra que a pessoa
+vem olhar, e mandá-la pro login seria a resposta mais frustrante possível.
+
+**O limite está escrito na própria página.** Ela roda na mesma infraestrutura
+que descreve: se tudo cair, ela cai junto e nunca vai mostrar uma queda total.
+Página de status que se apresenta como onisciente engana o cliente exatamente
+no momento em que ele mais precisa de informação. Quem cobre a queda total é o
+monitor externo consultando `/api/health` (7.2.23).
+
+O que ela cobre é o caso mais comum e mais traiçoeiro: o sistema **no ar** com
+alguma coisa quebrada por dentro — que é o que o cliente não consegue enxergar
+sozinho.
+
+**Nenhum percentual de disponibilidade.** Não medimos isso daqui de dentro, e
+número inventado numa página de status é pior que página nenhuma: vira promessa
+que o cliente cobra. O que se mostra é registro próprio e verificável — as
+execuções diárias das tarefas automáticas, um quadrado por dia nos últimos 30.
+
+**Cinza não é vermelho.** Dia sem registro e dia com falha são coisas
+diferentes e aparecem diferentes. Antes de 19/08/2026 nada era registrado;
+pintar esse passado de vermelho seria inventar um histórico ruim que ninguém
+observou. Pelo mesmo motivo o resumo conta sobre os dias **observados**, nunca
+sobre a janela inteira — senão um sistema que passou a registrar ontem
+apareceria como "1 de 30", lido como catástrofe.
+
+Link no rodapé da landing.
+
+494 → 504 testes.
+
+---
+
+### 7.2.25 Escrita offline — 19/08/2026
+
+Item 14 (Nível 4). O `sw.js` v2 (7.2.6) trouxe leitura offline e dizia no
+próprio comentário o que faltava: *"gravar offline (…) é um projeto à parte,
+bem maior — as Server Actions são POST, e haveria conflito de edição pra
+resolver"*. É esse projeto.
+
+O caso: o técnico chega no subsolo, conclui o serviço, não tem sinal. Antes ele
+podia LER a OS mas não fechar — e o trabalho ficava para depois, que vira nunca
+ou vira bilhete no bolso.
+
+**O que muda de natureza aqui.** Guardar página em cache é conveniência. Isto é
+uma promessa: o técnico afirma algo sobre o mundo ("este serviço foi concluído,
+custou R$ 400"), o sistema aceita, e ele vai embora achando que está
+registrado. Quebrar essa promessa é pior que ter recusado de cara.
+
+Três problemas definem o desenho:
+
+| Problema | Resposta |
+|---|---|
+| **Idempotência** | O id vem do CELULAR (`crypto.randomUUID`) e é chave primária de `OfflineOperation`. Repetir devolve "repetida" sem aplicar. Sem isso, uma resposta perdida no caminho faria a OS ser concluída duas vezes — **duas receitas e estoque baixado em dobro**, invisível até o financeiro não fechar |
+| **Conflito** | A OS pode ter mudado enquanto o celular estava sem rede. Já concluída, faturada ou cancelada ⇒ **recusa com motivo**, e o técnico vê o motivo. Aplicar por cima desfaria o trabalho de quem estava com sinal |
+| **Desistência** | Depois de 5 tentativas a operação para — mas **continua visível** como travada. Sumir sozinha seria perder trabalho em silêncio, exatamente o que a fila existe pra impedir |
+
+**Decisões que valem registrar:**
+
+- **Com sinal, nada muda.** A operação vai pelo caminho de sempre e o erro real
+  chega ao técnico. A fila só entra quando `navigator.onLine` é falso. Trocar
+  um caminho testado por um novo em 99% dos casos não traria ganho.
+- **O momento gravado é o do técnico**, não o da sincronização — que pode ser
+  dias depois. A OS registra quando o serviço aconteceu no mundo real.
+- **Um lote não é tudo-ou-nada.** Uma OS cancelada não pode fazer o técnico
+  perder as outras cinco conclusões do dia.
+- **Erro inesperado vira "falhou", não "recusada".** Falhou é reenviável;
+  recusada descartaria trabalho de campo por um problema momentâneo.
+- **IndexedDB, não localStorage**: síncrono trava a interface do celular na
+  mão do técnico, e 5MB não caberia foto depois.
+- **`useSyncExternalStore`**, o mesmo primitivo do `OfflineBanner` e pelo mesmo
+  motivo — com `useState`+`useEffect` a atualização vira setState dentro de
+  efeito. O lint pegou isso, e a correção trouxe de brinde uma trava contra
+  sincronização simultânea (duas abas mandariam o mesmo lote em paralelo).
+
+**Fora do escopo, de propósito: fotos.** São binário grande e merecem a mesma
+fila, não uma meia-solução que perde o trabalho do técnico. Hoje foto ainda
+exige sinal.
+
+504 → 530 testes.
+
+---
+
+### 7.2.26 Agenda arrastar-e-soltar — 20/08/2026
+
+A agenda era uma grade de **leitura**. Reagendar exigia abrir a OS, entrar em
+editar, mexer na data e salvar — três telas para mover um card um dia adiante.
+Quem monta a semana faz isso dezenas de vezes, e o custo não está em nenhuma
+tela isolada: está em ter que sair da visão que mostra o problema (a semana
+cheia) para resolver o problema.
+
+**Dois defeitos encontrados no caminho, ambos no código que já existia:**
+
+1. **Os botões de mês não refaziam a busca.** Mexiam só em estado local, e o
+   agrupamento por dia usava `getDate()` sem conferir o mês. Avançar um mês
+   redesenhava as **mesmas OS** nos mesmos números de dia. Enganoso por si só;
+   com arrastar, passaria a mover a OS errada. Corrigido: navegar de mês agora
+   é navegação de URL (`?year=&month=`), o servidor refaz a busca, e o
+   agrupamento confere ano e mês.
+2. **`?year=abc` dava `NaN`** e `new Date(NaN, …)` desenhava uma grade inteira
+   de vazio sem explicar. Passou a importar mais justamente porque o mês virou
+   URL. Agora cai no mês atual.
+
+**Decisões que definem o recurso:**
+
+- **O cliente escolhe o DIA, não o instante.** A hora vem do agendamento que já
+  está no banco e o servidor monta a data final. Server Action é endereço HTTP
+  como outro qualquer: aceitar um instante pronto significaria que bastava
+  chamar direto para gravar qualquer data em qualquer OS.
+- **A hora sobrevive ao arrasto.** Arrastar responde "quando", não "que horas".
+  Zerar a hora transformaria a agenda do dia inteiro em meia-noite.
+- **Concluída, faturada e cancelada não arrastam**, cada uma com seu motivo na
+  tela. Mais restrito que o formulário de propósito: o formulário é ato
+  deliberado com campo de data à vista; arrastar é gesto, e gesto acontece sem
+  querer. Quem precisa corrigir a data de uma OS concluída ainda consegue pela
+  edição.
+- **Entra no histórico igual ao formulário.** Se só o formulário registrasse, o
+  caminho mais rápido seria também o que não deixa rastro — e a linha do tempo
+  mentiria por omissão exatamente no campo que mais gera discussão com cliente.
+- **Conflito avisa, não impede.** A OS não tem duração no modelo, só o instante.
+  Então o aviso é o honesto que os dados permitem — "esta pessoa já tem outro
+  serviço nesse horário" — e não uma sobreposição simulada com duração
+  inventada, que daria falso alarme em visita de quinze minutos e silêncio em
+  reforma de um dia. Quem monta a agenda às vezes encaixa dois de propósito.
+- **No celular não existe arrastar.** A alça vira "pegar", e o dia de destino
+  recebe um alvo que cobre a célula inteira. O card continua sendo link: o
+  toque que abre a OS é a ação principal e não podia virar refém do arrastar.
+
+O cálculo de data dá o mesmo resultado no servidor (UTC) e no navegador (fuso
+do usuário) porque lê e escreve no mesmo fuso — a diferença se cancela. Valeria
+revisar se o Brasil voltasse a ter horário de verão.
+
+`lib/agenda.ts` é puro porque a regra precisa valer igual nos dois lados: a
+tela decide o que deixa arrastar, o servidor decide o que aceita. Se as cópias
+divergirem, a tela promete um movimento que o servidor recusa — ou aceita um
+que a tela achava impossível.
+
+530 → 542 testes.
+
+---
+
+### 7.2.27 Permissão por ação — 20/08/2026
+
+A permissão era por **aba**: quem enxerga "Ordens de Serviço" faz tudo dentro
+dela. Antes de construir, levantei o que o técnico consegue de fato hoje — e
+quase tudo já era OWNER/ADMIN (excluir, financeiro, orçamento, estoque, equipe,
+compras, contratos). Sobraram oito coisas sem barreira nenhuma, e **uma pesa
+muito mais que as outras**:
+
+> `updateServiceOrder` reescreve os ITENS e o VALOR TOTAL da OS, sem checagem
+> de papel nenhuma. Qualquer técnico com a aba mudava o preço de um serviço já
+> executado.
+
+Não é hipótese distante: é a discussão que aparece quando o faturamento do mês
+não bate com o que foi combinado.
+
+**O defeito que apareceu no caminho.** A tela de Permissões deixa desmarcar
+todas as 19 abas. `savePermissions` gravava zero linhas, e `getAllowedTabs` lia
+zero linhas como "usar o padrão" — que **concede 3 abas**. A tela prometia
+acesso nenhum e o sistema dava três. Corrigido com `Tenant.tabsConfigured`, que
+separa "nunca mexeram nisso" de "mexeram e não liberaram nada". A migration já
+marca como configurado quem tem permissão gravada, para não desfazer escolha de
+ninguém.
+
+**Decisões:**
+
+- **O padrão é tudo liberado**, e não o contrário. Fechar por padrão é mais
+  seguro no papel e péssimo na prática: toda empresa que já usa o sistema
+  chegaria na segunda-feira com os técnicos sem conseguir trabalhar, sem ter
+  pedido mudança nenhuma. Fechar é decisão do dono, tomada por ele, na tela.
+- **Só entra no catálogo o que o técnico já consegue fazer.** Trazer "excluir"
+  ou "faturar" para cá sugeriria que dá para liberar, e a tela passaria a
+  oferecer um botão que não deveria existir. Há um teste que guarda isso.
+- **OWNER/ADMIN passam sempre**, sem consultar o banco. Um dono que se
+  trancasse para fora não teria por onde voltar — a tela que conserta é a dele.
+- **`checarAcao` devolve código, não lança.** As Actions daqui já respondem
+  `{ erro }` ou `{ message }` e cada uma sabe o formato que a tela dela espera;
+  lançar transformaria recusa prevista em tela de erro genérica.
+- **A tela esconde o que não pode**, e as páginas de formulário redirecionam.
+  Esconder botão nunca foi proteção — a Action se defende sozinha —, mas botão
+  que aparece e falha é pior que botão que não aparece, e preencher um
+  formulário inteiro para levar recusa no fim é pior ainda.
+- **Uma consulta por página, não por linha.** A lista de OS pode ter cem itens.
+
+**Onde ficou:** `lib/acoes.ts` (puro), `ActionPermission`, `Tenant.actionsConfigured`,
+`getAcoesPermitidas`/`checarAcao` em `lib/auth.ts`, e uma segunda seção na tela
+de Permissões — duas seções e não uma lista só, porque quais abas a pessoa
+ENXERGA e o que ela FAZ dentro delas são perguntas diferentes, e vinte e sete
+caixas numa lista só esconderiam justamente a que mais importa.
+
+542 → 557 testes.
+
+---
+
+### 7.2.28 API de integração — 20/08/2026
+
+**Só no Enterprise**, e essa é a razão de ela existir agora. Fora dela, Pro e
+Enterprise diferiam só em quantidade (usuários ilimitados) e atendimento — ou
+seja, o plano de R$ 397 não tinha nada que o de R$ 97 não tivesse para quem já
+cabia em 10 usuários. `pro` deixou de receber `TODOS` os recursos, e um teste
+guarda a linha: se ela cair, o Enterprise volta a não ter o que oferecer, e
+nada quebra visivelmente para avisar.
+
+**A chave é tratada como senha, não como identificador.** Ela vai parar em
+arquivo de configuração de terceiro, em variável de ambiente, em backup:
+
+- O banco guarda **o hash, nunca a chave**. Um vazamento do banco — ou um
+  backup nosso, que circula por definição — não vira uma pilha de credenciais
+  válidas.
+- A chave **aparece uma vez**. Poder reexibir obrigaria a guardar o texto.
+- **Comparação em tempo constante**, para o tempo de resposta não contar
+  quantos caracteres iniciais um palpite acertou.
+- **Prefixo público separado do segredo.** Sem ele, conferir uma chave exigiria
+  carregar todas as chaves de todas as empresas e testar o hash uma a uma.
+- Chave inexistente, malformada e **revogada dão a mesma resposta**: distinguir
+  contaria a quem tenta se o prefixo existe.
+- **Sem limite de tentativa para chave inválida**, de propósito: o segredo tem
+  ~190 bits, adivinhar é inviável, e gravar uma linha de contagem por tentativa
+  recusada daria a quem varre a internet uma forma de encher uma tabela nossa.
+
+**Plano e assinatura são conferidos a cada chamada**, e não só na criação.
+Cancelar a assinatura ou cair de Enterprise para Pro desliga a chave — senão o
+recurso que justifica o preço viraria vitalício para quem passou por lá uma vez.
+
+**O contrato não é o modelo do banco.** `lib/api-formato.ts` lista campo por
+campo o que sai. Devolver a linha do Prisma direto publicaria cada coluna nova
+que alguém adicionasse — inclusive `clientToken`, que dá acesso ao portal
+público da OS. Latitude/longitude também ficam de fora: são resultado da nossa
+geocodificação, não cadastro do cliente.
+
+**Outras decisões:**
+
+- `POST /service-orders` aceita só `OPEN` e `IN_PROGRESS`. Aceitar `DONE` ou
+  `INVOICED` deixaria criar receita e nota fiscal por aqui, pulando conclusão,
+  estoque e assinatura.
+- **A cota de OS do plano vale na API.** Sem isso ela seria a porta dos fundos
+  do limite que a tela cobra, e o Starter viraria ilimitado para quem soubesse
+  chamar.
+- `GET /service-orders/{id}` usa `findFirst` com `tenantId`, não `findUnique`
+  por id. É o IDOR clássico, e já foi achado de verdade neste projeto
+  (revisão de 19/07/2026). Responde **404 e não 403**: dizer "existe, mas não é
+  sua" já conta que o id é válido em algum lugar.
+- **Paginação por cursor**, não offset: com offset, um registro criado enquanto
+  o cliente pagina faz um item repetir e outro sumir.
+- Erros em **inglês, com `code` estável**. Quem consome API lê o código, não a
+  frase — e `getTranslations` depende de contexto de request que rota de API
+  pode não ter, o que transformaria um 401 honesto num 500.
+- Criar cliente pela API **não geocodifica na hora**: gastaria crédito do
+  Geoapify a cada chamada. O lote noturno pega quem entrou por aqui.
+- `nextOrderNumber` saiu da action para `lib/os-numero.ts`, porque a API cria
+  OS pelo mesmo caminho. Duas cópias da numeração acabariam divergindo — e isso
+  só aparece quando o cliente liga reclamando de duas ordens com o mesmo número.
+
+**Endereço:** `neighborhood` no contrato público, `district` na coluna. O nome
+de fora é o que o consumidor entende; renomear a coluna agora quebraria o resto
+do sistema por causa da API.
+
+557 → 580 testes.
+
+---
+
+### 7.2.29 Filiais — 20/08/2026
+
+**Só no Enterprise**, junto com a API. Os dois são de empresa que cresceu — quem
+integra com ERP e quem tem mais de uma unidade costuma ser a mesma pessoa.
+
+**O escopo é declarado, não implícito.** 447 consultas do sistema filtram por
+`tenantId`; escopar todas por filial de uma vez seria reescrever o sistema. E
+filial meio-feita — algumas telas filtrando e outras não — é **pior que
+nenhuma**, porque promete separação e vaza. Então:
+
+| Separado por filial | Compartilhado, por decisão |
+|---|---|
+| Clientes, OS, agenda | Estoque e peças |
+| Financeiro (receitas e despesas) | Fornecedores e compras |
+| Equipe | Orçamentos, contratos, configurações, cobrança |
+
+A tela de Filiais mostra essas duas listas. Uma empresa que **acha** que separou
+o estoque por unidade e descobre no inventário que não separou perdeu mais do
+que teria perdido sabendo desde o começo.
+
+**As regras que evitam os dois desastres óbvios:**
+
+1. **Registro sem filial é visto por todos.** Sem isso, criar a primeira filial
+   faria a base histórica inteira desaparecer da tela — anos de cliente e OS
+   sumindo porque alguém cadastrou "Unidade Centro". A migration não preenche
+   nada: ligar filiais não muda o que ninguém vê até a empresa vincular a
+   primeira pessoa.
+2. **Sem o recurso, filial se desliga.** Um downgrade de Enterprise para Pro
+   devolve a visão completa, em vez de deixar a equipe presa a uma divisão que
+   ninguém mais consegue administrar (a tela some junto com o plano). As colunas
+   continuam gravadas: voltar restaura tudo sem recadastrar. A direção segura é
+   essa — errar para "mostra mais" mostra dado da própria empresa a quem já tem
+   acesso a ela; errar para "mostra menos" esconde o trabalho da pessoa.
+
+**O erro que quase entrou.** O filtro ia ser `{ OR: [...] }`. As consultas de
+cliente e de OS **já usam `OR` no nível de cima**, para a busca por texto —
+espalhar outro por cima substituiria o da busca em silêncio: a pesquisa pararia
+de filtrar e a listagem devolveria a base inteira, **parecendo funcionar**. Vira
+`{ AND: [{ OR: [...] }] }`, com um teste da forma e outro rodando busca e filtro
+juntos contra o banco.
+
+**Outras decisões:**
+
+- A OS herda a filial do **cliente**, não de quem digitou: um atendente da
+  matriz abrindo OS para cliente da filial não muda de quem é aquele cliente. A
+  receita herda a da OS — senão o faturamento apareceria no fechamento de todas.
+- **O filtro da tela não vale para quem está preso a uma filial.** Se valesse,
+  bastaria trocar o parâmetro na URL para ler a unidade vizinha, e o seletor de
+  tela viraria a autorização.
+- **Desativa, não apaga.** Apagar levaria junto o vínculo de cada cliente, OS e
+  receita da unidade, e o faturamento por filial do ano sumiria por um clique de
+  organização. As chaves estrangeiras são `ON DELETE SET NULL` como rede embaixo.
+- **A API herda a filial igual à tela.** Se criasse OS sem filial, a integração
+  viraria o jeito de furar a divisão sem ninguém perceber.
+- Navegar de mês na agenda **preserva a URL inteira** — montar o endereço à mão
+  descartaria o filtro, e quem filtrou uma unidade voltaria a ver a empresa
+  toda só por avançar um mês.
+
+580 → 603 testes.
+
+---
+
+### 7.2.30 Auditoria por subsistema — 20-21/08/2026
+
+Cinco frentes independentes lendo o código, cada achado verificado por um
+cético que tentava refutá-lo lendo os arquivos. **Nove defeitos reais.** Duas
+frentes (código morto, duas-fontes-da-verdade) nunca completaram por limite de
+uso — **essa parte do sistema segue sem ter sido olhada.**
+
+**O pior não era técnico.** Os Termos de Uso, seção 4, prometiam *"15 dias
+corridos de teste gratuito, sem necessidade de cartão de crédito"*, e a seção 7
+prometia "dias extras de teste" pela indicação. O trial foi removido do produto
+em 10/08 — landing, cadastro e `getTenant` foram limpos, e **o contrato ficou
+para trás**. Reescritas para descrever o que o sistema faz: acesso exige plano
+pago ativo, e a indicação dá desconto. **Isto é texto contratual e merece o
+olhar do advogado que fez o parecer da v1.1** — o que fiz foi corrigir uma
+divergência factual, não redigir cláusula nova.
+
+**Marcadores crus chegavam ao cliente final.** Havia dois caminhos de tradução
+e só um trocava os marcadores de vocabulário:
+
+```
+getTranslations()/useTranslations() → i18n/request.ts → trocava   ✓
+getTranslator(locale, ns)           → lib/i18n.ts     → NÃO trocava ✗
+```
+
+O segundo é justamente o que gera e-mail, WhatsApp e PDF. Onze textos passavam
+crus, então o cliente da nossa cliente recebia `[[osC]] #1234`. A troca virou
+`lib/mensagens.ts`, usada pelos dois caminhos — o defeito e a duplicação caem
+juntos. O padrão agora é **trocar sempre**: sem vocabulário informado vale o
+texto padrão, nunca o marcador. Errar para "texto padrão" é invisível; errar
+para "marcador cru" é constrangedor na frente do cliente de outra empresa.
+
+**Um defeito nosso, do dia anterior.** A permissão por ação (7.2.27) fez
+`updateOrderStatus` recusar com um `return` seco. A fila offline (7.2.25) grava
+"aplicada" antes de aplicar — de propósito, para nunca duplicar dinheiro. As
+duas decisões juntas viravam perda silenciosa: desmarcar "mudar status" de um
+técnico passava a **descartar o trabalho de campo dele sem aviso**. Agora
+`sincronizar` confere a permissão antes e RECUSA com motivo.
+
+**Aviso de conclusão que nunca disparava.** A regra "mudou de status, avisa o
+cliente" estava escrita só no `updateOrderStatus`. O botão Concluir — o caminho
+normal, e também o da fila offline — não avisava ninguém. Somava-se a isso que
+`momentoDoStatus` ignorava `INVOICED`, que é onde a maioria das OS concluídas
+termina em produção (o comentário do cron de NPS já registrava isso). A empresa
+ligava o aviso, via o "a caminho" funcionando, e concluía que estava tudo no ar.
+
+**O cron, endurecido.** Três achados no mesmo lugar, e um deles se escondia:
+
+- **Teto de 40 reconciliações.** O laço faz uma chamada HTTP por linha num
+  conjunto que só cresce. Estourar os 60s mata tudo depois — e a Vercel mata a
+  função antes do `avisarFalhaDoCron`, então **a falha apagaria o próprio
+  alarme**. Hoje há 0 assinaturas presas e o cron roda em 0,45s; o teto existe
+  para o dia em que não for assim.
+- **Timeout de 3s** no `fetch` da Asaas. O padrão já existia no projeto
+  (`geocode.ts`) e não tinha sido aplicado aqui.
+- **`try/catch` nas duas etapas que não tinham.** Eram as menos importantes
+  (e-mails de acompanhamento e NPS) e derrubavam a cobrança que vem depois.
+
+**Geocodificação atropelando o limite.** O comentário afirmava respeitar 1 req/s
+do Nominatim e não havia pausa nenhuma. Falha muda com perda de trabalho: o
+Nominatim recusa, o endereço conta tentativa, o cron fecha verde — e depois de
+6 dias o endereço **sai da fila para sempre**. Pausa de 1,1s, só quando o
+provedor é o Nominatim (com Geoapify o limite é por crédito/dia).
+
+**E-mail de pagamento morrendo com a instância.** `gerarContrato().then(email)`
+disparado sem `after()`: em serverless a instância congela quando o handler
+retorna. O cliente pagava, era ativado, e não recebia confirmação nem o
+contrato em PDF — sem erro no Sentry, sem linha no log.
+
+#### Penhascos conhecidos, com o número em que passam a doer
+
+Reais e verificados, mas **não vale mexer hoje**: 4 empresas, 6 clientes, 11 OS,
+7 receitas, 0 contratos.
+
+| Onde | O que acontece | Dói a partir de |
+|---|---|---|
+| `finance.ts:89` | Carrega o razão inteiro e faz KPI e busca em JS | ~3.000 linhas de receita+despesa |
+| `cron/daily:73` | Uma chamada HTTP por assinatura presa | ~150 presas (teto já mitiga) |
+| `reports.ts:64` | Carteira inteira com OS aninhadas para ranquear 10 | ~2.000 clientes |
+| `service-orders.ts` | Lista traz todos os itens de todas as OS | ~1.000 OS ativas |
+
+Refutado corretamente: o N+1 de contratos recorrentes. Existe, mas com 0
+contratos não roda nunca.
+
+#### O que continua sem ter sido olhado
+
+Código morto e duplicação de regra. É onde este projeto já teve problema antes
+(numeração de OS duplicada, `reset()` de teste desatualizado por 6 tabelas) — e,
+durante esta mesma auditoria, achei **uma terceira** implementação da numeração
+de OS em `contracts.ts:211`, sem o `retryOnUniqueConflict` que os outros dois
+caminhos têm. Fica registrado como pendência.
+
+603 → 617 testes.
+
+---
+
+### 7.2.31 Assinaturas nos documentos — 21/08/2026
+
+**Comecou como defeito.** A assinatura do cliente final era colhida na tela do
+celular, gravada em `ServiceOrder.clientSignatureUrl` — e o PDF imprimia duas
+**linhas em branco** para assinar no papel. Em producao, 3 das 11 OS tinham
+assinatura guardada e nenhuma saiu impressa. Nao e que parou de sair: **nunca
+saiu**.
+
+E abriu a pergunta seguinte: e a assinatura de quem EXECUTOU? Documento de
+servico tem dois lados — quem recebeu assina que recebeu, quem fez assina que
+fez. So um dos dois era capturado, e nenhum impresso.
+
+Agora cada pessoa desenha a dela uma vez em Configuracoes > Minha assinatura, e
+ela sai nos documentos que emite. Desenhar, e nao enviar arquivo: assinatura e
+gesto, e quase ninguem tem a propria como imagem no computador.
+
+**Decisoes:**
+
+- A action grava a assinatura de QUEM PEDE, sem parametro de usuario. Aceitar
+  `userId` deixaria trocar a assinatura de outra pessoa — e assinatura trocada
+  e documento assinado por quem nao assinou.
+- **Reprocessa no servidor** (sharp) em vez de gravar o que veio do navegador,
+  mesmo raciocinio do logo.
+- Piso e teto de tamanho **com motivo na recusa**: arquivo grande e foto, traco
+  minusculo e toque acidental e sairia como sujeira no documento do cliente.
+- Quem nao gravou continua com a linha para assinar a mao.
+
+**O orcamento exigiu corrigir algo antes:** o sistema nao registrava quem criou
+um orcamento. Sem o autor, a unica coisa carimbavel seria quem esta BAIXANDO o
+PDF — e um administrador baixando o orcamento da Ana sairia com a assinatura
+dele. `Quote.createdById` passou a existir.
+
+**Duas ficaram de fora por falta de documento, nao de assinatura:** o contrato
+de prestacao recorrente (`ServiceContract`) e a ordem de compra **nao tem PDF
+nenhum**. O unico `contrato-pdf` e o NOSSO com a empresa cliente.
+
+Detalhe de teste: os dois PNGs de exemplo precisam ser diferentes — o react-pdf
+deduplica imagem identica, entao com o mesmo arquivo dos dois lados o teste de
+"as duas entram" mediria nada. Falhou por 2 bytes e mostrou isso.
+
+617 -> 634 testes.
+
+---
+
+### 7.2.32 Carencia de cobranca: 5 -> 30 dias — 21/08/2026
+
+Avisos nos dias 1, 3, 10, 15, 20, 25 e 30; bloqueio no 30. Apertada no comeco
+porque a maioria das falhas de cobranca e boba e se resolve no mesmo dia;
+espacada depois, para nao virar perseguicao a quem ja sabe que deve.
+
+**O ultimo marco coincide com o corte de proposito**, e por isso o e-mail
+daquele dia e outro texto: dizer "restam 0 dias de acesso" para quem acabou de
+perder o acesso e pior que nao avisar.
+
+**Duas fontes da verdade, corrigida:** o tom do e-mail era decidido dentro do
+`resend.ts` (`diasRestantes <= 2`), separado do modulo que sabe quantos dias de
+carencia existem. Com a carencia subindo, as duas metades divergiriam em
+silencio.
+
+**E um defeito que a propria mudanca dispararia.** O contrato juridico declara
+a carencia e escrevia o extenso com `dias === 5 ? "cinco" : String(dias)` — ou
+seja, sabia falar UM numero. Com 30 sairia **"30 (30) dias corridos"**, o
+algarismo repetido no lugar do extenso, num documento assinado. Criado
+`lib/extenso.ts` (0-999); fora da faixa devolve o algarismo, porque extenso
+errado e pior que sem extenso.
+
+**VERSAO_CONTRATO 1.1 -> 1.2, PENDENTE DE ADVOGADO.** Isto muda uma clausula:
+quem assinou a v1.1 contratou 5 dias. A mudanca e favoravel a contratante, mas
+o documento dela declara o que ela assinou.
+
+634 -> 650 testes.
+
+---
+
+### 7.2.33 Planos novos e cota de nota fiscal — 22/08/2026
+
+Starter: 3 usuarios, 50 OS/mes, **8 NFS-e/mes**. Pro: 10 usuarios, **200
+OS/mes**, **70 NFS-e/mes**.
+
+**A cota de nota fiscal nao existia.** A vitrine passaria a vender "8 notas por
+mes" e nada no sistema contava nota emitida — o mesmo defeito que os limites de
+plano tiveram em 10/08. `requireCotaDeNfse` barra ANTES de falar com a NFE.io:
+passar da cota e emitir mesmo assim seria irreversivel, porque nao ha
+cancelamento de nota no produto.
+
+Conta por `nfseIssuedAt`, nao pelo `createdAt` da OS: uma OS aberta em julho e
+faturada em agosto gasta a cota de AGOSTO.
+
+**O Pro deixou de ter OS ilimitada.** E reducao de contrato para quem ja
+assinou; travado por teste para nao se desfazer sozinho.
+
+**A janela do mes virou um lugar so** — era calculada na cota de OS e repetida
+na rota da API, e ia virar uma terceira copia. E mudou de UTC para **Brasilia**:
+o resto do sistema ja conta mes em BRT, e uma OS aberta as 21h30 do dia 31 caia
+no mes seguinte para a cota e no mes corrente para o faturamento.
+
+650 -> 656 testes.
+
+---
+
+### 7.2.34 Plano customizado: tetos, preco e funcoes por empresa — 22/08/2026
+
+Os planos sao tres e as empresas nao. O painel ganhou **Limites** (usuarios,
+OS/mes, NFS-e/mes, mensalidade) e **Funcoes** (dez interruptores).
+
+**Nos tetos, o detalhe que definiu o desenho:** "herdar do plano" e "sem
+limite" sao coisas DIFERENTES, e as duas seriam `null` num campo de numero
+anulavel. Herdar acompanha o plano quando ele mudar; sem limite nao. Por isso
+`0` carrega o sentido de ilimitado — zero usuario nao significa nada como teto
+real — e a tela oferece **tres** opcoes em vez de um campo solto.
+
+**Nas funcoes, a regra e o oposto do resto do sistema, e de proposito:**
+
+| | |
+|---|---|
+| **Recurso** (`lib/recursos.ts`) | o que o PLANO vende. Nasce desligado, o plano liga |
+| **Funcao** (`lib/funcoes.ts`) | o que o sistema FAZ. Nasce **ligada**, o painel desliga |
+
+O banco guarda as DESLIGADAS. Lista vazia = tudo funcionando = comportamento de
+hoje. E a unica forma segura de criar interruptor para coisa ja em uso: uma
+lista de "ligadas" comecaria vazia e apagaria PDF, historico, portal e fila
+offline de todos os clientes no deploy.
+
+**Das 23 funcoes sem trava, 13 ficaram de fora** — e o produto (login), e NOSSO
+(cobranca, backup, monitoramento) ou ja tem dono (`stock`, Contratos). Desligar
+a receita criada ao faturar deixaria OS faturada sem lancamento: livro-caixa
+furado, nao economia. Um teste guarda essa lista.
+
+**Um defeito meu no caminho:** criei `customPriceMonthly`, o painel gravava, a
+auditoria registrava — e `billing.ts` continuava calculando pelo preco do
+plano. A tela mostrava a tabela tambem. Corrigido com `lib/preco.ts`, puro e
+testado, porque e dinheiro saindo da conta de alguem: erro ali nao da erro em
+lugar nenhum, aparece na fatura.
+
+656 -> 715 testes.
+
+---
+
+### 7.2.35 Codigo numerico das telas — 22/08/2026
+
+Ideia de menu de PABX: quem usa todo dia decora "1.1" e chega mais rapido que
+cacando na barra lateral. `1.x` Operacao, `2.x` Clientes, `3.x` Dinheiro,
+`4.x` Estoque, `5.x` Empresa, com terceiro nivel so em Configuracoes.
+
+**Aceita nome tambem**, e isso nao e enfeite: codigo que so funciona se voce
+souber de cor e um atalho para ninguem. Aceita virgula e espaco como separador,
+porque quem digita no teclado numerico erra o ponto.
+
+**Prefixo mostra as opcoes em vez de adivinhar:** "5.4" e um destino E o comeco
+de seis outros.
+
+Renumerar e uma linha em `lib/codigos-abas.ts` — o numero nao esta na rota, nem
+no menu, nem no banco. Numeracao e convencao de quem usa, e convencao muda.
+
+699 -> 715 testes.
+
+---
+
+### 7.2.36 Manual dentro do sistema e barra lateral por codigo — 23/08/2026
+
+A ajuda nao existia. Havia Primeiros Passos (onboarding) e o FAQ da landing
+(pre-venda) — nada que respondesse "o que essa aba faz".
+
+O manual vive em `lib/manual.ts` como **DADO**, com cada verbete amarrado ao
+codigo da tela. Duas consequencias: o botao "?" abre a ajuda ja no ponto certo,
+e um teste confere que nenhuma tela ficou sem explicacao e que nenhum verbete
+descreve tela que nao existe mais. **Manual que envelhece em silencio ensina
+errado com cara de autoridade** — por isso o build quebra em vez de deixar.
+
+A ajuda **nao tem porta**: nenhuma checagem de papel, aba ou plano. O tecnico em
+campo, que tem menos abas liberadas, e quem mais precisa dela.
+
+Na barra lateral: uma busca so (aceita numero E nome), codigos visiveis, e so
+Configuracoes e Sair fixos — o rodape fixo empurrava os dois para fora da tela
+em monitor baixo.
+
+**Dois textos que ficaram para tras do comportamento**, corrigidos junto: a tela
+de "sem conexao" dizia que concluir OS exige conexao, mas a fila offline aceita
+`CONCLUIR_OS` e `MUDAR_STATUS` desde que foi construida — e e justamente o
+tecnico sem sinal que le essa frase e desiste.
+
+`codigoDaTelaAtual` casa pelo caminho **mais longo**: `/settings` e prefixo de
+`/settings/fiscal`, e pegar o primeiro daria a ajuda de Configuracoes para quem
+esta na tela Fiscal.
+
+780 -> 795 testes.
+
+---
+
+### 7.2.37 Assinatura nao salvava: tres defeitos empilhados — 23-24/08/2026
+
+Relatado como "as assinaturas da equipe e proprietario nao esta salvando". Em
+producao: 6 usuarios, ZERO assinaturas.
+
+**Defeito 1 — o canvas nunca teve tamanho.** Um `<canvas>` tem DOIS tamanhos: o
+buffer de desenho (atributos `width`/`height`, 300x150 quando ninguem define) e
+o tamanho exibido (CSS). O quadro recebia so CSS, entao um buffer de 300x150 era
+esticado para preencher a caixa. O traco era gravado em coordenadas da TELA e
+escrito no BUFFER, em outra escala: numa caixa larga o desenho caia FORA do
+buffer. `getTrimmedCanvas()` nao achava pixel, devolvia canvas vazio, e o
+`toDataURL()` disso nao e um PNG. Corrigido em `useQuadroNoTamanhoDaCaixa`.
+
+**Defeito 2 — o piso media a coisa errada.** 200 bytes minimos. Byte nao mede
+tamanho de desenho, mede COMPRESSAO: um traco simples, aparado e sobre fundo
+transparente comprime abaixo disso sendo assinatura legitima. A tela dizia "o
+traco ficou pequeno demais", a pessoa desenhava maior, e continuava recusada —
+porque desenhar maior quase nao muda o tamanho do arquivo. A pergunta agora e
+feita sobre as DIMENSOES, depois de decodificar.
+
+**Defeito 3 — o sharp nao carregava na Vercel.** Depois dos dois primeiros a
+assinatura ainda falhava, agora com "nao consegui salvar agora". O log de
+producao deu a causa: `libvips-cpp.so.8.18.3: cannot open shared object file`.
+Ver o gotcha 19 na secao 9.
+
+**O alcance era maior que o relatado:** o upload de LOGO usa o mesmo sharp e
+estava quebrado do mesmo jeito, sem ninguem ter notado.
+
+Verificacao final em producao: PNG valido, 182x111 px, 5,4 KB. Os 5,4 KB
+confirmam que o piso de 200 bytes era diagnostico errado — assinatura real com
+traco pesa bem mais.
+
+---
+
+### 7.2.38 Assistente de voz com IA, vendida como adicional — 23/08/2026
+
+Comando por voz em toda tela do painel: a pessoa fala, a assistente responde em
+voz e navega, le e escreve no sistema. Quinze ferramentas.
+
+**A decisao que governa o desenho: a IA nao fala com o banco.** Ela chama as
+MESMAS funcoes que a tela chama. Consequencia — o tenant vem da sessao dentro
+da action, a permissao e conferida la (`checarAcao`) e a cota do plano tambem
+(`requireCotaDeOs`). Um tecnico falando com a assistente tem exatamente os
+poderes que teria clicando, e nao ha caminho para escapar disso porque nao
+existe caminho paralelo. Uma camada de IA que falasse direto com o banco teria
+de reimplementar as tres coisas, e cada reimplementacao e uma chance de divergir.
+
+**Confirmacao no irreversivel.** Concluir, faturar, emitir nota e apagar param e
+mostram uma frase em portugues com o numero da OS e o nome do cliente, falada em
+voz alta. A barreira e contra ERRO DE RECONHECIMENTO DE FALA, e nao contra
+usuario mal-intencionado: quem quisesse apagar de proposito chamaria a action
+direto. Ela existe para a pessoa perceber que a assistente ouviu "apaga" quando
+ela disse "acaba".
+
+**Na duvida, nao escolhe.** "Conclui a do Joao" com dois Joaos devolve as opcoes
+para a assistente perguntar. Nome exato vence parcial.
+
+Sem `ANTHROPIC_API_KEY` a assistente diz que nao esta configurada e nao consome
+cota de ninguem. Cache de prompt ligado nas instrucoes e nas ferramentas: sao
+identicas em toda chamada e sao a maior parte da entrada.
+
+**Nao testado de ponta a ponta** — sem chave nao ha como. Verificado: estrutura,
+regras e compilacao. 795 -> 870 testes.
+
+#### Terceira categoria de recurso: ADICIONAL
+
+A assistente e o primeiro recurso do sistema com **CUSTO POR USO**: cada comando
+consome API paga. Todo o resto custa o mesmo tenha a empresa 10 ou 10 mil OS.
+
+Num plano de preco fixo, o cliente que mais fala com ela seria o que menos da
+lucro — e nao ha como prever qual. Por isso `ADICIONAIS` em `lib/recursos.ts`,
+ao lado de "vem no plano" e "so no Enterprise". **Nenhum plano inclui, nem o
+Enterprise**, e ha teste travando isso: sem ele, `TODOS` varreria o adicional
+para dentro do plano mais caro sem ninguem decidir.
+
+Conceder da 500 comandos/mes por padrao, e nao zero: conceder o adicional e a
+pessoa nao conseguir dar um comando pareceria defeito, nao decisao.
+
+---
+
+### 7.2.39 Cargos de verdade — 24/08/2026
+
+O enum tinha tres valores e eles descreviam NIVEL DE ACESSO, nao funcao. Uma
+empresa de servico tem atendimento, financeiro, logistica e gerencia, e todos
+caiam em "tecnico", enxergando a mesma coisa. Agora sao oito.
+
+Isto funcionou sem reescrever permissao porque `TabPermission` e
+`ActionPermission` SEMPRE tiveram chave `(tenantId, role, ...)`: o sistema ja
+sabia guardar permissao por papel, so nunca existiu mais de um configuravel.
+
+**Antes de prometer, foram lidos os 93 lugares que decidem por papel.** O padrao
+em uso e lista de permissao (`se nao e OWNER nem ADMIN, nega`), entao cargo novo
+comeca **negado**. O unico `=== "TECHNICIAN"` que existe rotula "em campo" num
+relatorio e nao decide acesso.
+
+**Dois defeitos que o enum sozinho teria criado**, corrigidos junto:
+
+1. O padrao de quem nunca foi configurado era `DEFAULT_TECHNICIAN_TABS`, fixo.
+   Um financeiro recem-convidado abriria o sistema em ordens de servico, sem ver
+   o financeiro — e a empresa concluiria que o cargo nao funciona, quando
+   faltava so a configuracao que ela nem sabia existir.
+2. "Ja configuraram isto?" era um booleano da empresa inteira. Configurar o
+   TECNICO faria o FINANCEIRO ler "ja configuraram" com zero linhas gravadas:
+   **menu vazio**, sem ninguem ter mexido no cargo dele. Virou lista de cargos,
+   com backfill na migration.
+
+**GERENTE ficou de fora dos administrativos de proposito.** Parece candidato ate
+a primeira empresa que quer um gerente que nao mexe na cobranca. A lista de quem
+manda em tudo tem de ficar curta, porque e a lista de quem ninguem consegue
+restringir depois.
+
+---
+
+### 7.2.40 Paleta azul no modo claro — 24/08/2026
+
+Azul `#0A66C2` como identidade, seguindo a convencao dos ERPs grandes.
+
+**Duas escolhas contrariaram de proposito o que foi pedido**, pelo mesmo motivo
+que motivou o pedido (nao cansar a vista em jornada longa):
+
+- Fundo **nao** e branco puro. `#FFFFFF` e luminancia maxima e e a maior fonte
+  de fadiga numa tela de trabalho. `#F7F9FC` derruba o brilho sem parecer sujo,
+  e faz os cartoes (que SAO brancos) ganharem relevo sem sombra pesada.
+- Texto **nao** e preto puro. `#000` sobre `#FFF` da 21:1, acima do confortavel,
+  e causa halation — as letras parecem vibrar. `#111823` da 16.9:1.
+
+Todos os contrastes foram **calculados, nao estimados**, e conferidos depois no
+navegador comparando em CIELAB o renderizado com o pretendido: bate nos quatro
+pontos medidos.
+
+Os graficos eram CINCO TONS DE CINZA, o que tornava "Receita x Despesa" quase
+ilegivel. Azul e ambar lideram a sequencia — o par que continua separavel para
+daltonismo vermelho-verde.
+
+O modo escuro recebeu o MESMO azul, levantado para `#4D9BEF`. Cor de marca que
+so existe num tema nao e cor de marca.
+
+---
+
+### 7.2.41 Telas do sistema na landing — 24/08/2026
+
+Maquete em HTML, e **nao print**. Print tem um tema (e a pagina acompanha
+claro/escuro do visitante), uma resolucao (borra em tela densa), pesa centenas
+de KB, **congela** (vira propaganda enganosa silenciosa quando a tela real muda)
+e sai de uma conta real com dados de cliente reais.
+
+Os TEXTOS vem das mesmas chaves de traducao que as telas de verdade usam: a
+vitrine fala portugues ou ingles junto com a pagina, e muda junto se o
+vocabulario do produto mudar, em vez de mentir.
+
+**Primeira verificacao visual real desta sequencia** — a landing e publica,
+entao deu para VER em vez de deduzir. Dois defeitos apareceram so no celular: a
+agenda com cinco colunas em 375px deixava o chip com 10px de fonte, e a tabela
+de itens rolava de lado dentro da janela.
+
+A landing ja respeitava tema (o script do layout raiz le a preferencia e cai no
+`prefers-color-scheme`); faltava o CONTROLE — quem chega pela landing ainda nao
+tem conta, e o unico botao de tema morava dentro do painel.
+
+---
+
+### 7.2.42 Subcliente: quem contrata nao e quem recebe — 24/08/2026
+
+Uma administradora fecha contrato, o servico e feito em cada condominio. Vale
+igual para seguradora e segurado, franquia e cada loja, construtora e cada obra.
+
+Ate aqui o sistema respondia com UM campo duas perguntas diferentes, porque elas
+tinham sempre a mesma resposta:
+
+- ONDE o servico acontece? -> `ServiceOrder.clientId`
+- QUEM paga por ele? -> o mesmo `clientId`
+
+**O que faz isto ser mais que um campo novo:** tudo que envolve dinheiro seguia
+o `clientId`. A receita nasce dele, o ranking soma por ele, e — o grave —
+`emitNfse` o usava como TOMADOR da nota. Apontar a OS para o condominio sem
+mexer nesses pontos faria a nota sair contra o CNPJ do condominio, quando o
+contrato e o pagamento sao com a administradora. **Documento fiscal contra
+terceiro, no nome da empresa do cliente, perante a prefeitura — e nao existe
+cancelamento neste produto.**
+
+O ranking soma **por pagador**: sem isso, uma administradora com trinta
+condominios teria o faturamento espalhado entre os trinta, nenhum entraria no
+Top 10, e o cliente que MAIS fatura sumiria do relatorio.
+
+**Quem paga e por OS.** O padrao e o contratante, mas da para cobrar do cliente
+final naquela OS — a administradora paga quase tudo e as vezes o condominio paga
+direto um servico extra, e forcar tudo para o contratante erraria justamente no
+caso excepcional, que e quando alguem repara. O pagador escolhido e validado
+contra a relacao: id de fora cai no padrao, e nao vira nota no CNPJ de um
+terceiro por chamada direta a Server Action.
+
+**Um nivel so.** Subcliente nao pode ter subcliente. Mata o risco de ciclo pela
+raiz — A pai de B, B pai de A, e a busca de quem paga entra em laco — em vez de
+exigir deteccao de laco em toda gravacao.
+
+`ON DELETE SET NULL` no vinculo, e nao `CASCADE`: apagar a administradora nao
+pode levar junto trinta condominios com historico, receita e nota emitida.
+
+Nada muda para quem nao usa: sem contratante, quem paga e o proprio cliente, e o
+seletor nem aparece. 887 -> 905 testes.
+
+**Fora do escopo, e sabido:** contrato recorrente firmado com a administradora
+gerando OS para cada condominio dela. So vale construir com um caso real na mao.
+
+---
+
+### 7.2.43 Regua de cobranca das contas a receber — 27/08/2026
+
+Lembra o cliente 3 dias ANTES de vencer, e cobra depois: no dia seguinte ao
+vencimento e aos 7, 15 e 30 dias. Passados os 30, cala.
+
+**Reuso, e nao construcao.** O motor ja existia e ja rodava em producao — em
+`lib/past-due.ts`, cobrando a INADIMPLENCIA DA PROPRIA PLATAFORMA. A regua
+aponta a mesma mecanica para as contas a receber do cliente.
+
+**Uma escada so, com degraus negativos.** Sao dois comportamentos ("vence em 3
+dias" e "venceu ha 15") e a tentacao e modelar dois, cada um com seu contador —
+dois estados para sincronizar e a pergunta chata de se o lembrete que nao saiu
+deve sair depois do vencimento. Um degrau e um numero de dias EM RELACAO ao
+vencimento: `[-3, 1, 7, 15, 30]`. Um contador so, e a ordem sai de graca.
+
+**Conta degraus, nao compara datas.** O cron roda uma vez por dia e pode falhar
+num dia. Com a regra "hoje e exatamente o 7o dia?", o degrau perdido nunca mais
+volta — a conta pula do 1o para o 15o e ninguem percebe, porque a falha e
+silenciosa. Contando quantos degraus ja venceram contra quantos ja sairam, o dia
+perdido se recupera sozinho.
+
+**Um degrau por dia, nunca a pilha.** Cron fora do ar por 20 dias, ou carteira
+antiga com o contador em zero no dia em que a empresa liga o recurso: manda o
+degrau mais recente e so ele. Quatro cobrancas no mesmo minuto e pior que tres a
+menos.
+
+**O contador conta POSICAO na regua, e nao mensagens enviadas.** O defeito sutil
+que isso evita: com `lembrarAntes` desligado, um contador de mensagens ficaria em
+zero no vencimento — e ai o degrau 1 seria "o primeiro", o 7 "o segundo", e a
+regua andaria deslocada ate o fim, com o tom errado em cada etapa.
+
+**Renegociacao se resolve sozinha.** Vencimento empurrado para frente faz o
+calendario andar para tras em relacao ao contador; a regua percebe e recomeca.
+Ninguem precisa lembrar de zerar nada ao editar a data.
+
+**Cobra QUEM PAGA, e nao quem recebeu o servico** — via `quemPaga` de
+`lib/subcliente.ts` (7.2.42). Cobrar o condominio quando a administradora tem a
+fatura constrange o cliente final e nao chega em quem deve.
+
+**Nasce DESLIGADA.** E a unica automacao do sistema que manda mensagem de
+COBRANCA, em nome da empresa, para o celular de terceiros. Toda mensagem carrega
+"se voce ja efetuou o pagamento, desconsidere" — baixa de pagamento atrasa, e
+acusar de caloteiro quem pagou em dia e o erro que o cliente nao esquece.
+
+**Um defeito real pego pelo teste dia-a-dia:** a primeira versao devolvia
+`total: 0` em todo caminho que nao enviava. Quem gravasse o contador sem condicao
+o ZERAVA — e a regua recomecava do primeiro degrau todo dia depois de ter
+terminado, cobrando o mesmo cliente para sempre. O contrato passou a ser "grave
+`total` sempre", que e bem mais dificil de errar que "grave so quando enviar".
+
+Teto de 200 mensagens por execucao: o cron tem `maxDuration = 60` dividido com a
+reconciliacao da Asaas e a fila de geocodificacao, e uma empresa com 800 contas
+vencidas derrubaria as etapas seguintes. O que sobra nao se perde — o contador
+nao anda para quem nao foi processado.
+
+Migration `20260827000001_regua_de_cobranca`: `Tenant.dunningConfig` (JSONB,
+nulo) e `Revenue.remindersSent` (int, default 0, CHECK >= 0). Coluna separada de
+`clientNotifications` de proposito: avisar que o tecnico esta a caminho e cobrar
+uma conta atrasada sao dois consentimentos diferentes, e num JSON so ligar um
+ligaria o outro. 1005 -> 1023 testes.
+
+**Trava de plano: Pro para cima** (decidida em 30/08/2026, ver 7.2.44).
+
+---
+
+### 7.2.44 Trava de plano da regua, e dois furos achados no caminho — 30/08/2026
+
+A regua nasceu sem trava. O dono pediu: cada plano entrega so o que promete, e o
+painel do admin continua liberando por cliente.
+
+**A trava saiu de graca, porque `TODOS` e DERIVADO.** `TODOS = RECURSOS -
+ADICIONAIS`, `SEM_EXCLUSIVOS = TODOS - SO_ENTERPRISE`, e o Starter tem a lista
+literal `[]`. Acrescentar `reguaCobranca` a `RECURSOS` ja o coloca no Pro e no
+Enterprise e o deixa fora do Starter — **nenhuma linha de `POR_PLANO` mudou**. E
+o painel do admin monta as caixas com `RECURSOS.map(...)`, entao a concessao
+individual apareceu sozinha.
+
+**Tres pontos de trava, e o que cada um cobre:**
+
+1. `actions/regua-cobranca.ts` — `requireRecurso`. E a que VALE: toda export de
+   arquivo `"use server"` e endereco HTTP despachavel, e esconder o bloco na
+   tela nao protege nada.
+2. `lib/cobrar-vencidas.ts` — `temRecurso` a cada execucao do cron. Cobre o caso
+   que uma trava so na tela deixaria aberto: **a empresa liga no Pro e desce
+   para o Starter**. A config fica gravada com `ativo: true`, e o cron seguiria
+   cobrando para sempre — entregando de graca o recurso que motivou o upgrade,
+   justamente para quem desistiu dele. `temRecurso` e nao `requireRecurso`
+   porque aquele usa `getTranslations`, que exige contexto de requisicao.
+3. A tela mostra o bloco TRAVADO, e nao escondido. Recurso que ninguem ve nao
+   faz ninguem subir de plano.
+
+**Furo 1, achado no caminho: quatro recursos sem mensagem de bloqueio.**
+`requireRecurso` monta a chave como `planFeature.${recurso}`, e
+`errors.planFeature` tinha 5 das 9 entradas. `actions/estoque.ts` chama
+`requireRecurso(tenantId, "stock")` em SEIS lugares — o cliente do Starter que
+tentasse abrir estoque nao recebia "faz parte do Pro", recebia erro de traducao.
+Faltavam `stock`, `api`, `filiais` e `ia`. Corrigido nos dois idiomas, e
+`__tests__/travas-de-plano.test.ts` agora obriga toda entrada de `RECURSOS` a ter
+mensagem de bloqueio e nome no painel. Confirmado por mutacao: removendo
+`planFeature.stock`, o teste falha.
+
+**Furo 2 — RESOLVIDO em 7.2.45, entregando: o Starter era vendido com
+"8 notas fiscais por mes" e nao entregava nenhuma.** `POR_PLANO.starter` tinha
+`maxNfseMes: 8` mas `recursos: []`, e `actions/nfse.ts:19` chama
+`requireRecurso(tenantId, "nfse")`. Quem assinava o Starter por causa daquela
+linha nao emitia uma unica nota. Os dois consertos possiveis custam dinheiro em
+direcoes opostas (dar `nfse` ao Starter, ou tirar a promessa da vitrine). O dono
+escolheu ENTREGAR — ver 7.2.45.
+
+O `vitrine-x-plano.test.ts` nao pegou isso porque so compara planos contra
+ADICIONAIS. A licao: falta um teste que compare a vitrine contra os RECURSOS DO
+PLANO, item a item — e ele precisa de um mapa texto-de-venda -> recurso, que
+hoje nao existe.
+
+1033 -> 1051 testes.
+
+---
+
+### 7.2.45 O Starter passa a emitir nota, e o menu do celular passa a fechar — 30/08/2026
+
+**O Starter emite NFS-e.** `POR_PLANO.starter` foi de `recursos: []` para
+`["nfse"]`. Ele SEMPRE foi vendido com "8 notas fiscais por mes" e SEMPRE teve a
+cota gravada (`maxNfseMes: 8`) — so a trava de recurso impedia a emissao, e
+`actions/nfse.ts:19` chama `requireRecurso(tenantId, "nfse")`. Quem assinava o
+plano de entrada por causa daquela linha nao emitia uma unica nota.
+
+Dos dois consertos possiveis, o dono escolheu entregar em vez de apagar a
+promessa: emitir nota e o que tira a pequena empresa da planilha, e e o
+argumento mais forte do plano de entrada. **Os tres planos passam a emitir; o
+que os separa e a COTA — 8, 70 e ilimitado**, que ja era o desenho de
+`maxNfseMes`. A trava certa aqui sempre foi a de QUANTIDADE
+(`requireCotaDeNfse`, com mensagem propria que cita o numero), e nao a de
+recurso.
+
+Efeito colateral desejado: `nfse` e RECURSO_DE_ABA, entao o Starter ganha junto
+a aba Fiscal — sem ela nao havia onde cadastrar o certificado digital, e o
+recurso seria liberado sem caminho para usar.
+
+Quatro testes de `plan.test.ts` afirmavam `recursos: []` para o Starter e
+falharam, que e exatamente o que se espera deles. A intencao continua: a lista e
+comparada com `toEqual` e nao `toContain`, para um recurso a mais nunca
+escorregar para dentro do plano mais barato sem alguem decidir.
+
+**A mensagem `planFeature.nfse` virou inalcancavel** — nenhum plano fica sem o
+recurso. Foi reescrita para nao prometer a faixa errada, em vez de deixar um
+texto que diz "faz parte do plano Pro" para um recurso que o Starter tem.
+
+---
+
+**O menu do celular: tres defeitos, um deles invisivel no desktop.**
+
+*1. O botao tinha 28px.* `SidebarTrigger` usava `size="icon-sm"` (`size-7`) nos
+dois tamanhos de tela. No mouse funciona porque o cursor e preciso; no polegar,
+nao — 44px e o minimo recomendado (WCAG 2.5.5, e a mesma medida que Apple e
+Google publicam). E este e o UNICO botao que abre o menu inteiro no celular:
+errar o toque nele e ficar preso na tela em que se esta. Agora `size-11` (44px)
+no celular e `size-8` no desktop, com o icone crescendo junto — icone de 16px
+dentro de botao de 44px parece defeito e nao indica que a area toda e clicavel.
+
+*2. Nao havia como fechar o menu.* O `Sheet` traz um "X" de fabrica, e
+`ui/sidebar.tsx` o esconde com `[&>button]:hidden`. A unica saida era tocar fora
+da gaveta — que ninguem adivinha, e que num menu de vinte itens quase sempre
+erra e abre a aba de baixo. Entrou uma seta de voltar no cabecalho do menu,
+ANTES do nome, com os mesmos 44px, e `md:hidden` porque no desktop o menu nao e
+gaveta e nao se fecha.
+
+*3. O menu nao fechava ao navegar — e "so em algumas abas", que era a parte
+enganosa.* Nada chamava `setOpenMobile(false)`. Quem tocasse numa aba via a
+pagina trocar ATRAS da gaveta e continuava olhando para o menu, sem saber se o
+toque funcionou. **Fechavam sozinhas apenas as abas que saem deste layout** (o
+painel do dono, por exemplo), porque ai o `SidebarProvider` desmonta junto e o
+estado se perde — o que explica por que umas fechavam e outras nao, sem padrao
+aparente. Um sintoma que so aparece no celular, num subconjunto das abas, e por
+um motivo que nao tem nada a ver com as abas.
+
+A correcao reage ao `pathname`, e nao ao clique: cobre de uma vez os links do
+menu, os da administracao, o rodape, a ajuda e a busca de abas — inclusive os
+que ainda nao existem. O `onClick` foi somado nos links so para o caso em que o
+`pathname` NAO muda: tocar na aba em que ja se esta, que e justamente quando a
+pessoa nao ve nada acontecer.
+
+**Verificacao do que nao da para ver.** As telas do menu vivem atras do login,
+entao a conferencia visual ficou com o dono. O que deu para provar por maquina:
+as quatro utilidades novas existem no CSS compilado — `.size-11` resolve para
+`calc(var(--spacing) * 11)` com `--spacing: .25rem`, ou seja 44px exatos, e
+`.md\:size-8`, `.md\:hidden` e o seletor do icone estao dentro do
+`@media (min-width: 48rem)`. Sem essa conferencia, uma classe que o Tailwind nao
+gerasse deixaria o botao pequeno em silencio, sem erro de build.
+
+1051 -> 1052 testes.
+
+---
+
+### 7.2.46 Demonstracao publica em /demo — 01/09/2026
+
+**O que o funil mostrava.** Quatro cadastros em TRES MESES (2 em junho, 1 em
+julho, 1 em agosto), e dois deles com o mesmo nome variando so a maiuscula —
+na pratica, dois prospectos reais. Tres assinaturas criadas na historia toda,
+duas canceladas. O cron roda todo dia sem erro e o caminho de pagamento
+funcionou em 06/08, entao **nao havia venda travando por defeito**: o problema
+era que quase ninguem chegava, e quem chegava nao conseguia ver nada.
+
+Ate aqui a unica forma de conhecer o produto era criar conta E assinar. A FAQ
+dizia com todas as letras "nao ha periodo de teste", e o botao principal era
+"Criar conta e assinar". Para uma marca que o dono da desentupidora nunca ouviu
+falar, pedir R$ 97 antes de mostrar uma tela e o pedido mais dificil que existe.
+
+**A escolha: demo em vez de trial.** Voltar o teste gratis mexeria no fluxo de
+assinatura e no bloqueio de acesso, que e a parte mais delicada do sistema, e
+traria de volta o suporte de graca que a decisao original quis evitar. A demo
+nao mexe em cobranca nenhuma, e serve a venda que este produto realmente tem —
+por conversa, mandando um link no WhatsApp para o dono de uma empresa pequena.
+
+**A regra que define o desenho: a demo nao toca o banco.** E uma rota PUBLICA,
+sem login, dentro do mesmo aplicativo que guarda a carteira de clientes de
+terceiros. Qualquer caminho dali ate o Prisma seria uma porta anonima para dado
+real, e nao existe forma segura de "so ler um pouquinho". Os dados sao literais
+em `lib/demo.ts`; a rota vive fora do grupo `(dashboard)` e nao chama sessao.
+
+A garantia e ESTRUTURAL, e nao um filtro: `__tests__/demo.test.ts` percorre a
+arvore de imports a partir dos tres arquivos da rota e falha se qualquer um
+alcancar `@/lib/prisma`, o cliente gerado, uma Server Action ou a sessao.
+Confirmado por mutacao — injetando `import { prisma }` em `lib/demo.ts`, o
+teste acusa o arquivo E o `lib/prisma.ts` alcancado por ele, provando que a
+travessia e transitiva.
+
+**Empresa inventada, e nao print de conta real.** Print vaza nome, telefone e
+endereco de cliente final de uma empresa que nao autorizou virar material de
+venda. Um teste procura e-mail, CPF, CNPJ e telefone nos dados da demo.
+
+**Os numeros fecham, e ha teste para isso.** Dono de empresa confere soma: "a
+receber" e a soma das nao pagas, "vencido" e a soma das atrasadas, o total da OS
+e a soma dos itens, e a OS do detalhe e a mesma da lista. O teste ja pegou uma
+inconsistencia na primeira rodada — o painel dizia 4 OS em aberto e a lista
+tinha 3.
+
+**Dois defeitos achados no navegador, que nenhum teste pegaria:**
+
+1. *O grafico saia VAZIO.* `height: X%` so resolve contra um pai de altura
+   definida, e a coluna que embrulhava barra+rotulo tinha altura automatica. As
+   barras nasciam com zero. Corrigido separando barras e rotulos em duas
+   fileiras. Compilava, passava no lint, e estava errado na tela.
+2. *A quarta aba ficava cortada em 375px.* Numa barra rolante a tela do
+   Financeiro simplesmente nao seria vista — ninguem rola uma barra que nao
+   parece rolavel. As quatro passaram a dividir a largura, com o icone sumindo
+   no celular para caber o rotulo, que e o que carrega o significado.
+
+**Na landing, a demo virou o botao SECUNDARIO do heroi**, no lugar de "Ja tenho
+conta" — que desceu para um link discreto. Quem chega pela primeira vez nao quer
+entrar, quer ver; e quem ja e cliente acha o login de qualquer jeito.
+
+`/demo` precisou entrar em `isPublicRoute` no `proxy.ts`, senao o middleware
+manda para /login e o link nao serve para nada. Ha teste para isso tambem.
+
+1052 -> 1062 testes.
+
+---
+
+### 7.2.47 Uma demo por RAMO, e o dinheiro deixa de ser texto — 01/09/2026
+
+A demo generica faz o dono da empresa perguntar "isso serve para mim?". A demo
+com os servicos, o checklist e os valores do ramo DELE nao faz pergunta nenhuma
+— ele reconhece o proprio dia de trabalho na tela. Como a venda aqui e por
+conversa (mandar o link no WhatsApp para uma empresa especifica), acertar o ramo
+e a diferenca entre o link ser aberto e ignorado.
+
+Cinco ramos, cada um com endereco proprio: `/demo` (desentupidora, o endereco
+curto para quando nao se sabe o ramo de quem vai abrir), `/demo/refrigeracao`,
+`/demo/eletrica`, `/demo/assistencia-tecnica`, `/demo/dedetizacao`. Cada um tem
+empresa, clientes, tecnicos, servicos, checklist e valores do proprio setor —
+descupinizacao e porta-iscas na dedetizacao, DPS e ART na eletrica, recolher a
+carga de gas na refrigeracao.
+
+**Slug desconhecido e 404, e nao o ramo padrao em silencio.** Um link errado que
+"funciona" esconde o erro de digitacao ate alguem reparar que metade dos
+contatos recebeu a demo do ramo errado.
+
+**O proxy precisou de `startsWith`, e nao igualdade.** Com `=== "/demo"` so o
+endereco curto ficava publico e TODO link por ramo caia no login — quebrando
+exatamente os links feitos para mandar no WhatsApp. Ha teste para isso.
+
+---
+
+**Duas correcoes de fundo, aproveitando a reestruturacao:**
+
+*1. Dinheiro virou NUMERO.* A primeira versao guardava `"18.740,00"` como
+string. Duas consequencias: a pagina em ingles mostrava a pontuacao brasileira,
+e os totais do painel eram escritos a mao. Agora sao numeros formatados com
+`Intl` no idioma de quem le — moeda continua sendo real, porque a empresa e
+brasileira, mas a pontuacao acompanha a pagina.
+
+*2. Os totais do painel passaram a ser CALCULADOS* (`painelDe`). "A receber",
+"vencido" e "OS em aberto" saem das listas, e nao de campos paralelos. Isso
+elimina de vez a classe de defeito que o teste tinha pego na versao anterior: o
+painel dizendo 4 OS em aberto com a lista tendo 3. O mesmo vale para o total da
+OS (`totalDaOs`, soma dos itens) e para o cabecalho do detalhe, que le da LISTA
+em vez de repetir os campos — lista e detalhe nao tem mais como discordar sobre
+o mesmo servico.
+
+**O teste virou `describe.each` sobre os cinco ramos**, e achou uma
+inconsistencia de imediato: na eletrica a lista dizia R$ 3.400 e os itens somavam
+R$ 3.375. Dono de empresa confere soma, e uma demo cuja conta nao fecha e a
+primeira coisa que ele nota e a ultima em que confia.
+
+Alem dos totais, cada ramo e checado por: o detalhe abre uma OS que existe na
+lista; nenhuma conta e "vencida e paga" ao mesmo tempo; o grafico termina no mes
+que o painel mostra; o checklist tem passos feitos E por fazer (todo marcado, ou
+todo vazio, nao mostra o que o recurso faz); e todo ramo tem nome nos dois
+idiomas — sem a chave, next-intl lanca na renderizacao e a pagina do ramo que
+estava sendo divulgada sai do ar.
+
+A trava estrutural continua e foi ampliada: a travessia de imports agora parte
+dos cinco arquivos das duas rotas.
+
+1062 -> 1112 testes.
+
+---
+
+### 7.2.48 O cartao do link: o que o WhatsApp mostra — 01/09/2026
+
+A venda deste produto e por conversa: manda-se o link para o dono de uma
+empresa e ele decide em meio segundo se toca. O que ele ve nesse meio segundo
+NAO e a pagina — e o cartao de preview que o WhatsApp monta a partir das meta
+tags. Conferindo o HTML servido em producao, o cartao estava assim:
+
+- **sem `og:image`** — o site inteiro nao tinha nenhuma. Cartao sem figura
+  encolhe e some no meio da conversa;
+- **com o texto GENERICO do site** em todas as paginas da demo:
+  "CRM, OS, Financeiro e Dashboard para empresas de servico". Jargao que nao diz
+  nada para quem controla servico no caderno — e, pior, `/demo/refrigeracao`
+  anunciava isso em vez de "Refrigeracao", que e a razao de a pagina existir;
+- **`twitter:card: summary`**, que renderiza a figura como miniatura ao lado do
+  texto em vez de banner.
+
+**A causa do texto generico:** o layout raiz define um `openGraph` proprio, e um
+filho que declara apenas `title`/`description` NAO o sobrescreve. Era preciso
+declarar `openGraph` explicitamente em cada pagina. Facil de errar e invisivel
+no navegador — so aparece no HTML servido, ou colando o link num aplicativo de
+conversa.
+
+**As imagens sao GERADAS por rota** (`opengraph-image.tsx` + `ImageResponse`),
+uma por ramo: quem recebe `/demo/eletrica` ve um cartao que diz "Eletrica" em
+letra grande. Desenho pensado para MINIATURA dentro de uma bolha de conversa —
+tres informacoes, contraste alto, e a linha do RAMO como maior elemento, porque
+em tamanho pequeno ela e praticamente a unica coisa legivel.
+
+Sem fonte propria de proposito: a padrao do `next/og` ja cobre o portugues com
+acento, e carregar arquivo de fonte e a mesma classe de problema que quebrou o
+`sharp` na Vercel (gotcha 19). O `ImageResponse` desenha com satori, que aceita
+so um subconjunto de CSS — flexbox com `display: flex` explicito, nada de grid.
+
+**Um defeito que so apareceu OLHANDO a imagem:** o endereco `servicoos.com.br`
+ficava na mesma fileira das pastilhas de modulo, com `space-between`; elas o
+empurravam para fora e saia "servicoos.com.b", com o "r" cortado. Nada no codigo
+acusaria — nao ha erro de tipo, de lint nem de build numa imagem mal
+diagramada. Corrigido movendo o endereco para o topo, ao lado da marca, onde a
+fileira tem so dois elementos.
+
+**Outro, tambem so visivel na imagem:** o cartao do endereco curto repetia
+"Veja o sistema funcionando" no titulo e "Veja funcionando, sem cadastro" na
+chamada. A manchete saiu do componente para as traducoes e passou a usar a
+posicao que a landing ja provou — "Chega de OS no WhatsApp e na planilha".
+
+Os testes cobrem o que da para cobrir sem renderizar: as chaves do cartao
+existem nos dois idiomas (sem elas a GERACAO DA IMAGEM lanca, e a falha aparece
+como link sem figura — onde ninguem vai investigar), e as duas paginas declaram
+`openGraph` e `summary_large_image`. A trava estrutural foi ampliada: as rotas
+de imagem rodam no servidor e entraram na travessia de imports.
+
+1112 -> 1114 testes.
+
+---
+
+### 7.2.49 O menu que sumia, e a foto que so podia ser tirada na hora — 01/09/2026
+
+Dois relatos do dono. Nenhum dos dois aparece em erro de tipo, de lint ou de
+build, e nenhum dos dois aparece no computador — que e onde o desenvolvimento
+acontece.
+
+---
+
+**1. "Com a aba historico e/ou recibo aberta, nao da para clicar no menu de
+novo."**
+
+A causa nao era o menu. `SidebarProvider` e um flex EM LINHA, e o `<main>` do
+dashboard e um item flex — que nasce com `min-width: auto` e por isso NAO
+encolhe abaixo da largura do proprio conteudo.
+
+A tabela de 9 colunas do Historico esticava esse `main` para **1223px numa tela
+de 375px** (medido no navegador, injetando a estrutura real num shadow root), e
+o `overflow-x-auto` que a tabela ja tinha nunca entrava em acao: o `w-full` dele
+resolvia contra a largura ja esticada.
+
+Como o cabecalho vive DENTRO desse `main`, rolar para o lado para ler a tabela
+levava o botao do menu para fora da tela. Daí o sintoma parecer "o menu travou",
+e parecer acontecer so em algumas abas — as que tem tabela larga.
+
+A correcao e `min-w-0` no `main`: uma linha, no layout, que vale para todas as
+paginas. Consertar tabela por tabela seria remendo em cada tela nova.
+
+Medido antes e depois, na mesma pagina:
+
+| | largura do `main` (tela de 375px) | pagina estica | tabela rola sozinha |
+|---|---|---|---|
+| sem `min-w-0` | 1223px | sim | nao |
+| com `min-w-0` | 375px | nao | sim |
+
+---
+
+**2. "Nas OS, permitir adicionar fotos vindas dos arquivos do celular ou
+computador, para o tecnico adicionar a foto do antes e depois."**
+
+Havia uma entrada so, com `capture="environment"`. Aquilo foi decisao
+deliberada e continua certa para o caso principal: quem esta no local fotografa
+na hora, e `capture` abre a camera traseira num toque, sem passar pela galeria.
+
+O que faltou perceber e que `capture` no celular abre a camera **E SO**. A foto
+do "antes" costuma ja existir — batida antes de o servico comecar, as vezes
+mandada pelo cliente no WhatsApp — e nao havia como anexa-la. No computador o
+atributo e ignorado, entao o problema existia exatamente no aparelho de quem
+trabalha em campo.
+
+A correcao mantem os dois: "Adicionar foto" (camera, um toque) e "Escolher
+arquivo" (galeria no celular, explorador no computador).
+
+**Dois `<input>` escondidos, e nao um com `capture` alternado por estado:** o
+atributo e lido no momento de abrir o seletor, entao alternar dependeria de o
+React ter aplicado a mudanca antes do clique. Dois elementos escondidos custam
+nada e nao tem corrida. As duas entradas passam pelo MESMO tratador — a
+compressao no aparelho e o teto por registro nao podem valer so para um caminho.
+
+---
+
+Os dois ganharam trava em `__tests__/regressoes-de-tela.test.ts`: o `main` tem
+de declarar `min-w-0` (confirmado por mutacao — removendo, o teste falha), a
+tabela tem de manter o proprio contentor de rolagem, e o componente de fotos tem
+de ter exatamente duas entradas de arquivo, uma com `capture` e uma sem, as duas
+com o mesmo `onChange`.
+
+1114 -> 1120 testes.
+
+---
+
+### 7.2.50 O backup cobria menos do que parecia — 01/09/2026
+
+Auditoria do backup a pedido do dono. A ferramenta era boa e o resultado era
+pior do que ela sugeria.
+
+**O que estava certo.** O script le a lista de tabelas do CATALOGO do banco, e
+nao de lista escrita a mao — que e como uma tabela nova fica de fora sem ninguem
+notar. Grava manifesto com contagem por tabela. E o verificador sobe um Postgres
+descartavel em memoria (pglite), carrega o backup e confere linha a linha: prova
+que restaura sem banco de ensaio, sem credencial e sem risco.
+
+**O que estava errado.**
+
+*O unico backup era de 19/08 — treze dias.* Nenhuma automacao: nem no cron, nem
+no CI. Backup manual e backup esquecido. (14 linhas novas desde entao; pouco
+porque o negocio e pequeno, e exatamente o que se perderia.)
+
+*Duas lacunas de cobertura*, porque o script le so `schemaname = 'public'`:
+
+1. **As 9 contas de login.** O Supabase Auth vive no schema `auth`. Restaurar
+   devolvia clientes, OS, orcamentos e financeiro — e NINGUEM conseguia entrar.
+2. **As 9 fotos (1,1 MB) do Storage.** Sao arquivos, nao linhas. Os registros
+   `Attachment` voltariam apontando para arquivos inexistentes, e a foto E a
+   prova do servico prestado.
+
+**A senha fica de fora, por decisao.** Guardar o hash faria a restauracao ser
+transparente. O custo e hash de senha em disco — e, neste projeto, a pasta de
+backup fica dentro do OneDrive, ou seja, sincronizada para a nuvem. Sem o hash a
+recuperacao continua completa: as contas voltam com o MESMO id (conferido:
+`User.id` == `auth.users.id` nos 6 usuarios) e cada pessoa entra pelo "esqueci
+minha senha". Um e-mail a mais no pior dia do ano custa menos que hash vazado num
+dia comum. Quem quiser a outra troca roda com `--com-senha`.
+
+**O verificador passou a mentir menos.** Ele imprimia "PROVADO" falando so das
+tabelas. Agora confere tambem que o arquivo de contas tem a contagem do
+manifesto e que os arquivos existem em disco — e a palavra "provado" so aparece
+depois de tudo conferido. Backup anterior a hoje sai como INCOMPLETO, com saida
+1, em vez de passar.
+
+**Descarte, com teste.** Automatizar exigiu descartar antigos, senao a pasta
+cresce para sempre dentro do OneDrive. Guarda os 8 mais recentes — e nao so o
+ultimo, porque dano que se descobre tarde (apagamento na segunda, notado na
+sexta) sobrescreveria a unica copia boa.
+
+A regra virou funcao PURA em `_backup-lib.mjs` e ganhou teste proprio: e a unica
+parte deste sistema que destroi o que deveria proteger. Um erro de sinal apagaria
+os recentes e guardaria os velhos, e so se descobriria no dia em que o backup
+fosse preciso. Confirmado por mutacao: trocando por `slice(-manter)`, 6 dos 9
+testes falham.
+
+**A distincao que nao pode se perder.** O dono perguntou se o backup podia virar
+um botao para o cliente. NAO: `scripts/backup.mjs` contem os dados de TODAS as
+empresas. O que existe para o cliente e `actions/data-export.ts`, filtrado por
+`tenantId` em toda consulta, ja disponivel em Configuracoes. Sao coisas
+diferentes com nomes parecidos, e confundi-las seria vazamento entre inquilinos.
+
+1120 -> 1129 testes.
+
+---
+
+### 7.2.51 Estoque por LOCAL — 01/09/2026
+
+Ate aqui o saldo era um numero so por peca. "Tem 4 no estoque" nao responde a
+pergunta que o dono de uma empresa de campo realmente faz: *onde*. A van de cada
+tecnico e um almoxarifado que anda, e a peca pode estar do outro lado da cidade.
+
+E a lacuna mais especifica deste ramo — sistema generico de estoque trata o
+deposito como um ponto so, o que serve a loja e nao serve a quem trabalha na rua.
+
+**A trava de plano saiu de graca.** O dono pediu "so Pro e Enterprise", e o
+estoque JA e Pro+ (`POR_PLANO`: o Starter tem so `nfse`). Locais vivem dentro do
+estoque, entao herdam a trava. Criar um recurso separado faria o Pro ter estoque
+e nao ter onde guarda-lo — isso nao seria um plano, seria um defeito.
+
+**`Part.stock` continua sendo o TOTAL.** Ele ja e lido pelo alerta de minimo,
+pela listagem, pela escolha na OS e pelos relatorios; troca-lo por uma soma seria
+refazer meia duzia de telas para chegar no mesmo numero. Ao lado dele entra
+`StockBalance` (saldo por peca por local), escrito na MESMA transacao. Manter
+total e parcelas convida os dois a divergirem em silencio — por isso todo teste
+de banco termina conferindo `Part.stock === soma dos StockBalance`.
+
+**Transferencia e um PAR de movimentos**, e nao um tipo novo: `balanceAfter`
+passou a ser o saldo DAQUELE local, e uma linha so nao guarda dois saldos. Saida
+na origem, entrada no destino, ligadas por `transferId`, na mesma transacao.
+
+**O defeito sutil que quase entrou.** No AJUSTE a quantidade e o saldo CONTADO,
+nao a diferenca. Se o total fosse recalculado com `saldoApos` (como era antes),
+contar 3 numa van faria o TOTAL DA EMPRESA virar 3 — apagando as 10 do
+almoxarifado sem nenhum movimento que explicasse. O total passou a acompanhar
+pela VARIACAO. Confirmado por mutacao: voltando a `saldoApos`, o teste falha.
+
+**Tornar `locationId` obrigatorio foi de proposito.** O compilador apontou os
+tres caminhos que mexem em estoque, e cada um decidiu conscientemente:
+
+  - baixa da OS -> a van de quem executou (resolvida UMA vez fora do laco);
+  - recebimento de compra -> o almoxarifado, e nao o carro de quem digitou;
+  - movimento manual -> o que a tela escolher.
+
+**A migracao preenche, e isso nao tem segunda chance.** Sem ela, toda empresa que
+ja usa estoque abriria a tela e veria os saldos fora de qualquer local —
+presentes no total e invisiveis na unica tela que passa a importar. A migracao
+cria o "Almoxarifado" de cada empresa QUE TEM PECA, move o saldo inteiro para
+dentro e aponta o historico antigo para ele. Empresa que nunca usou estoque nao
+ganha local nenhum: seria sujeira na tela de quem nem contratou o recurso.
+
+Testado com dados: um teste aplica as migrations ATE A ANTERIOR, insere uma
+empresa com pecas e saldo, e so entao aplica a de hoje. Mutacao: removendo o
+preenchimento, 4 testes falham.
+
+`resolverLocal` CRIA o almoxarifado quando a empresa nao tem nenhum — a migracao
+so atendeu quem ja tinha peca, e recusar o movimento seria pedir que a empresa
+nova adivinhe que precisa criar um lugar antes de guardar a primeira peca. Mesmo
+padrao do bucket de fotos.
+
+**Desativar local exige ele VAZIO.** Com peca dentro, o saldo sumiria das
+escolhas sem ter saido de lugar nenhum, e o total passaria a contar algo que
+ninguem acha na tela.
+
+Na tela: os locais aparecem ACIMA da lista de pecas (a primeira coisa a entender
+e que agora existe "onde"), e cada peca ganhou um botao "onde esta" — FORA do
+bloco de administrador, porque ver onde a peca esta e leitura e e o tecnico quem
+mais precisa. Transferir, que mexe em saldo, continua so para dono e admin, com
+a Action conferindo de novo.
+
+1129 -> 1172 testes.
+
+---
+
+### 7.2.52 A visita que vira orcamento — 01/09/2026
+
+O cliente liga, a empresa abre a OS, o tecnico vai ate o endereco — e no local
+descobre que o servico e maior do que o telefonema sugeria. O cliente entao so
+quer saber quanto custa.
+
+Ate aqui `Quote` e `ServiceOrder` eram DUAS ILHAS: nenhuma coluna ligava uma a
+outra, e o orcamento aprovado tambem nao virava OS. Aquela visita virava uma OS
+orfa — fechar com valor cheio cobraria um servico que nao houve; cancelar
+apagaria o deslocamento que aconteceu de verdade.
+
+**O vinculo:** `Quote.orderId`, com `SetNull`. Apagar a OS nao pode levar junto
+o orcamento que o cliente ja recebeu e talvez ja tenha aprovado.
+
+**A taxa de visita e DE CADA EMPRESA** (`Tenant.visitFee`, NULL = nao cobra, e e
+o padrao). Umas cobram o deslocamento mesmo com o orcamento recusado —
+combustivel e duas horas do tecnico foram gastos. Outras absorvem, porque a
+visita e o custo de vender. O sistema nao escolhe por elas; foi decisao explicita
+do dono.
+
+**A regra do fechamento**, em lib/os-orcamento.ts:
+
+  - sem orcamento, ou orcamento APROVADO -> a OS fecha pelo valor dos itens;
+  - RECUSADO -> fecha com a taxa de visita, e NUNCA com o valor dos itens, que
+    sao exatamente o servico que o cliente decidiu nao fazer;
+  - AGUARDANDO -> nao barra, mas avisa. Faturar sem resposta cobra um servico
+    nao aprovado; a empresa pode ter combinado por telefone, entao o aviso e da
+    tela e nao uma trava.
+
+Fechar em zero ja nao gera cobranca por construcao: `INVOICED` so cria receita
+com total maior que zero.
+
+**As FOTOS vao junto para o orcamento.** O tecnico acabou de fotografar o cano
+estourado, e e essa foto que responde "por que custa isso" para quem vai
+decidir. Copia-se o VINCULO, nao o arquivo — ele continua um so no
+armazenamento. Reaproveita direto o `Attachment` com dois donos (7.2.45).
+
+**Uma visita gera UM orcamento.** O segundo seria o mesmo pedido contado duas
+vezes no funil, e a tela de fechamento nao saberia qual dos dois olhar.
+
+**Numeracao extraida para lib/orcamento-db.ts.** Dois caminhos passaram a
+precisar dela (a criacao normal e a que nasce da visita), e um arquivo
+`"use server"` so pode exportar Server Action — a funcao nao podia ser
+compartilhada de la. Duas copias da mesma contagem e como duas telas passam a
+numerar diferente.
+
+**Erro meu, corrigido no caminho:** escrevi a consulta de memoria — `os.address`,
+`os.fotos`, `@/lib/quotes-db`. Nenhum dos tres existe: o endereco fica no
+`Client`, as fotos sao `attachments`, e `retryOnUniqueConflict` mora em
+`lib/retry`. O compilador acusou os nove pontos de uma vez.
+
+1172 -> 1189 testes.
+
+---
+
+### 7.2.53 A compra que nao saia do caixa — 01/09/2026
+
+Quatro correcoes no modulo de compras. A primeira e um DEFEITO, e nao uma
+melhoria.
+
+**1. A compra nao virava despesa.** A empresa comprava R$ 2.400 em pecas, o
+estoque subia — e o Financeiro nao ficava sabendo. O dinheiro saiu do mundo real
+e nao saiu do sistema, entao o lucro na tela era maior que o lucro de verdade.
+Estoque que engorda sem despesa correspondente e a forma mais silenciosa de um
+sistema mentir sobre o resultado do mes.
+
+A despesa nasce por RECEBIMENTO, e pelo valor do que chegou AGORA — numa compra
+parcial paga-se o que foi entregue, e lancar o total inteiro registraria
+dinheiro que ainda nao saiu. Na MESMA transacao do estoque: se uma gravasse e a
+outra nao, estoque e caixa passariam a discordar sem ninguem notar.
+`Expense.purchaseOrderId` (SetNull) permite ir da despesa ate a nota e de volta.
+
+**2. Prazo e parcelas.** O recebimento e o momento em que se sabe o que foi
+combinado com o fornecedor, entao e ali que se informa. Sem preencher, vence hoje
+em uma parcela — o comportamento de quem paga a vista.
+
+A sobra do arredondamento vai toda na PRIMEIRA parcela (33,34 + 33,33 + 33,33),
+como banco e boleto fazem. Dividir R$ 100 em 3 e arredondar cada uma soma 99,99,
+e o centavo perdido reaparece meses depois como diferenca inexplicavel na
+conciliacao. Ha teste afirmando que a soma fecha EXATO em varios valores.
+
+**3. Custo MEDIO ponderado.** O custo era sobrescrito pela ultima nota: 10 pecas
+a R$ 80 mais 2 a R$ 120 passavam a valer R$ 120 cada, e a margem de todo servico
+seguinte aparecia menor do que e — calculada sobre um estoque que custou outra
+coisa. Agora e a media pesada pelas quantidades.
+
+Casos de borda que importam: estoque zerado, peca nova e estoque NEGATIVO (que
+acontece quando a baixa chega antes da entrada) usam o custo da compra nova —
+ponderar por quantidade negativa produziria numero sem sentido.
+
+**4. Sugestao de compra.** O sistema ja sabia o que esta abaixo do minimo — o
+alerta usa isso todo dia. Faltava transformar em ordem de compra em vez de o
+dono somar a mao. Cria em RASCUNHO: ele ainda vai escolher fornecedor, conferir
+quantidade e negociar preco. Criar enviada seria o sistema comprando sozinho.
+Ordena pelo que esta MAIS faltando, e nao por nome.
+
+**Um defeito meu, pego pelo teste:** `Math.max(1, Math.floor(NaN))` e NaN, e
+`Array.from({ length: NaN })` devolve lista VAZIA — um campo de parcelas mal
+preenchido faria a despesa sumir em silencio. O `Number.isFinite` veio antes.
+
+Confirmado por mutacao: desligando a criacao da despesa, 8 testes falham;
+voltando ao custo da ultima nota, o do custo medio falha.
+
+1189 -> 1222 testes.
+
+**Ainda pendentes deste modulo:** anexar a nota do fornecedor e cotacao entre
+fornecedores.
+
+---
+
+### 7.2.54 Nota do fornecedor e cotacao entre fornecedores — 02/09/2026
+
+Os dois ultimos itens do modulo de compras.
+
+**A NOTA DO FORNECEDOR** ganhou um terceiro dono possivel no `Attachment`, que
+ja servia a OS e ao orcamento. A trava de dono unico foi REESCRITA: dizia
+"orderId OU quoteId, nunca os dois", e com um terceiro viraria quatro
+combinacoes escritas a mao — a quinta, quando um quarto dono aparecer, seria
+esquecida. Agora e `num_nonnulls("orderId","quoteId","purchaseOrderId") = 1`,
+que e literalmente "exatamente um" e cresce sozinha. Nove testes cobrem cada
+combinacao, incluindo as tres que a trava antiga nao conhecia.
+
+**Uma ABA propria** (4.4), e nao so o anexo dentro da compra. Sao duas
+perguntas: "onde esta a nota DESTA compra" (resolve dentro dela) e "onde esta a
+nota daquele compressor de marco" (so resolve com todas num lugar so, com
+busca). E o que o contador pede todo mes.
+
+**A COTACAO** (4.5) responde o que a ordem de compra nao responde: de quem
+comprar. Quatro tabelas — cotacao, item, participante convidado e preco. O
+participante e linha propria para o sistema distinguir "nao respondeu" de
+"respondeu que nao tem".
+
+A comparacao mostra DUAS respostas porque elas divergem: o melhor fornecedor
+unico (menor total entre quem cotou TUDO — comparar quem respondeu 1 de 3 contra
+quem respondeu os 3 daria a vitoria a quem respondeu menos) e o total comprando
+cada item de quem esta mais barato. A diferenca e a economia ao dividir, e e o
+que o dono compra ao aceitar tres entregas. Ao escolher, a ordem de compra nasce
+COM OS PRECOS COTADOS — sem redigitar justamente o numero que se acabou de
+comparar.
+
+---
+
+**A REVISAO ADVERSARIAL, e o que ela achou.** O pedido era "sem erros para nao
+precisar corrigir depois", entao rodei quatro agentes independentes sobre o
+codigo antes de commitar. Encontraram quatro defeitos reais, todos corrigidos
+antes de subir:
+
+*1. Duas convencoes de arredondamento (alta).* `totaisPorFornecedor` somava cru
+e arredondava uma vez; `melhorPorItem` arredondava por linha; o fechamento
+gravava a soma das linhas arredondadas. Com quantidade fracionaria — e a coluna
+e Decimal(12,3) — os tres divergiam. Verificado: 2,5×3,45 + 1,5×7,15 + 0,5×9,99
+dava R$ 24,35 num caminho e R$ 24,36 no outro, entao "dividindo" aparecia MAIS
+CARO que o melhor unico, **o que e impossivel por definicao**, e a ordem de
+compra gravava um centavo a mais do que o dono aprovou na tela. Unificado para
+arredondar POR LINHA — que e o que a nota fiscal faz.
+
+*2. Corrida no fechamento (alta).* A guarda de status ficava FORA da transacao e
+o update gravava por id puro. Dois administradores na mesma tela criariam DUAS
+ordens de compra identicas, que ao serem recebidas dobrariam estoque E despesa.
+Corrigido com `updateMany` condicionado ao status DENTRO da transacao, abortando
+quando `count === 0`. Tres testes com `Promise.all` provam; por mutacao, os tres
+falham sem a trava.
+
+*3. A nota subia sem compressao (alta).* O componente mandava o arquivo cru,
+enquanto a galeria de fotos reduz no aparelho. Fotografar uma nota de papel da
+3–8 MB, o limite de corpo das Server Actions e 4 MB, e o HEIC do iPhone nem
+passa pela validacao de tipo — ou seja, o caminho PRINCIPAL da funcionalidade
+falhava justamente no aparelho em que ela e usada. A compressao virou
+`lib/comprimir-foto.ts`, compartilhada: estar dentro de um componente foi
+exatamente o que permitiu o segundo caminho esquece-la.
+
+*4. Busca numerica estourando INT4 (alta).* `/^\d+$/` aceitava a chave de acesso
+da NF-e (44 digitos) e mandava para `PurchaseOrder.number`, que e INT4. O Prisma
+lancava, a aba devolvia 500 — e o texto ficava na URL, entao ela continuava
+quebrada ao recarregar. Corrigido com `Number.isSafeInteger` e teto de INT4.
+
+**Dois testes do proprio projeto tambem me pegaram**, antes da revisao: o codigo
+de aba `4.3` ja era do Fornecedores, e a duplicata mascarou a falta de verbete
+do manual para a aba de notas — o teste casou pelo codigo repetido.
+
+1222 -> 1275 testes.
+
+---
+
+### 7.2.55 Controle de bens — 02/09/2026
+
+A empresa sabia quanto tinha em PECA e nao sabia quanto tinha em BEM. A van, o
+notebook, a maquina de solda, a sala — tudo que ela comprou para trabalhar e nao
+para revender ficava fora do sistema, e o contador pedia a lista todo fim de
+exercicio numa planilha feita a mao. Aba 5.5, `/bens`.
+
+**Bem nao e estoque, e a diferenca e a DEPRECIACAO.** Peca entra e sai; bem fica
+e perde valor com o tempo, e essa perda e despesa do exercicio. Por isso o
+modulo nao reaproveitou `Part`: teria um campo de saldo que nunca faz sentido e
+nenhum campo de data de compra, que e o que a depreciacao inteira precisa.
+
+**A regra vive em `lib/patrimonio.ts`, pura, com 26 testes.** Taxa linear por
+categoria, do Anexo III da IN RFB 1.700/2017 — veiculo e informatica 20%,
+maquina/ferramenta/movel 10%, imovel 4%. Quatro decisoes que sao o modulo
+inteiro:
+
+- **TERRENO nao deprecia** (taxa 0). Nao e um caso especial escrito a mao: e uma
+  linha da tabela, entao vale na lista, no resumo e no CSV pelo mesmo caminho.
+- **`??` e nao `||` ao ler a taxa propria.** Taxa ZERO e escolha legitima; com
+  `||` ela cairia na padrao da categoria e o terreno voltaria a depreciar.
+- **Conta MESES inteiros, nunca antes da compra.** E a convencao brasileira, e o
+  "nunca antes" e o que impede depreciacao negativa aparecer no balanco.
+- **A BAIXA congela.** Depois dela o bem nao e mais da empresa, e continuar
+  depreciando inventaria despesa que nao existe.
+
+**Baixar nao e excluir, e essa e a decisao de produto.** Bem que a empresa teve
+de verdade existiu, custou dinheiro e depreciou — o contador precisa dessa
+historia para fechar o exercicio, e apagar reescreveria o passado. Baixa guarda
+data e motivo. Excluir existe so para o que nunca deveria ter existido (cadastro
+duplicado, erro de digitacao): e so do DONO e some assim que ha manutencao
+ligada ao bem. Reativar LIMPA a data da baixa — sem isso o bem reativado ficaria
+congelado no tempo.
+
+**O que foi ligado ao que ja existia**, em vez de duplicar:
+
+- **Local** reaproveita os locais de estoque. "A rotativa esta na van do Carlos"
+  e a mesma pergunta que "onde esta a peca". Quando a empresa nao tem o recurso
+  de estoque o campo simplesmente some, e "com quem esta" continua respondido
+  pelo responsavel.
+- **Manutencao** ganhou `assetId`. E o historico da van: quantas vezes parou,
+  quanto ja custou. `SetNull`, porque a manutencao aconteceu mesmo que o bem
+  seja baixado depois.
+- **Anexo** ganhou um QUARTO dono (nota fiscal do bem, foto, manual). A trava
+  `num_nonnulls(...) = 1`, escrita em 7.2.54 justamente para crescer sozinha,
+  cresceu sozinha — uma linha, sem combinacao nova escrita a mao.
+
+**Sem trava de plano, de proposito.** Saber o que a empresa tem e o minimo para
+ela existir direito. Prender isso atras do Pro obrigaria quem tem uma van e tres
+ferramentas a pagar mais para anota-las — e essa empresa e justamente a que mais
+precisa de organizacao e menos pode pagar por ela.
+
+**A exportacao para o contador** sai com as quatro colunas que ele lanca no
+imobilizado: valor de aquisicao, taxa usada, depreciacao acumulada e valor
+contabil. Com BOM na frente, senao o Excel em portugues abre em ANSI e todo
+acento vira caractere estranho — e ele devolve pedindo de novo.
+
+**Quatro CHECKs no banco**, porque validacao de tela nao protege quem chama a
+Action direto: valor de aquisicao >= 0, taxa entre 0 e 100, residual >= 0, e
+baixa nunca antes da compra. Verificado no banco de verdade: *"Baixa antes da
+compra: RECUSADA"*.
+
+20 testes de Action sobre banco real (pglite), todos verificados por mutacao —
+tirar cada guarda faz o teste correspondente falhar. O teste do CSV pegou o
+escape: sem ele, `Furadeira 1/2", bancada` parte a linha em duas colunas e o
+contador recebe uma planilha desalinhada.
+
+**Um teste do projeto virou ruim e foi trocado.** `codigos-abas.test.ts` fixava
+o ULTIMO codigo do menu ("5.4.5"), entao quebrava a cada aba nova sem que nada
+estivesse errado — foi o que aconteceu ao entrar o 5.5. Teste que falha quando o
+sistema cresce corretamente treina quem le a ignora-lo. Trocado pela PROPRIEDADE
+que importa: a lista ordenada tem de ser nao decrescente, o que vale para
+qualquer aba futura.
+
+1275 -> 1321 testes.
+
+---
+
+### 7.2.56 Balanco patrimonial, e o conferente — 02/09/2026
+
+A pergunta que o dono nunca consegue responder: *quanto vale a minha empresa?*
+O sistema ja tinha as pecas — dinheiro que entrou e saiu, o que ha para receber
+e para pagar, estoque, e os bens com depreciacao (7.2.55). Faltava a foto.
+Aba 5.6, `/balanco`.
+
+**A identidade fecha por CONSTRUCAO, e isso e dito com todas as letras.** O
+patrimonio liquido sai por diferenca (Ativo − Passivo), porque o sistema nao tem
+partidas dobradas. Entao `fecha` nao e conferencia de contabilidade: e trava
+contra erro de programacao daqui, com tolerancia de um centavo pelo
+arredondamento por linha. Um sistema que anunciasse "seu balanco fecha!" como se
+fosse validacao estaria vendendo confianca que nao tem.
+
+**O caixa PODE ficar negativo, e fica.** E o que acontece com toda empresa que
+comecou a usar o sistema no meio da vida: ele so conhece o MOVIMENTO desde
+entao. Travar em zero esconderia exatamente o defeito que o balanco existe para
+mostrar, e o conferente nao teria o que apontar. Numero errado visivel se
+conserta; numero errado escondido vira decisao errada.
+
+**Duas coisas o sistema pergunta**, porque nao tem como calcular: o caixa
+inicial e o capital social. `NULL` significa "nao informou", que e DIFERENTE de
+zero informado — e e dessa diferenca que o conferente tira qual mensagem
+mostrar: falta cadastrar, ou o dinheiro acabou mesmo. Um `DEFAULT 0` apagaria a
+distincao e mandaria toda empresa consertar um campo que ja esta certo.
+
+**As linhas manuais sao GENERICAS de proposito.** Emprestimo, financiamento da
+van, imovel nao cadastrado, reserva de lucros: grupo + descricao + valor. A
+alternativa era um campo por tipo, e o quarto tipo seria esquecido — a mesma
+licao do `num_nonnulls(...) = 1`. Aceitam valor NEGATIVO, porque conta
+retificadora existe: "(-) Provisao para perdas" e linha legitima do ativo, e
+travar em zero obrigaria a empresa a mentir no balanco para caber na regra do
+sistema.
+
+---
+
+**O AGENTE DE CONTABILIDADE e REGRA, e nao modelo de linguagem.** O sistema ja
+tem uma assistente de IA (7.2.38); o conferente nao usa ela, por tres motivos:
+
+1. Ele fala sobre DINHEIRO. Um modelo que erra um numero num balanco erra com a
+   mesma confianca com que acerta, e quem le nao tem como saber qual foi. Regra
+   escrita erra de um jeito que o teste pega.
+2. Ele precisa funcionar para TODO MUNDO. A assistente e adicional pago e
+   depende de chave de API — que hoje nem esta configurada. O conferente roda
+   sem chave, de graca, e e justamente a empresa sem contador de plantao que
+   mais precisa dele.
+3. O que ele faz e CONFERENCIA, e nao conversa: uma lista fechada de coisas que
+   costumam estar erradas, cada uma com o numero que a denuncia.
+
+Dez achados, em tres gravidades. Dois detalhes que separam lista de conferencia
+util de ruido:
+
+- **O PL negativo NAO aparece junto do caixa negativo.** Com o caixa negativo, o
+  PL negativo e eco do mesmo defeito, e apontar os dois faria o dono perseguir
+  duas causas quando ha uma.
+- **"Nenhum bem cadastrado" so aparece para quem JA usa o sistema.** No primeiro
+  dia nao haver bem e normal, e o aviso seria ruido.
+
+O conferente vem ANTES do balanco na tela, de proposito: mostrar o numero antes
+da ressalva e entregar uma conclusao sem o aviso de que ela pode estar errada.
+E o CSV para o contador leva as ressalvas junto, pelo mesmo motivo — traduzidas,
+e nao as chaves internas, porque quem abre o arquivo e uma pessoa.
+
+---
+
+**A TRAVA DE PLANO, e a linha que ela desenha.** `balanco` entrou em `RECURSOS`
+e caiu sozinho no Pro e no Enterprise. O controle de bens (5.5), que o alimenta,
+continua livre. A linha e: **anotar e de todos; o relatorio contabil e do Pro.**
+Anotar a van e as tres ferramentas e o minimo para a empresa existir direito;
+prender isso atras do Pro cobraria mais de quem menos pode pagar.
+
+**Um teste novo que vale por muitos: DRIFT entre migration e schema.** As duas
+descrevem a mesma tabela por caminhos diferentes — a migration e escrita a mao,
+o schema e lido pelo Prisma. Quando divergem, o sistema funciona local e quebra
+no deploy, que e o pior lugar para descobrir. O teste aplica as duas num pglite
+e compara `information_schema.columns` da tabela nova e os campos novos do
+Tenant, coluna por coluna.
+
+**Um gotcha novo do Next 16** (secao 9, item 20): `export type { ... }` num
+arquivo `"use server"` passa no typecheck e QUEBRA O BUILD — o compilador de
+Server Actions do Turbopack trata toda export como endereco em tempo de
+execucao, e reclama que "The export Balanco was not found in module".
+
+**Dez mutantes, dez mortos.** Entre eles um que sobreviveu na primeira rodada e
+denunciou um teste que afirmava mais do que provava: "bem baixado some do
+balanco" passava mesmo sem o filtro na consulta, porque `resumirPatrimonio`
+tambem descarta o baixado. Quem pagava o preco era o CONFERENTE, que passaria a
+cobrar nota fiscal de uma van vendida ha dois anos — e e isso que o teste
+verifica agora.
+
+1321 -> 1402 testes.
+
+---
+
+## 8. Infraestrutura e deploy
+
+- **Hospedagem:** Vercel, projeto `adriel5/app`, região `gru1`
+- **Deploy (CD):** **manual** — apesar do projeto aparecer conectado ao GitHub no dashboard da Vercel, na prática não dispara deploy automático (descoberto 21/07/2026, ver seção 9 item 14: 16-18 dias sem nenhum deploy novo apesar de dezenas de pushes). Deploy real é via `npx vercel --prod --yes` (CLI autenticada como o usuário) — rodar manualmente após cada push que deva ir pra produção, e novamente após qualquer `vercel env add` (env var nova só entra em vigor num redeploy — item 18)
+- **CI:** `.github/workflows/ci.yml` — a cada push (`master`, `improve/readme`) e PR pra `master`, roda `npm ci && npm run lint && npm test && npm run build` num runner limpo. `npm test` não precisa de nenhum segredo real (banco embutido, ver item "Testes automatizados" abaixo); `npm run build` usa valores fictícios pras env vars só pra passar no `prisma generate`/`next build`, já que nenhuma página faz fetch no banco em build time
+- **Build de produção (`vercel.json`):** `prisma generate && prisma migrate deploy && next build` — simplificado em 03/08/2026 (o patch `migrate resolve` acumulado de várias migrations passou do limite de 256 caracteres do `buildCommand` da Vercel; confirmado via `prisma migrate status` que os resolves já aplicados ficam gravados permanentemente no banco, não precisam ser reafirmados a cada build)
+- **Build local (`package.json`):** `prisma generate && next build` — **não roda `migrate deploy`**. Mudança de schema feita localmente não sobe pro banco de produção sozinha (ver seção 9, item 9)
+- **Cron:** `/api/cron/daily` às 12:00 UTC (09h BRT) via `vercel.json`
+- **Migrations:** Prisma Migrate — aplicadas de verdade só no build da Vercel (`migrate deploy`), nunca no build local nem no CI
+- **Testes automatizados:** Vitest + PGlite (Postgres real compilado pra WASM, roda embutido no processo — sem Docker, sem conta externa, sem tocar no banco de produção). `npm test` — ver seção 9, item 13
+
+---
+
+## 9. Decisões técnicas e "gotchas" (aprendidos na prática)
+
+Estes pontos custaram tempo real de debug — não repetir os mesmos caminhos:
+
+1. **Env vars recicladas na Vercel ficam vazias.** Um nome de variável que já foi removido (`vercel env rm`) e recriado fica permanentemente vazio em produção, mesmo com o valor certo. Sempre usar um nome **novo** ao trocar um segredo. A chave do Asaas por isso vive em `ASAAS_TOKEN_B64` (base64, nome nunca reciclado).
+2. **PIX não é permitido como `billingType` de assinatura** nesta conta Asaas (só para cobrança avulsa). Usar `UNDEFINED` (cliente escolhe boleto/cartão na fatura) — exige `cpfCnpj` no cadastro do cliente.
+3. **`/auth/v1/admin/invite` do Supabase foi descontinuado** — retorna 404 em texto puro (não JSON), quebra qualquer `res.json()` sem try/catch. Usar `/auth/v1/admin/generate_link` com `type: "invite"` (mesmo formato de resposta).
+4. **Região das funções importa de verdade.** Rodar em região diferente do banco causa latência perceptível em toda a navegação — sempre colocar a função no mesmo datacenter do banco.
+5. **`no-scrollbar` sem CSS correspondente** escondia a existência de scroll na sidebar sem indicar visualmente — itens "sumiam" em telas menores. Scrollbar precisa ser visível, não só funcional.
+6. **Condição de corrida na criação automática de tenant.** Múltiplas Server Components chamando a mesma função de auto-provisionamento em paralelo no primeiro login podiam criar tenants duplicados órfãos. Corrigido tratando unique constraint violation como "outra requisição já venceu a corrida".
+7. **TLS quebrado no ambiente de dev local** (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`, provavelmente antivírus interceptando HTTPS) — não acontece em produção. Não gastar tempo tentando corrigir isso no código.
+8. **`.next` acumula cache indefinidamente** — em projetos de várias semanas, pode chegar a vários GB. Limpar com `rm -rf .next` de vez em quando é normal e seguro.
+9. **Mudança de schema local não sobe sozinha pra produção.** O build local só roda `prisma generate && next build` (sem `migrate deploy`) — só o build da Vercel aplica migrations de verdade no banco. Se uma mudança de schema for aplicada localmente via `prisma db push` (necessário quando `migrate dev` detecta drift — item 10) e precisar estar no banco antes do próximo deploy, rodar também `prisma migrate resolve --applied <nome_da_migration>` — senão o `migrate deploy` da Vercel tenta rodar o SQL de novo e falha (`already exists`), quebrando o build de produção. Foi o que aconteceu com a migration `20260719214104_add_pending_subscription_status` (seção 7.1), resolvido manualmente antes do próximo deploy.
+10. **Histórico de migrations do Prisma está com drift em relação ao schema real de produção** (descoberto 19/07/2026: `prisma migrate dev` detectou que reconstruir o schema do zero a partir das migrations não bate com o banco real, e só ofereceu `migrate reset` — que **apaga todos os dados** — como saída). Causa provável: alguma mudança de schema foi aplicada via `db push` no passado sem gerar a migration correspondente; é o que já exigiu o patch permanente `migrate resolve --applied 20260630000001_add_rbac_push_location || true` no `buildCommand` da Vercel. **Nunca rodar `prisma migrate dev` neste projeto sem entender esse contexto** (ele conecta no mesmo banco de produção — não há banco de dev separado). Usar `prisma db push` pra sincronizar schema localmente, sempre seguido de `prisma migrate resolve --applied <nome>` antes do próximo deploy (item 9). Reconciliar esse drift de vez é trabalho futuro — ver débito técnico (seção 10).
+11. **Nunca confiar em `user.user_metadata` do Supabase pra decisões de autorização.** É editável pelo próprio usuário autenticado via `supabase.auth.updateUser({data:{...}})` no client-side SDK — qualquer lógica server-side que leia esses campos pra decidir tenant/papel/permissão é, por definição, controlável por quem estiver logado. Foi a causa raiz da vulnerabilidade crítica corrigida em 19/07/2026 (seção 7.1: usuário podia se declarar OWNER de qualquer tenant). A fonte de verdade pra tenant/papel é sempre o registro `User` no Postgres, criado/atualizado só por código server-side com a service role key.
+12. **Toda função exportada de um arquivo `"use server"` já é um endpoint HTTP despachável, mesmo que nenhum componente client a importe.** Confirmado na 2ª auditoria (seção 7.2) inspecionando o `server-reference-manifest.json` gerado no build: `getFinanceSummary` (chamada só de dentro de um Server Component) já tinha um Action ID registrado e despachável pelo dispatcher do Next.js — só não estava *descoberto* por nenhum client ainda, o que é bem diferente de estar protegido. Um redirect na página que chama a função, ou o fato de "hoje nada do lado client importa isso", não é controle de acesso — é só o ID não ter vazado ainda (log, source map, erro verboso, um teammate non-admin). Toda Server Action que mexe em dado sensível precisa checar `role`/`tenantId` **dentro de si mesma**, nunca só confiar em quem a chama.
+13. **Testes de integração sem Docker: PGlite + `prisma migrate diff --from-empty` em vez de replay de `prisma/migrations/*.sql`.** Ao montar a infra de testes (roadmap #6), replay do histórico de migrations do zero falhou (`type "SubscriptionStatus" does not exist`) — confirmação na prática do drift do item 10. Contornado sem tocar no histórico de produção: `npm run pretest` gera `src/test-utils/test-schema.sql` direto do `schema.prisma` atual via `prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script` (arquivo não versionado, sempre em sincronia). `@electric-sql/pglite` roda um Postgres real (WASM) embutido no processo Node — zero Docker, zero conta externa, zero risco pro banco de produção. Server Actions são testadas mockando `@/lib/prisma` (aponta pro client PGlite) e `@/lib/auth`'s `getTenant()` (simula `{tenantId, role}` do chamador); `redirect()`/`revalidatePath()` são mockados globalmente (`vitest.config.ts` → `setupFiles`) porque exigem o "static generation store" do Next.js, que não existe em teste puro Node.
+14. **"Vercel conectada ao GitHub" não significa deploy automático de verdade — checar sempre pelo histórico real de deployments, nunca só por confirmação verbal ou pela tela de configuração.** Ao montar o CI/CD (roadmap #7, 20/07/2026) foi assumido, com base em confirmação direta do usuário, que a Vercel fazia deploy automático a cada push nesta branch — por isso o GitHub Actions ficou só com CI, sem step de deploy. Descoberto em 21/07/2026 que isso era falso na prática: o site em produção mostrava conteúdo de ~16 dias atrás (`x-vercel-cache: HIT` com `age` de 1,4M+ segundos; `vercel ls` mostrando os 20 deploys mais recentes — todos manuais via CLI, todos do mesmo usuário, todos de 16-18 dias atrás, nenhum em ambiente Preview; zero deployments/status checks da Vercel em qualquer commit recente no GitHub). Ou seja, nenhum push desta sessão inteira (segurança, rate limiting, testes, CI, remoção do trial) tinha de fato chegado a produção, apesar da CI passando a cada push. Corrigido rodando `vercel --prod` manualmente (CLI já autenticada como o usuário). **Lição:** "está conectado" no dashboard e "dispara deploy automático de verdade" são coisas diferentes — pra confirmar a segunda, olhar `vercel ls`/o histórico real de deployments, não só a tela de configuração ou perguntar.
+16. **Domínio novo adicionado na Vercel não garante emissão automática do certificado SSL em tempo hábil.** Confirmado em 05/08/2026: DNS propagado e correto (`nslookup` batendo com o A record da Vercel) não foi suficiente — o site ficou fora do ar por ~7h, e `vercel certs ls` mostrava zero certificados pro domínio (não "ainda processando", literalmente nunca tentou). Verificação rápida e reaproveitável: `vercel certs ls` — se não aparecer o domínio depois de um tempo razoável, forçar com `vercel certs issue <domínio>` em vez de só esperar.
+17. **`id` duplicado entre dois formulários renderizados na mesma página quebra a associação `label for=`** (o navegador resolve pro primeiro elemento com aquele id — clicar no label do segundo campo foca o campo errado). Achado em `/settings` (`TenantForm` e `ProfileForm` ambos usando `id="name"`/`"document"`/`"phone"`). Ao adicionar um novo formulário numa página que já tem outro, conferir que nenhum `id` colide.
+18. **Env var nova na Vercel não entra em vigor na build já rodando — precisa de um redeploy depois de `vercel env add`.** Confirmado ao configurar o `ASAAS_WEBHOOK_SECRET` pendente (seção 7.1) em 21/07/2026: adicionar a variável via CLI não foi suficiente sozinho, foi preciso rodar `vercel --prod` de novo pra ela ficar disponível no runtime. Verificação simples e reaproveitável pra qualquer secret novo: `POST` na rota que o usa sem o header/valor esperado (deve dar 401/erro) e com o valor certo (deve dar 200) — comparar antes/depois do redeploy.
+19. **Biblioteca nativa carregada por `dlopen` não é rastreada pelo build — e falha SÓ em produção, EM SILÊNCIO.** O `sharp` resolve o binário da plataforma por caminho dinâmico (`@img/sharp-${plataforma}`), e esse binário carrega a `libvips` via `dlopen` do sistema operacional. Nenhum rastreador estático segue `dlopen`, então `@img/sharp-libvips-linux-x64` ficava de fora do pacote da função na Vercel: no Windows do desenvolvedor funcionava, em produção dava `ERR_DLOPEN_FAILED: libvips-cpp.so.8.18.3: cannot open shared object file`. Pior: a exceção era pega por um `catch` e virava "não consegui salvar agora, tente de novo" — o usuário tentou **cinco vezes** antes de reportar, e nem o build, nem o lint, nem os 870 testes, nem o deploy acusaram nada. Atingia a gravação de assinatura E o upload de logo (este quebrado sem ninguém ter notado). Corrigido com `outputFileTracingIncludes` no `next.config.ts`, incluindo **só** os binários `linux-x64` (a pasta `@img` inteira arrastaria Windows e macOS, ~50 MB por função). **Não dá para verificar isto no Windows:** o npm só instala o binário da plataforma local, então o glob não casa nada em dev — tentar instalar os de Linux com `npm install --os=linux --cpu=x64` troca os binários de *todos* os pacotes opcionais e quebra o build local (sumiu o `@parcel/watcher-win32-x64`). Por isso existe `src/lib/__tests__/sharp-empacotado.test.ts`, que confere o que dá para conferir sem deploy: que a config declara os binários, e que **todo arquivo que usa sharp está numa rota listada no rastreamento**. Usar sharp numa rota nova sem lembrar do `next.config` reintroduz o mesmo defeito com a mesma cara silenciosa.
+
+20. **`export type { ... }` num arquivo `"use server"` passa no typecheck e QUEBRA O BUILD.** O compilador de Server Actions do Turbopack trata toda export de um arquivo `"use server"` como endereço em tempo de execução, inclusive as que só existem para o TypeScript. O `tsc --noEmit` passava limpo e o `next build` morria com *"The export Balanco was not found in module"* — quatro erros de uma vez, todos apontando para um arquivo gerado (`.next-internal/.../actions.js`) que não existe no repositório, o que torna a mensagem difícil de ligar à causa. Descoberto ao reexportar tipos por conveniência em `actions/balanco.ts` (02/09/2026). **Regra:** arquivo `"use server"` exporta função `async`, e nada mais. Quem precisa dos tipos importa direto do `lib/` de onde eles vêm.
+
+---
+
+## 10. Débito técnico conhecido
+
+> Revisado em 19/08/2026 conferindo item a item contra o código. **Quatro dos
+> seis itens anteriores estavam resolvidos e continuavam listados** — e uma
+> lista de débito errada é pior que lista nenhuma: quem lê ou refaz trabalho
+> pronto, ou acredita em risco que não existe. Confira esta seção sempre que
+> for planejar, não só quando for adicionar item novo.
+
+**Resolvido desde a última revisão, e removido daqui:**
+
+| Item | Estado real |
+|---|---|
+| WhatsApp (Z-API) "nunca finalizada" | Implementada e ligada em dois caminhos: envio manual (`api/whatsapp/send`) e aviso automático ao cliente final (`lib/enviar-aviso-cliente.ts`) |
+| Drift do histórico de migrations | Reparado em 12/06/2026 (migration de reparo); 31 migrations aplicam do zero e `migrate status` confirma |
+| Ícones do PWA quebrados | `icon-192.png` e `icon-512.png` existem em `public/` |
+| Cobertura de testes "16 testes, 3 arquivos" | 504 testes em 40 arquivos |
+
+**Aberto de verdade:**
+
+- **Sem imagem `og:image` (1200x630).** O `openGraph` do layout não define
+  `images`, então o preview ao compartilhar link fica só texto. Precisa de
+  asset de design real — não dá pra gerar.
+- **Bônus de indicação via `user_metadata.ref_code` sem rate-limit/captcha.**
+  Decisão consciente de não corrigir (ver 7.2): o cadastro base já não tem essa
+  proteção independente de indicação, então o risco marginal é baixo.
+- **Textos de marketing em inglês nunca revisados por falante nativo.** O EN
+  foi traduzido por IA. Aceitável pra funcionar, arriscado pra copy de vendas.
+
+**Da comissão por OS (04/09/2026) — conhecidos e deixados de fora de propósito:**
+
+- **Não existe conferente da comissão.** `reconciliarComissao` é chamada de
+  cinco pontos, e nada no código, no tipo ou no banco obriga um sexto caminho a
+  chamá-la. Comissão FALTANDO alguém reclama; comissão ERRADA (a OS virou
+  R$ 1.800 e a conta a pagar continua sendo 10% de R$ 1.200) ninguém nota,
+  porque os dois números são plausíveis. A defesa seria rodar o reconciliador em
+  modo somente-leitura no cron diário e avisar a divergência sem corrigir.
+- **Pagar comissão é um clique por linha.** `markExpensePaid` atualiza uma
+  despesa por chamada. Quatro técnicos com vinte OS são oitenta cliques no
+  fechamento — e no segundo mês o dono volta para o caderno. Falta "pagar todas
+  as comissões da Ana".
+- **A comissão cai no mês errado no DRE.** `getReportData` soma despesa por
+  `paidAt` e receita por `paidAt`; a comissão de janeiro vence dia 5 e é paga em
+  fevereiro, contra uma receita que entrou em janeiro. Todo mês fecha com lucro
+  inflado e o seguinte com prejuízo, sistematicamente, e ninguém percebe porque
+  os dois números são plausíveis.
+- **Pagamento parcial de comissão não existe.** Adiantamento ("metade no dia
+  20") é prática corriqueira em prestadora pequena e não tem representação: o
+  dono vai marcar como paga uma linha que pagou pela metade, e sistema e caderno
+  voltam a divergir — que é o que o recurso existia para acabar.
+- **`fiscalIssRate` não é "a taxa da nota fiscal" inteira.** Numa NFS-e com
+  tomador PJ há retenção de IRRF, INSS e PIS/COFINS/CSLL além do ISS, e o
+  sistema não modela nenhuma. O emissor devolve `servicesAmount`, e a
+  conciliação lê apenas `flowStatus`, `number` e `pdf.url` — o valor que a
+  prefeitura de fato apurou nunca volta.
+- **Comissão só pode ser de quem é usuário do sistema.** Ela pendura em
+  `ServiceOrder.technicianId → User`, e o Starter tem 3 assentos. Uma empresa
+  com 6 técnicos num plano de 3 não consegue comissionar os outros 3: o limite
+  de assentos vira, em silêncio, limite de quem pode ser comissionado.
+
+**Pendências operacionais — não são código, e só o dono resolve:**
+
+- **Monitor externo não contratado.** Toda a instrumentação de 7.2.23 está
+  inerte até alguém apontar um serviço de fora para `/api/health`. Rota que
+  ninguém consulta é o mesmo que não ter monitoramento.
+- **Backup sem rotina e sem cópia fora do Supabase.** O mecanismo existe e está
+  provado (7.2.22), mas um backup de três meses atrás restaura o negócio de
+  três meses atrás — e se a conta do Supabase for perdida, o backup dele vai
+  junto.
+- **Cláusulas-Padrão da ANPD não firmadas com fornecedores estrangeiros.** O
+  período de adoção encerrou em 23/08/2025. Referenciá-las no contrato não
+  basta: é preciso firmá-las com cada fornecedor (Supabase, Vercel, Resend,
+  Sentry). É a pendência mais antiga e a única com prazo legal vencido.
+- **Split de pagamento do Asaas** depende de contrato de plataforma/marketplace
+  com eles, antes de qualquer linha de código.
+
+---
+
+## 11. Roadmap priorizado
+
+Itens #2-#7 do roadmap anterior (rate limiting, SEO básico, exportação LGPD,
+decisão sobre Plano Gratuito, testes automatizados, CI/CD) foram concluídos
+em 20/07/2026 — detalhes na seção 7.2, seção 9 (itens 13-14) e commits
+correspondentes. Plano Gratuito: decisão foi remover a ideia (na época, o
+trial de 15 dias cobria esse papel; o trial em si foi removido depois, em
+21/07/2026 — ver seção 1.1).
+
+Modo claro/escuro (05/08/2026) e suporte a PT/EN (07/08/2026) foram
+concluídos — ver seção 12.
+
+| # | Item | Por quê |
+|---|---|---|
+| 1 | Ativar WhatsApp (Z-API) | Pendência mais antiga, diferencial de venda citado na própria landing page |
+| 2 | Reconciliar drift de migrations | Pré-requisito real pra confiar 100% em `migrate deploy`/CI futuro (ver seção 9, itens 10 e 13) |
+| 3 | Expandir cobertura de testes | Infra pronta (seção 9, item 13) — faltam testes para `service-orders.ts`, `nfse.ts`, `billing.ts` |
+| 4 | Ícones PWA + imagem `og:image` | Precisa de asset de design real (192x192, 512x512, 1200x630) |
+| 5 | Decidir sobre bônus de indicação sem rate-limit | Risco baixo hoje, mas fica registrado pra decisão consciente (ver seção 7.2) |
+| 6 | Traduzir os textos de marketing com revisão humana | O EN de hoje foi traduzido por IA e não passou por revisão de um falante nativo — aceitável pra funcionar, arriscado pra copy de vendas |
+
+---
+
+## 12. Internacionalização (PT/EN) e tema claro/escuro
+
+**Modo claro/escuro (05/08/2026).** O tema claro já existia inteiro no CSS
+(shadcn/ui gera os dois desde o início do projeto), só nunca tinha sido
+ativado — `<html>` ficava travado em `className="dark"`. Faltava só o
+mecanismo de troca: script inline no `<head>` decide antes da hidratação
+(localStorage, com fallback pro `prefers-color-scheme` do sistema) pra não
+piscar a cor errada, e um toggle no rodapé da sidebar.
+
+**PT/EN (07/08/2026).** next-intl, 29 namespaces, ~1090 chaves com paridade
+exata entre `pt` e `en`. 116 arquivos migrados: landing, auth, as 16 abas do
+dashboard, portal público do cliente, e-mails, PDFs, mensagens de WhatsApp,
+push notifications e mensagens de erro/validação.
+
+**Como o idioma é resolvido.** `Tenant.locale` é a fonte de verdade: toda a
+equipe e tudo que é gerado pra aquela empresa (e-mail, PDF, WhatsApp) sai no
+mesmo idioma, mesmo disparado fora de um navegador. `src/i18n/request.ts`
+centraliza isso — com sessão, lê o tenant; sem sessão (páginas públicas), cai
+pro cookie `locale`. Contextos que rodam fora do request do Next.js (e-mails
+via cron/webhook, PDFs via `renderToBuffer`, WhatsApp, portal público)
+recebem o locale explícito via `getTranslator(locale, ns)` em `lib/i18n.ts`,
+porque `getTranslations()` não tem de onde resolver ali.
+
+**Mensagens de validação do zod.** Schemas vivem no escopo do módulo, sem
+request context, então guardam *códigos* (`"nameRequired"`) em vez de frases.
+`lib/validation.ts` traduz logo depois do `safeParse`, no idioma de quem
+chamou. Sem isso o formulário exibiria o código cru — pior que o português
+fixo que havia antes.
+
+### 12.1 Dois modos de falha que o typecheck não pega
+
+A migração rodou com ~22 agentes em paralelo, e os dois problemas mais
+sérios passaram limpos por `tsc`, lint e build:
+
+1. **Escritas concorrentes no mesmo `messages/*.json` se sobrescreveram.**
+   Os namespaces `team`, `schedule` e `billingReferral` sumiram inteiros:
+   os agentes migraram os `.tsx` e gravaram as traduções, mas um escritor
+   posterior salvou por cima (lost update clássico). As telas de Equipe,
+   Agenda, Assinatura e Indicação ficaram apontando pra texto inexistente —
+   e **o typecheck passou limpo**, porque next-intl não valida chave contra
+   arquivo em tempo de compilação. Recuperados do journal do workflow, sem
+   reprocessar agentes.
+
+2. **~100 textos ficaram em português fixo** depois da migração
+   "concluída" — entre eles a **página `/expired` inteira** (a tela que todo
+   cliente sem assinatura vê), os rótulos das abas em Permissões e as
+   mensagens de WhatsApp enviadas aos clientes finais.
+
+**Lição:** num trabalho de i18n, "compila e o build passa" não é evidência
+de nada. Duas verificações independentes fecham isso, e valem pra qualquer
+mudança futura em tradução — rodar as duas antes de considerar pronto:
+
+- casar **cada chave usada no código** contra os dois idiomas (hoje: 1148
+  chaves em 102 arquivos, 0 não resolvidas);
+- varrer **texto acentuado fora de comentários**, pra achar o que nunca
+  chegou a virar chave.
+
+Um terceiro cuidado, mais barato: comparar a contagem de folhas de `pt.json`
+e `en.json` — divergência ali denuncia tradução faltando num dos lados.
+
+### 12.2 Gotchas específicos
+
+- **`str.replace` do Python substitui todas as ocorrências**, não a primeira.
+  Ao aplicar edições em lote em Server Actions, isso inseriu a mesma
+  declaração de tradutor duas vezes na mesma função. Usar `count=1` quando a
+  substituição carrega uma declaração junto.
+- **Detectar comentário com regex de `//` é frágil** — a primeira versão do
+  verificador deixava comentários passarem e inflava a contagem de "texto
+  pendente" de 20 pra 204, escondendo os achados reais no meio do ruído.
+  Checar prefixo da linha (`//`, `*`, `/*`) é mais confiável.
+- **Componente criado ≠ componente ligado.** O `PublicLanguageToggle` existia
+  e funcionava, mas não estava referenciado em lugar nenhum: trocar de idioma
+  deslogado só era possível editando o cookie na mão. Só apareceu no teste
+  em produção, clicando na tela — nenhuma verificação estática pegaria isso.
+
+---
+
+## 13. Como este documento deve ser mantido
+
+Atualizar este arquivo sempre que:
+- Uma nova integração externa for adicionada
+- Uma decisão de arquitetura importante for tomada ou revertida
+- Um "gotcha" caro em tempo de debug for descoberto
+- Um item do roadmap for concluído (mover pra seção 5, remover da seção 11)
