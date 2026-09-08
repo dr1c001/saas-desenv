@@ -11,8 +11,17 @@ export default async function ExpiredPage() {
   // If somehow active again, redirect to dashboard
   if (tenantStatus?.subscriptionStatus === "ACTIVE") redirect("/dashboard")
 
-  // Sem trial: TRIAL aqui significa "nunca assinou", não "trial expirado".
-  const neverSubscribed = tenantStatus?.subscriptionStatus === "TRIAL"
+  // TRIAL chegando AQUI significa que o teste acabou: quem está dentro do prazo
+  // nunca é redirecionado para esta tela (ver hasActiveSubscription).
+  //
+  // A distinção que falta a `subscriptionStatus` sozinho vem da DATA. Sem ela,
+  // quem usou quinze dias leria "o ServiçoOS não tem período de teste" logo
+  // depois de ter tido um — texto que já esteve certo, e que ficou mentindo
+  // quando o teste voltou em 08/09/2026.
+  const emTrial = tenantStatus?.subscriptionStatus === "TRIAL"
+  const testeAcabou = emTrial && !!tenantStatus?.trialEndsAt
+  // Empresa criada enquanto não havia teste: nunca teve prazo, nunca assinou.
+  const neverSubscribed = emTrial && !tenantStatus?.trialEndsAt
   const isPending = tenantStatus?.subscriptionStatus === "PENDING"
   const isCancelled = tenantStatus?.subscriptionStatus === "CANCELLED"
   const isPastDue = tenantStatus?.subscriptionStatus === "PAST_DUE"
@@ -27,6 +36,13 @@ export default async function ExpiredPage() {
             ? <Clock className="size-8 text-blue-500" />
             : <AlertCircle className="size-8 text-orange-500" />}
         </div>
+
+        {testeAcabou && (
+          <>
+            <h1 className="text-2xl font-bold">{t("trialTerminou.title")}</h1>
+            <p className="text-muted-foreground">{t("trialTerminou.desc")}</p>
+          </>
+        )}
 
         {neverSubscribed && (
           <>

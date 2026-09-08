@@ -67,6 +67,26 @@ export default async function FiscalSettingsPage() {
             {t("form.description")}
           </p>
 
+          {/* O QUE NÃO DEPENDE DE NÓS.
+              Cadastrar a empresa aqui não faz a prefeitura reconhecer nota
+              nenhuma: falta o certificado digital, que ASSINA o documento, e o
+              credenciamento no município, que é entre a empresa e a prefeitura
+              dela — nem nós nem o emissor podemos fazer por ela.
+              Confirmado com a nfe.io em 08/09/2026: "precisa do certificado A1
+              de cada empresa".
+              Sem este aviso, a pessoa preenche o formulário, acha que acabou, e
+              descobre o que faltava quando a primeira nota falha — que é a pior
+              hora, porque já prometeu a nota ao cliente. */}
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-4 space-y-2">
+            <p className="text-sm font-semibold">{t("antesDeEmitir.titulo")}</p>
+            <ul className="space-y-1.5 text-sm text-muted-foreground">
+              <li>{t("antesDeEmitir.certificado")}</li>
+              <li>{t("antesDeEmitir.credenciamento")}</li>
+              <li>{t("antesDeEmitir.inscricao")}</li>
+            </ul>
+            <p className="text-xs text-muted-foreground">{t("antesDeEmitir.rodape")}</p>
+          </div>
+
           <form action={registerFiscalCompany} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">

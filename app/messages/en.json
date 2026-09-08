@@ -1043,7 +1043,7 @@
   "expired": {
     "neverSubscribed": {
       "title": "Subscribe to a plan to get started",
-      "desc": "ServiçoOS has no free trial — choose one of the plans below to unlock access to the system."
+      "desc": "Choose one of the plans below to unlock access to the system."
     },
     "pending": {
       "title": "Confirming your payment",
@@ -1066,7 +1066,11 @@
     "ctaPending": "View subscription status",
     "ctaDefault": "View plans and subscribe",
     "helpQuestion": "Questions?",
-    "helpLink": "Talk to us"
+    "helpLink": "Talk to us",
+    "trialTerminou": {
+      "title": "Your free trial has ended",
+      "desc": "That was 15 days on us. Pick a plan to carry on from where you stopped — all your data is still here."
+    }
   },
   "filiais": {
     "title": "Branches",
@@ -2760,7 +2764,14 @@
       },
       "passo1": "Step 1 of 2",
       "passo2": "Step 2 of 2",
-      "certificadoTravado": "Available after you register the company above. The certificate is installed ON the issuer's company record, so it has to exist first — uploading before would leave the file with nowhere to go."
+      "certificadoTravado": "Available after you register the company above. The certificate is installed ON the issuer's company record, so it has to exist first — uploading before would leave the file with nowhere to go.",
+      "antesDeEmitir": {
+        "titulo": "Three things the system can't do for you before your first invoice",
+        "certificado": "• Your company's A1 digital certificate. It signs the invoice — without it the city won't recognise anything. You upload the file below, after registering the company.",
+        "credenciamento": "• Registration with your city hall. Many municipalities require you to authorise the issuer in their system before the first invoice. You do this with your company's login on the city's website.",
+        "inscricao": "• An active, correct municipal registration number. It's the number you enter in the form below.",
+        "rodape": "We can't do these three for you: they are your company's own credentials and registrations with the municipality."
+      }
     }
   },
   "settingsCore": {

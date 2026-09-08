@@ -1043,7 +1043,7 @@
   "expired": {
     "neverSubscribed": {
       "title": "Assine um plano para começar",
-      "desc": "O ServiçoOS não tem período de teste — escolha um dos planos abaixo para liberar o acesso ao sistema."
+      "desc": "Escolha um dos planos abaixo para liberar o acesso ao sistema."
     },
     "pending": {
       "title": "Confirmando seu pagamento",
@@ -1066,7 +1066,11 @@
     "ctaPending": "Ver status da assinatura",
     "ctaDefault": "Ver planos e assinar",
     "helpQuestion": "Dúvidas?",
-    "helpLink": "Fale conosco"
+    "helpLink": "Fale conosco",
+    "trialTerminou": {
+      "title": "Seu teste grátis terminou",
+      "desc": "Foram 15 dias por nossa conta. Escolha um plano para continuar de onde parou — seus dados estão todos aqui."
+    }
   },
   "filiais": {
     "title": "Filiais",
@@ -2760,7 +2764,14 @@
       },
       "passo1": "Passo 1 de 2",
       "passo2": "Passo 2 de 2",
-      "certificadoTravado": "Disponível depois de cadastrar a empresa acima. O certificado é instalado NA empresa do emissor, então ela precisa existir primeiro — enviar antes deixaria o arquivo sem onde ser aplicado."
+      "certificadoTravado": "Disponível depois de cadastrar a empresa acima. O certificado é instalado NA empresa do emissor, então ela precisa existir primeiro — enviar antes deixaria o arquivo sem onde ser aplicado.",
+      "antesDeEmitir": {
+        "titulo": "Antes da primeira nota, três coisas não dependem do sistema",
+        "certificado": "• Certificado digital A1 da sua empresa. É ele que assina a nota — sem ele a prefeitura não reconhece nada. Você envia o arquivo logo abaixo, depois de cadastrar a empresa.",
+        "credenciamento": "• Credenciamento na prefeitura da sua cidade. Muitos municípios exigem que você autorize o emissor no sistema deles antes da primeira nota. Isso é feito por você, com o login da sua empresa no site da prefeitura.",
+        "inscricao": "• Inscrição municipal ativa e correta. É o número que você informa no formulário abaixo.",
+        "rodape": "Não conseguimos fazer esses três por você: são credenciais e cadastros da sua empresa junto ao município."
+      }
     }
   },
   "settingsCore": {
