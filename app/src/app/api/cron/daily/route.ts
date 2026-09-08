@@ -522,7 +522,43 @@ export async function GET(req: NextRequest) {
         data: {
           finishedAt: new Date(),
           ok: semErro,
-          detail: `${results.errors} erro(s); nps ${results.nps}, contratos ${results.contratos}, geocodificados ${results.geocoded}, cobrancas ${results.cobrancasEnviadas}`,
+          // A linha que fica GRAVADA. Toda etapa nova precisa aparecer aqui —
+          // um contador que existe so em memoria some quando a funcao termina,
+          // e ai nao ha como saber, olhando producao, se a etapa rodou.
+          //
+          // Foi o que aconteceu com o conferente de comissoes: ele foi ligado
+          // no cron em 05/09/2026, rodou tres dias seguidos, e nao havia
+          // nenhuma forma de conferir isso. (Achado olhando a tabela de
+          // execucoes em 08/09/2026.)
+          // A linha que fica GRAVADA, e a UNICA janela para o que aconteceu:
+          // a funcao termina, o objeto `results` some, e o que nao entrou aqui
+          // deixa de existir.
+          //
+          // Sete etapas rodavam sem deixar rastro nenhum — entre elas o aviso
+          // de atraso aos assinantes, o alerta de certificado vencendo e a nota
+          // fiscal REJEITADA. E o conferente de comissoes, ligado tres dias
+          // antes, tambem nao aparecia.
+          //
+          // Ha um teste que quebra quando alguem acrescenta um contador e
+          // esquece desta linha: lib/__tests__/cron-resumo.test.ts.
+          // (Achado olhando a tabela de execucoes em 08/09/2026.)
+          detail: [
+            `${results.errors} erro(s)`,
+            `assinaturas ${results.reconciled} conciliadas/${results.stuckPending} presas`,
+            `avisos de atraso ${results.avisosAtraso}`,
+            `onboarding ${results.day3}`,
+            `nps ${results.nps}`,
+            `contratos ${results.contratos}`,
+            `cobrancas ${results.cobrancasEnviadas}`,
+            `notas ${results.notasConsultadas} consultadas/${results.notasRejeitadas} rejeitadas`,
+            `certificados vencendo ${results.certificadosVencendo}`,
+            `comissoes ${results.comissoesConferidas} conferidas/${results.comissoesDivergentes} divergentes` +
+              (results.comissoesForaDaJanela > 0
+                ? ` (${results.comissoesForaDaJanela} fora da janela)`
+                : ""),
+            `geocodificados ${results.geocoded}`,
+            `limpeza ${results.rateLimitCleanup}`,
+          ].join("; "),
         },
       })
       .catch((e) => console.error("[cron] falha ao registrar execucao:", e))
