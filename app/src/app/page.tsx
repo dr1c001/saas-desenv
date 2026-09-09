@@ -315,6 +315,26 @@ export default async function LandingPage() {
               )
             })}
           </div>
+          {/* A saída para quem não cabe no maior plano.
+              O Enterprise deixou de ser ilimitado em 04/09/2026 (30 usuários,
+              200 notas). Sem esta linha, a empresa GRANDE — a que mais paga —
+              lê um teto na página e não vê porta nenhuma; o plano
+              personalizado existe, por empresa, e era invisível aqui. */}
+          <p className="text-center text-sm text-muted-foreground mt-8">
+            {t("pricing.custom.text")}{" "}
+            <a
+              // Sem `&&` guardando a linha inteira: se o WhatsApp não estiver
+              // configurado, o e-mail atende. O contrário — a porta sumir
+              // porque faltou uma variável de ambiente — devolve a página ao
+              // problema que esta linha existe para resolver.
+              href={suporteWhatsapp || "mailto:suporte@servicoos.com.br"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary underline underline-offset-2"
+            >
+              {t("pricing.custom.link")}
+            </a>
+          </p>
           <p className="text-center text-xs text-muted-foreground mt-8">
             {t("pricing.disclaimer")}
           </p>

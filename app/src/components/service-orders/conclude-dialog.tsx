@@ -149,6 +149,10 @@ export function ConcluirDialog({
           conclusionNote,
           items,
           invoiceImmediately: invoice,
+          // A MESMA conversão do caminho com sinal, logo abaixo: sem esta
+          // linha o técnico digitava 10% no meio do mato e o número se perdia
+          // na fila, que levava só texto, itens e a decisão de faturar.
+          commissionPct: commissionPct.trim() === "" ? null : Number(commissionPct.replace(",", ".")),
         })
         setOpen(false)
         return
@@ -238,7 +242,15 @@ export function ConcluirDialog({
             </div>
 
             {items.map((item, i) => (
-              <div key={i} className="grid gap-2 grid-cols-[1fr_70px_110px_28px] items-end">
+              // O `md:` é o que faz a descrição caber no celular.
+              //
+              // Sem ele, as quatro colunas fixas (70+110+28 mais três vãos de
+              // 8px = 232px) deixavam ~79px para o campo onde o técnico escreve
+              // o que ele fez — dentro de um diálogo de 343px. Empilhado no
+              // celular e em quatro colunas a partir do tablet, que é o que o
+              // formulário de OS já fazia. (Achado auditando o uso em campo,
+              // 08/09/2026.)
+              <div key={i} className="grid gap-2 md:grid-cols-[1fr_70px_110px_28px] items-end">
                 <div>
                   {i === 0 && <p className="text-xs text-muted-foreground mb-1">{t("items.descriptionLabel")}</p>}
                   <Input

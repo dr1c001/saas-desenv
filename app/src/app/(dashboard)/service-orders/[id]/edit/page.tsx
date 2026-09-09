@@ -4,6 +4,7 @@ import { getAcoesPermitidas, getTenant } from "@/lib/auth"
 import { podeFazer } from "@/lib/acoes"
 import { getServiceOrder } from "@/actions/service-orders"
 import { getClients } from "@/actions/clients"
+import { getTeamMembers } from "@/actions/team"
 import { ServiceOrderEditForm } from "@/components/service-orders/service-order-edit-form"
 import { formatOsNumber } from "@/lib/utils"
 
@@ -22,7 +23,11 @@ export default async function EditServiceOrderPage({
 }) {
   const { id } = await params
   await exigir("os.editar", `/service-orders/${id}`)
-  const [order, clients] = await Promise.all([getServiceOrder(id), getClients()])
+  const [order, clients, teamMembers] = await Promise.all([
+    getServiceOrder(id),
+    getClients(),
+    getTeamMembers(),
+  ])
   if (!order) notFound()
 
   const t = await getTranslations("serviceOrdersPages")
@@ -33,7 +38,7 @@ export default async function EditServiceOrderPage({
         <p className="text-sm font-mono text-muted-foreground">{formatOsNumber(order.number, order.createdAt)}</p>
         <h1 className="text-2xl font-bold">{t("edit.title")}</h1>
       </div>
-      <ServiceOrderEditForm order={order} clients={clients} />
+      <ServiceOrderEditForm order={order} clients={clients} teamMembers={teamMembers} />
     </div>
   )
 }

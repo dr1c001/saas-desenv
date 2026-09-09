@@ -16,6 +16,7 @@ import { Plus, Trash2 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 
 type Client = { id: string; name: string }
+type TeamMember = { id: string; name: string }
 type Item = { description: string; quantity: number; unitPrice: number }
 
 type OrderData = {
@@ -23,6 +24,7 @@ type OrderData = {
   title: string
   description: string | null
   clientId: string
+  technicianId: string | null
   scheduledAt: Date | null
   items: { description: string; quantity: unknown; unitPrice: unknown }[]
 }
@@ -30,9 +32,10 @@ type OrderData = {
 type Props = {
   order: OrderData
   clients: Client[]
+  teamMembers: TeamMember[]
 }
 
-export function ServiceOrderEditForm({ order, clients }: Props) {
+export function ServiceOrderEditForm({ order, clients, teamMembers }: Props) {
   const t = useTranslations("serviceOrdersComponents")
   const tc = useTranslations("common")
   const [items, setItems] = useState<Item[]>(
@@ -109,6 +112,30 @@ export function ServiceOrderEditForm({ order, clients }: Props) {
               </SelectContent>
             </Select>
             {state.errors?.clientId && <p className="text-sm text-destructive">{state.errors.clientId[0]}</p>}
+          </div>
+
+          {/* O RESPONSÁVEL. Este campo faltava aqui, e só aqui — a tela de
+              criar sempre teve. Sem ele o navegador não mandava
+              `technicianId`, e cada edição apagava quem executou o serviço: a
+              OS sumia da lista e do mapa do técnico e a comissão pendente ia
+              junto, por não haver mais a quem pagar. */}
+          <div className="space-y-1.5">
+            <Label htmlFor="technicianId">{t("form.technicianLabel")}</Label>
+            <Select name="technicianId" defaultValue={order.technicianId ?? ""}>
+              <SelectTrigger id="technicianId">
+                <SelectValue placeholder={t("form.technicianPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                {/* "Ninguém" precisa ser escolhível: sem esta opção, uma OS
+                    atribuída por engano não teria como voltar a ficar livre. */}
+                <SelectItem value="">{t("form.technicianNone")}</SelectItem>
+                {teamMembers.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1.5">

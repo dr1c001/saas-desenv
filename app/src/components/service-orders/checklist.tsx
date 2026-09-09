@@ -47,7 +47,12 @@ export function Checklist({ orderId, items, readonly }: { orderId: string; items
             <button
               disabled={readonly}
               onClick={() => startTransition(() => toggleChecklistItem(item.id, !item.completed))}
-              className="shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
+              // Alvo de toque de 44px no celular, menor no desktop.
+              //
+              // Era um ícone de 16px sem padding — pouco mais de um terço do
+              // mínimo que este repositório já adota na barra lateral. É o
+              // botão que o técnico mais aperta em campo, muitas vezes de luva.
+              className="shrink-0 -m-2.5 p-2.5 md:-m-1.5 md:p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-50"
             >
               {item.completed
                 ? <CheckSquare2 className="size-4 text-green-500" />
@@ -59,7 +64,10 @@ export function Checklist({ orderId, items, readonly }: { orderId: string; items
             {!readonly && (
               <button
                 onClick={() => startTransition(() => deleteChecklistItem(item.id))}
-                className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                // No celular NÃO existe hover: o botão ficava invisível e sem
+                // como ser alcançado. Visível sempre no toque, discreto até o
+                // hover a partir do tablet.
+                className="shrink-0 -m-2.5 p-2.5 md:-m-1.5 md:p-1.5 text-muted-foreground hover:text-destructive transition-opacity md:opacity-0 md:group-hover:opacity-100"
               >
                 <Trash2 className="size-3.5" />
               </button>

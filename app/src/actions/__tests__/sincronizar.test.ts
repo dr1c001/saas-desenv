@@ -68,6 +68,52 @@ const op = (orderId: string, p: Partial<Operacao> = {}): Operacao => ({
   ...p,
 })
 
+describe("a comissão digitada sem sinal chega junto", () => {
+  // A fila levava texto, itens e a decisão de faturar — e mais nada. O técnico
+  // que terminava o serviço no meio do mato digitava "10%" no Concluir, e o
+  // número morria ali: a OS subia concluída e sem comissão, ninguém era
+  // avisado, e o dono só descobria no dia 5, pela reclamação de quem executou.
+  //
+  // `completeServiceOrder` é mockada neste arquivo (o efeito tem os próprios
+  // testes), então o que se prova aqui é o REPASSE: a porcentagem sai da fila
+  // e chega no quinto argumento.
+  it("a porcentagem da operação é repassada ao concluir", async () => {
+    const { os } = await cenario()
+    const { sincronizar } = await import("@/actions/sincronizar")
+
+    await sincronizar([
+      op(os.id, {
+        dados: {
+          conclusionNote: "Trocada a bomba",
+          items: [{ description: "Mão de obra", quantity: 1, unitPrice: 800 }],
+          invoiceImmediately: false,
+          commissionPct: 10,
+        },
+      }),
+    ])
+
+    expect(mockConcluir).toHaveBeenCalledWith(
+      os.id,
+      "Trocada a bomba",
+      [{ description: "Mão de obra", quantity: 1, unitPrice: 800 }],
+      false,
+      10
+    )
+  })
+
+  it("operação SEM a porcentagem repassa `undefined`, e não zero", async () => {
+    // `undefined` quer dizer "não mexe no que já está gravado" — é assim que a
+    // assistente de IA conclui uma OS sem apagar uma comissão que alguém já
+    // tinha definido. Mandar `null` ou `0` aqui apagaria.
+    const { os } = await cenario()
+    const { sincronizar } = await import("@/actions/sincronizar")
+
+    await sincronizar([op(os.id)])
+
+    expect(mockConcluir).toHaveBeenCalledWith(os.id, "Trocada a bomba", [], false, undefined)
+  })
+})
+
 describe("idempotência", () => {
   it("aplica a operação uma vez", async () => {
     const { os } = await cenario()

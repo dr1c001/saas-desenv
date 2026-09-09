@@ -117,7 +117,7 @@
     "register": {
       "title": "Criar conta",
       "subtitleWithRef": "Você foi indicado — ganhe 10% de desconto no seu plano!",
-      "subtitleDefault": "Crie sua conta e escolha um plano para começar",
+      "subtitleDefault": "Crie sua conta e use 15 dias grátis — sem cartão.",
       "refBanner": "🎁 Código de indicação aplicado! Você ganhou <strong>10% de desconto</strong> no seu primeiro pagamento.",
       "companyNameLabel": "Nome da empresa",
       "companyNamePlaceholder": "Minha Empresa Ltda",
@@ -134,7 +134,8 @@
       "errors": {
         "rateLimit": "Muitas tentativas de cadastro. Aguarde alguns minutos e tente novamente.",
         "alreadyRegistered": "Este e-mail já está cadastrado. Tente fazer login."
-      }
+      },
+      "subtitle": "Crie sua conta e use 15 dias grátis — sem cartão."
     },
     "forgotPassword": {
       "title": "Esqueci minha senha",
@@ -1332,11 +1333,11 @@
       "createAccount": "Criar conta"
     },
     "hero": {
-      "badge": "Configure em minutos · Cancele quando quiser",
+      "badge": "15 dias grátis · sem cartão de crédito",
       "titleLine1": "Chega de controlar OS",
       "titleLine2": "pelo WhatsApp e planilha",
       "subtitle": "Sistema completo para empresas de serviço — orçamentos, ordens de serviço, equipe em campo no mapa, financeiro e NFS-e. Tudo em um só lugar, no celular ou no computador.",
-      "ctaPrimary": "Criar conta e assinar",
+      "ctaPrimary": "Começar teste grátis",
       "ctaSecondary": "Já tenho conta",
       "socialProof": "<strong>Sem fidelidade e sem taxa de instalação</strong> — seus dados são seus e você exporta quando quiser",
       "ctaDemo": "Ver o sistema por dentro"
@@ -1386,8 +1387,8 @@
           "desc": "Cadastre sua empresa em menos de 2 minutos. Nenhuma configuração técnica necessária."
         },
         {
-          "title": "Escolha seu plano",
-          "desc": "Assine em segundos — aceita boleto ou cartão, direto pelo Asaas, com total segurança."
+          "title": "Use por 15 dias",
+          "desc": "Acesso completo, sem cartão. No fim do prazo você escolhe um plano — ou não, e nada é cobrado."
         },
         {
           "title": "Comece a usar",
@@ -1463,12 +1464,16 @@
     },
     "pricing": {
       "title": "Planos simples e transparentes",
-      "subtitle": "Escolha o plano ideal para o tamanho da sua equipe. Cancele quando quiser.",
+      "subtitle": "Todos começam com 15 dias grátis. Escolha o plano depois de testar.",
       "mostPopular": "Mais popular",
       "perMonth": "/mês",
       "yearlyNote": "ou R$ {price}/ano (economize 2 meses)",
-      "subscribe": "Assinar",
-      "disclaimer": "Todos os preços em BRL. Cobranças via boleto ou cartão de crédito.",
+      "subscribe": "Começar grátis",
+      "custom": {
+        "text": "Precisa de mais usuários ou de mais notas fiscais do que o Enterprise?",
+        "link": "Monte um plano sob medida"
+      },
+      "disclaimer": "Todos os preços em BRL. Você só paga depois dos 15 dias, se decidir continuar. Boleto ou cartão.",
       "plans": {
         "starter": {},
         "pro": {},
@@ -1507,10 +1512,10 @@
     "finalCta": {
       "title": "Pronto para organizar sua empresa?",
       "line1": "Do primeiro orçamento à nota fiscal, tudo num sistema só.",
-      "line2": "Configure em minutos e comece hoje mesmo.",
+      "line2": "Comece hoje: 15 dias grátis, sem cartão.",
       "button": "Criar conta",
       "badges": {
-        "payment": "Boleto ou cartão",
+        "payment": "Sem cartão para começar",
         "secure": "Dados seguros (LGPD)",
         "cancelAnytime": "Cancele quando quiser"
       }
@@ -1547,7 +1552,7 @@
     "terms": {
       "metaTitle": "Termos de Uso — ServiçoOS",
       "title": "Termos de Uso",
-      "lastUpdated": "Última atualização: 21 de agosto de 2026",
+      "lastUpdated": "Última atualização: 8 de setembro de 2026",
       "section1": {
         "title": "1. Quem presta este serviço",
         "p1": "O ServiçoOS é operado por <strong>ADRIEL WELLINGTON RODRIGUES</strong>, inscrito no CNPJ nº <strong>53.325.011/0001-08</strong>, doravante denominado “ServiçoOS”, “nós” ou “prestador”.",
@@ -1565,7 +1570,7 @@
       },
       "section4": {
         "title": "4. Contratação e acesso",
-        "p1": "O acesso às funcionalidades do ServiçoOS exige um plano pago ativo. Não há período de teste gratuito: a conta criada permanece bloqueada até a confirmação do primeiro pagamento.",
+        "p1": "O ServiçoOS oferece 15 dias de teste grátis, sem necessidade de cartão de crédito. Durante esse período o acesso às funcionalidades é liberado integralmente. Encerrado o prazo sem a contratação de um plano, o acesso é bloqueado — nada é cobrado automaticamente e nenhum dado é apagado.",
         "p2": "Caso a assinatura seja cancelada ou deixe de ser paga, o acesso às funcionalidades é bloqueado — os dados cadastrados permanecem salvos e são restaurados automaticamente assim que um plano voltar a ser assinado. Em caso de atraso de pagamento, há um período de carência antes do bloqueio, informado na área de cobrança do sistema."
       },
       "section5": {
@@ -1631,7 +1636,7 @@
       },
       "section16": {
         "title": "16. Contato",
-        "p1": "Dúvidas sobre estes Termos de Uso podem ser enviadas para <email>olisuporte1@gmail.com</email>."
+        "p1": "Dúvidas sobre estes Termos de Uso podem ser enviadas para <email>suporte@servicoos.com.br</email>."
       }
     },
     "privacy": {
@@ -1707,7 +1712,7 @@
       },
       "section8": {
         "title": "8. Como exercer seus direitos",
-        "p1": "O proprietário da conta (perfil Owner) pode baixar uma cópia de todos os dados da empresa a qualquer momento, de forma self-service, em Configurações → Exportar dados. Para os demais direitos (correção, eliminação, revogação de consentimento, esclarecimentos), entre em contato pelo e-mail <email>olisuporte1@gmail.com</email> — este é também o canal do encarregado de dados (DPO) do ServiçoOS. Responderemos dentro de um prazo razoável, conforme previsto na LGPD."
+        "p1": "O proprietário da conta (perfil Owner) pode baixar uma cópia de todos os dados da empresa a qualquer momento, de forma self-service, em Configurações → Exportar dados. Para os demais direitos (correção, eliminação, revogação de consentimento, esclarecimentos), entre em contato pelo e-mail <email>suporte@servicoos.com.br</email> — este é também o canal do encarregado de dados (DPO) do ServiçoOS. Responderemos dentro de um prazo razoável, conforme previsto na LGPD."
       },
       "section9": {
         "title": "9. Segurança da informação",
@@ -1727,7 +1732,7 @@
       },
       "section13": {
         "title": "13. Encarregado de dados (DPO)",
-        "p1": "Para todos os assuntos relacionados à proteção de dados pessoais, o encarregado de dados pode ser contatado pelo e-mail <email>olisuporte1@gmail.com</email>."
+        "p1": "Para todos os assuntos relacionados à proteção de dados pessoais, o encarregado de dados pode ser contatado pelo e-mail <email>suporte@servicoos.com.br</email>."
       }
     }
   },
@@ -2103,7 +2108,7 @@
     },
     "banner": {
       "title": "Sem conexão.",
-      "description": "Você está vendo dados salvos no aparelho, que podem estar desatualizados. Alterações não serão salvas até o sinal voltar."
+      "description": "Você está vendo dados salvos no aparelho, que podem estar desatualizados. Concluir uma OS e mudar o status ficam guardados e sobem sozinhos quando o sinal voltar; o resto espera."
     },
     "fila": {
       "pendentes": "{n, plural, one {# alteração aguardando envio} other {# alterações aguardando envio}}",
@@ -2280,9 +2285,9 @@
       "Até 30 usuários",
       "OS ilimitadas",
       "200 notas fiscais por mês",
-      "Onboarding dedicado",
+      "Ajuda na configuração inicial",
       "API de integração",
-      "Suporte 24h via WhatsApp"
+      "Atendimento por WhatsApp em horário comercial"
     ]
   },
   "portal": {
@@ -2560,6 +2565,7 @@
       "clientPlaceholder": "Selecione um cliente",
       "technicianLabel": "Técnico responsável",
       "technicianPlaceholder": "Selecione um técnico (opcional)",
+      "technicianNone": "Ninguém ainda",
       "scheduledLabel": "Agendamento",
       "itemsTitle": "Itens / Serviços",
       "createPending": "Criando [[osC]]...",

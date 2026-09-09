@@ -67,7 +67,17 @@ function RegisterForm() {
       return
     }
     if (!needsEmailConfirmation) {
-      router.push("/billing")
+      // Vai para o SISTEMA, e não para o paywall.
+      //
+      // Enquanto não havia teste, mandar para /billing era o certo: a conta
+      // nascia bloqueada e a única coisa a fazer era assinar. Com os 15 dias de
+      // volta, o recém-cadastrado tem acesso completo — e caía numa tela
+      // dizendo "sem assinatura, escolha um plano para começar a usar".
+      //
+      // É a pior primeira impressão possível: a pessoa acabou de se cadastrar
+      // por causa do "15 dias grátis" e a primeira tela diz que ela ainda não
+      // pode usar.
+      router.push("/dashboard")
       router.refresh()
       return
     }

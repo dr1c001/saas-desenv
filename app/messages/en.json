@@ -117,7 +117,7 @@
     "register": {
       "title": "Create account",
       "subtitleWithRef": "You were referred — get 10% off your plan!",
-      "subtitleDefault": "Create your account and choose a plan to get started",
+      "subtitleDefault": "Create your account and use it free for 15 days — no card.",
       "refBanner": "🎁 Referral code applied! You earned <strong>10% off</strong> your first payment.",
       "companyNameLabel": "Company name",
       "companyNamePlaceholder": "My Company Ltd.",
@@ -134,7 +134,8 @@
       "errors": {
         "rateLimit": "Too many registration attempts. Please wait a few minutes and try again.",
         "alreadyRegistered": "This email is already registered. Try signing in instead."
-      }
+      },
+      "subtitle": "Create your account and use it free for 15 days — no card."
     },
     "forgotPassword": {
       "title": "Forgot my password",
@@ -1332,11 +1333,11 @@
       "createAccount": "Create account"
     },
     "hero": {
-      "badge": "Set up in minutes · Cancel anytime",
+      "badge": "15 days free · no credit card",
       "titleLine1": "Stop managing service orders",
       "titleLine2": "over WhatsApp and spreadsheets",
       "subtitle": "The complete system for service businesses — quotes, service orders, your field team on the map, finances and e-invoices. All in one place, on your phone or computer.",
-      "ctaPrimary": "Create account and subscribe",
+      "ctaPrimary": "Start free trial",
       "ctaSecondary": "I already have an account",
       "socialProof": "<strong>No lock-in, no setup fee</strong> — your data is yours and you can export it anytime",
       "ctaDemo": "See it in action"
@@ -1386,8 +1387,8 @@
           "desc": "Register your company in under 2 minutes. No technical setup required."
         },
         {
-          "title": "Choose your plan",
-          "desc": "Subscribe in seconds — pay by boleto or card, securely through Asaas."
+          "title": "Use it for 15 days",
+          "desc": "Full access, no card. When the period ends you pick a plan — or you don't, and nothing is charged."
         },
         {
           "title": "Start using it",
@@ -1463,12 +1464,16 @@
     },
     "pricing": {
       "title": "Simple, transparent plans",
-      "subtitle": "Choose the plan that fits the size of your team. Cancel anytime.",
+      "subtitle": "Everyone starts with 15 days free. Choose a plan after you've tried it.",
       "mostPopular": "Most popular",
       "perMonth": "/mo",
       "yearlyNote": "or R$ {price}/year (save 2 months)",
-      "subscribe": "Subscribe",
-      "disclaimer": "All prices in BRL. Billed via boleto or credit card.",
+      "subscribe": "Start free",
+      "custom": {
+        "text": "Need more users or more invoices than Enterprise?",
+        "link": "Get a custom plan"
+      },
+      "disclaimer": "All prices in BRL. You only pay after the 15 days, if you decide to continue. Bank slip or card.",
       "plans": {
         "starter": {},
         "pro": {},
@@ -1507,10 +1512,10 @@
     "finalCta": {
       "title": "Ready to get your business organized?",
       "line1": "From the first quote to the invoice, all in one system.",
-      "line2": "Set up in minutes and get started today.",
+      "line2": "Start today: 15 days free, no card.",
       "button": "Create account",
       "badges": {
-        "payment": "Boleto or card",
+        "payment": "No card to start",
         "secure": "Secure data (LGPD)",
         "cancelAnytime": "Cancel anytime"
       }
@@ -1547,7 +1552,7 @@
     "terms": {
       "metaTitle": "Terms of Use — ServiçoOS",
       "title": "Terms of Use",
-      "lastUpdated": "Last updated: August 21, 2026",
+      "lastUpdated": "Last updated: 8 September 2026",
       "section1": {
         "title": "1. Who provides this service",
         "p1": "ServiçoOS is operated by <strong>ADRIEL WELLINGTON RODRIGUES</strong>, registered under CNPJ No. <strong>53.325.011/0001-08</strong>, hereinafter referred to as “ServiçoOS,” “we,” or “provider.”",
@@ -1565,7 +1570,7 @@
       },
       "section4": {
         "title": "4. Subscription and access",
-        "p1": "Access to ServiçoOS features requires an active paid plan. There is no free trial period: a newly created account stays locked until the first payment is confirmed.",
+        "p1": "ServiçoOS offers a 15-day free trial, with no credit card required. During that period access to all features is fully enabled. If the period ends without a plan being purchased, access is blocked — nothing is charged automatically and no data is deleted.",
         "p2": "If the subscription is cancelled or goes unpaid, access to the features is blocked — registered data remains saved and is automatically restored as soon as a plan is subscribed to again. In case of late payment, there is a grace period before the block, shown in the billing area of the system."
       },
       "section5": {
@@ -1631,7 +1636,7 @@
       },
       "section16": {
         "title": "16. Contact",
-        "p1": "Questions about these Terms of Use can be sent to <email>olisuporte1@gmail.com</email>."
+        "p1": "Questions about these Terms of Use can be sent to <email>suporte@servicoos.com.br</email>."
       }
     },
     "privacy": {
@@ -1707,7 +1712,7 @@
       },
       "section8": {
         "title": "8. How to exercise your rights",
-        "p1": "The account owner (Owner profile) can download a copy of all company data at any time, on a self-service basis, under Settings → Export data. For other rights (correction, deletion, withdrawal of consent, clarifications), contact us at <email>olisuporte1@gmail.com</email> — this is also the contact channel for ServiçoOS's data protection officer (DPO). We will respond within a reasonable time, as required by the LGPD."
+        "p1": "The account owner (Owner profile) can download a copy of all company data at any time, on a self-service basis, under Settings → Export data. For other rights (correction, deletion, withdrawal of consent, clarifications), contact us at <email>suporte@servicoos.com.br</email> — this is also the contact channel for ServiçoOS's data protection officer (DPO). We will respond within a reasonable time, as required by the LGPD."
       },
       "section9": {
         "title": "9. Information security",
@@ -1727,7 +1732,7 @@
       },
       "section13": {
         "title": "13. Data Protection Officer (DPO)",
-        "p1": "For all matters related to personal data protection, the data protection officer can be contacted at <email>olisuporte1@gmail.com</email>."
+        "p1": "For all matters related to personal data protection, the data protection officer can be contacted at <email>suporte@servicoos.com.br</email>."
       }
     }
   },
@@ -2103,7 +2108,7 @@
     },
     "banner": {
       "title": "No connection.",
-      "description": "You're seeing data saved on this device, which may be out of date. Changes won't be saved until you're back online."
+      "description": "You're seeing data saved on this device, which may be out of date. Completing an order and changing status are saved here and sync on their own when you're back online; anything else waits."
     },
     "fila": {
       "pendentes": "{n, plural, one {# change waiting to be sent} other {# changes waiting to be sent}}",
@@ -2280,9 +2285,9 @@
       "Up to 30 users",
       "Unlimited work orders",
       "200 tax invoices per month",
-      "Dedicated onboarding",
+      "Help with initial setup",
       "Integration API",
-      "24h WhatsApp support"
+      "WhatsApp support during business hours"
     ]
   },
   "portal": {
@@ -2560,6 +2565,7 @@
       "clientPlaceholder": "Select a client",
       "technicianLabel": "Assigned technician",
       "technicianPlaceholder": "Select a technician (optional)",
+      "technicianNone": "Nobody yet",
       "scheduledLabel": "Schedule",
       "itemsTitle": "Items / Services",
       "createPending": "Creating [[osC]]...",

@@ -18,6 +18,9 @@ import { HistoricoOs } from "@/components/service-orders/historico-os"
 import { WhatsAppButton } from "@/components/service-orders/whatsapp-button"
 import { EnviarPorEmail } from "@/components/shared/enviar-por-email"
 import { ParcelarDialog } from "@/components/service-orders/parcelar-dialog"
+import { ConcluirDialog } from "@/components/service-orders/conclude-dialog"
+import { getPecasAtivas } from "@/actions/estoque"
+import { temRecurso } from "@/lib/plan"
 import { enviarOsPorEmail } from "@/actions/service-orders"
 import { osPodeSerEnviada } from "@/lib/envio-documento"
 import { Badge } from "@/components/ui/badge"
@@ -48,6 +51,22 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
     ? await historicoDaOs(tenantId, id)
     : []
 
+  // As peças do catálogo, para escolher ao concluir. Só com o recurso de
+  // estoque — buscar para depois não oferecer seria trabalho pago em toda
+  // abertura de OS.
+  // Decimal do Prisma vira número aqui: o componente é de cliente e não pode
+  // receber Decimal. Mesma conversão que a tela de lista já faz.
+  const pecasParaConcluir = ((await temRecurso(tenantId, "stock")) ? await getPecasAtivas() : []).map(
+    (p) => ({
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      unit: p.unit,
+      salePrice: p.salePrice === null ? null : Number(p.salePrice),
+      stock: Number(p.stock),
+    })
+  )
+
   const t = await getTranslations("serviceOrdersPages")
   const tCommon = await getTranslations("common")
 
@@ -63,13 +82,43 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      {/* No celular o título fica EM CIMA e os botões embaixo, com a largura
+          inteira. Lado a lado, os até onze botões desta tela dividiam metade
+          de 343px — cabia um por linha, e o técnico rolava onze fileiras de
+          botão antes de ver os dados da OS. Com a largura toda cabem três por
+          linha. No desktop nada muda. */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
         <div>
           <p className="text-sm font-mono text-muted-foreground">{formatOsNumber(os.number, os.createdAt)}</p>
           <h1 className="text-2xl font-bold">{os.title}</h1>
           <Badge variant={config.variant} className="mt-1">{config.label}</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
+          {/* CONCLUIR, na tela da própria OS.
+              Este botão só existia na LISTA, na última coluna de uma tabela de
+              oito colunas — fora da tela num celular. O técnico terminava o
+              serviço, abria a OS, marcava o checklist, tirava as fotos, colhia
+              a assinatura, e ali não havia onde fechar o trabalho com os itens
+              e o valor: ele tinha de voltar para a lista e rolar de lado.
+              Vem PRIMEIRO porque é a ação que encerra o serviço.
+              (Achado auditando o uso em campo, 08/09/2026.) */}
+          {os.status !== "INVOICED" && os.status !== "CANCELLED" && pode("os.concluir") && (
+            <ConcluirDialog
+              orderId={id}
+              orderTitle={os.title}
+              currentStatus={os.status}
+              initialConclusionNote={os.conclusionNote}
+              initialItems={os.items.map((i) => ({
+                description: i.description,
+                quantity: Number(i.quantity),
+                unitPrice: Number(i.unitPrice),
+                partId: i.partId,
+              }))}
+              pecas={pecasParaConcluir}
+              initialCommissionPct={os.commissionPct === null ? null : Number(os.commissionPct)}
+              temResponsavel={os.technicianId !== null}
+            />
+          )}
           {config.next && pode("os.status") && (
             <StatusButton
               action={updateOrderStatus.bind(null, id, config.next)}

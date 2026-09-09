@@ -174,6 +174,44 @@ export const MANUAL: readonly Secao[] = [
           },
         ]
       ),
+      geral(
+        "teste-gratis",
+        "Os 15 dias de teste",
+        "O cadastro dá acesso ao sistema inteiro por 15 dias, sem pedir cartão. Depois, o acesso para até a empresa escolher um plano — e nada é apagado.",
+        [
+          {
+            tipo: "p",
+            texto:
+              "São *15 dias corridos*, contados do cadastro, com o sistema *inteiro liberado* — nenhuma tela fica escondida durante o teste. Não pedimos cartão, então não há nada para cancelar: no fim do prazo o acesso simplesmente para.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "A contagem aparece no alto do painel, e é arredondada para cima: faltando seis horas ela ainda diz “1 dia”, porque quem tem a tarde inteira não está na mesma situação de quem já perdeu o acesso. Você também recebe e-mail faltando *7*, *3* e *1* dia.",
+          },
+          {
+            tipo: "passos",
+            titulo: "O que acontece no dia 16",
+            itens: [
+              "Ao abrir qualquer tela, o sistema leva para a página de assinatura em vez do painel.",
+              "As telas de *Assinatura* e de *Configurações* continuam abertas — é por elas que se assina, e a assinatura exige o CNPJ preenchido nas configurações.",
+              "Gravar deixa de funcionar em tudo mais: criar OS, concluir serviço, lançar despesa, emitir nota. A trava não é só da tela; ela vale também para quem tentar chamar o sistema por fora, pela API.",
+              "Escolhido o plano e confirmado o pagamento, o acesso volta na hora, com tudo no lugar.",
+            ],
+          },
+          {
+            tipo: "atencao",
+            titulo: "Parar não é apagar",
+            texto:
+              "Nada é excluído quando o teste vence: clientes, ordens de serviço, fotos, assinaturas e histórico continuam guardados, esperando. Não existe taxa para voltar, e você não perde a numeração das suas OS.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "Vale usar os 15 dias com o trabalho de verdade, e não com dados de mentira: cadastre os clientes que você já tem, abra as OS da semana, feche uma com valor. O que se aprende testando com serviço real é o que decide se o sistema serve — e o que você digitar continua lá depois de assinar.",
+          },
+        ]
+      ),
     ],
   },
 
@@ -480,6 +518,145 @@ export const MANUAL: readonly Secao[] = [
             texto:
               "Cada linha tem *Pendente*, *Pago* ou *Vencido*, e um botão Pagar para dar baixa. Receitas nascem das OS faturadas; despesas você lança aqui, com descrição, valor, vencimento, categoria (Fixa, Variável ou Outra) e a marcação de *recorrente*, para o aluguel não precisar ser digitado todo mês.",
           },
+
+          // Comissão por OS.
+          {
+            tipo: "p",
+            texto:
+              "*Comissão por ordem de serviço.* Quando o funcionário ganha uma porcentagem por serviço, ela vira uma conta a pagar sozinha assim que a OS é concluída.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "A porcentagem NÃO se define aqui. Ela é de cada OS, e quem digita é quem fecha o serviço: no botão *Concluir* da ordem de serviço (1.1) há o campo *Comissão desta OS*. Uma OS pode ter 10% e a outra 15% — é o que muda de serviço para serviço.",
+          },
+          {
+            tipo: "lista",
+            titulo: "O campo, em detalhe",
+            itens: [
+              "Só aparece quando a OS tem *responsável*. Sem alguém a quem pagar, não há comissão.",
+              "Vale de *0 a 100*, e aceita vírgula: 12,5 funciona.",
+              "Enquanto você digita, a conta aparece pronta ao lado. O imposto não entra nessa prévia, porque nota ainda não existe.",
+              "*Vazio* quer dizer que esta OS não comissiona. Zero também não cria linha nenhuma.",
+              "O mesmo botão vira *Editar conclusão* depois. Mudar a porcentagem ali recalcula; apagar o campo apaga a conta a pagar.",
+            ],
+          },
+          {
+            tipo: "p",
+            texto:
+              "Ao concluir, a comissão vira uma linha em *Contas a pagar*, nesta tela. A descrição traz a conta inteira — “Comissão OS20260042 — 10% de R$ 1.200,00” — para conferir de cabeça na hora da conversa. O vencimento é *dia 5 do mês seguinte* à conclusão, e não hoje: é a janela em que corrigir a OS ainda conserta a comissão sozinha.",
+          },
+          {
+            tipo: "lista",
+            titulo: "Comissão sobre — a escolha da empresa",
+            itens: [
+              "*Total da OS* — o valor cheio. É o que vem ligado.",
+              "*Só mão de obra* — tira da conta os itens que saíram do seu estoque. Numa OS de R$ 1.200 com R$ 1.000 de compressor, a comissão passa a incidir sobre R$ 200.",
+            ],
+          },
+          {
+            tipo: "p",
+            texto:
+              "A opção fica no próprio cartão *Comissões a pagar*, ao lado dos números que ela muda. Trocar recalcula na hora as comissões ainda *pendentes*; as já pagas não mudam. Só o dono e os administradores mexem nisso — o técnico não muda a base de cálculo da própria comissão.",
+          },
+          {
+            tipo: "atencao",
+            titulo: "Peça digitada à mão conta como mão de obra",
+            texto:
+              "“Só mão de obra” separa pelo vínculo com o *estoque*, e não pela palavra escrita. Peça comprada no balcão e digitada como item comum entra na base e é comissionada. Para deixá-la de fora, escolha a peça pela lista de peças ao concluir.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "*O imposto.* Quando a OS tem nota fiscal *emitida*, o ISS sai da base antes de a porcentagem ser aplicada — a empresa nunca teve esse dinheiro, então ele não entra na conta de ninguém. A alíquota é a de *3.4 Config. Fiscal*; sem ela preenchida, o sistema usa *5%*.",
+          },
+          {
+            tipo: "atencao",
+            titulo: "Faturada não é o mesmo que ter nota",
+            texto:
+              "Mudar o status para *Faturada* sem emitir NFS-e não desconta imposto nenhum — e está certo: ninguém recolheu ISS ali. O desconto entra só quando a prefeitura aceita a nota. Nota rejeitada não desconta, e a comissão volta ao valor cheio sozinha.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "*Pagar todas.* Com o pagar em lote ligado, cada pessoa ganha o botão *Pagar todas*, que liquida de uma vez as comissões pendentes dela; antes de gravar, mostra quantas e quanto. Ou todas são pagas, ou nenhuma é. Desligue a opção se prefere conferir OS a OS.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "*O conferente.* Uma vez por dia o sistema refaz a conta das comissões pendentes e das OS concluídas nos últimos *45 dias*, e compara com o que está gravado. Se algo não bater, o escritório recebe um aviso com os números das OS. Ele avisa e NÃO corrige: quem decide é você. Comissão faltando alguém reclama no dia 5; comissão errada ninguém nota, e é para isso que ele existe.",
+          },
+          {
+            tipo: "atencao",
+            titulo: "Marcou como paga, congelou",
+            texto:
+              "Depois de paga, a comissão não muda mais: mexer no valor da OS, na porcentagem ou no responsável não a reescreve, e o conferente não reclama dela. O sistema não reescreve dinheiro que já saiu do caixa. Corrigir comissão já paga é conversa entre pessoas, e um lançamento novo à mão.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "*Trocar quem executou.* Enquanto a comissão está pendente, ela segue a OS: mudando o responsável, a conta a pagar muda de nome junto e o valor é refeito — não fica dívida no nome de quem saiu da empresa. Se já foi paga, congela no nome de quem recebeu.",
+          },
+
+          // O cliente pediu prazo.
+          {
+            tipo: "p",
+            texto:
+              "*O cliente pediu prazo.* Quando ele paga uma parte à vista e pede prazo para o resto, cada parcela vira uma linha própria aqui, com o seu vencimento e o seu botão Pagar.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "O botão *Parcelar recebimento* não fica nesta tela: fica na ordem de serviço (1.1). Aparece quando a OS já tem valor e está *Concluída* ou *Faturada* — antes disso não há o que parcelar. Faturar cria uma receita só, com o valor cheio vencendo hoje; parcelar troca essa receita por uma linha por parcela, na mesma operação, para o serviço nunca ser contado duas vezes.",
+          },
+          {
+            tipo: "lista",
+            titulo: "O que você preenche",
+            itens: [
+              "*Entrada à vista* — quanto o cliente paga na hora. Em branco quando não há entrada: nenhuma linha de R$ 0,00 é criada.",
+              "*Parcelas do saldo* — em quantas vezes o que sobra é dividido.",
+              "*Prazo* — em dias, contados da DATA DA EXECUÇÃO do serviço. Há três atalhos — 7, 15 e 30 —, e o campo ao lado aceita qualquer número, para o cliente que pede 45.",
+              "*A entrada já foi recebida* — marcada, a entrada nasce paga.",
+            ],
+          },
+          {
+            tipo: "p",
+            texto:
+              "*Gerar parcelas* monta a lista, e ela é EDITÁVEL: dá para mudar a data e o valor de cada linha, marcar uma como já recebida, remover e acrescentar. É assim que se registra o que não cabe em prazo fixo — R$ 800 no dia 15 e R$ 700 no dia 3 do mês seguinte. Para 30/60/90 dias, o prazo é o intervalo: três parcelas de 30 dias vencem em 30, 60 e 90 dias da execução.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "*As parcelas têm que somar o valor da OS, ao centavo.* Enquanto não fecham, a tela diz quanto falta ou quanto sobra, e o botão de gravar fica desligado. Quando a divisão não é exata, o centavo que sobra vai para a primeira parcela.",
+          },
+          {
+            tipo: "tabela",
+            cabecalho: ["O que", "O limite"],
+            linhas: [
+              ["Parcelas do saldo", "de 1 a 24"],
+              ["Prazo entre parcelas", "de 1 a 365 dias"],
+              ["Vencimento mais antigo", "o dia da execução do serviço"],
+              ["Vencimento mais distante", "três anos a partir da execução"],
+              ["Soma das parcelas", "igual ao valor da OS, ao centavo"],
+            ],
+          },
+          {
+            tipo: "p",
+            texto:
+              "Gravado o plano, cada parcela vira uma linha aqui no contas a receber, e a descrição diz qual é: “(entrada)”, “(1/3)”, “(2/3)”. Cada uma tem o seu *Pagar*, e cada parcela paga vira um recibo em 3.3. Enquanto sobrar parcela em aberto, a OS mostra o botão *Fatura*: um PDF com o que falta, o total e o PIX da empresa.",
+          },
+          {
+            tipo: "atencao",
+            titulo: "Parcela paga tranca o plano",
+            texto:
+              "Refazer o plano antes de qualquer pagamento é livre. Mas assim que uma parcela é paga — inclusive a entrada marcada como recebida —, o *Parcelar recebimento* fica desligado naquela OS e a gravação é recusada inteira, sem mudar nada. O dinheiro que entrou já está no extrato e no resultado do mês em que entrou.",
+          },
+          {
+            tipo: "atencao",
+            titulo: "OS antiga parcelada já nasce vencida",
+            texto:
+              "Os prazos contam da EXECUÇÃO, e não do dia em que você preenche. Parcelar uma OS concluída há quarenta dias com prazo de 7 dias cria parcelas que já venceram, e elas aparecem em vermelho na hora. Confira as datas na lista antes de gravar.",
+          },
         ]
       ),
       aba(
@@ -623,6 +800,78 @@ export const MANUAL: readonly Secao[] = [
             titulo: "No Ajuste, digite o que você contou",
             texto:
               "Não a diferença. Se a prateleira tem 8 e o sistema diz 12, o ajuste é 8. E o motivo é obrigatório: ajuste sem motivo é indistinguível de erro seis meses depois.",
+          },
+
+          // Setores, busca por setor e transferência.
+          {
+            tipo: "p",
+            texto:
+              "*O saldo da peça tem ONDE.* Cada lugar em que a empresa guarda peça é um local: o depósito, o canto onde a compra chega, a van do técnico. A soma dos locais é o saldo total da peça — os dois números sempre batem.",
+          },
+          {
+            tipo: "tabela",
+            cabecalho: ["Tipo de local", "O que é"],
+            linhas: [
+              ["Almoxarifado", "O depósito da empresa. É o tipo que já vem escolhido."],
+              ["Recebimento", "Onde a compra chega e ainda não foi conferida."],
+              ["Produção", "Material já separado para ser consumido."],
+              ["Expedição", "O que está separado para sair: carga de van, entrega, retirada."],
+              ["Veículo", "A van de um técnico. É o único que anda, e o único que tem responsável."],
+            ],
+          },
+          {
+            tipo: "p",
+            texto:
+              "O cartão *Locais de estoque* fica no topo da tela, antes da lista de peças. Criar, editar, ativar e desativar local é do Proprietário e do Administrador. O nome vai até *80 caracteres* e não pode se repetir dentro da empresa. Só o tipo Veículo pergunta de quem é a van — e aí o nome do técnico aparece junto do nome da van na lista, porque “Van 01” sozinho não diz nada numa lista de seis.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "Você não precisa criar nada para começar: sem local nenhum, o sistema cria um *Almoxarifado* sozinho na primeira movimentação.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "Ao lado da busca há a caixa *Todos os locais*. Escolhendo um setor, a lista mostra só as peças com saldo maior que zero nele, a coluna Saldo troca de nome para “Saldo em Expedição” — ou o setor escolhido — e o total da empresa aparece embaixo, em letra menor. O aviso de peça abaixo do mínimo some enquanto há filtro: o mínimo é da empresa, não do setor.",
+          },
+          {
+            tipo: "passos",
+            titulo: "Transferir uma peça de um setor para outro",
+            itens: [
+              "Na linha da peça, clique no *alfinete* — é o botão Onde está.",
+              "A lista de cima responde onde a peça está agora, com quanto em cada local.",
+              "Em *De*, escolha a origem. Só aparecem os locais que têm a peça.",
+              "Em *Para*, escolha o destino. Serve qualquer local ativo, inclusive um vazio — é assim que um setor recém-criado recebe a primeira peça.",
+              "Digite a quantidade. Abaixo do campo aparece *Disponível*, com o que a origem tem.",
+              "Escreva o motivo, se quiser.",
+              "Clique em *Transferir*. Os números da tela se atualizam sozinhos.",
+            ],
+          },
+          {
+            tipo: "p",
+            texto:
+              "O motivo é OPCIONAL, e é de propósito: campo obrigatório de justificativa ensina a pessoa a digitar “x” só para o formulário passar, e aí o histórico passa a mentir. Aceita até *200 caracteres*. Sem motivo, a linha do histórico fica “Transferência para Expedição”; com motivo, “Transferência para Expedição — separado para a entrega de amanhã”. O mesmo texto é gravado nos dois lados.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "O histórico fica no botão do *relógio*, na mesma linha da peça. São as *50* movimentações mais recentes, da mais nova para a mais velha, cada uma com a quantidade e o sinal, o tipo, o local, o motivo escrito por quem moveu, a data e a hora, o nome de quem fez e quanto ficou naquele local. Uma transferência aparece como DUAS linhas: a saída na origem e a entrada no destino.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "Ver onde a peça está e ler o histórico é para toda a equipe — é o técnico quem mais precisa saber quem tirou as quatro que faltam. Transferir mexe em saldo, e fica com o Proprietário e o Administrador. O formulário de transferência só aparece quando a empresa tem *dois ou mais locais ativos*. A tela inteira é do plano *Pro* para cima.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "Transferência nunca cria peça do nada: pedir mais do que a origem tem é recusado. Isso vale só aqui — o movimento avulso (entrada, saída, ajuste) continua aceitando o saldo ficar negativo, porque a realidade chega ao sistema atrasada e travar a baixa da OS pararia o trabalho.",
+          },
+          {
+            tipo: "atencao",
+            titulo: "Desativar exige o local vazio",
+            texto:
+              "Com peça dentro, o sistema recusa e pede para transferir antes — senão o saldo sumiria da tela sem ter saído do estoque. E se um local já desativado aparecer com saldo, ative-o de novo para conseguir tirar a peça de lá: a transferência só aceita origem e destino ativos.",
           },
         ]
       ),
@@ -841,6 +1090,36 @@ export const MANUAL: readonly Secao[] = [
             titulo: "Depende do plano",
             texto:
               "No plano inicial, o relatório mostra o mês atual. Período personalizado e as análises avançadas (Top 10, desempenho por técnico e os detalhamentos) entram a partir do Pro.",
+          },
+
+          // Caixa ou competência.
+          {
+            tipo: "p",
+            texto:
+              "*Caixa ou competência.* O DRE tem duas maneiras de decidir em que mês um valor entra, e a diferença aparece justamente quando o cliente paga em outro mês.",
+          },
+          {
+            tipo: "tabela",
+            cabecalho: ["Regime", "Um valor entra no mês em que"],
+            linhas: [
+              ["Caixa", "o dinheiro entrou ou saiu de verdade"],
+              ["Competência", "o serviço foi feito, tenha sido pago ou não"],
+            ],
+          },
+          {
+            tipo: "p",
+            texto:
+              "O exemplo que decide: serviço de R$ 2.000 executado em *março*, com o cliente pedindo 30 dias e pagando em *abril*. No regime de *caixa*, março fica com R$ 0 e abril com R$ 2.000. No de *competência*, o resultado é de março — foi quando o trabalho aconteceu, e é quando o combustível, a peça e a mão de obra saíram do bolso.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "A escolha fica *no topo desta tela*, ao lado do período, e vale só para o que você está olhando: trocar não altera lançamento nenhum, só muda a pergunta que o relatório responde. O padrão é *caixa*, porque é como a maioria das empresas pequenas pensa — o que entrou na conta. Quem parcela muito costuma preferir competência: do contrário, um mês cheio de trabalho parcelado parece um mês fraco, e o mês seguinte parece ótimo sem ninguém ter trabalhado.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "A comissão segue a mesma régua: ela pertence ao mês em que o serviço foi *concluído*, e não ao dia 5 em que é paga. Sem isso, o trabalho de um mês aparecia com a despesa do mês seguinte — e o resultado ficava bom demais num mês e ruim demais no outro, os dois errados.",
           },
         ]
       ),

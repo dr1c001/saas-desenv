@@ -459,6 +459,23 @@ export async function updateServiceOrder(
 
   const { title, description, clientId, technicianId, scheduledAt } = parsed.data
 
+  // Campo AUSENTE não é campo vazio.
+  //
+  // O formulário de edição não tinha o select de responsável, então o
+  // navegador nunca mandava `technicianId` — e `technicianId || null` gravava
+  // null. Qualquer edição (corrigir o título, arrumar a data) apagava em
+  // silêncio quem executou o serviço: a OS sumia da lista e do mapa daquele
+  // técnico, a comissão pendente era apagada junto por não haver a quem pagar,
+  // e não existia tela para devolver o responsável, porque o campo que faltava
+  // era justamente o da edição.
+  //
+  // A tela ganhou o campo, mas a correção precisa morar aqui também: toda
+  // exportação de um arquivo "use server" é um endereço HTTP que qualquer
+  // cliente pode chamar. Ausente quer dizer "não mexe"; para esvaziar, manda-se
+  // vazio. (Achado em 09/09/2026, conferindo contra o código um texto de manual
+  // que descrevia o apagamento como se fosse regra.)
+  const mexeuNoResponsavel = technicianId !== undefined
+
   // A que mais pesa: esta função reescreve os ITENS e o VALOR TOTAL. Até aqui
   // não tinha checagem de papel nenhuma — qualquer técnico com a aba mudava o
   // preço de um serviço já executado.
@@ -490,6 +507,9 @@ export async function updateServiceOrder(
   // 2026-08-03.)
   if (order.status === "INVOICED") return { message: te3("invoicedOrderLocked") }
   if (!client) return { message: te3("clientNotFound") }
+
+  /** Quem fica como responsável depois desta edição. Ver a nota acima. */
+  const responsavelFinal = mexeuNoResponsavel ? technicianId || null : order.technicianId
 
   if (technicianId) {
     const technician = await prisma.user.findUnique({ where: { id: technicianId, tenantId }, select: { id: true } })
@@ -524,7 +544,7 @@ export async function updateServiceOrder(
         title,
         description: description || null,
         clientId,
-        technicianId: technicianId || null,
+        technicianId: responsavelFinal,
         totalAmount: total,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
       },
@@ -538,8 +558,8 @@ export async function updateServiceOrder(
 
   // O responsavel novo pelo NOME: guardar id faria a linha do tempo virar
   // "responsavel mudou para cmr04..." no dia em que a pessoa saisse.
-  const novoResponsavel = technicianId
-    ? (await prisma.user.findUnique({ where: { id: technicianId }, select: { name: true } }))?.name ?? null
+  const novoResponsavel = responsavelFinal
+    ? (await prisma.user.findUnique({ where: { id: responsavelFinal }, select: { name: true } }))?.name ?? null
     : null
 
   await registrarMudancas(
@@ -561,14 +581,14 @@ export async function updateServiceOrder(
   // salvar a OS sem mexer no responsável não pode disparar notificação.
   // Trocou de mãos: avisa quem recebeu. Comparado com o responsável ANTERIOR —
   // salvar a OS sem mexer no responsável não pode disparar notificação.
-  if ((technicianId || null) !== order.technicianId) {
+  if (responsavelFinal !== order.technicianId) {
     await notificar({
       tenantId,
       evento: "osAtribuida",
       corpo: title,
       url: `/service-orders/${id}`,
       autorId: userId,
-      responsavelId: technicianId,
+      responsavelId: responsavelFinal ?? undefined,
     })
   }
 

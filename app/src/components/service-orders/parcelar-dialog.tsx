@@ -205,15 +205,25 @@ export function ParcelarDialog({
 
           {/* As linhas COMBINADAS. Editáveis: o gerador acima resolve o caso
               comum, e aqui a pessoa ajusta a data e o valor onde o cliente
-              combinou outra coisa. */}
+              combinou outra coisa.
+
+              No celular cada parcela vira um cartão com borda, e a data ocupa o
+              resto da primeira linha. Em linha única as larguras fixas somavam
+              312px dentro de um diálogo de ~311px: a data e o valor quebravam
+              em fileiras soltas e, com cinco parcelas, não dava para saber qual
+              valor era de qual data. No desktop a borda some e volta a ser uma
+              linha só. */}
           {linhas.length > 0 && (
             <ul className="space-y-2">
               {linhas.map((l, i) => (
-                <li key={i} className="flex flex-wrap items-center gap-2">
+                <li
+                  key={i}
+                  className="flex flex-wrap items-center gap-2 rounded-md border p-2 sm:rounded-none sm:border-0 sm:p-0"
+                >
                   <span className="w-10 text-xs text-muted-foreground">{i + 1}/{linhas.length}</span>
                   <Input
                     type="date"
-                    className="w-40"
+                    className="w-[calc(100%-3.5rem)] sm:w-40"
                     value={l.vencimento}
                     onChange={(e) =>
                       setLinhas((ls) => ls.map((x, k) => (k === i ? { ...x, vencimento: e.target.value } : x)))
@@ -221,7 +231,7 @@ export function ParcelarDialog({
                   />
                   <Input
                     inputMode="decimal"
-                    className="w-28"
+                    className="w-24 sm:w-28"
                     value={l.valor}
                     onChange={(e) =>
                       setLinhas((ls) => ls.map((x, k) => (k === i ? { ...x, valor: e.target.value } : x)))

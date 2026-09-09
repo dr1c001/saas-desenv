@@ -1,6 +1,6 @@
 # Plano de Engenharia — ServiçoOS
 
-> Última atualização: 24/08/2026
+> Última atualização: 09/09/2026
 > Este documento é a referência técnica viva do projeto. Deve ser atualizado sempre que uma decisão de arquitetura importante for tomada.
 
 ---
@@ -11,9 +11,13 @@
 
 **Proposta de valor:** substituir o controle manual via WhatsApp/planilha/papel por um sistema único que cobre todo o ciclo — orçamento, ordem de serviço, execução em campo, financeiro e nota fiscal.
 
-**Modelo de negócio:** SaaS multi-tenant por assinatura, 3 planos pagos (Starter/Pro/Enterprise) cobrados via Asaas. **Sem trial gratuito** — cadastro não dá acesso; é preciso assinar (boleto ou cartão) para usar o sistema (ver seção 1.1).
+**Modelo de negócio:** SaaS multi-tenant por assinatura, 3 planos pagos (Starter/Pro/Enterprise) cobrados via Asaas, mais o plano personalizado. **Com teste grátis de 15 dias, sem cartão** — o cadastro dá acesso completo por 15 dias e depois a empresa cai na tela de assinatura (ver seção 1.2, que revoga a 1.1).
 
-### 1.1 Mudança de modelo: fim do trial gratuito (21/07/2026)
+**Nicho:** um só — prestadores de serviço. O posicionamento horizontal ("serve para qualquer negócio") foi recolhido em 08/09/2026: com uma landing que fala com todo mundo não se convence ninguém, e o produto tem termos, telas e documentos de ordem de serviço.
+
+### 1.1 Mudança de modelo: fim do trial gratuito (21/07/2026) — REVOGADA em 08/09/2026
+
+> **Esta seção é história, não o estado atual.** O trial foi removido nesta data e VOLTOU em 08/09/2026 — ver 1.2. O que continua valendo daqui é o desenho do programa de indicação (desconto percentual, não dias extras) e a carência de `PAST_DUE`. Mantida porque explica dois fatos que ainda se encontram no banco e no código: por que existem tenants em `TRIAL` com `trialEndsAt` nulo, e por que `referralDiscountPercent` é percentual.
 
 Decisão de produto: o trial gratuito de 15 dias foi removido. Cadastro não dá mais acesso — o tenant nasce bloqueado e só libera com uma assinatura `ACTIVE` confirmada pelo webhook do Asaas. Vale pra todo mundo, inclusive os clientes piloto que já estavam usando de graça (decisão explícita, não descuido).
 
@@ -24,6 +28,32 @@ Decisão de produto: o trial gratuito de 15 dias foi removido. Cadastro não dá
 **Limpeza decorrente:** banner de contagem regressiva do trial (removido, tinha virado código morto), stats/alerta de "trial expirando" no `/admin`, os 2 blocos do cron diário que buscavam trial expirando em 3/1 dias (nunca mais achariam nada), e-mail de trial expirando (sem chamador depois disso, removido), e-mail de onboarding do dia 3 (linkava pra `/service-orders/new` — quem não assinou não acessa mais essa rota; reescrito pra apontar pra `/billing`), e todos os textos de "15 dias grátis sem cartão" na landing page, registro e plano de marketing.
 
 **Pendência que tinha virado ainda mais crítica, resolvida em 21/07/2026:** `ASAAS_WEBHOOK_SECRET` estava sem configurar no Asaas/Vercel (seção 7.1) — sem isso, ninguém seria liberado depois de pagar, o único caminho de entrada no sistema inteiro. Configurado e verificado (ver seção 7.1).
+
+### 1.2 O teste grátis de 15 dias, de volta (08/09/2026)
+
+**Este é o estado atual.** Cadastro dá acesso completo por 15 dias, sem pedir cartão. No fim do prazo o acesso para e a pessoa cai em `/expired` — nada é cobrado, nada é apagado, nada é cancelado.
+
+O motivo de reverter é o mesmo que motivou a remoção, lido do outro lado: exigir assinatura no cadastro não fez ninguém assinar, fez o cadastro parar. Pedir cartão para um teste é a forma mais rápida de não ter testes.
+
+**A regra é pura e mora sozinha** (`src/lib/teste-gratis.ts`), porque ela decide quem entra no sistema:
+
+| Função | O que decide |
+|---|---|
+| `DIAS_DE_TESTE = 15` | o prazo |
+| `fimDoTeste(criadaEm)` | meia-noite do dia seguinte ao último — quem se cadastra às 23h de uma terça não perde um dia por causa da hora |
+| `testeAtivo(trialEndsAt, agora)` | **`trialEndsAt` nulo devolve `false`**, não `true` |
+| `diasRestantes` | arredonda para **cima**: faltando 6h a tela diz "1 dia" |
+| `AVISOS_DE_FIM = [7, 3, 1]` + `decidirAvisoDeFim` | quando avisar, contando POSIÇÃO na escada e não mensagens enviadas |
+
+**O `null` que devolve `false` é a decisão que mais importa.** É o estado das empresas criadas enquanto não havia trial — inclusive uma que está assim em produção desde julho. Se `null` liberasse, o retorno do teste teria reaberto o sistema de graça para quem parou de pagar, que é o oposto do que ele quer fazer.
+
+**`decidirAvisoDeFim` conta marcos, não e-mails** — mesma regra da régua de cobrança e pelo mesmo motivo: um aviso perdido (cron fora do ar) não pode deslocar todos os seguintes, e rodar duas vezes no mesmo dia não pode mandar dois e-mails. Quando vários marcos vencem de uma vez, manda **um** — o mais recente.
+
+**Onde a regra é consultada:** `hasActiveSubscription` (`src/lib/auth.ts`) ganhou o ramo `TRIAL → testeAtivo(...)`. Isso não é só o bloqueio de página: `requireActiveSubscription` chama a mesma função em **208 pontos, em 81 arquivos** de Server Action. Uma regra que valesse só no layout deixaria a empresa em teste liberada para *olhar* e bloqueada para *trabalhar*.
+
+**O campo já existia e ninguém preenchia.** `trialEndsAt` está no schema desde julho; a criação de tenant não gravava nada nele. Sem a migração `20260908000001_teste_gratis_de_volta` e a gravação em `src/lib/auth.ts`, o teste teria voltado só no nome — toda empresa nova nasceria `TRIAL` sem prazo, que pela regra acima não tem acesso a nada.
+
+**O que NÃO voltou:** o programa de indicação em "dias extras de trial". Ele nunca chegou a ser aplicado de verdade (ver 1.1), virou desconto percentual, e o desconto funciona. Misturar os dois traria de volta um bônus que nunca existiu.
 
 ---
 
@@ -3308,6 +3338,261 @@ cobrar nota fiscal de uma van vendida ha dois anos — e e isso que o teste
 verifica agora.
 
 1321 -> 1402 testes.
+
+---
+
+### 7.2.50 Setores de estoque, e o registro que ninguem conseguia ler — 04/09/2026
+
+Pedido: "adcionar mais setores como almoxarifado, expedicao, recebimento,
+producao / barra de pesquisa para puxar tudo que esta no almoxarifado / e sempre
+poder fazer transferencia de um item de um setor para o outro e sempre deixar
+registrado que transferiu, quando transferiu e porque transferiu".
+
+**O laco que matava o recurso.** Acrescentar os tipos ao enum nao entregava setor
+nenhum. `getSaldosDaPeca` devolvia so as linhas de `StockBalance` que existiam, o
+`select` de destino da tela era montado a partir dessa lista, e um setor
+recem-criado — sem saldo — nunca aparecia como destino. A unica forma de ele
+ganhar saldo era receber uma transferencia que a tela nao deixava fazer. Pior: o
+formulario inteiro exigia `saldos.length > 1`, ou seja, a peca ja estar em dois
+lugares.
+
+**E o "fica sempre registrado" ja era verdade no banco e mentira no produto.**
+`StockMovement` gravava `userId`, `createdAt`, `reason`, `locationId` e
+`toLocationId` desde sempre; existia ate um `getPeca` que lia as 50 ultimas
+linhas. Nenhuma tela o chamava. Registro que ninguem consegue abrir nao e
+registro — a terceira aparicao, nesta base, do mesmo defeito: codigo construido e
+inalcancavel.
+
+| Decisao | Por que |
+|---|---|
+| `getSaldosDaPeca` le `StockLocation` direto e devolve todo local ativo, com zero onde nao ha saldo | E o que rompe o laco. Os dois lados levam filtro de tenant (`where: { tenantId }` no local, `location: { tenantId }` no saldo): sem isso, um `partId` de outra empresa devolveria a distribuicao do estoque alheio |
+| Dois recortes da MESMA resposta: `ondeTem` filtra `quantidade !== 0`, `paraOnde` filtra `location.active` | Sao duas perguntas diferentes. "Onde esta" nao inclui local zerado; "para onde pode ir" inclui, e e assim que um setor novo recebe a primeira peca |
+| Formulario aparece com dois locais ATIVOS, e nao com dois saldos | O criterio antigo escondia a transferencia justamente de quem mais precisava dela |
+| Motivo OPCIONAL, `MAX_MOTIVO = 200` | Campo obrigatorio de justificativa ensina a digitar "x" para o formulario passar, e ai o historico passa a mentir |
+| O motivo entra nas DUAS pernas, via `motivoDaTransferencia` | Quem le o historico do destino tem a mesma explicacao de quem le o da origem |
+| Ordem de exibicao dos tipos em `ordemDoTipo`, no JS | O Postgres nunca remove nem reordena valor de enum. Ordem de tela que dependa da ordem do enum congela na primeira migracao |
+| Transferencia recusa saldo insuficiente; movimento avulso continua aceitando negativo | A realidade chega ao sistema atrasada. Travar a baixa da OS pararia o trabalho; transferir de um lugar que nao tem a peca e sempre erro de digitacao |
+
+Migracao `20260904000001_setores_de_estoque` (so `ALTER TYPE`, em arquivo
+proprio: o Postgres nao usa valor de enum novo na mesma transacao que o adiciona).
+
+---
+
+### 7.2.51 Comissao por OS — 05-06/09/2026
+
+Pedido: "quando o funcionario e comicionado e ganha uma porcentagem por ordem de
+servico concluida e ou faturada / assim que a ordem de servico for concluida, ja
+adcionar no contas a pagar a porcentagem do funcionario / se for faturada
+tambem, porem, descontar a taxa da nota fiscal".
+
+**A porcentagem e da OS, e nao da pessoa.** Foi a decisao que organizou o resto:
+prestador de servico varia a comissao por tipo de trabalho, e um percentual fixo
+no cadastro do funcionario obrigaria a corrigir a mao em metade das OS.
+
+**Regra pura em `lib/comissao.ts`**, testada sozinha: `calcularComissao` tira o
+ISS da base ANTES de aplicar o percentual, tudo em centavos inteiros — somar
+reais em ponto flutuante deixa residuo binario, e comissao e dinheiro que alguem
+confere na mao.
+
+| Decisao | Por que |
+|---|---|
+| ISS sai da base so quando `estadoDaNota(nfseStatus) === "emitida"` | O status FATURADA e alcancavel sem emitir nota, e e assim que trabalha quem cobra sem nota. Descontar ali tiraria dinheiro do funcionario para pagar tributo que ninguem recolheu. Usar `nfseIssuedAt` seria pior: ele e carimbado no envio, antes de a prefeitura aceitar — uma nota REJEITADA deixaria a comissao descontada para sempre |
+| Base configuravel por empresa (`TOTAL` ou `MAO_DE_OBRA`), com `TOTAL` de padrao | Quem revende peca cara nao quer comissionar o compressor. Quem so vende servico nao quer nem saber que existe essa escolha |
+| Vencimento no dia 5 do mes seguinte | E a janela em que corrigir a OS ainda conserta a comissao sozinha, sem ninguem ter pago nada |
+| `decidirComissao` extraida para o reconciliador e o conferente compartilharem UMA regra | Duas copias da mesma regra divergem, e a divergencia aparece como "o conferente reclama do que o sistema mesmo gravou" |
+| Comissao PAGA congela | O sistema nao reescreve dinheiro que ja saiu do caixa |
+| `reconciliarComissao` nunca lanca | Ela roda dentro do fecho da OS. Uma falha ali nao pode impedir o tecnico de fechar o servico |
+
+**O defeito que o meu proprio teste achou:** a reconciliacao comparava so
+`amount` antes de decidir reescrever. Trocar o tecnico de uma OS concluida
+deixava a divida no nome de quem saiu da empresa — mesmo valor, pessoa errada.
+Passou a comparar todos os campos.
+
+**O conferente e regra, e nao IA.** Uma vez por dia refaz a conta das comissoes
+pendentes e das OS concluidas nos ultimos `DIAS_PARA_TRAS = 45` dias e compara
+com o gravado. Avisa e NAO corrige: comissao faltando alguem reclama no dia 5;
+comissao errada ninguem nota.
+
+**Pagar em lote e opcao da empresa** (ligada por padrao), por transacao — ou
+todas ou nenhuma. Quem confere OS a OS desliga e continua pagando na linha.
+
+Migracoes `20260904000002_comissao_por_os`, `20260905000001_base_da_comissao`,
+`20260905000003_pagar_comissao_em_lote`.
+
+---
+
+### 7.2.52 Regime de competencia no DRE — 07/09/2026
+
+O pedido veio como consequencia da comissao: "e detalhe melhor o que cada um
+faria, ate mesmo caindo no mes errado no DRE".
+
+`lib/competencia.ts` e puro: `Regime = "caixa" | "competencia"`,
+`REGIME_PADRAO = "caixa"`, `dataDoResultado`, e `dataDeCompetencia` que resolve
+`accrualDate ?? dueDate`. A escolha vive na URL (`?regime=`), some quando e o
+padrao, e nao altera lancamento nenhum — muda a pergunta, nao o dado.
+
+A comissao passou a gravar `accrualDate` na conclusao da OS. Sem isso, o
+trabalho de um mes aparecia com a despesa do mes seguinte: resultado bom demais
+num mes e ruim demais no outro, os dois errados.
+
+> Uma funcao `somarNoPeriodo` chegou a ser escrita e foi APAGADA antes do commit,
+> por nao ter chamador. Codigo sem chamador e o defeito mais recorrente desta
+> base (ver 7.2.50); nao vale a pena criar mais um.
+
+Migracao `20260907000001_competencia`.
+
+---
+
+### 7.2.53 Parcelamento: qualquer data combinada — 07/09/2026
+
+Pedido: "o cliente consegue pagar 500 reais a vista e pede prazo de pagamento
+para 7 dias apos a data da execucao do servico", depois "tera cliente que vai
+querer pagar em 30, 60, 90 dias", e por fim o que definiu o contrato da Action:
+"a empresa combina QUALQUER data combinada para o pagamento".
+
+**Uma `Revenue` por parcela**, e nao um campo de parcelamento na receita unica.
+Cada parcela tem vencimento proprio, e paga em dia proprio e vira cobranca
+propria; guardar "R$ 2.000 em 3x" numa linha so obrigaria a inventar um estado
+meio-pago, e a regua de cobranca nao saberia o que cobrar. Com uma linha por
+parcela, contas a receber, aviso de vencido, recibo, fatura em PDF e baixa
+individual passaram a funcionar sem codigo novo.
+
+| Decisao | Por que |
+|---|---|
+| Prazo em DIAS, modulo novo em vez de reusar `dividirEmParcelas` | Aquele divide de mes em mes, certo para a compra do fornecedor. Prestador combina 7, 15 e 30 DIAS, e "um mes" nao e 30 dias |
+| O marco e a EXECUCAO (`concludedAt ?? createdAt`) | "7 dias apos a data da execucao" e como o cliente combina, nao "7 dias depois de eu lancar isto" |
+| `vencimento = execucao + prazoDias * (i+1)` | Contar a partir da parcela anterior da as mesmas datas por raciocinio errado, e quebra quando alguem mexe no primeiro vencimento |
+| O contrato da Action e a LISTA combinada; `montarPlano` virou atalho da TELA | O gerador resolve 7/15/30/60/90 em dois cliques, mas nao cobre R$ 800 no dia 15 e R$ 700 no dia 3 do mes seguinte |
+| A MESMA `problemaNasParcelas` roda no dialogo e na Action | Toda export de arquivo "use server" e endereco HTTP despachavel |
+| Troca das PENDENTES e criacao das parcelas na MESMA transacao | O intervalo entre apagar e criar e o intervalo em que o servico nao existe no contas a receber |
+| Recusa se qualquer parcela ja esta PAGA | Dinheiro que entrou ja esta no extrato e no resultado do mes em que entrou |
+
+Limites: `MAX_PARCELAS = 24`, prazo de 1 a 365 dias, vencimento mais distante
+tres anos a frente, soma igual ao total ao centavo. O centavo da divisao inexata
+vai para a primeira parcela.
+
+---
+
+### 7.2.54 A regua cobra o cliente DA EMPRESA — 07/09/2026
+
+O pedido nasceu torto e foi corrigido pelo dono: "eu nao quero que eu cobre o meu
+cliente por nao pagar o valor mensal. quero que o MEU CLIENTE consiga cobrar o
+cliente DELE a parcela atrasada".
+
+Degraus em `DEGRAUS_DA_REGUA = [-3, 1, 7, 15, 30]`: um lembrete tres dias ANTES
+de vencer, e quatro depois, do tom mais leve ao mais firme.
+
+**O defeito de idempotencia que eu mesmo introduzi.** A primeira formulacao do
+teto por idade, `Math.min(passados, jaEnviadas + 1)`, fazia a escada andar um
+degrau POR EXECUCAO do cron — duas execucoes no mesmo dia, duas mensagens.
+Reformulado para contar POSICAO na escada, e nao mensagens enviadas:
+
+```ts
+const diasEfetivos = idadeEmDias === undefined ? dias : Math.min(dias, idadeEmDias)
+const total = DEGRAUS_DA_REGUA.filter((d) => diasEfetivos >= d).length
+```
+
+O teto por idade existe porque uma OS antiga parcelada nasce vencida: sem ele, a
+primeira cobranca de uma conta criada hoje sairia no tom de 30 dias de atraso.
+
+**Agrupamento por PAGADOR antes de decidir**: cinco parcelas vencidas do mesmo
+cliente viram um e-mail com cinco linhas, e nao cinco e-mails. E `portalUrl`, que
+`textoDaCobranca` aceitava e ninguem passava — mais um caso de codigo
+inalcancavel —, passou a ser passado de verdade: cobranca sem dizer onde pagar e
+so incomodo.
+
+**Fatura e nota anexadas** (`lib/fatura.ts`, molde de `lib/contrato.ts`): a
+fatura em PDF sai sempre; a NF-e so quando `estadoDaNota(...) === "emitida"`.
+`baixarNotaFiscal` usa `AbortSignal.timeout(8000)` e descarta resposta menor que
+1024 bytes — pagina de erro do emissor nao pode virar anexo com cara de nota.
+
+**Arquivamento** (`lib/arquivo-da-nota.ts`): PDF e XML no nosso storage, com
+`arquivarNota` que nunca lanca, servico preguicoso para notas antigas, e volta ao
+emissor se o arquivo guardado sumir. Migracao `20260907000002_arquivar_nota_fiscal`.
+
+> **Um teste que mentia, achado por mutacao.** "A nota de outra empresa nao e
+> servida" passava com o filtro de tenant REMOVIDO: o `fetch` nao stubado falhava
+> e o `null` vinha da rede, nao da regra. Com o fetch stubado, o mutante morre.
+
+---
+
+### 7.2.55 Editar a OS apagava quem a executou — 09/09/2026
+
+Achado conferindo, contra o codigo, um texto de manual que descrevia o
+apagamento **como se fosse regra**. Documentar defeito com cara de
+comportamento e a forma mais duradoura de nunca conserta-lo.
+
+`updateServiceOrder` gravava `technicianId: technicianId || null`, e o campo e
+`optional()` no schema. O formulario de EDICAO nao tinha o select de responsavel
+— so o de CRIACAO tinha. O navegador nao envia o que nao esta no formulario,
+entao toda edicao (corrigir o titulo, arrumar a data, mexer num valor) chegava
+com o campo ausente e gravava `null`.
+
+O estrago passava longe de "sumiu um nome da tela":
+
+- a OS saia da lista e do mapa daquele tecnico;
+- a comissao pendente era APAGADA junto, por nao haver mais a quem pagar;
+- o PDF e o portal do cliente perdiam o responsavel;
+- e nao havia tela para devolver o tecnico, porque o campo que faltava era
+  justamente o da edicao.
+
+**Corrigido nos dois niveis.** A tela ganhou o campo (com "Ninguem ainda"
+escolhivel, para uma OS atribuida por engano poder voltar a ficar livre). E a
+Action passou a distinguir ausente de vazio — `mexeuNoResponsavel =
+technicianId !== undefined` —, porque toda export de um arquivo "use server" e
+endereco HTTP que qualquer cliente pode chamar: ausente quer dizer "nao mexe";
+para esvaziar, manda-se vazio.
+
+Sete testes, dois deles estruturais sobre a fonte da tela: os de comportamento
+sozinhos PASSAVAM com a tela quebrada, que foi exatamente o que aconteceu por
+semanas.
+
+**No mesmo rastro**, a fila offline: ela levava texto, itens e a decisao de
+faturar, e nao a porcentagem de comissao. O tecnico digitava 10% sem sinal e o
+numero morria ali — a OS subia concluida e sem comissao, e o dono descobria no
+dia 5 pela reclamacao. `commissionPct` entrou no payload, com `undefined`
+continuando a significar "nao mexe" (e assim que a assistente de IA conclui sem
+apagar comissao ja gravada).
+
+---
+
+### 7.2.56 O celular, antes de lancar — 08-09/09/2026
+
+Auditoria do ciclo do tecnico num aparelho de 375px. O rompimento de verdade era
+um so: **fechar a OS com valor so existia dentro de uma celula da ultima coluna
+de uma tabela de oito colunas** — fora da tela num celular. O tecnico terminava o
+servico, abria a OS, marcava o checklist, tirava as fotos, colhia a assinatura, e
+ali nao havia onde fechar o trabalho.
+
+| O que | Correcao |
+|---|---|
+| Concluir so existia na lista | `ConcluirDialog` na tela da propria OS, como PRIMEIRO botao do cabecalho |
+| Botao de 32px em todo o sistema | O par `h-10 md:h-8` na definicao do botao (`ui/button.tsx`), e nao tela a tela — 40px no dedo, 32 no mouse. Uma mudanca, todas as telas |
+| Cabecalho da OS com ate onze botoes em meia largura | Empilha no celular (`flex-col md:flex-row`): tres por linha em vez de onze fileiras |
+| Cabecalho do painel nao grudava | `sticky top-0` com fundo proprio — ele carrega o UNICO botao de menu do celular |
+| `p-6` fixo | `p-4 md:p-6`: 48 dos 375px eram margem |
+| Linha de parcela somava 312px num dialogo de ~311 | Vira cartao com borda no celular; data ocupa o resto da primeira linha |
+| Excluir do checklist so aparecia no hover | `md:opacity-0 md:group-hover:opacity-100` — nao ha hover no celular |
+| Faixa de offline dizia que as alteracoes nao seriam salvas | Contradizia a propria fila, que salva Concluir e mudanca de status |
+
+---
+
+### 7.2.57 Vitrine conferida contra a trava — 09/09/2026
+
+`prisma/seed.ts` vendia tres coisas que `POR_PLANO` (`lib/plan.ts`) nao entrega:
+Pro com "OS ilimitadas" (sao 200/mes), Enterprise com "Usuarios ilimitados" (sao
+30 desde 04/09) e "Emissao de NFS-e" listada como se fosse exclusividade dele (os
+tres planos emitem; muda a cota — 8 / 70 / 200). Nao chegava ao cliente — a tela
+de planos le `planFeatures` de `messages/*.json`, que ja estava certo, e o
+`upsert` do seed so atualiza preco —, mas e a copia que um banco novo recebe.
+Alinhado, com a nota de conferir os dois juntos.
+
+**Encarregado de dados.** A politica de privacidade (2x) e os termos (1x)
+apontavam para um Gmail pessoal, enquanto o CONTRATO que o cliente assina nomeia
+`suporte@servicoos.com.br` como "Contato / Encarregado" e canal de protecao de
+dados. Dois documentos do mesmo produto davam DPOs diferentes. Unificados no
+institucional.
+
 
 ---
 

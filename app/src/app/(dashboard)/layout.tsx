@@ -69,7 +69,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
           menu para fora da tela. Parecia "o menu travou em algumas abas".
           (Relatado no Histórico e nos Recibos, 01/09/2026.) */}
       <main className="flex-1 min-w-0 flex flex-col min-h-screen">
-        <header className="h-14 border-b flex items-center px-4 gap-2">
+        {/* GRUDADO no topo. Este cabeçalho carrega o único botão de menu que
+            existe no celular; sem `sticky`, quem rolava uma lista de OS até o
+            fim precisava rolar tudo de volta para cima só para trocar de tela.
+            Precisa de fundo próprio: sem ele o conteúdo passa por baixo e se
+            lê o texto da lista atravessando o botão. */}
+        <header className="sticky top-0 z-20 h-14 border-b bg-background flex items-center px-4 gap-2">
           <SidebarTrigger />
         </header>
         {/* Antes de tudo: se o dono da plataforma estiver vendo como um
@@ -91,7 +96,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <Suspense>
           <OverdueAlerts tenantId={tenantId} />
         </Suspense>
-        <div className="flex-1 p-6">{children}</div>
+        {/* 16px no celular, 24 no desktop. `p-6` fixo comia 48 dos 375px de um
+            telefone comum — 13% da tela em margem, numa tela onde o que falta
+            é largura. */}
+        <div className="flex-1 p-4 md:p-6">{children}</div>
       </main>
       {/* A assistente de voz. Ela mesma decide se aparece: sem o adicional
           contratado, não desenha nada. */}

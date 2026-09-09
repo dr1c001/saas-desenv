@@ -135,7 +135,7 @@ export default async function PrivacyPage() {
             <p>
               {t.rich("privacy.section8.p1", {
                 email: (chunks) => (
-                  <a href="mailto:olisuporte1@gmail.com" className="text-primary underline underline-offset-2">
+                  <a href="mailto:suporte@servicoos.com.br" className="text-primary underline underline-offset-2">
                     {chunks}
                   </a>
                 ),
@@ -168,7 +168,7 @@ export default async function PrivacyPage() {
             <p>
               {t.rich("privacy.section13.p1", {
                 email: (chunks) => (
-                  <a href="mailto:olisuporte1@gmail.com" className="text-primary underline underline-offset-2">
+                  <a href="mailto:suporte@servicoos.com.br" className="text-primary underline underline-offset-2">
                     {chunks}
                   </a>
                 ),

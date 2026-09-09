@@ -51,6 +51,15 @@ export type Operacao = {
     conclusionNote?: string
     items?: ItemDaConclusao[]
     invoiceImmediately?: boolean
+    /** A comissão desta OS, em porcentagem.
+     *
+     *  Sem este campo, o técnico que digitava 10% sem sinal perdia o número: a
+     *  fila levava texto, itens e a decisão de faturar, e mais nada. A OS
+     *  chegava concluída e sem comissão, e ninguém era avisado — o dono só
+     *  descobria no dia 5, pela reclamação. `undefined` continua querendo
+     *  dizer "não mexe": é assim que a assistente de IA conclui sem apagar uma
+     *  comissão já gravada. */
+    commissionPct?: number | null
     status?: string
   }
 }
