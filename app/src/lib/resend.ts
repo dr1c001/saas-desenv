@@ -2,6 +2,7 @@ import { Resend } from "resend"
 import { getTranslator } from "@/lib/i18n"
 import { momentoDoAviso, type Momento } from "@/lib/past-due"
 import { destinoDeEmailDeTeste, ehProducao, prefixoDeAssunto } from "@/lib/ambiente"
+import { EMAIL_FUNDADOR } from "@/lib/admin"
 
 let resendClient: Resend | null = null
 
@@ -494,11 +495,20 @@ export async function avisarFalhaDoCron(
   erros: number,
   detalhe: Record<string, unknown>
 ) {
-  const para = process.env.SUPER_ADMIN_EMAIL?.trim()
-  if (!para) {
-    console.error("[cron] falhou, mas SUPER_ADMIN_EMAIL não está definido — ninguém foi avisado.")
-    return
-  }
+  // `EMAIL_FUNDADOR`, e não a variável crua.
+  //
+  // Esta função lia `process.env.SUPER_ADMIN_EMAIL` direto e desistia quando a
+  // variável faltava — deixando um `console.error` que ninguém lê. E a variável
+  // NÃO está definida em produção: o alarme do cron estava mudo desde sempre,
+  // justamente no processo que roda comissão, régua de cobrança, avisos de fim
+  // de teste e cobrança de assinatura.
+  //
+  // `lib/admin.ts` já resolvia isso: a mesma variável, com o e-mail do fundador
+  // de reserva, "a chave reserva que impede o painel de ficar trancado sem
+  // ninguém dentro". O alarme merece a mesma reserva — um aviso que depende de
+  // configuração para existir é um aviso que falta exatamente quando alguém
+  // esqueceu de configurar. (Achado na auditoria de 13/09/2026.)
+  const para = EMAIL_FUNDADOR
 
   return send({
     from: FROM,

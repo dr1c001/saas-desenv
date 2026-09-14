@@ -291,6 +291,19 @@ describe("quem recebe a cobrança", () => {
         description: "Extra",
         amount: 300,
         dueDate: vencimento(7),
+        // `createdAt` junto com o vencimento, e não o `now()` do banco.
+        //
+        // Sem isto a conta nascia HOJE DE VERDADE e vencia em 10/09/2026, a
+        // data fixa do teste. O teto por idade da régua (`idadeEmDias`, que
+        // existe para uma OS antiga parcelada não ser cobrada já no tom de 30
+        // dias) via uma conta com idade NEGATIVA e não mandava nada.
+        //
+        // O teste passou verde enquanto o relógio real esteve antes de
+        // 10/09/2026 e começou a falhar sozinho quando o calendário passou —
+        // sem ninguém ter mexido no código. É o mesmo defeito que já havia sido
+        // corrigido no ajudante `contaDe`; este caso monta a receita à mão e
+        // ficou de fora. (Achado em 14/09/2026.)
+        createdAt: vencimento(7),
       },
     })
 
@@ -389,6 +402,12 @@ describe("os canais", () => {
         description: "X",
         amount: 200,
         dueDate: vencimento(7),
+        // Mesmo motivo do caso acima — e aqui o estrago era pior: sem
+        // `createdAt`, o teto por idade barrava o envio ANTES de o código
+        // chegar na falta de contato, e o teste passava pelo motivo errado.
+        // Ele continuaria verde com o tratamento de "cliente sem contato"
+        // completamente quebrado, que é justamente o que ele existe para provar.
+        createdAt: vencimento(7),
       },
     })
 

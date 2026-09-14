@@ -137,19 +137,40 @@ export async function liberarAcesso(tenantId: string) {
 
   const antes = await prisma.tenant.findUnique({
     where: { id: tenantId },
-    select: { subscriptionStatus: true, name: true },
+    select: { subscriptionStatus: true, name: true, planId: true },
   })
   if (!antes) throw new Error("Empresa não encontrada.")
 
-  await prisma.tenant.update({ where: { id: tenantId }, data: { subscriptionStatus: "ACTIVE" } })
+  // O PLANO da assinatura mais recente, quando a empresa ainda não tem plano.
+  //
+  // Liberar sem plano deixava a empresa ACTIVE com `planId` nulo — e sem plano
+  // `getLimites` caía no PERMISSIVO: recursos TODOS e cotas infinitas, de
+  // graça e para sempre. Não era caso de borda: no fluxo que criou esta função
+  // (cliente pagou e ficou preso em PENDING) o tenant NUNCA teve planId, porque
+  // quem grava esse campo é só o webhook da Asaas. Ou seja, TODA empresa
+  // liberada à mão ganhava o pacote inteiro.
+  //
+  // `trocarPlano`, a outra liberação manual deste mesmo painel, sempre gravou o
+  // plano. Esta era a única que não. (Achado na auditoria de 13/09/2026.)
+  const assinatura = await prisma.subscription.findFirst({
+    where: { tenantId },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, planId: true },
+  })
+
+  await prisma.tenant.update({
+    where: { id: tenantId },
+    data: {
+      subscriptionStatus: "ACTIVE",
+      // Só preenche o que está vazio: quem já tem plano não é rebaixado por um
+      // clique de destravar.
+      ...(antes.planId === null && assinatura?.planId ? { planId: assinatura.planId } : {}),
+    },
+  })
   // A Subscription mais recente também vira ACTIVE: hasActiveSubscription lê o
   // Tenant, mas a carência de PAST_DUE e a tela de cobrança leem a Subscription
   // — deixar as duas discordando produz bug difícil de enxergar depois.
-  const ultima = await prisma.subscription.findFirst({
-    where: { tenantId },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  })
+  const ultima = assinatura
   if (ultima) {
     await prisma.subscription.update({
       where: { id: ultima.id },

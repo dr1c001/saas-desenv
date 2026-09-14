@@ -106,12 +106,61 @@ const POR_PLANO: Record<string, Limites> = {
   enterprise: { maxUsuarios: 30, maxOsMes: null, maxNfseMes: 200, recursos: TODOS },
 }
 
+// O que os 15 dias de teste entregam.
+//
+// Ate 14/09/2026 o teste nao tinha plano nenhum, e "sem plano" caia no
+// PERMISSIVO logo abaixo: recursos TODOS e cotas INFINITAS. Quem se cadastrava
+// sem cartao podia emitir NOTA FISCAL SEM TETO — e cada nota e cobrada de nos
+// pela nfe.io, sem volta, porque nao ha cancelamento no produto. Era
+// estritamente pior que o caso que o Enterprise ja tinha corrigido em
+// 04/09/2026 (ver o comentario dele acima): la o teto existe e o cliente paga;
+// aqui nao havia teto e ninguem pagava.
+//
+// O teste mostra o PRO, e nao o Starter: estoque, mapa, regua de cobranca e
+// relatorios avancados sao justamente os argumentos que fazem alguem assinar.
+// Esconde-los durante o teste e vender o plano de entrada para quem estava
+// avaliando o de cima.
+//
+// A NOTA e a unica coisa contida, e por um motivo que nao e comercial: ela tem
+// custo por unidade para nos. Cinco bastam para a pessoa ver a nota sair com o
+// CNPJ dela e conferir que a prefeitura aceitou — que e o que ela quer saber
+// antes de assinar.
+//
+// `api` fica de fora porque e o unico recurso exclusivo do Enterprise, e o
+// teste nao e uma amostra gratis do plano mais caro.
+const TESTE: Limites = {
+  maxUsuarios: 10,
+  maxOsMes: 200,
+  maxNfseMes: 5,
+  recursos: SEM_EXCLUSIVOS,
+}
+
 // Slug desconhecido (plano novo cadastrado direto no banco) cai no permissivo
 // de propósito. É uma troca deliberada: um plano novo mal cadastrado gera, no
 // pior caso, recurso liberado a mais; o inverso — travar quem está pagando por
-// causa de um slug que o código não conhece — é muito pior. Tenant sem plano
-// nenhum também cai aqui, e não é brecha: sem assinatura ACTIVE o layout do
-// dashboard já manda pra /expired antes de qualquer coisa.
+// causa de um slug que o código não conhece — é muito pior.
+//
+// ─── O que este comentário dizia, e por que estava errado ───────────────────
+//
+// Ele terminava assim: "Tenant sem plano nenhum também cai aqui, e não é
+// brecha: sem assinatura ACTIVE o layout do dashboard já manda pra /expired
+// antes de qualquer coisa."
+//
+// A defesa citada parou de valer em 08/09/2026, quando o teste grátis voltou:
+// TRIAL passa em `hasActiveSubscription`, o layout deixa entrar, e o tenant em
+// teste não tem plano. Durante seis dias, quem se cadastrava sem cartão ganhou
+// recursos TODOS e cotas INFINITAS — inclusive nota fiscal, que custa por
+// unidade e não tem cancelamento.
+//
+// A lição é sobre a forma do comentário, não sobre o trial: ele justificava uma
+// escolha ARRISCADA apontando para uma trava em OUTRO arquivo. Quando aquela
+// trava mudou, ninguém veio reler esta linha. Por isso o caso do teste agora é
+// explícito acima (`TESTE`), e não delegado.
+//
+// O que sobra aqui é só o slug desconhecido. Tenant sem plano e sem teste
+// continua caindo no permissivo — é o estado de quem foi liberado à mão antes
+// de 14/09/2026; `liberarAcesso` passou a gravar o plano justamente para não
+// criar mais nenhum.
 const PERMISSIVO: Limites = { maxUsuarios: null, maxOsMes: null, maxNfseMes: null, recursos: TODOS }
 
 // cache() do React: memoriza por requisição. Toda checagem de recurso
@@ -127,11 +176,17 @@ export const getLimites = cache(async function getLimites(tenantId: string): Pro
       maxUsersOverride: true,
       maxOrdersOverride: true,
       maxNfseOverride: true,
+      subscriptionStatus: true,
       plan: { select: { slug: true } },
     },
   })
 
-  const doPlano = (tenant?.plan?.slug && POR_PLANO[tenant.plan.slug]) || PERMISSIVO
+  // A ordem importa. Plano contratado manda; depois vem o TESTE, que e o estado
+  // de quem ainda nao escolheu; e so entao o permissivo, que agora cobre apenas
+  // o slug desconhecido.
+  const doPlano =
+    (tenant?.plan?.slug && POR_PLANO[tenant.plan.slug]) ||
+    (tenant?.subscriptionStatus === "TRIAL" ? TESTE : PERMISSIVO)
 
   // Recursos concedidos individualmente somam com os do plano (ver o comentário
   // de extraFeatures em schema.prisma).

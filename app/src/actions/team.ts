@@ -215,6 +215,26 @@ export async function removeTeamMember(memberId: string) {
   if (requesterRole !== "OWNER" && requesterRole !== "ADMIN") return
   if (memberId === userId) return // can't remove yourself
 
+  // O DONO não se remove.
+  //
+  // A função irmã logo acima já recusava mexer no papel de um OWNER; esta
+  // apagava a linha dele sem olhar o alvo. Um ADMIN — papel que outro ADMIN
+  // distribui por convite — podia apagar o dono da empresa.
+  //
+  // O estrago não era perder um usuário. No login seguinte o dono cai em
+  // `getTenant()` sem linha de User, não é super admin, e o código CRIA UMA
+  // EMPRESA NOVA E VAZIA no nome dele: ele perde a empresa que paga, os
+  // clientes, as OS e o financeiro, e fica olhando um tenant em branco. Do
+  // outro lado, a empresa original fica sem OWNER — `subscribeToPlan` passa a
+  // recusar com "ownerNotFound" e o e-mail de pagamento confirmado deixa de ter
+  // destinatário —, enquanto quem apagou segue com acesso total.
+  // (Achado na auditoria de 13/09/2026.)
+  const alvo = await prisma.user.findUnique({
+    where: { id: memberId, tenantId },
+    select: { role: true },
+  })
+  if (!alvo || alvo.role === "OWNER") return
+
   await prisma.user.delete({ where: { id: memberId, tenantId } })
 
   // Defesa em profundidade: limpa tenantId/role do user_metadata no Supabase.
