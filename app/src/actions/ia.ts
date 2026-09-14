@@ -86,22 +86,36 @@ export async function estadoDaAssistente(): Promise<{
  * uma chamada fora dessa lista é recusada em conversa.ts. O pior que um
  * histórico adulterado consegue é confundir o modelo.
  */
-export async function falarComAssistente(
-  historico: Mensagem[],
-  falado: string,
-  telaAtual?: string
-): Promise<RespostaDaAssistente> {
-  const { tenantId, role, userId } = await getTenant()
-
+/**
+ * O portão que toda ida ao modelo atravessa: recurso, chave e cota.
+ *
+ * Devolve o motivo da recusa, ou `null` quando pode — e, quando pode, JÁ
+ * consome um comando da franquia.
+ *
+ * ─── Por que isto virou função ───────────────────────────────────────────────
+ *
+ * O portão existia só dentro de `falarComAssistente`. As outras duas portas que
+ * chegam ao modelo pagas — `confirmarPendente` e `cancelarPendente` — passavam
+ * ao largo: a primeira conferia o recurso e não descontava cota; a segunda não
+ * conferia nada. Como `cancelarPendente` recebe o histórico inteiro pelo corpo
+ * da requisição e dispara até `MAX_VOLTAS` chamadas ao modelo, qualquer conta
+ * autenticada — inclusive uma do teste grátis, que nem comprou o adicional —
+ * podia gastar a nossa chave em laço.
+ *
+ * Três portas, um portão. Copiar a checagem nas outras duas resolveria hoje e
+ * deixaria a quarta porta repetir a história. (Achado na auditoria de
+ * 13/09/2026.)
+ *
+ * A cota é consumida ANTES da conversa, e não depois: uma conversa que gasta
+ * seis idas ao modelo e falha na última já custou dinheiro. Cobrar só o que
+ * termina bem transformaria falha em uso grátis.
+ */
+async function cobrarUmComando(
+  tenantId: string
+): Promise<{ impedimento: Impedimento | null; restam: number | null }> {
   const cru = await prisma.tenant.findUnique({
     where: { id: tenantId },
-    select: {
-      maxIaOverride: true,
-      iaComandosNoMes: true,
-      iaMesDoContador: true,
-      locale: true,
-      vocabulary: true,
-    },
+    select: { maxIaOverride: true, iaComandosNoMes: true, iaMesDoContador: true },
   })
   const cota = estadoDaCota({
     usado: cru?.iaComandosNoMes ?? 0,
@@ -114,12 +128,25 @@ export async function falarComAssistente(
     temChave: Boolean(process.env.ANTHROPIC_API_KEY),
     cota,
   })
-  if (impedimento) return { tipo: "impedida", motivo: impedimento }
+  if (impedimento) return { impedimento, restam: cota.restam }
 
-  // A cota é consumida ANTES da conversa, e não depois: uma conversa que gasta
-  // seis idas ao modelo e falha na última já custou dinheiro. Cobrar só o que
-  // termina bem transformaria falha em uso grátis.
   await prisma.tenant.update({ where: { id: tenantId }, data: aposConsumir(cota) })
+  return { impedimento: null, restam: cota.restam }
+}
+
+export async function falarComAssistente(
+  historico: Mensagem[],
+  falado: string,
+  telaAtual?: string
+): Promise<RespostaDaAssistente> {
+  const { tenantId, role, userId } = await getTenant()
+
+  const cru = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { locale: true, vocabulary: true },
+  })
+  const portao = await cobrarUmComando(tenantId)
+  if (portao.impedimento) return { tipo: "impedida", motivo: portao.impedimento }
 
   const usuario = await prisma.user.findFirst({
     where: { id: userId, tenantId },
@@ -137,13 +164,15 @@ export async function falarComAssistente(
   })
 
   const conversa: Mensagem[] = [...historico, { role: "user", content: falado }]
-  return rodar(conversa, sistema, disponiveis, cota.restam)
+  return rodar(conversa, sistema, disponiveis, portao.restam)
 }
 
 /** Executa o que a pessoa acabou de confirmar, e devolve a conversa ao modelo. */
 export async function confirmarPendente(p: Pendente): Promise<RespostaDaAssistente> {
   const { tenantId, role } = await getTenant()
-  if (await temRecurso(tenantId, "ia")) {
+  const portao = await cobrarUmComando(tenantId)
+  if (portao.impedimento) return { tipo: "impedida", motivo: portao.impedimento }
+  {
     // A execução passa pela action de verdade, que confere permissão de novo.
     const r = await executarFerramenta(p.ferramenta, p.args)
     const ehAdmin = role === "OWNER" || role === "ADMIN"
@@ -168,6 +197,9 @@ export async function confirmarPendente(p: Pendente): Promise<RespostaDaAssisten
 /** Quem a pessoa cancelou não acontece, e o modelo precisa saber disso. */
 export async function cancelarPendente(p: Pendente): Promise<RespostaDaAssistente> {
   const { tenantId, role } = await getTenant()
+  const portao = await cobrarUmComando(tenantId)
+  if (portao.impedimento) return { tipo: "impedida", motivo: portao.impedimento }
+
   const ehAdmin = role === "OWNER" || role === "ADMIN"
   const disponiveis = ferramentasPara(ehAdmin, await getAcoesPermitidas(tenantId, role))
   const conversa: Mensagem[] = [

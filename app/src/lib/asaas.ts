@@ -93,6 +93,30 @@ export const asaas = {
     })
   },
 
+  /**
+   * Muda o valor de uma assinatura viva.
+   *
+   * Existe por causa do desconto de indicação. Ele é vendido como "10% no
+   * primeiro pagamento", mas a assinatura da Asaas cobra o `value` em TODO
+   * ciclo — então o desconto virava vitalício, e com 100% acumulado a
+   * assinatura nascia valendo R$ 0,00 para sempre.
+   *
+   * `updatePendingPayments: false` é o que faz a promessa valer: a primeira
+   * fatura, já gerada com desconto, fica como está; só as próximas saem pelo
+   * preço cheio.
+   *
+   * ATENÇÃO — não verificado contra a Asaas. O verbo e o formato vieram da
+   * documentação, e este projeto não tem como exercitar a API real em teste. A
+   * falha aqui é benigna de propósito (quem chama registra e segue), mas isto
+   * precisa de uma passada no sandbox antes de ser considerado entregue.
+   */
+  async updateSubscription(id: string, data: { value: number; updatePendingPayments?: boolean }) {
+    return asaasRequest<AsaasSubscription>(`/subscriptions/${id}`, {
+      method: "POST",
+      body: JSON.stringify({ updatePendingPayments: false, ...data }),
+    })
+  },
+
   async cancelSubscription(id: string) {
     return asaasRequest(`/subscriptions/${id}`, { method: "DELETE" })
   },

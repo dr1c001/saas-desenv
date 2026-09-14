@@ -127,17 +127,56 @@ export async function subscribeToPlan(formData: FormData) {
     // Next due date = today
     const nextDueDate = new Date().toISOString().split("T")[0]
 
-    const sub = await asaas.createSubscription({
-      customer: asaasCustomerId,
-      billingType: "UNDEFINED",
-      value: price,
-      nextDueDate,
-      cycle: cycle === "YEARLY" ? "YEARLY" : "MONTHLY",
-      description: `${plan.name} — ${cycle === "YEARLY" ? "Anual" : "Mensal"}`,
-    })
-
     const periodEnd = new Date()
     periodEnd.setMonth(periodEnd.getMonth() + (cycle === "YEARLY" ? 12 : 1))
+
+    // ─── A linha local nasce ANTES da chamada à Asaas ───────────────────────
+    //
+    // A ordem antiga era: cria a assinatura recorrente REAL na Asaas, e só
+    // depois grava no banco. Entre as duas não havia nada — nem registro de
+    // intenção, nem compensação —, e `asaasRequest` não tem timeout.
+    //
+    // O estrago: a Asaas cria a cobrança mensal, o `$transaction` falha (banco
+    // em failover, pool esgotado) ou a função morre por tempo, e o catch manda
+    // o dono de volta para /billing com um erro. A guarda de duplicidade lá em
+    // cima procura Subscription no NOSSO banco e não acha nada, porque nada foi
+    // gravado. Ele clica de novo: SEGUNDA assinatura recorrente no mesmo
+    // cartão. Duas cobranças mensais paralelas, e o sistema só conhece a
+    // segunda — a primeira cobra para sempre e ninguém consegue nem vê-la nem
+    // cancelá-la pela tela.
+    //
+    // Agora a linha é criada antes, sem `asaasId`. Se a Asaas falhar, ela é
+    // apagada e o dono pode tentar de novo; se a gravação do `asaasId` falhar
+    // depois, a linha fica lá e a guarda de duplicidade ENXERGA a tentativa —
+    // que é exatamente o que faltava. (Auditoria de 13/09/2026.)
+    const local = await prisma.subscription.create({
+      data: {
+        tenantId,
+        planId,
+        status: "PENDING",
+        billingCycle: cycle,
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: periodEnd,
+      },
+      select: { id: true },
+    })
+
+    let sub
+    try {
+      sub = await asaas.createSubscription({
+        customer: asaasCustomerId,
+        billingType: "UNDEFINED",
+        value: price,
+        nextDueDate,
+        cycle: cycle === "YEARLY" ? "YEARLY" : "MONTHLY",
+        description: `${plan.name} — ${cycle === "YEARLY" ? "Anual" : "Mensal"}`,
+      })
+    } catch (e) {
+      // A Asaas recusou: não há cobrança lá fora, então a linha local não deve
+      // ficar bloqueando uma nova tentativa.
+      await prisma.subscription.delete({ where: { id: local.id } }).catch(() => null)
+      throw e
+    }
 
     // Fica PENDING até o webhook do Asaas confirmar o pagamento (evento
     // PAYMENT_RECEIVED/PAYMENT_CONFIRMED) — nem Subscription.status nem
@@ -151,17 +190,7 @@ export async function subscribeToPlan(formData: FormData) {
     // confirmar via "Assine um plano" como se nunca tivesse tentado.
     // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
     await prisma.$transaction([
-      prisma.subscription.create({
-        data: {
-          tenantId,
-          planId,
-          asaasId: sub.id,
-          status: "PENDING",
-          billingCycle: cycle,
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: periodEnd,
-        },
-      }),
+      prisma.subscription.update({ where: { id: local.id }, data: { asaasId: sub.id } }),
       prisma.tenant.update({ where: { id: tenantId }, data: { subscriptionStatus: "PENDING" } }),
     ])
 
@@ -234,9 +263,20 @@ export async function cancelSubscription() {
     data: { status: "CANCELLED", cancelledAt: new Date() },
   })
 
+  // O PLANO fica.
+  //
+  // Zerar `planId` aqui fazia duas coisas ruins de uma vez. A primeira: durante
+  // o período já pago, que o contrato garante, a empresa ficaria sem plano — e
+  // sem plano `getLimites` caía no PERMISSIVO, entregando mais do que ela
+  // comprou. A segunda: era o terceiro caminho que produzia o estado
+  // "ACTIVE sem plano", bastando alguém clicar "Liberar acesso" depois.
+  //
+  // Quem decide o acesso é o STATUS mais a data em `currentPeriodEnd`, lida por
+  // `hasActiveSubscription`. O plano continua descrevendo o que a empresa
+  // contratou até o fim do que pagou. (Auditoria de 13/09/2026.)
   await prisma.tenant.update({
     where: { id: tenantId },
-    data: { subscriptionStatus: "CANCELLED", planId: null },
+    data: { subscriptionStatus: "CANCELLED" },
   })
 
   revalidatePath("/billing")

@@ -141,7 +141,34 @@ export async function emitNfse(orderId: string) {
   const clientDoc = pagador.document?.replace(/[^A-Za-z0-9]/g, "").toUpperCase() || undefined
   const addr = pagador.address
 
-  const invoice = await nfeio.emitNfse(tenant.nfeioCompanyId, {
+  // ─── RESERVA antes de emitir ────────────────────────────────────────────
+  //
+  // A emissão na nfe.io cria um documento fiscal DE VERDADE, e o produto não
+  // tem cancelamento. Até aqui a marca que impede a segunda emissão (`nfseId`)
+  // só era gravada DEPOIS da chamada — e entre as duas não havia nada.
+  //
+  // Dois caminhos reais para a nota duplicada:
+  //   - a nfe.io demora mais que o limite da função; a nota É criada lá, o
+  //     `update` abaixo nunca roda, o botão mostra erro e a pessoa clica de
+  //     novo;
+  //   - o dono e o administrador abrem a mesma OS: os dois passam pela
+  //     checagem de `order.nfseId` (ainda nulo) e os dois emitem.
+  //
+  // `updateMany` condicionado a `nfseId: null` é a reserva: o Postgres decide
+  // quem chega primeiro, e o segundo recebe `count: 0`. O valor reservado não é
+  // um id de verdade — é um marcador que diz "alguém está emitindo agora" —, e
+  // ele é substituído pelo id real logo abaixo.
+  // (Achado na auditoria de 13/09/2026.)
+  const RESERVA = `reservando:${orderId}`
+  const reserva = await prisma.serviceOrder.updateMany({
+    where: { id: orderId, tenantId, nfseId: null },
+    data: { nfseId: RESERVA },
+  })
+  if (reserva.count === 0) throw new Error(te("nfseAlreadyIssued"))
+
+  let invoice
+  try {
+    invoice = await nfeio.emitNfse(tenant.nfeioCompanyId, {
     borrower: {
       federalTaxNumber: clientDoc,
       name: pagador.name,
@@ -164,9 +191,29 @@ export async function emitNfse(orderId: string) {
     services: {
       description,
       amount,
-      issRate: tenant.fiscalIssRate ?? 5,
-    },
-  })
+        issRate: tenant.fiscalIssRate ?? 5,
+      },
+    })
+  } catch (e) {
+    // A emissão não saiu: devolve a reserva para a pessoa poder tentar de novo.
+    //
+    // Isto solta a reserva em QUALQUER erro capturado, e vale dizer por que
+    // hoje é seguro: `lib/nfeio.ts` não tem `AbortSignal.timeout`, então um
+    // erro aqui é sempre uma resposta da nfe.io dizendo não — nunca um "não sei
+    // se saiu". O outro caso, a função inteira ser morta por tempo na Vercel,
+    // não passa por este `catch`: o processo acaba, a reserva fica de pé, e a
+    // OS trava. Travada é o lado certo — o suporte destrava uma OS, mas
+    // ninguém desfaz uma nota fiscal.
+    //
+    // No dia em que o timeout entrar em lib/nfeio.ts (está na lista da
+    // auditoria), este `catch` precisa distinguir os dois: recusa devolve a
+    // reserva, tempo esgotado mantém.
+    await prisma.serviceOrder.updateMany({
+      where: { id: orderId, tenantId, nfseId: RESERVA },
+      data: { nfseId: null },
+    })
+    throw e
+  }
 
   await prisma.serviceOrder.update({
     where: { id: orderId },

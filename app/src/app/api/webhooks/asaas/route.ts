@@ -4,6 +4,8 @@ import { avisarPlataforma } from "@/lib/avisar-plataforma"
 import { sendPaymentConfirmedEmail } from "@/lib/resend"
 import { gerarContrato } from "@/lib/contrato"
 import { notificar } from "@/lib/notificar"
+import { asaas } from "@/lib/asaas"
+import { precoCobrado } from "@/lib/preco"
 
 // Espelha REFERRAL_DISCOUNT_PERCENT/NEW_SIGNUP_DISCOUNT_PERCENT em
 // lib/auth.ts e api/referral/join/route.ts — bônus de quem indicou, creditado
@@ -31,12 +33,15 @@ export async function POST(req: NextRequest) {
     const sub = await prisma.subscription.findFirst({
       where: { asaasId: asaasSubId },
       include: {
-        plan: { select: { name: true } },
+        plan: { select: { name: true, priceMonthly: true, priceYearly: true } },
         tenant: {
           select: {
             id: true,
             name: true,
             referredByCode: true,
+            // Para devolver o preço cheio depois do primeiro pagamento com
+            // desconto de indicação — o combinado, quando existe, é o teto.
+            customPriceMonthly: true,
             // locale: o e-mail de confirmação sai no idioma da empresa — webhook
             // roda fora de qualquer request de navegador, então não há contexto
             // pra resolver isso sozinho. (i18n, item 1.)
@@ -118,6 +123,39 @@ export async function POST(req: NextRequest) {
         url: "/billing",
         referencia: sub.id,
       })
+
+      // O desconto de indicação acaba AQUI — ele é de um pagamento só.
+      //
+      // A assinatura da Asaas cobra o mesmo `value` em todo ciclo, então criar
+      // a assinatura já descontada transformava "10% no primeiro pagamento"
+      // (o texto da landing, do manual e do próprio comentário em billing.ts)
+      // num desconto vitalício. Com os 20% por indicação acumulando até 100%,
+      // cinco conversões davam assinatura de R$ 0,00 para sempre.
+      //
+      // Melhor esforço, e de propósito: se a chamada falhar, o cliente segue
+      // com o desconto. Perder alguns por cento de um cliente é muito melhor
+      // que derrubar a ativação de quem acabou de pagar — e o log diz o que
+      // não foi corrigido. (Auditoria de 13/09/2026.)
+      if (isFirstConfirmation && sub.asaasId) {
+        try {
+          const cheio = precoCobrado(
+            {
+              priceMonthly: Number(sub.plan.priceMonthly),
+              priceYearly: Number(sub.plan.priceYearly),
+            },
+            sub.tenant.customPriceMonthly === null ? null : Number(sub.tenant.customPriceMonthly),
+            sub.billingCycle === "YEARLY" ? "YEARLY" : "MONTHLY",
+            0
+          )
+          await asaas.updateSubscription(sub.asaasId, { value: cheio })
+        } catch (e) {
+          console.error(
+            "Falha ao devolver o preço cheio da assinatura após o primeiro pagamento:",
+            sub.asaasId,
+            e
+          )
+        }
+      }
 
       // Bônus de quem indicou — melhor esforço, nunca deve derrubar a
       // ativação do tenant que acabou de pagar nem o e-mail de confirmação.

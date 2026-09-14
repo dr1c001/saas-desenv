@@ -119,7 +119,7 @@ describe("contrato — geração automática de OS", () => {
   it("gera a OS com a data agendada e o valor do contrato", async () => {
     const { tenant, cliente } = await cenario()
     const c = await contratoEm(tenant.id, cliente.id)
-    const { gerarOsDosContratos } = await import("@/actions/contracts")
+    const { gerarOsDosContratos } = await import("@/lib/gerar-os-de-contrato")
 
     const n = await gerarOsDosContratos(dia("2026-08-08"), dia("2026-08-11"))
 
@@ -134,7 +134,7 @@ describe("contrato — geração automática de OS", () => {
   it("avança a próxima execução mantendo o dia escolhido", async () => {
     const { tenant, cliente } = await cenario()
     const c = await contratoEm(tenant.id, cliente.id)
-    const { gerarOsDosContratos } = await import("@/actions/contracts")
+    const { gerarOsDosContratos } = await import("@/lib/gerar-os-de-contrato")
 
     await gerarOsDosContratos(dia("2026-08-08"), dia("2026-08-11"))
 
@@ -148,7 +148,7 @@ describe("contrato — geração automática de OS", () => {
     // repetida chegar ao cliente final.
     const { tenant, cliente } = await cenario()
     await contratoEm(tenant.id, cliente.id)
-    const { gerarOsDosContratos } = await import("@/actions/contracts")
+    const { gerarOsDosContratos } = await import("@/lib/gerar-os-de-contrato")
 
     await gerarOsDosContratos(dia("2026-08-08"), dia("2026-08-11"))
     // Segunda rodada no mesmo dia: nextRunAt já avançou, então nem entra na
@@ -163,7 +163,7 @@ describe("contrato — geração automática de OS", () => {
   it("não gera o que ainda não venceu", async () => {
     const { tenant, cliente } = await cenario()
     await contratoEm(tenant.id, cliente.id, { nextRunAt: dia("2026-12-10") })
-    const { gerarOsDosContratos } = await import("@/actions/contracts")
+    const { gerarOsDosContratos } = await import("@/lib/gerar-os-de-contrato")
 
     expect(await gerarOsDosContratos(dia("2026-08-08"), dia("2026-08-11"))).toBe(0)
     expect(await testDb.db.serviceOrder.count()).toBe(0)
@@ -172,7 +172,7 @@ describe("contrato — geração automática de OS", () => {
   it("desliga o contrato encerrado em vez de gerar pra cliente que saiu", async () => {
     const { tenant, cliente } = await cenario()
     const c = await contratoEm(tenant.id, cliente.id, { endsAt: dia("2026-07-31") })
-    const { gerarOsDosContratos } = await import("@/actions/contracts")
+    const { gerarOsDosContratos } = await import("@/lib/gerar-os-de-contrato")
 
     expect(await gerarOsDosContratos(dia("2026-08-08"), dia("2026-08-11"))).toBe(0)
     const depois = await testDb.db.serviceContract.findUnique({ where: { id: c.id } })
@@ -183,7 +183,7 @@ describe("contrato — geração automática de OS", () => {
   it("ignora contrato desativado", async () => {
     const { tenant, cliente } = await cenario()
     await contratoEm(tenant.id, cliente.id, { active: false })
-    const { gerarOsDosContratos } = await import("@/actions/contracts")
+    const { gerarOsDosContratos } = await import("@/lib/gerar-os-de-contrato")
 
     expect(await gerarOsDosContratos(dia("2026-08-08"), dia("2026-08-11"))).toBe(0)
   })
@@ -196,7 +196,7 @@ describe("contrato — geração automática de OS", () => {
       data: { number: 42, title: "Avulsa", tenantId: tenant.id, clientId: cliente.id },
     })
     await contratoEm(tenant.id, cliente.id)
-    const { gerarOsDosContratos } = await import("@/actions/contracts")
+    const { gerarOsDosContratos } = await import("@/lib/gerar-os-de-contrato")
 
     await gerarOsDosContratos(dia("2026-08-08"), dia("2026-08-11"))
 
@@ -209,7 +209,7 @@ describe("contrato — geração automática de OS", () => {
     const b = await cenario()
     await contratoEm(a.tenant.id, a.cliente.id)
     await contratoEm(b.tenant.id, b.cliente.id)
-    const { gerarOsDosContratos } = await import("@/actions/contracts")
+    const { gerarOsDosContratos } = await import("@/lib/gerar-os-de-contrato")
 
     await gerarOsDosContratos(dia("2026-08-08"), dia("2026-08-11"))
 

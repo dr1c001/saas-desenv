@@ -4,14 +4,8 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
-import {
-  alcancarHoje,
-  FREQUENCIAS,
-  proximaData,
-  type Frequencia,
-} from "@/lib/contrato-recorrente"
+import { alcancarHoje, FREQUENCIAS, type Frequencia } from "@/lib/contrato-recorrente"
 import type { ContractFrequency } from "@/generated/prisma/client"
-import { notificar } from "@/lib/notificar"
 
 export type EstadoContrato = { erro?: string; ok?: boolean }
 
@@ -176,78 +170,4 @@ export async function getContratos() {
       _count: { select: { orders: true } },
     },
   })
-}
-
-/**
- * Gera as OS dos contratos vencidos. Chamado pelo cron diário.
- *
- * Fora das Server Actions de propósito: não tem sessão nem tenant: percorre
- * todos os contratos ativos de todas as empresas.
- */
-export async function gerarOsDosContratos(hoje: Date, limite: Date) {
-  const vencidos = await prisma.serviceContract.findMany({
-    where: { active: true, nextRunAt: { lte: limite } },
-    include: { client: { select: { id: true } } },
-  })
-
-  let geradas = 0
-  for (const c of vencidos) {
-    // Contrato encerrado: desliga em vez de continuar consultando todo dia.
-    if (c.endsAt && c.endsAt < hoje) {
-      await prisma.serviceContract.update({ where: { id: c.id }, data: { active: false } })
-      continue
-    }
-    if (c.startsAt > limite) continue
-
-    const proxima = c.nextRunAt
-
-    // Idempotência: se já existe OS deste contrato agendada pra esta data, o
-    // cron já rodou hoje (ou rodou duas vezes) e não pode duplicar.
-    const jaExiste = await prisma.serviceOrder.findFirst({
-      where: { contractId: c.id, scheduledAt: proxima },
-      select: { id: true },
-    })
-
-    if (!jaExiste) {
-      const ultimo = await prisma.serviceOrder.aggregate({
-        where: { tenantId: c.tenantId },
-        _max: { number: true },
-      })
-      await prisma.serviceOrder.create({
-        data: {
-          number: (ultimo._max.number ?? 0) + 1,
-          title: c.title,
-          description: c.description,
-          tenantId: c.tenantId,
-          clientId: c.clientId,
-          technicianId: c.technicianId,
-          contractId: c.id,
-          scheduledAt: proxima,
-          totalAmount: c.amount,
-        },
-      })
-      geradas++
-
-      // Avisa quem vai executar. Sem isto, a OS do contrato nasce de
-      // madrugada e o técnico só descobre abrindo o sistema — que é
-      // justamente o contrário do que gerar com antecedência serve.
-      await notificar({
-        tenantId: c.tenantId,
-        evento: "osDeContrato",
-        corpo: c.title,
-        url: "/service-orders",
-        responsavelId: c.technicianId,
-      })
-    }
-
-    await prisma.serviceContract.update({
-      where: { id: c.id },
-      data: {
-        lastRunAt: proxima,
-        nextRunAt: proximaData(proxima, c.frequency as Frequencia, c.dayOfMonth),
-      },
-    })
-  }
-
-  return geradas
 }

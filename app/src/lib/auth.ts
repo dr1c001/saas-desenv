@@ -257,6 +257,28 @@ export const hasActiveSubscription = cache(async function hasActiveSubscription(
     return testeAtivo(tenant.trialEndsAt, new Date())
   }
 
+  // CANCELADA: o acesso vai até o fim do período JÁ PAGO.
+  //
+  // `cancelSubscription` marcava o tenant como CANCELLED no instante do clique,
+  // e o acesso morria ali. Só que o contrato que o cliente assina diz "o acesso
+  // permanece disponível até o fim do período já pago" (cláusula 6), os Termos
+  // repetem, e os dois dizem que valor pago não é reembolsado. Quem pagava dia
+  // 01 e cancelava dia 05 perdia 25 dias comprados — com o contrato assinado
+  // dizendo o contrário. (Achado na auditoria de 13/09/2026.)
+  //
+  // Mesma forma da carência de PAST_DUE logo abaixo, e pelo mesmo motivo: a
+  // data que decide já está gravada em `currentPeriodEnd`, e não precisa de
+  // campo novo.
+  if (tenant?.subscriptionStatus === "CANCELLED") {
+    const cancelada = await prisma.subscription.findFirst({
+      where: { tenantId, status: "CANCELLED" },
+      orderBy: { createdAt: "desc" },
+      select: { currentPeriodEnd: true },
+    })
+    if (!cancelada) return false
+    return new Date() < new Date(cancelada.currentPeriodEnd)
+  }
+
   if (tenant?.subscriptionStatus !== "PAST_DUE") return false
 
   // A carência olha só pra Subscription que está de fato PAST_DUE — pegar "a
