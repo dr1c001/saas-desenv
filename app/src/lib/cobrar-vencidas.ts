@@ -392,7 +392,14 @@ async function mandar(
           traduz
         )
 
-  const assunto = `${empresa.name} — ${t(`reguaCobranca.assunto.${tom}` as "reguaCobranca.assunto.lembrete")}`
+  // O nome da empresa entra pelo PARÂMETRO, e não colado na frente: as quatro
+  // chaves `assunto.*` já carregam `{empresa}` nos dois idiomas. Sem passar o
+  // parâmetro o next-intl devolvia o caminho da chave, e o cliente final
+  // recebia "Desentupidora Silva — whatsapp.reguaCobranca.assunto.insistente"
+  // como assunto. (Achado em 15/09/2026, ao provar a contagem do e-mail.)
+  const assunto = t(`reguaCobranca.assunto.${tom}` as "reguaCobranca.assunto.lembrete", {
+    empresa: empresa.name,
+  })
 
   // ─── Os ANEXOS: a fatura e a nota fiscal ──────────────────────────────────
   //
@@ -436,7 +443,20 @@ async function mandar(
 
   // Os dois canais em paralelo e independentes: falha de um não impede o
   // outro. allSettled porque o objetivo é nunca lançar por causa de um canal.
-  const saidas = await Promise.allSettled([
+  //
+  // Os dois canais falam contratos DIFERENTES, e aqui eles são igualados:
+  //   - sendWhatsApp resolve boolean: true saiu, false não saiu, nunca lança;
+  //   - sendDunningEmail resolve NADA quando sai e LANÇA quando falha — o SDK
+  //     do Resend nunca rejeita, então lib/resend.ts (send) transforma o erro
+  //     em throw e o sucesso é a ausência dele. Mesmo idioma de actions/team.ts.
+  // Sem o `.then(() => true)` o e-mail entrava na conta como Boolean(undefined),
+  // ou seja: nunca. Uma empresa só-e-mail (sem Z-API, o caso comum) cobrava 40
+  // clientes e a execução gravava "cobrancas 0" — e o teto de MAX_POR_EXECUCAO
+  // não existia para ela. (Achado na auditoria de 13/09/2026.)
+  //
+  // O tipo é anotado de propósito: se alguém tirar o `.then`, o allSettled vira
+  // PromiseSettledResult<boolean | void> e o typecheck barra.
+  const saidas: PromiseSettledResult<boolean>[] = await Promise.allSettled([
     canais.whatsapp && numero
       ? sendWhatsApp(empresa.zapiInstance!, empresa.zapiToken!, numero, texto)
       : Promise.resolve(false),
@@ -451,9 +471,9 @@ async function mandar(
           texto,
           await emailDaEmpresa(empresa.id),
           anexos
-        )
+        ).then(() => true) // resolveu = saiu
       : Promise.resolve(false),
   ])
 
-  return saidas.some((s) => s.status === "fulfilled" && Boolean(s.value))
+  return saidas.some((s) => s.status === "fulfilled" && s.value)
 }

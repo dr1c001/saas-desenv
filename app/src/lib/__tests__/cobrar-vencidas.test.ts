@@ -40,7 +40,12 @@ afterAll(async () => {
 beforeEach(async () => {
   await testDb.reset()
   mockWhats.mockReset().mockResolvedValue(true)
-  mockEmail.mockReset().mockResolvedValue(true)
+  // O mock devolve o que a função real devolve (nada): lib/resend.ts send()
+  // não tem return — o sucesso é a ausência de throw. Com `true` aqui o teste
+  // "sem WhatsApp configurado, o e-mail ainda sai" passava com o defeito no
+  // lugar: a função real nunca devolve true, e o cron contava 0.
+  // (Achado na auditoria de 13/09/2026.)
+  mockEmail.mockReset().mockResolvedValue(undefined)
   mockFatura
     .mockReset()
     .mockResolvedValue({ buffer: Buffer.alloc(2048), nomeArquivo: "fatura-OS20260042.pdf", numero: "OS20260042" })
@@ -385,6 +390,52 @@ describe("os canais", () => {
     expect((await rodar(HOJE)).enviadas).toBe(1)
     expect(mockWhats).not.toHaveBeenCalled()
     expect(mockEmail).toHaveBeenCalledTimes(1)
+  })
+
+  it("cobrança que sai SÓ por e-mail é CONTADA — e a que o Resend recusa, não", async () => {
+    // O e-mail resolve nada quando sai e lança quando falha (lib/resend.ts,
+    // send). `mandar` lia o canal como se fosse o WhatsApp — Boolean(undefined)
+    // — e uma empresa sem Z-API, o caso comum, cobrava 40 clientes e gravava
+    // "cobrancas 0" na execução; o teto de MAX_POR_EXECUCAO nunca disparava
+    // para ela. (Achado na auditoria de 13/09/2026.)
+    const empresa = await testDb.db.tenant.create({
+      data: { name: "Sem Zapi", dunningConfig: { ...REGUA_PADRAO, ativo: true }, subscriptionStatus: "ACTIVE" },
+    })
+    await contaDe(empresa.id, { diasAtras: 7 })
+    await contaDe(empresa.id, { diasAtras: 7 })
+    await contaDe(empresa.id, { diasAtras: 7 })
+    // Um dos três o Resend recusa (destinatário inválido, domínio não
+    // verificado): a função real LANÇA nesse caso, e a recusa não pode contar.
+    mockEmail
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("Resend: invalid recipient"))
+
+    const r = await rodar(HOJE)
+
+    expect(mockEmail).toHaveBeenCalledTimes(3)
+    expect(mockWhats).not.toHaveBeenCalled()
+    expect(r.enviadas).toBe(2)
+  })
+
+  it("o ASSUNTO do e-mail traz o nome da empresa — e não o caminho da chave", async () => {
+    // As quatro chaves `reguaCobranca.assunto.*` têm `{empresa}` (pt e en), e o
+    // regua-textos.test.ts até afirma que "o assunto recebe só {empresa}" — mas
+    // ninguém passava o parâmetro. O next-intl, sem `{ empresa }`, registra
+    // FORMATTING_ERROR e devolve o CAMINHO DA CHAVE: o cliente final recebia
+    // "Desentupidora Silva — whatsapp.reguaCobranca.assunto.insistente" na
+    // caixa de entrada. (Achado ao provar o defeito acima, 15/09/2026.)
+    const empresa = await testDb.db.tenant.create({
+      data: { name: "Desentupidora Silva", dunningConfig: { ...REGUA_PADRAO, ativo: true }, subscriptionStatus: "ACTIVE" },
+    })
+    await contaDe(empresa.id, { diasAtras: 7 })
+
+    await rodar(HOJE)
+
+    const assunto = String(mockEmail.mock.calls[0][2])
+    expect(assunto).toContain("Desentupidora Silva")
+    expect(assunto).not.toContain("reguaCobranca")
+    expect(assunto).not.toContain("{empresa}")
   })
 
   it("cliente sem e-mail e sem telefone não gera erro", async () => {
