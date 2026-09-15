@@ -42,7 +42,20 @@ export async function createExpense(
   await prisma.expense.create({
     data: {
       ...parsed.data,
-      dueDate: new Date(parsed.data.dueDate),
+      // Ancorado ao MEIO-DIA, como compras.ts, cotacao.ts e patrimonio.ts já
+      // fazem.
+      //
+      // `new Date("2026-10-01")` é meia-noite UTC — que em Brasília ainda é
+      // 21h do dia 30. A lista do Financeiro imprime a data em
+      // America/Sao_Paulo e mostrava **30/09**; pior, no DRE por competência a
+      // despesa caía em SETEMBRO, porque o limite de outubro é
+      // `brtMidnightUTC(2026, 9, 1)` = 01/10 às 03:00Z. O dono digitava uma
+      // despesa de outubro e ela aparecia como de setembro no resultado do mês.
+      //
+      // Meio-dia é o horário que sobrevive a qualquer fuso do Brasil sem trocar
+      // de dia — o mesmo motivo que levou os outros três arquivos a usá-lo.
+      // (Achado na auditoria de 13/09/2026.)
+      dueDate: new Date(`${parsed.data.dueDate}T12:00:00`),
       tenantId,
       branchId: filialParaNovo(null, branchId),
     },

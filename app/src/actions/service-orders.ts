@@ -108,7 +108,12 @@ export async function createServiceOrder(
 
   // Parse items sent as JSON string
   const itemsRaw = formData.get("items")
-  const items: { description: string; quantity: number; unitPrice: number }[] = itemsRaw
+  const items: {
+    description: string
+    quantity: number
+    unitPrice: number
+    partId?: string | null
+  }[] = itemsRaw
     ? JSON.parse(itemsRaw as string)
     : []
 
@@ -407,8 +412,39 @@ export async function completeServiceOrder(
           : { commissionPct: percentualValido(commissionPct) ? commissionPct : null }),
       },
     })
+    // ─── O que já está no contas a receber precisa acompanhar o total ───────
+    //
+    // Antes, só se criava receita quando NÃO havia nenhuma. Reeditar a
+    // conclusão mudava o `totalAmount` e deixava as receitas como estavam: uma
+    // OS de R$ 2.000 parcelada em 3× que virasse R$ 1.500 seguia cobrando
+    // R$ 2.000 — a tela mostrava um número, a fatura em PDF outro, e o cliente
+    // pagava a mais. (Achado na auditoria de 13/09/2026.)
+    //
+    // Três casos, três respostas:
+    //   nenhuma receita  -> cria, como sempre;
+    //   UMA pendente     -> atualiza o valor; nada se perde;
+    //   plano de parcelas ou qualquer parcela PAGA -> RECUSA, porque as datas
+    //   foram combinadas com o cliente e redistribuir por conta própria seria
+    //   inventar um acordo que ninguém fez. É a mesma regra que
+    //   `parcelarRecebimento` já aplica ao se recusar a refazer plano com
+    //   parcela paga.
+    const recebimentos = await tx.revenue.findMany({
+      where: { orderId: id, tenantId },
+      select: { id: true, status: true, amount: true },
+    })
+    const pendentes = recebimentos.filter((r) => r.status === "PENDING")
+    const temPaga = recebimentos.some((r) => r.status !== "PENDING")
+
+    if (recebimentos.length > 0 && (temPaga || recebimentos.length > 1)) {
+      if (Number(order.totalAmount) !== total) {
+        throw new Error((await getTranslations("errors"))("parceladaNaoRecalcula"))
+      }
+    } else if (pendentes.length === 1 && Number(pendentes[0].amount) !== total) {
+      await tx.revenue.update({ where: { id: pendentes[0].id }, data: { amount: total } })
+    }
+
     if (invoiceImmediately && total > 0) {
-      const existing = await tx.revenue.findFirst({ where: { orderId: id, tenantId } })
+      const existing = recebimentos[0]
       if (!existing) {
         const year = new Date(order.createdAt).getFullYear()
         const osNum = `OS${year}${String(order.number).padStart(4, "0")}`
@@ -552,7 +588,20 @@ export async function updateServiceOrder(
   }
 
   const itemsRaw = formData.get("items")
-  const items: { description: string; quantity: number; unitPrice: number }[] = itemsRaw
+  // `partId` vem junto: é o vínculo do item com a PEÇA do estoque.
+  //
+  // Esta reescrita apagava o campo — o tipo não o declarava e o `createMany`
+  // abaixo não o mandava. Numa empresa com a comissão sobre MÃO DE OBRA,
+  // `partId` é o que separa peça de mão de obra, então apagá-lo reclassificava
+  // o compressor de R$ 1.000 como mão de obra: a comissão TRIPLICAVA na mesma
+  // gravação em que alguém só queria corrigir um erro de digitação no título.
+  // (Achado na auditoria de 13/09/2026.)
+  const items: {
+    description: string
+    quantity: number
+    unitPrice: number
+    partId?: string | null
+  }[] = itemsRaw
     ? JSON.parse(itemsRaw as string)
     : []
 
@@ -568,6 +617,7 @@ export async function updateServiceOrder(
               quantity: i.quantity,
               unitPrice: i.unitPrice,
               total: i.quantity * i.unitPrice,
+              partId: i.partId ?? null,
               orderId: id,
             })),
           }),

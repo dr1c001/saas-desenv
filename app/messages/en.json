@@ -949,6 +949,7 @@
     "companyNotFound": "Company not found.",
     "tenantNotFound": "Company not found.",
     "invoicedOrderLocked": "An invoiced [[os]] cannot be edited.",
+    "parceladaNaoRecalcula": "This [[os]] has an instalment plan agreed with the client. Redo the plan before changing the amount — otherwise the instalments would keep charging the old value.",
     "invalidRequest": "Invalid request.",
     "invalidScore": "Invalid score.",
     "invalidStatus": "Invalid status.",

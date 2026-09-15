@@ -17,7 +17,10 @@ import { formatCurrency } from "@/lib/utils"
 
 type Client = { id: string; name: string }
 type TeamMember = { id: string; name: string }
-type Item = { description: string; quantity: number; unitPrice: number }
+/** `partId` não é editável na tela — é o vínculo com a peça do estoque, que a
+ *  edição precisa PRESERVAR. Sem ele, salvar aqui desligava o item do estoque e
+ *  inflava a comissão de quem calcula sobre mão de obra. */
+type Item = { description: string; quantity: number; unitPrice: number; partId?: string | null }
 
 type OrderData = {
   id: string
@@ -26,7 +29,7 @@ type OrderData = {
   clientId: string
   technicianId: string | null
   scheduledAt: Date | null
-  items: { description: string; quantity: unknown; unitPrice: unknown }[]
+  items: { description: string; quantity: unknown; unitPrice: unknown; partId?: string | null }[]
 }
 
 type Props = {

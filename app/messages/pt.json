@@ -949,6 +949,7 @@
     "companyNotFound": "Empresa não encontrada.",
     "tenantNotFound": "Empresa não encontrada.",
     "invoicedOrderLocked": "[[osC]] já faturad[[osFim]] não pode ser editad[[osFim]].",
+    "parceladaNaoRecalcula": "Esta [[os]] tem um plano de parcelas combinado com o cliente. Refaça o parcelamento antes de mudar o valor — senão as parcelas continuariam cobrando o valor antigo.",
     "invalidRequest": "Requisição inválida.",
     "invalidScore": "Nota inválida.",
     "invalidStatus": "Status inválido.",
