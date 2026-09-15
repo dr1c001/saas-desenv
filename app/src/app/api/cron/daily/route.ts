@@ -267,10 +267,33 @@ export async function GET(req: NextRequest) {
   //
   // A geração é idempotente — se este cron rodar duas vezes no mesmo dia, a
   // segunda não duplica OS. É o que permite reprocessar sem medo.
+  //
+  // ─── Este `try` fechava 159 linhas abaixo ──────────────────────────────────
+  //
+  // O `catch` dele ficava depois da conferência das comissões, e no meio
+  // estavam, indentados com os mesmos dois espaços como se fossem irmãos,
+  // QUATRO blocos independentes: certificado vencendo, conciliação de notas
+  // fiscais, avisos de fim do teste grátis e conferência das comissões.
+  //
+  // Bastava `gerarOsDosContratos` lançar — e ela cria OS com
+  // `(ultimo._max.number ?? 0) + 1` sem retry, às 09:00, horário em que um
+  // atendente pode estar criando OS ao mesmo tempo — para o dia inteiro perder
+  // as quatro. Ninguém era avisado de certificado vencendo, nota rejeitada pela
+  // prefeitura passava em branco, quem estava no fim do teste não recebia aviso
+  // (e `decidirAvisoDeFim` conta POSIÇÃO na escada: o marco passa e não volta),
+  // e comissão divergente não era conferida. O log dizia só "Falha ao gerar OS
+  // de contratos recorrentes", escondendo as outras quatro.
+  //
+  // Cada etapa em seu próprio try/catch, que é o que o comentário mais abaixo
+  // já dizia ser o desenho. (Achado na auditoria de 13/09/2026.)
   try {
     const limiteContratos = new Date(now)
     limiteContratos.setUTCDate(limiteContratos.getUTCDate() + DIAS_DE_ANTECEDENCIA)
     results.contratos = await gerarOsDosContratos(now, limiteContratos)
+  } catch (e) {
+    console.error("[cron] geração de OS de contratos recorrentes falhou:", e)
+    results.errors++
+  }
 
   // ── Certificado digital perto de vencer ───────────────────────────────────
   //
@@ -424,10 +447,6 @@ export async function GET(req: NextRequest) {
     }
   } catch (e) {
     console.error("[cron] conferência das comissões falhou:", e)
-    results.errors++
-  }
-  } catch (e) {
-    console.error("Falha ao gerar OS de contratos recorrentes:", e)
     results.errors++
   }
 

@@ -8,6 +8,11 @@ import { prisma } from "@/lib/prisma"
 import { checarAcao, filtroDeFilialAtual, getTenant, requireActiveSubscription } from "@/lib/auth"
 import { baixarPecasDaOs } from "@/lib/estoque-db"
 import { reconciliarComissao } from "@/lib/comissao-db"
+import {
+  situacaoDaVisita,
+  valorDeFechamento,
+  type StatusOrcamento,
+} from "@/lib/os-orcamento"
 import { percentualValido } from "@/lib/comissao"
 import { osPodeSerEnviada, problemaNoEnvio, textoDaOs } from "@/lib/envio-documento"
 import { emailDaEmpresa, urlPublica } from "@/lib/envio-db"
@@ -313,7 +318,7 @@ export async function completeServiceOrder(
   // disparar isso nem pela fila offline, que chama esta mesma função.
   if (await checarAcao("os.concluir")) throw new Error((await getTranslations("common"))("noPermission"))
 
-  const total = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+  const somaDosItens = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
   const status = invoiceImmediately ? "INVOICED" : "DONE"
 
   // Fetch order before transaction — needed for revenue description
@@ -329,6 +334,36 @@ export async function completeServiceOrder(
   })
   const te2 = await getTranslations("errors")
   if (!order) throw new Error(te2("orderNotFound"))
+
+  // ─── Orçamento RECUSADO fecha pela taxa de visita ───────────────────────────
+  //
+  // `valorDeFechamento` existia em lib/os-orcamento.ts, com teste, e NENHUMA
+  // linha de produção a chamava. A tela da OS já prometia o comportamento ao
+  // dono — "Cliente recusou. Esta OS fecha com a taxa de visita de R$ X, e não
+  // com o valor dos itens" — e a ajuda do campo em Configurações também. O
+  // fechamento, porém, somava os itens e pronto.
+  //
+  // O estrago é de dinheiro e de confiança: a empresa manda um orçamento de
+  // R$ 1.800, o cliente RECUSA, e o sistema fatura os R$ 1.800 recusados, com
+  // comissão por cima. Deveria fechar pelos R$ 120 do deslocamento — ou por
+  // zero, quando a empresa não cobra visita, e aí `INVOICED` não gera receita
+  // nenhuma por construção.
+  //
+  // (Achado na auditoria de 13/09/2026 — a oitava vez que aparece código
+  // construído, testado e sem nenhum caminho até ele.)
+  const [orcamentoDaOs, empresaDaTaxa] = await Promise.all([
+    prisma.quote.findFirst({
+      where: { orderId: id, tenantId },
+      orderBy: { createdAt: "desc" },
+      select: { status: true },
+    }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { visitFee: true } }),
+  ])
+  const total = valorDeFechamento({
+    situacao: situacaoDaVisita(orcamentoDaOs?.status as StatusOrcamento | null),
+    totalDosItens: somaDosItens,
+    taxaDeVisita: Number(empresaDaTaxa?.visitFee ?? 0),
+  })
   // Uma OS já faturada tem consequências reais fora do banco (NFS-e emitida,
   // assinatura do cliente coletada) — reabrir e trocar itens/total aqui
   // dessincroniza tudo isso silenciosamente, sem nenhum aviso. Sem cancelamento
