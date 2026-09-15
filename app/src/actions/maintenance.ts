@@ -38,6 +38,7 @@ export async function createMaintenanceOrder(
     title: z.string().min(2, t("form.errors.titleRequired")),
     description: z.string().optional(),
     providerId: z.string().optional(),
+    assetId: z.string().optional(),
     status: z.enum(["OPEN", "IN_PROGRESS", "DONE", "CANCELLED"]).default("OPEN"),
     scheduledAt: z.string().optional(),
   })
@@ -55,6 +56,29 @@ export async function createMaintenanceOrder(
       select: { id: true },
     })
     if (!provider) return { message: (await getTranslations("errors"))("providerNotFound") }
+  }
+
+  // O BEM que está em manutenção.
+  //
+  // `assetId` existia no schema, com a documentação da regra escrita nele — "dá
+  // histórico à van: quantas vezes parou, quanto já custou, e quando". `getBem`
+  // fazia o `include`, `excluirBem` contava `_count.maintenance` para recusar a
+  // exclusão, e havia três textos de tela sobre isso em pt e en.
+  //
+  // NENHUMA linha de produção gravava o campo: o formulário não oferecia o bem
+  // e esta Action não o lia. Consequências: a contagem era sempre zero, então
+  // `excluirBem` NUNCA recusava e o dono apagava a van sem o aviso que a
+  // mensagem prometia; e o histórico do bem nunca aparecia na tela.
+  //
+  // Mesma checagem de posse do `providerId` acima, e pelo mesmo motivo: um id
+  // vindo do formulário sem validar tenant ligaria a OM ao bem de outra
+  // empresa. (Achado na auditoria de 13/09/2026.)
+  if (parsed.data.assetId) {
+    const bem = await prisma.asset.findUnique({
+      where: { id: parsed.data.assetId, tenantId },
+      select: { id: true },
+    })
+    if (!bem) return { message: (await getTranslations("errors"))("assetNotFound") }
   }
 
   const itemsRaw = formData.get("items")
@@ -77,6 +101,7 @@ export async function createMaintenanceOrder(
         title: parsed.data.title,
         description: parsed.data.description || null,
         providerId: parsed.data.providerId || null,
+        assetId: parsed.data.assetId || null,
         status: parsed.data.status,
         totalAmount: total,
         tenantId,

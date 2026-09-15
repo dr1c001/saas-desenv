@@ -518,6 +518,7 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
+    "days": "days",
     "view": "View",
     "actions": "Actions",
     "create": "Create",
@@ -943,6 +944,7 @@
     "clientNotFound": "Client not found.",
     "technicianNotFound": "Technician not found.",
     "providerNotFound": "Provider not found.",
+    "assetNotFound": "Asset not found.",
     "orderNotFound": "Service order not found.",
     "quoteNotFound": "Quote not found.",
     "itemNotFound": "Item not found.",
@@ -1788,6 +1790,9 @@
       "descriptionLabel": "Description / Notes",
       "providerLabel": "Responsible provider",
       "providerPlaceholder": "Select a provider (optional)",
+      "assetLabel": "Company asset",
+      "assetPlaceholder": "None — standalone maintenance",
+      "assetHint": "Linking the order to an asset makes its history show how often it stopped and how much it has cost.",
       "scheduledAtLabel": "Scheduling",
       "itemsTitle": "Items / Services",
       "addItemButton": "Add item",
@@ -2590,6 +2595,12 @@
     "comissao": {
       "rotulo": "Commission for this order",
       "ajuda": "Becomes a payable as soon as the order is completed. Leave blank for no commission."
+    },
+    "garantia": {
+      "rotulo": "Warranty for this order",
+      "ajuda": "In days, from completion. Leave blank to use the company default (5.4). Zero is a choice: it means no warranty.",
+      "padrao": "company default: {dias} days",
+      "semPadrao": "the company has no default term"
     },
     "concludeDialog": {
       "trigger": "Complete",

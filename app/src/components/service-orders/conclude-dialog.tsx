@@ -58,6 +58,14 @@ type Props = {
   initialCommissionPct?: number | null
   /** Há responsável? Sem alguém a quem pagar, comissão não faz sentido. */
   temResponsavel?: boolean
+  /** A garantia já gravada NESTA OS. `null` = usa o padrão da empresa.
+   *
+   *  O campo existia no schema e NENHUMA tela o preenchia, enquanto a ajuda em
+   *  5.4 prometia que "cada OS pode ter prazo próprio". O PDF entregue ao
+   *  cliente sempre saía com o padrão da empresa. */
+  initialWarrantyDays?: number | null
+  /** O padrão da empresa, só para a tela dizer o que vale com o campo vazio. */
+  padraoDeGarantia?: number | null
 }
 
 export function ConcluirDialog({
@@ -69,6 +77,8 @@ export function ConcluirDialog({
   pecas = [],
   initialCommissionPct = null,
   temResponsavel = false,
+  initialWarrantyDays = null,
+  padraoDeGarantia = null,
 }: Props) {
   const t = useTranslations("serviceOrdersComponents")
   const tc = useTranslations("common")
@@ -80,6 +90,11 @@ export function ConcluirDialog({
     initialItems && initialItems.length > 0 ? initialItems : [{ description: "", quantity: 1, unitPrice: 0 }]
   )
   const [error, setError] = useState<string | null>(null)
+  const [warrantyDays, setWarrantyDays] = useState(
+    initialWarrantyDays === null || initialWarrantyDays === undefined
+      ? ""
+      : String(initialWarrantyDays)
+  )
   const [commissionPct, setCommissionPct] = useState(
     initialCommissionPct === null ? "" : String(initialCommissionPct)
   )
@@ -153,6 +168,7 @@ export function ConcluirDialog({
           // linha o técnico digitava 10% no meio do mato e o número se perdia
           // na fila, que levava só texto, itens e a decisão de faturar.
           commissionPct: commissionPct.trim() === "" ? null : Number(commissionPct.replace(",", ".")),
+          warrantyDays: warrantyDays.trim() === "" ? null : Number(warrantyDays.replace(",", ".")),
         })
         setOpen(false)
         return
@@ -166,7 +182,11 @@ export function ConcluirDialog({
           invoice,
           // String vazia vira null: apagar o campo é como se desliga a comissão
           // desta OS, e o reconciliador apaga a conta a pagar junto.
-          commissionPct.trim() === "" ? null : Number(commissionPct.replace(",", "."))
+          commissionPct.trim() === "" ? null : Number(commissionPct.replace(",", ".")),
+          // Vazio = null = "usa o padrão da empresa". Zero é outra coisa: é
+          // "esta OS não tem garantia", e precisa sobrepor o padrão — por isso
+          // `diasDeGarantia` compara com null, e não com valor falso.
+          warrantyDays.trim() === "" ? null : Number(warrantyDays.replace(",", "."))
         )
         setOpen(false)
       } catch (e) {
@@ -343,6 +363,36 @@ export function ConcluirDialog({
               <p className="text-xs text-muted-foreground">{t("comissao.ajuda")}</p>
             </div>
           )}
+
+          {/* A garantia DESTA OS.
+              Fica aqui, e não no formulário de editar, porque garantia conta da
+              CONCLUSÃO — é neste momento que alguém sabe dizer "esta reforma
+              tem um ano". Sem responsável não faz diferença: a garantia é do
+              serviço, não de quem executou, então este campo aparece sempre. */}
+          <div className="space-y-1.5 rounded-lg border p-3">
+            <Label htmlFor="warrantyDays" className="text-xs">
+              {t("garantia.rotulo")}
+            </Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="warrantyDays"
+                inputMode="numeric"
+                className="w-24"
+                placeholder={padraoDeGarantia === null ? "" : String(padraoDeGarantia)}
+                value={warrantyDays}
+                onChange={(e) => setWarrantyDays(e.target.value)}
+              />
+              <span className="text-sm text-muted-foreground">{tc("days")}</span>
+              {warrantyDays.trim() === "" && (
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {padraoDeGarantia === null
+                    ? t("garantia.semPadrao")
+                    : t("garantia.padrao", { dias: padraoDeGarantia })}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">{t("garantia.ajuda")}</p>
+          </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 

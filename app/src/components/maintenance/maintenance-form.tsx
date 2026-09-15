@@ -16,8 +16,16 @@ import { createMaintenanceOrder, type MaintenanceFormState } from "@/actions/mai
 
 type Provider = { id: string; name: string; specialty: string | null }
 type Item = { description: string; quantity: number; unitPrice: number }
+/** Um bem da empresa — a van, a máquina —, para dar histórico à manutenção. */
+type Bem = { id: string; name: string; brand: string | null }
 
-export function MaintenanceForm({ providers }: { providers: Provider[] }) {
+export function MaintenanceForm({
+  providers,
+  bens = [],
+}: {
+  providers: Provider[]
+  bens?: Bem[]
+}) {
   const t = useTranslations("maintenance")
   const tc = useTranslations("common")
   const [items, setItems] = useState<Item[]>([{ description: "", quantity: 1, unitPrice: 0 }])
@@ -65,6 +73,37 @@ export function MaintenanceForm({ providers }: { providers: Provider[] }) {
               </SelectContent>
             </Select>
           </div>
+          {/* O BEM em manutenção.
+              `assetId` existia no schema desde sempre, com a regra documentada
+              nele, e NENHUMA tela o preenchia: a contagem de manutenções do bem
+              era sempre zero, então `excluirBem` nunca recusava a exclusão
+              apesar de a mensagem prometer que recusaria, e o histórico nunca
+              aparecia. Só aparece quando há bem cadastrado — perguntar por algo
+              que a empresa não tem é ruído. */}
+          {bens.length > 0 && (
+            <div className="space-y-1.5">
+              <Label htmlFor="assetId">{t("form.assetLabel")}</Label>
+              <Select name="assetId">
+                <SelectTrigger id="assetId">
+                  <SelectValue placeholder={t("form.assetPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* Manutenção avulsa é o caminho normal: nem toda OM é de um
+                      bem cadastrado. Sem esta opção não haveria como desfazer
+                      uma escolha feita por engano. */}
+                  <SelectItem value="">{t("form.assetPlaceholder")}</SelectItem>
+                  {bens.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                      {b.brand ? ` — ${b.brand}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{t("form.assetHint")}</p>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="scheduledAt">{t("form.scheduledAtLabel")}</Label>
             <Input id="scheduledAt" name="scheduledAt" type="datetime-local" />

@@ -60,6 +60,9 @@ export type Operacao = {
      *  dizer "não mexe": é assim que a assistente de IA conclui sem apagar uma
      *  comissão já gravada. */
     commissionPct?: number | null
+    /** A garantia desta OS, em dias. Mesma semântica do campo acima:
+     *  `undefined` não mexe, `null` volta ao padrão da empresa. */
+    warrantyDays?: number | null
     status?: string
   }
 }

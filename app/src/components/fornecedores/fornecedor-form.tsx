@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { AlertTriangle, Loader2 } from "lucide-react"
@@ -60,7 +60,24 @@ export function FornecedorForm({ fornecedor }: { fornecedor?: FornecedorDoForm }
     {}
   )
 
-  if (estado.ok) setTimeout(() => router.push("/fornecedores"), 0)
+  // Volta para a lista SÓ quando não há nada para ler.
+  //
+  // Antes era `if (estado.ok) setTimeout(...)`, sem olhar o aviso — e o aviso
+  // só vem acompanhado de `ok`, porque duplicata não impede salvar. Resultado:
+  // o sistema detectava o CNPJ repetido, montava o texto, renderizava o
+  // parágrafo âmbar lá embaixo... e jogava a pessoa na lista antes que ela o
+  // enxergasse. As duas fichas ficavam, o histórico de compras do fornecedor
+  // partia em duas, e as cotações passavam a comparar o mesmo fornecedor
+  // contra ele mesmo — que é justamente o que o aviso existe para evitar.
+  //
+  // Com aviso, fica na tela: a pessoa lê, confere, e sai quando quiser.
+  // (Achado na auditoria de 13/09/2026.)
+  //
+  // Em `useEffect`, e não no corpo do render: navegar durante a renderização é
+  // efeito colateral fora de hora, e em modo estrito roda duas vezes.
+  useEffect(() => {
+    if (estado.ok && !estado.aviso) router.push("/fornecedores")
+  }, [estado.ok, estado.aviso, router])
 
   const v = (campo: keyof FornecedorDoForm) => {
     const valor = fornecedor?.[campo]

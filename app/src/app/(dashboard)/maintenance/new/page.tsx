@@ -4,9 +4,11 @@ import { buttonVariants } from "@/components/ui/button"
 import { ChevronLeft } from "lucide-react"
 import { MaintenanceForm } from "@/components/maintenance/maintenance-form"
 import { getProviders } from "@/actions/providers"
+import { getBens } from "@/actions/patrimonio"
 
 export default async function NewMaintenancePage() {
-  const providers = await getProviders()
+  // Os bens ATIVOS, para a OM poder dar histórico à van ou à máquina.
+  const [providers, bens] = await Promise.all([getProviders(), getBens()])
   const t = await getTranslations("maintenance")
 
   return (
@@ -17,7 +19,12 @@ export default async function NewMaintenancePage() {
         </Link>
         <h1 className="text-2xl font-bold">{t("new.title")}</h1>
       </div>
-      <MaintenanceForm providers={providers} />
+      <MaintenanceForm
+        providers={providers}
+        bens={bens
+          .filter((b) => b.status === "ATIVO")
+          .map((b) => ({ id: b.id, name: b.name, brand: b.brand }))}
+      />
     </div>
   )
 }

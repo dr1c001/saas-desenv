@@ -97,7 +97,10 @@ describe("a comissão digitada sem sinal chega junto", () => {
       "Trocada a bomba",
       [{ description: "Mão de obra", quantity: 1, unitPrice: 800 }],
       false,
-      10
+      10,
+      // A garantia desta OS vai pelo mesmo caminho, e `undefined` segue
+      // querendo dizer "não mexe no que já está gravado".
+      undefined
     )
   })
 
@@ -110,7 +113,14 @@ describe("a comissão digitada sem sinal chega junto", () => {
 
     await sincronizar([op(os.id)])
 
-    expect(mockConcluir).toHaveBeenCalledWith(os.id, "Trocada a bomba", [], false, undefined)
+    expect(mockConcluir).toHaveBeenCalledWith(
+      os.id,
+      "Trocada a bomba",
+      [],
+      false,
+      undefined,
+      undefined
+    )
   })
 })
 

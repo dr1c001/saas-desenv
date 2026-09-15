@@ -518,6 +518,7 @@
     "cancel": "Cancelar",
     "delete": "Excluir",
     "edit": "Editar",
+    "days": "dias",
     "view": "Ver",
     "actions": "Ações",
     "create": "Criar",
@@ -943,6 +944,7 @@
     "clientNotFound": "Cliente não encontrado.",
     "technicianNotFound": "Técnico não encontrado.",
     "providerNotFound": "Prestador não encontrado.",
+    "assetNotFound": "Bem não encontrado.",
     "orderNotFound": "Ordem não encontrada.",
     "quoteNotFound": "Orçamento não encontrado.",
     "itemNotFound": "Item não encontrado.",
@@ -1788,6 +1790,9 @@
       "descriptionLabel": "Descrição / Observações",
       "providerLabel": "Prestador responsável",
       "providerPlaceholder": "Selecione um prestador (opcional)",
+      "assetLabel": "Bem da empresa",
+      "assetPlaceholder": "Nenhum — manutenção avulsa",
+      "assetHint": "Ligando a OM a um bem, o histórico dele passa a mostrar quantas vezes parou e quanto já custou.",
       "scheduledAtLabel": "Agendamento",
       "itemsTitle": "Itens / Serviços",
       "addItemButton": "Adicionar item",
@@ -2590,6 +2595,12 @@
     "comissao": {
       "rotulo": "Comissão desta OS",
       "ajuda": "Vira uma conta a pagar assim que a OS for concluída. Deixe vazio para não comissionar."
+    },
+    "garantia": {
+      "rotulo": "Garantia desta OS",
+      "ajuda": "Em dias, contados da conclusão. Deixe em branco para usar o prazo padrão da empresa (5.4). Zero é uma escolha: quer dizer sem garantia.",
+      "padrao": "padrão da empresa: {dias} dias",
+      "semPadrao": "a empresa não definiu prazo padrão"
     },
     "concludeDialog": {
       "trigger": "Concluir",

@@ -33,6 +33,7 @@ import { DeleteButton } from "@/components/shared/delete-button"
 import { StatusButton } from "@/components/service-orders/status-button"
 import { formatCurrency, formatDate, formatOsNumber } from "@/lib/utils"
 import { temFuncao } from "@/lib/plan"
+import { prisma } from "@/lib/prisma"
 
 export default async function ServiceOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -66,6 +67,12 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
       stock: Number(p.stock),
     })
   )
+
+  // O prazo padrão da empresa, só para o diálogo dizer o que vale quando o
+  // campo de garantia fica em branco.
+  const padraoDeGarantia =
+    (await prisma.tenant.findUnique({ where: { id: tenantId }, select: { warrantyDays: true } }))
+      ?.warrantyDays ?? null
 
   const t = await getTranslations("serviceOrdersPages")
   const tCommon = await getTranslations("common")
@@ -117,6 +124,8 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
               pecas={pecasParaConcluir}
               initialCommissionPct={os.commissionPct === null ? null : Number(os.commissionPct)}
               temResponsavel={os.technicianId !== null}
+              initialWarrantyDays={os.warrantyDays}
+              padraoDeGarantia={padraoDeGarantia}
             />
           )}
           {config.next && pode("os.status") && (

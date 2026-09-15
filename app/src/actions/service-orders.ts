@@ -315,7 +315,20 @@ export async function completeServiceOrder(
   // A porcentagem de comissao DESTA OS. `undefined` = nao mexe no que ja
   // estava gravado (a fila offline e a assistente de IA chamam sem isso, e
   // apagar a comissao por omissao seria pior do que nao ter o campo).
-  commissionPct?: number | null
+  commissionPct?: number | null,
+  // A garantia DESTA OS, em dias. `undefined` = não mexe no que já estava
+  // gravado — mesma regra do `commissionPct` acima, e pelo mesmo motivo: a fila
+  // offline e a assistente concluem sem informar, e apagar por omissão seria
+  // pior do que não ter o campo.
+  //
+  // `null` e `0` são coisas diferentes: nulo quer dizer "usa o padrão da
+  // empresa", zero quer dizer "sem garantia". `diasDeGarantia` em
+  // lib/garantia.ts já trata os dois — e o primeiro ramo dela era
+  // INALCANÇÁVEL em produção, porque nenhuma tela gravava este campo, apesar de
+  // a ajuda em 5.4 prometer que "cada OS pode ter prazo próprio". O PDF
+  // entregue ao cliente sempre saía com o padrão da empresa.
+  // (Achado na auditoria de 13/09/2026.)
+  warrantyDays?: number | null
 ) {
   const { tenantId, userId } = await getTenant()
   await requireActiveSubscription(tenantId)
@@ -410,6 +423,14 @@ export async function completeServiceOrder(
         ...(commissionPct === undefined
           ? {}
           : { commissionPct: percentualValido(commissionPct) ? commissionPct : null }),
+        ...(warrantyDays === undefined
+          ? {}
+          : {
+              warrantyDays:
+                warrantyDays === null || !Number.isFinite(warrantyDays) || warrantyDays < 0
+                  ? null
+                  : Math.round(warrantyDays),
+            }),
       },
     })
     // ─── O que já está no contas a receber precisa acompanhar o total ───────

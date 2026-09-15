@@ -133,7 +133,8 @@ async function aplicar(
       op.dados.conclusionNote ?? "",
       op.dados.items ?? [],
       op.dados.invoiceImmediately ?? false,
-      op.dados.commissionPct
+      op.dados.commissionPct,
+      op.dados.warrantyDays
     )
     return { estado: "aplicada" }
   }
