@@ -1,8 +1,6 @@
 import Link from "next/link"
 import { Suspense } from "react"
-import { redirect } from "next/navigation"
 import { getTranslations } from "next-intl/server"
-import { getTenant } from "@/lib/auth"
 import { getReportData } from "@/actions/reports"
 import { formatCurrency, formatDate, formatOsNumber } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -47,8 +45,10 @@ const OS_STATUSES = ["OPEN", "IN_PROGRESS", "DONE", "INVOICED"]
 export default async function ReportsPage({ searchParams }: { searchParams: SearchParams }) {
   const t = await getTranslations("finance")
   const tCommon = await getTranslations("common")
-  const { role } = await getTenant()
-  if (role !== "OWNER" && role !== "ADMIN") redirect("/dashboard")
+  // Sem trava de cargo aqui: o layout do painel barra a rota pela ABA
+  // (ver abaDaRota em lib/codigos-abas.ts). Fixar OWNER/ADMIN nesta linha
+  // fazia o menu prometer e a tela expulsar — o GERENTE e o FINANCEIRO
+  // nascem com esta aba marcada em ABAS_PADRAO. (15/09/2026.)
 
   const sp = await searchParams
   const { from: defFrom, to: defTo } = defaultDates()

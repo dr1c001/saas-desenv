@@ -5,10 +5,10 @@ import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { agruparComissoes, baseDaComissaoValida } from "@/lib/comissao"
 import { reconciliarComissao } from "@/lib/comissao-db"
-import { filtroDeFilialAtual, getTenant, requireActiveSubscription } from "@/lib/auth"
+import { filtroDeFilialAtual, getTenant, podeAba, requireAba, requireActiveSubscription } from "@/lib/auth"
 import { filialParaNovo } from "@/lib/filial"
-import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 import { getTranslations } from "next-intl/server"
+import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 import { translateFieldErrors } from "@/lib/validation"
 
 const expenseSchema = z.object({
@@ -28,9 +28,13 @@ export async function createExpense(
   _prev: FinanceFormState,
   formData: FormData
 ): Promise<FinanceFormState> {
-  const { tenantId, role, branchId } = await getTenant()
+  const { tenantId, branchId } = await getTenant()
   await requireActiveSubscription(tenantId)
-  if (role !== "OWNER" && role !== "ADMIN") return { message: (await getTranslations("common"))("noPermission") }
+  // Devolve, e não lança: este é um formulário com useActionState, e a
+  // mensagem é o que a tela mostra. Lançar aqui derrubaria a página.
+  if (!(await podeAba("finance"))) {
+    return { message: (await getTranslations("common"))("noPermission") }
+  }
 
   const raw = Object.fromEntries(formData.entries())
   const parsed = expenseSchema.safeParse(raw)
@@ -66,9 +70,9 @@ export async function createExpense(
 }
 
 export async function markRevenuePaid(id: string) {
-  const { tenantId, role } = await getTenant()
+  const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
-  if (role !== "OWNER" && role !== "ADMIN") return
+  await requireAba("finance")
   await prisma.revenue.update({
     where: { id, tenantId },
     data: { status: "PAID", paidAt: new Date() },
@@ -77,9 +81,9 @@ export async function markRevenuePaid(id: string) {
 }
 
 export async function markExpensePaid(id: string) {
-  const { tenantId, role } = await getTenant()
+  const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
-  if (role !== "OWNER" && role !== "ADMIN") return
+  await requireAba("finance")
   await prisma.expense.update({
     where: { id, tenantId },
     data: { status: "PAID", paidAt: new Date() },
@@ -88,12 +92,12 @@ export async function markExpensePaid(id: string) {
 }
 
 export async function getFinanceSummary(q?: string, filial?: string | null) {
-  const { tenantId, role } = await getTenant()
+  const { tenantId } = await getTenant()
   // Auto-defesa: essa função já tem um Action ID registrado e despachável
   // pelo Next.js independente de quem a importa hoje — não dá pra confiar
   // só na página chamadora redirecionar antes. Mesmo padrão do getSettings().
   // (Achado em revisão de segurança 2026-07-19.)
-  if (role !== "OWNER" && role !== "ADMIN") throw new Error((await getTranslations("common"))("noPermission"))
+  await requireAba("finance")
   await requireActiveSubscription(tenantId)
 
   // Fetch all data for KPI calculations, then filter for table display
@@ -233,10 +237,16 @@ export async function definirBaseDaComissao(base: string): Promise<{ erro?: stri
 export async function pagarComissoesDe(
   payeeId: string
 ): Promise<{ erro?: string; ok?: boolean; pagas?: number; total?: number }> {
-  const { tenantId, role } = await getTenant()
+  const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
-  // Pagar move dinheiro. Não é gesto de quem recebe.
-  if (role !== "OWNER" && role !== "ADMIN") return { erro: "semPermissao" }
+  // Pagar move dinheiro. Não é gesto de quem recebe — e quem recebe é o
+  // técnico, que não tem a aba Financeiro no cargo padrão dele.
+  //
+  // Segue a aba, e não OWNER/ADMIN, pelo mesmo motivo de `markExpensePaid`
+  // logo acima: comissão É uma despesa, e dar baixa uma a uma já passou a
+  // seguir a aba. Travar só o lote deixaria a mesma pessoa fazer o mesmo
+  // trabalho de um jeito e não de outro. (15/09/2026.)
+  if (!(await podeAba("finance"))) return { erro: "semPermissao" }
 
   const empresa = await prisma.tenant.findUnique({
     where: { id: tenantId },

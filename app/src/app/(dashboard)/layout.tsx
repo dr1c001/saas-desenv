@@ -11,6 +11,7 @@ import { OfflineBanner } from "@/components/layout/offline-banner"
 import { FilaOfflineBanner } from "@/components/layout/fila-offline-banner"
 import { ImpersonationBanner } from "@/components/layout/impersonation-banner"
 import { getTenant, getAllowedTabs, hasActiveSubscription } from "@/lib/auth"
+import { abaDaRota } from "@/lib/codigos-abas"
 import { isSuperAdmin } from "@/lib/admin"
 import { temFuncao, temRecurso } from "@/lib/plan"
 import { redirect } from "next/navigation"
@@ -48,6 +49,24 @@ export default async function DashboardLayout({ children }: { children: React.Re
   })
 
   const allowedTabs = await getAllowedTabs(tenantId, role)
+
+  // A aba não esconde só o menu: ela BARRA A ROTA.
+  //
+  // Até aqui `getAllowedTabs` tinha um consumidor — a linha acima — e o
+  // resultado só virava prop da barra lateral. Desmarcar "Clientes" para o
+  // técnico tirava o item do menu e mais nada: ele digitava /clients e recebia
+  // a carteira inteira, com documento, telefone e endereço de cada um. Com oito
+  // cargos configuráveis, a aba é o único separador entre a maioria deles.
+  //
+  // A trava mora aqui, ao lado da trava de assinatura, e pelo mesmo motivo: é o
+  // único ponto por onde toda tela do painel passa. Espalhar a checagem por
+  // página deixaria a próxima página nova de fora — que é como este defeito
+  // nasceu.
+  //
+  // `abaDaRota` devolve null para rota não catalogada, e null LIBERA. Ver o
+  // porquê em lib/codigos-abas.ts. (Achado na auditoria de 13/09/2026.)
+  const abaDaTela = abaDaRota(pathname)
+  if (abaDaTela && !allowedTabs.includes(abaDaTela)) redirect("/dashboard")
   const souDono = await isSuperAdmin()
   const [temApi, temFiliais, filaLigada] = await Promise.all([
     temRecurso(tenantId, "api"),

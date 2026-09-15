@@ -182,3 +182,44 @@ export function abasInvalidas(): string[] {
   const conhecidas = new Set<string>(ALL_TABS.map((t) => t.slug))
   return DESTINOS.filter((d) => d.aba !== null && !conhecidas.has(d.aba)).map((d) => d.codigo)
 }
+
+/**
+ * Qual ABA governa esta rota — ou `null` quando nenhuma governa.
+ *
+ * ─── Por que isto existe ─────────────────────────────────────────────────────
+ *
+ * A permissão por aba era só de MENU. `getAllowedTabs` tinha um consumidor no
+ * sistema inteiro — o layout — e o resultado só virava prop do componente de
+ * barra lateral. Nenhuma página e nenhuma Action consultava a lista.
+ *
+ * O dono desmarcava "Clientes" para o cargo TECHNICIAN, salvava, o item sumia
+ * do menu do técnico — e só. Ele digitava /clients e a carteira inteira
+ * aparecia, com documento, e-mail, telefone e endereço de cada cliente. Valia
+ * para toda aba cuja Action de leitura não tem checagem de papel própria.
+ *
+ * Com oito cargos configuráveis desde 24/08/2026, a aba virou o ÚNICO
+ * separador entre a maioria deles — e ela não separava nada.
+ *
+ * ─── As três decisões desta função ───────────────────────────────────────────
+ *
+ * 1. Casa pelo PREFIXO mais longo. `/settings/permissions` precisa achar o
+ *    destino 5.4.1, e não o 5.4; ordenar por comprimento decrescente resolve.
+ *
+ * 2. Compara o SEGMENTO inteiro. Sem isso `/servicos` casaria com `/service`,
+ *    e uma rota nova poderia herdar a trava de outra sem ninguém perceber.
+ *
+ * 3. Rota desconhecida devolve `null`, e quem chama LIBERA. É deliberado: o
+ *    catálogo não cobre tudo (a ajuda, o portal, as telas de criar e de
+ *    detalhe), e barrar o que não está mapeado transformaria esta função numa
+ *    lista de bloqueio silenciosa — quebrando telas ao acrescentar destinos.
+ *    O erro possível aqui é liberar demais, e ele é visível; o inverso trava
+ *    gente no meio do trabalho.
+ */
+export function abaDaRota(caminho: string): TabSlug | null {
+  const limpo = caminho.split("?")[0].replace(/\/+$/, "") || "/"
+  const candidatos = [...DESTINOS].sort((a, b) => b.rota.length - a.rota.length)
+  for (const d of candidatos) {
+    if (limpo === d.rota || limpo.startsWith(d.rota + "/")) return d.aba
+  }
+  return null
+}

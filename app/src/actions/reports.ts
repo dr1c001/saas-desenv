@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { getTenant, requireActiveSubscription, requireAba } from "@/lib/auth"
 import { brtMidnightUTC, todayInBRT } from "@/lib/utils"
 import { REGIME_PADRAO, regimeValido, type Regime } from "@/lib/competencia"
 import { temRecurso } from "@/lib/plan"
@@ -10,11 +10,15 @@ import { getTranslations } from "next-intl/server"
 import { quemPaga, somarPorPagador } from "@/lib/subcliente"
 
 export async function getReportData(from: string, to: string, regimePedido?: string) {
-  const { tenantId, role } = await getTenant()
+  const { tenantId } = await getTenant()
   // Auto-defesa: mesmo padrão do getFinanceSummary() em finance.ts — Action
   // tem Action ID próprio, despachável independente da página que redireciona
   // antes. (Achado em revisão de segurança 2026-07-21.)
-  if (role !== "OWNER" && role !== "ADMIN") throw new Error((await getTranslations("common"))("noPermission"))
+  //
+  // Por ABA desde 15/09/2026: quem decide é a permissão que o dono configura em
+  // 5.4.1, e não uma lista de cargos escrita aqui. Os cargos GERENTE e
+  // FINANCEIRO nasciam com "Relatórios" no menu e eram expulsos ao clicar.
+  await requireAba("reports")
   await requireActiveSubscription(tenantId)
 
   // "Relatórios básicos" (Starter) x "avançados" (Pro+). A linha fica assim:

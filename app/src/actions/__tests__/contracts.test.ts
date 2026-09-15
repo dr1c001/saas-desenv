@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { createTestDatabase, type TestDatabase } from "@/test-utils/pglite-db"
+import { abasDeMentira } from "@/test-utils/abas-de-mentira"
 
 let testDb: TestDatabase
 const mockGetTenant = vi.fn()
@@ -9,6 +10,7 @@ beforeAll(async () => {
   vi.doMock("@/lib/prisma", () => ({ prisma: testDb.db }))
   vi.doMock("@/lib/auth", () => ({
     getTenant: mockGetTenant,
+    ...abasDeMentira(mockGetTenant),
     requireActiveSubscription: vi.fn().mockResolvedValue(undefined),
   }))
 })
@@ -86,6 +88,18 @@ describe("contrato — cadastro", () => {
 
     expect(await salvarContrato({}, form(base(cliente.id)))).toEqual({ erro: "semPermissao" })
     expect(await testDb.db.serviceContract.count()).toBe(0)
+  })
+
+  it("e deixa o COMERCIAL — é o trabalho dele", async () => {
+    // Até 15/09/2026 a trava era OWNER/ADMIN escrita à mão, enquanto o cargo
+    // COMERCIAL nascia com "Contratos" no menu: via a tela, preenchia o
+    // formulário e recebia "sem permissão" ao salvar.
+    const { tenant, cliente } = await cenario()
+    mockGetTenant.mockResolvedValue({ tenantId: tenant.id, userId: "u1", role: "COMERCIAL" })
+    const { salvarContrato } = await import("@/actions/contracts")
+
+    expect(await salvarContrato({}, form(base(cliente.id)))).toEqual({ ok: true })
+    expect(await testDb.db.serviceContract.count()).toBe(1)
   })
 
   it("não apaga contrato de outra empresa", async () => {

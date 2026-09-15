@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { DollarSign, ClipboardList, Users, AlertTriangle, Wrench } from "lucide-react"
-import { getTenant } from "@/lib/auth"
+import { getTenant, podeAba } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { formatCurrency, formatDate, formatOsNumber, todayInBRT, brtMidnightUTC } from "@/lib/utils"
 import { getMonthlyRevenueChart } from "@/actions/dashboard"
@@ -87,13 +87,22 @@ const statusVariant: Record<string, "default" | "secondary" | "outline" | "destr
 
 export default async function DashboardPage() {
   const { tenantId, role } = await getTenant()
-  // Gráfico mostra receita/despesa reais — financeiro é OWNER/ADMIN-only em
-  // todo o resto do sistema (finance.ts, reports.ts), a Action já se
-  // recusa a rodar pra TECHNICIAN. (Achado em auditoria pré-venda, 2026-08-05.)
   const isAdmin = role === "OWNER" || role === "ADMIN"
+  // O DINHEIRO desta tela segue a aba Financeiro, e não o cargo.
+  //
+  // O gráfico e os dois cartões mostram receita e despesa reais. Eram
+  // escondidos por OWNER/ADMIN com a justificativa de que "financeiro é
+  // OWNER/ADMIN-only em todo o resto do sistema" — e em 15/09/2026 o resto do
+  // sistema passou a seguir a aba. Mantê-los no cargo faria o FINANCEIRO abrir
+  // o Financeiro pelo menu e não ver um centavo na tela inicial.
+  //
+  // Esconder aqui é cortesia, não trava: getMonthlyRevenueChart() chama
+  // requireAba("finance") por conta própria. (Achado em auditoria, 20/08/2026,
+  // para os cartões; 05/08/2026 para o gráfico.)
+  const veDinheiro = await podeAba("finance")
   const [data, chartData, passos] = await Promise.all([
     getDashboardData(tenantId),
-    isAdmin ? getMonthlyRevenueChart() : Promise.resolve(null),
+    veDinheiro ? getMonthlyRevenueChart() : Promise.resolve(null),
     // Só quem administra: o técnico não configura a empresa, e mostrar pra
     // ele uma lista que ele não pode cumprir é ruído puro.
     isAdmin && (await temFuncao(tenantId, "primeirosPassos"))
@@ -104,7 +113,7 @@ export default async function DashboardPage() {
   const t = await getTranslations("dashboardHome")
   const tc = await getTranslations("common")
 
-  // Os cartões de DINHEIRO só para quem administra.
+  // Os cartões de DINHEIRO só para quem tem a aba Financeiro.
   //
   // O gráfico logo abaixo já era escondido, com o comentário explicando que
   // financeiro é OWNER/ADMIN-only em todo o resto do sistema — e os cartões com
@@ -115,7 +124,7 @@ export default async function DashboardPage() {
   // não levava a lugar nenhum. (Achado em auditoria, 20/08/2026 — o mesmo
   // vazamento que o gráfico corrigiu em 05/08, na metade que ficou para trás.)
   const stats = [
-    ...(isAdmin
+    ...(veDinheiro
       ? [
           {
             title: t("stats.monthlyRevenue.title"),

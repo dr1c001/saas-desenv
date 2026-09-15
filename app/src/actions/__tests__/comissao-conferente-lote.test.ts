@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { createTestDatabase, type TestDatabase } from "@/test-utils/pglite-db"
+import { abasDeMentira } from "@/test-utils/abas-de-mentira"
 
 // O conferente diário das comissões, e o pagamento em lote.
 //
@@ -20,6 +21,7 @@ beforeAll(async () => {
   vi.doMock("@/lib/prisma", () => ({ prisma: testDb.db }))
   vi.doMock("@/lib/auth", () => ({
     getTenant: mockGetTenant,
+    ...abasDeMentira(mockGetTenant),
     requireActiveSubscription: vi.fn().mockResolvedValue(undefined),
     filtroDeFilialAtual: vi.fn().mockResolvedValue({}),
     checarAcao: vi.fn().mockResolvedValue(null),

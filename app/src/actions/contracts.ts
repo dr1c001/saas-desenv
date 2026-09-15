@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { getTenant, podeAba, requireActiveSubscription } from "@/lib/auth"
 import { alcancarHoje, FREQUENCIAS, type Frequencia } from "@/lib/contrato-recorrente"
 import type { ContractFrequency } from "@/generated/prisma/client"
 
@@ -30,11 +30,17 @@ export async function salvarContrato(
   _prev: EstadoContrato,
   formData: FormData
 ): Promise<EstadoContrato> {
-  const { tenantId, role } = await getTenant()
+  const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
   // Contrato gera OS sozinho e define faturamento recorrente — é decisão
   // comercial, não de quem está em campo.
-  if (role !== "OWNER" && role !== "ADMIN") return { erro: "semPermissao" }
+  //
+  // Quem é "comercial" é a ABA, e não uma lista de cargos escrita aqui: o
+  // cargo COMERCIAL nasce com Contratos marcada em ABAS_PADRAO, via de menu
+  // e esbarrava nesta linha ao salvar. A tela deixou de barrar por cargo na
+  // mesma data — a defesa da Action é o que torna isso seguro, porque ela é
+  // endereço HTTP próprio. (15/09/2026.)
+  if (!(await podeAba("contracts"))) return { erro: "semPermissao" }
 
   const parsed = schema.safeParse(Object.fromEntries(formData.entries()))
   if (!parsed.success) return { erro: "dadosInvalidos" }
@@ -110,9 +116,9 @@ export async function salvarContrato(
 }
 
 export async function alternarContrato(id: string): Promise<EstadoContrato> {
-  const { tenantId, role } = await getTenant()
+  const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
-  if (role !== "OWNER" && role !== "ADMIN") return { erro: "semPermissao" }
+  if (!(await podeAba("contracts"))) return { erro: "semPermissao" }
 
   const c = await prisma.serviceContract.findFirst({
     where: { id, tenantId },
@@ -144,9 +150,9 @@ export async function alternarContrato(id: string): Promise<EstadoContrato> {
 }
 
 export async function excluirContrato(id: string): Promise<EstadoContrato> {
-  const { tenantId, role } = await getTenant()
+  const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
-  if (role !== "OWNER" && role !== "ADMIN") return { erro: "semPermissao" }
+  if (!(await podeAba("contracts"))) return { erro: "semPermissao" }
 
   // deleteMany com tenantId: delete por id sozinho apagaria contrato alheio
   // se o id vazasse. As OS já geradas ficam — são trabalho realizado, e o

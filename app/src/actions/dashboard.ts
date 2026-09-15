@@ -1,17 +1,20 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { getTenant, requireAba, requireActiveSubscription } from "@/lib/auth"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
-import { getTranslations } from "next-intl/server"
 
 export async function getMonthlyRevenueChart() {
-  const { tenantId, role } = await getTenant()
-  // Financeiro é OWNER/ADMIN-only em todo o resto do sistema (finance.ts,
-  // reports.ts) — este gráfico expunha os mesmos totais de receita/despesa
-  // pra qualquer TECHNICIAN via /dashboard. (Achado em auditoria pré-venda,
-  // 2026-08-05.)
-  if (role !== "OWNER" && role !== "ADMIN") throw new Error((await getTranslations("common"))("noPermission"))
+  const { tenantId } = await getTenant()
+  // Este gráfico expunha os totais de receita/despesa para qualquer
+  // TECHNICIAN via /dashboard. (Achado em auditoria pré-venda, 2026-08-05.)
+  //
+  // A trava era OWNER/ADMIN porque "financeiro é OWNER/ADMIN-only em todo o
+  // resto do sistema" — premissa que deixou de valer em 15/09/2026, quando
+  // finance.ts e reports.ts passaram a seguir a ABA. O técnico continua de
+  // fora (não tem a aba); o cargo FINANCEIRO passa a ver na tela inicial o
+  // mesmo número que já vê no Financeiro.
+  await requireAba("finance")
   await requireActiveSubscription(tenantId)
 
   // Last 6 months (limites de mês em horário de Brasília, não UTC do

@@ -54,6 +54,13 @@ export default async function BalancoPage() {
   // erro para quem chegou aqui por engano.
   if (!(await temRecurso(tenantId, "balanco"))) redirect("/dashboard")
 
+  // E o PAPEL. A tela conferia o recurso e não o cargo — e o balanço é o
+  // documento mais completo da empresa: capital social, resultado acumulado,
+  // imobilizado. Fica OWNER/ADMIN de propósito, mesmo depois de Financeiro,
+  // Relatórios e Contratos passarem a seguir a aba (15/09/2026): é patrimônio,
+  // não operação do dia. Ver o porquê em actions/balanco.ts, `contexto`.
+  if (role !== "OWNER" && role !== "ADMIN") redirect("/dashboard")
+
   const t = await getTranslations("balanco")
   const isAdmin = role === "OWNER" || role === "ADMIN"
   const { balanco, achados, caixaInicial, capitalSocial } = await getBalanco()

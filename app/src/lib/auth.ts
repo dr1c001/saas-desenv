@@ -415,3 +415,53 @@ export async function checarAcao(acao: Acao): Promise<"semPermissao" | null> {
   const permitidas = await getAcoesPermitidas(tenantId, role)
   return podeFazer(role, permitidas, acao) ? null : "semPermissao"
 }
+
+/**
+ * Barra a ação quando a ABA que a governa não está liberada para o cargo.
+ *
+ * ─── Por que isto existe ─────────────────────────────────────────────────────
+ *
+ * Até 15/09/2026 as telas de dinheiro travavam em `role !== "OWNER" && role !==
+ * "ADMIN"`, escrito à mão em cinco páginas e oito Actions. Isso fazia sentido
+ * quando havia três cargos. Desde 24/08/2026 há oito, e três deles —
+ * FINANCEIRO, GERENTE, COMERCIAL — nasciam com abas padrão apontando para telas
+ * que os expulsavam: a pessoa via "Financeiro" no menu e caía no painel ao
+ * clicar.
+ *
+ * Quem decide agora é a permissão por aba, que o dono configura em 5.4.1 e que
+ * o layout passou a fazer valer de verdade na mesma data. O cargo FINANCEIRO
+ * abre o Financeiro porque o dono deixou a aba marcada para ele — não porque
+ * uma lista no código diz que sim.
+ *
+ * ─── O que NÃO passa por aqui ────────────────────────────────────────────────
+ *
+ * Continua em OWNER/ADMIN escrito à mão o que é POLÍTICA, e não operação: a
+ * base de cálculo da comissão, a opção de pagar em lote, o balanço patrimonial
+ * e a assinatura. Dar baixa numa conta é trabalho do financeiro; mudar a regra
+ * que define quanto cada técnico ganha não é.
+ *
+ * Dono e administrador passam sempre — `getAllowedTabs` já devolve tudo para
+ * eles, mas o atalho evita uma ida ao banco no caminho mais comum.
+ */
+export async function requireAba(aba: TabSlug): Promise<void> {
+  if (await podeAba(aba)) return
+  throw new Error((await getTranslations("common"))("noPermission"))
+}
+
+/**
+ * A mesma pergunta, para DESENHAR a tela em vez de barrar.
+ *
+ * Separada de `requireAba` porque esconder um cartão e recusar uma chamada são
+ * coisas diferentes: a tela inicial precisa decidir se mostra o faturamento do
+ * mês, e "lançar" ali derrubaria o painel inteiro de quem não tem a aba.
+ *
+ * Esconder NÃO é a trava — é cortesia. Quem protege o número é a Action que o
+ * calcula, que chama `requireAba` por conta própria. As duas precisam concordar,
+ * senão a tela promete e a chamada recusa (que é exatamente o defeito que esta
+ * dupla veio corrigir).
+ */
+export async function podeAba(aba: TabSlug): Promise<boolean> {
+  const { tenantId, role } = await getTenant()
+  if (role === "OWNER" || role === "ADMIN") return true
+  return (await getAllowedTabs(tenantId, role)).includes(aba)
+}

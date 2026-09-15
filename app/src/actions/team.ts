@@ -269,7 +269,28 @@ export async function getTeamMembers() {
       email: true,
       role: true,
       createdAt: true,
-      location: { select: { latitude: true, longitude: true, updatedAt: true } },
+      // SÓ a data da última posição — nunca as coordenadas.
+      //
+      // Esta consulta trazia `latitude` e `longitude` de todo mundo, e as duas
+      // únicas defesas da função são tenant e assinatura: nenhum papel, nenhum
+      // recurso. Ou seja, qualquer usuário autenticado — um TECHNICIAN, um
+      // ATENDIMENTO, alguém cujo dono desmarcou a aba Equipe — despachava esta
+      // Server Action e recebia a localização atual de todos os colegas.
+      //
+      // O projeto já tinha decidido que isso não pode: `/api/location/list`
+      // ganhou trava de papel em 19/07/2026, com o comentário dizendo
+      // exatamente isso, mais a checagem do recurso `gpsMap`; e `/map` repetia
+      // a trava. (Desde 15/09/2026 as duas seguem a aba "Mapa" — a porta
+      // continua fechada, só mudou quem tem a chave.) Foram trancadas duas
+      // portas para a mesma coluna do mesmo modelo — esta terceira ficou
+      // aberta.
+      //
+      // A correção não é acrescentar uma quarta checagem de papel: é PARAR DE
+      // ENVIAR o que ninguém usa. A tela de Equipe imprime apenas
+      // `formatDate(m.location.updatedAt)`; as coordenadas nunca foram lidas
+      // por nenhuma tela. Quem precisa delas de verdade é o mapa, que tem a sua
+      // própria rota, guardada. (Achado na auditoria de 13/09/2026.)
+      location: { select: { updatedAt: true } },
     },
     orderBy: { createdAt: "asc" },
   })

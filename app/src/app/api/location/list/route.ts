@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { getTenant, requireAba, requireActiveSubscription } from "@/lib/auth"
 import { temRecurso } from "@/lib/plan"
 
 export async function GET() {
-  const { tenantId, role } = await getTenant()
-  // A página /map já é OWNER/ADMIN-only, mas essa API é uma rota
-  // independente — sem essa checagem, qualquer papel podia chamá-la direto
-  // e ver a localização GPS de todos os colegas. (Achado em revisão de segurança 2026-07-19.)
-  if (role !== "OWNER" && role !== "ADMIN") {
+  const { tenantId } = await getTenant()
+  // Rota independente da página: sem checagem própria, qualquer papel a
+  // chamava direto e via a localização GPS de todos os colegas. (Achado em
+  // revisão de segurança 2026-07-19.)
+  // A trava é a ABA, e não uma lista de cargos: esta rota alimenta /map, e as
+  // duas precisam concordar. Com OWNER/ADMIN fixo aqui e a página liberada pela
+  // aba, o GERENTE abriria o mapa e ele nunca atualizaria — 403 silencioso a
+  // cada polling. `requireAba` lança, e o catch devolve o mesmo 403 de antes
+  // para quem realmente não tem a aba. (15/09/2026.)
+  try {
+    await requireAba("map")
+  } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
   // Mapa GPS é feature paga (plano Pro+) — mesmo raciocínio das Server

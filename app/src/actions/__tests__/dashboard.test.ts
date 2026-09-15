@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { createTestDatabase, type TestDatabase } from "@/test-utils/pglite-db"
+import { abasDeMentira } from "@/test-utils/abas-de-mentira"
 
 // O gráfico de 6 meses passou de 12 consultas (2 por mês, em laço) para 2
 // agrupadas no banco. O risco dessa troca é sutil: `paidAt` é
@@ -15,6 +16,7 @@ beforeAll(async () => {
   vi.doMock("@/lib/prisma", () => ({ prisma: testDb.db }))
   vi.doMock("@/lib/auth", () => ({
     getTenant: mockGetTenant,
+    ...abasDeMentira(mockGetTenant),
     requireActiveSubscription: vi.fn().mockResolvedValue(undefined),
   }))
   vi.doMock("next-intl/server", () => ({
@@ -118,5 +120,24 @@ describe("getMonthlyRevenueChart", () => {
     const dados = await getMonthlyRevenueChart()
     expect(dados.every((d) => d.receita === 0 && d.despesa === 0)).toBe(true)
     expect(dados).toHaveLength(6)
+  })
+
+  // A trava é pela ABA Financeiro desde 15/09/2026 — antes era OWNER/ADMIN, e
+  // não havia teste nenhum: um teste de mutação tirou a trava inteira e a
+  // suíte continuou verde. Estes dois casos são o que faltava.
+  it("o TÉCNICO não recebe o gráfico — é o faturamento da empresa", async () => {
+    const { getMonthlyRevenueChart } = await import("@/actions/dashboard")
+    const tenant = await seed()
+    mockGetTenant.mockResolvedValue({ tenantId: tenant.id, role: "TECHNICIAN", userId: "u2" })
+
+    await expect(getMonthlyRevenueChart()).rejects.toThrow()
+  })
+
+  it("o FINANCEIRO recebe — tem a aba, e já vê o mesmo número no Financeiro", async () => {
+    const { getMonthlyRevenueChart } = await import("@/actions/dashboard")
+    const tenant = await seed()
+    mockGetTenant.mockResolvedValue({ tenantId: tenant.id, role: "FINANCEIRO", userId: "u3" })
+
+    await expect(getMonthlyRevenueChart()).resolves.toHaveLength(6)
   })
 })

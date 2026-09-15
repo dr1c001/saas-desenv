@@ -13,8 +13,11 @@ const STATUS_COLOR: Record<string, string> = {
 }
 
 export default async function MapPage() {
-  const { tenantId, role } = await getTenant()
-  if (role !== "OWNER" && role !== "ADMIN") redirect("/dashboard")
+  const { tenantId } = await getTenant()
+  // Sem trava de cargo aqui: o layout do painel barra a rota pela ABA
+  // (ver abaDaRota em lib/codigos-abas.ts). Fixar OWNER/ADMIN nesta linha
+  // fazia o menu prometer e a tela expulsar — o GERENTE e o FINANCEIRO
+  // nascem com esta aba marcada em ABAS_PADRAO. (15/09/2026.)
   // "Mapa GPS" começa no plano Pro. A aba já some do menu (getAllowedTabs),
   // mas a URL continua digitável — e as duas rotas de API que alimentam o
   // mapa também checam por conta própria.

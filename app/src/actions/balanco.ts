@@ -39,11 +39,43 @@ export type EstadoBalanco = { erro?: string; ok?: boolean }
 
 const ehAdmin = (role: string) => role === "OWNER" || role === "ADMIN"
 
+/**
+ * Tenant, assinatura, recurso — e se quem chama ADMINISTRA.
+ *
+ * O papel faltava nas leituras. As três funções de ESCRITA deste arquivo o
+ * conferiam cada uma por conta própria; as duas de LEITURA não conferiam nada:
+ * `getBalanco` e `exportarBalancoCsv` entregavam o balanço patrimonial inteiro
+ * — caixa, contas a receber e a pagar, recebíveis vencidos, valor do estoque e
+ * do imobilizado, capital social, resultado acumulado — a qualquer cargo que
+ * despachasse a Server Action, ou simplesmente digitasse /balanco. A guarda
+ * estava nos lugares já protegidos e faltava justamente nos dois que entregavam
+ * tudo. (Achado na auditoria de 13/09/2026.)
+ *
+ * ─── Por que OWNER/ADMIN, e não a aba ────────────────────────────────────────
+ *
+ * Financeiro, Relatórios e Contratos passaram a seguir a ABA em 15/09/2026 —
+ * quem tem "Financeiro" marcada dá baixa em conta, quem tem "Contratos" cria
+ * contrato. O balanço ficou de fora DE PROPÓSITO: não é operação do dia, é o
+ * patrimônio da empresa, com capital social e resultado acumulado. É documento
+ * de dono, e a aba "balanco" existe para o MENU, não para delegar isso.
+ *
+ * `admin` vem no retorno em vez de lançar aqui, porque as duas metades
+ * respondem diferente: leitura lança (é o que `contextoDeLeitura` faz), e
+ * formulário DEVOLVE `{ erro }` — é o que a tela mostra, e lançar num
+ * useActionState derruba a página.
+ */
 async function contexto() {
   const { tenantId, role } = await getTenant()
   await requireActiveSubscription(tenantId)
   await requireRecurso(tenantId, "balanco")
-  return { tenantId, role }
+  return { tenantId, admin: ehAdmin(role) }
+}
+
+/** Para quem LÊ o balanço: sem administrar, não há o que devolver. */
+async function contextoDeLeitura() {
+  const c = await contexto()
+  if (!c.admin) throw new Error((await getTranslations("common"))("noPermission"))
+  return c
 }
 
 const num = (v: unknown) => (v === null || v === undefined ? 0 : Number(v))
@@ -68,7 +100,7 @@ export type BalancoCompleto = {
 }
 
 export async function getBalanco(): Promise<BalancoCompleto> {
-  const { tenantId } = await contexto()
+  const { tenantId } = await contextoDeLeitura()
   const hoje = new Date()
   const corte = new Date(hoje.getTime() - DIAS_RECEBIVEL_VELHO * 24 * 60 * 60 * 1000)
 
@@ -197,8 +229,8 @@ export async function salvarBasesDoBalanco(
   _prev: EstadoBalanco,
   formData: FormData
 ): Promise<EstadoBalanco> {
-  const { tenantId, role } = await contexto()
-  if (!ehAdmin(role)) return { erro: "semPermissao" }
+  const { tenantId, admin } = await contexto()
+  if (!admin) return { erro: "semPermissao" }
 
   const ler = (campo: string): number | null | undefined => {
     const cru = String(formData.get(campo) ?? "").trim()
@@ -228,8 +260,8 @@ export async function salvarLinhaManual(
   _prev: EstadoBalanco,
   formData: FormData
 ): Promise<EstadoBalanco> {
-  const { tenantId, role } = await contexto()
-  if (!ehAdmin(role)) return { erro: "semPermissao" }
+  const { tenantId, admin } = await contexto()
+  if (!admin) return { erro: "semPermissao" }
 
   const description = String(formData.get("description") ?? "").trim().slice(0, 120)
   if (description.length < 2) return { erro: "descricaoObrigatoria" }
@@ -258,8 +290,8 @@ export async function salvarLinhaManual(
 }
 
 export async function excluirLinhaManual(id: string): Promise<EstadoBalanco> {
-  const { tenantId, role } = await contexto()
-  if (!ehAdmin(role)) return { erro: "semPermissao" }
+  const { tenantId, admin } = await contexto()
+  if (!admin) return { erro: "semPermissao" }
 
   // deleteMany com o tenant no WHERE: `delete` por id puro apagaria a linha de
   // outra empresa para quem chamasse a Action direto com um id adivinhado.

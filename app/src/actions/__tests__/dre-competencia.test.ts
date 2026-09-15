@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { createTestDatabase, type TestDatabase } from "@/test-utils/pglite-db"
+import { abasDeMentira } from "@/test-utils/abas-de-mentira"
 import { dataDoResultado, dentroDoPeriodo } from "@/lib/competencia"
 
 // O DRE nos dois regimes.
@@ -26,6 +27,7 @@ beforeAll(async () => {
   vi.doMock("@/lib/prisma", () => ({ prisma: testDb.db }))
   vi.doMock("@/lib/auth", () => ({
     getTenant: mockGetTenant,
+    ...abasDeMentira(mockGetTenant),
     requireActiveSubscription: vi.fn().mockResolvedValue(undefined),
     filtroDeFilialAtual: vi.fn().mockResolvedValue({}),
   }))

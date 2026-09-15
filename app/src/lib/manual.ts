@@ -1224,14 +1224,14 @@ export const MANUAL: readonly Secao[] = [
           {
             tipo: "lista",
             itens: [
-              "*Abas que o cargo enxerga* — quais telas aparecem no menu de quem tem aquele cargo.",
+              "*Abas que o cargo enxerga* — quais telas aparecem no menu de quem tem aquele cargo. Desmarcar tira mais do que o item do menu: a tela deixa de abrir, mesmo digitando o endereço.",
               "*O que ele pode fazer* — dentro de uma aba liberada, quais ações ele executa.",
             ],
           },
           {
             tipo: "p",
             texto:
-              "Proprietário e administrador fazem tudo e não aparecem aqui. A mudança entra em vigor na próxima vez que a pessoa carregar a página.",
+              "Proprietário e administrador fazem tudo e não aparecem aqui. A mudança entra em vigor na próxima vez que a pessoa carregar a página. Duas coisas ficam sempre com eles, marque o que marcar: o *Balanço* (é o patrimônio da empresa) e a *Assinatura* (é a conta com o ServiçoOS). No Financeiro, a regra de comissão e a opção de pagar em lote também são só deles — o financeiro dá baixa nas contas, mas não muda quanto cada técnico ganha.",
           },
           {
             tipo: "atencao",

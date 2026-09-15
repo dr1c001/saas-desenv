@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation"
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
 import { CalendarSync } from "lucide-react"
@@ -15,9 +14,11 @@ import { ContractRowActions } from "@/components/contracts/contract-row-actions"
 import { formatCurrency, formatDate } from "@/lib/utils"
 
 export default async function ContractsPage() {
-  const { tenantId, role } = await getTenant()
+  const { tenantId } = await getTenant()
   // Contrato define faturamento recorrente — decisão comercial, não de campo.
-  if (role !== "OWNER" && role !== "ADMIN") redirect("/dashboard")
+  // Quem decide QUEM é comercial é a aba, e não uma lista de cargos escrita
+  // aqui: o cargo COMERCIAL nasce com "Contratos" marcada, e o redirect fixo
+  // o expulsava do próprio trabalho. O layout barra pela aba. (15/09/2026.)
 
   const t = await getTranslations("contratos")
   const [contratos, clientes, tecnicos] = await Promise.all([

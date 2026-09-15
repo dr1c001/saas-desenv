@@ -1,7 +1,5 @@
 import { Suspense } from "react"
-import { redirect } from "next/navigation"
 import { getTranslations } from "next-intl/server"
-import { getTenant } from "@/lib/auth"
 import { getFinanceSummary } from "@/actions/finance"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
-import { Separator } from "@/components/ui/separator"
 import { TrendingUp, TrendingDown, DollarSign } from "lucide-react"
 import { ExpenseDialog } from "@/components/finance/expense-dialog"
 import { BaseDaComissao } from "@/components/finance/base-comissao"
@@ -25,8 +22,10 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
   const { q, filial } = await searchParams
   const t = await getTranslations("finance")
   const tFil = await getTranslations("filiais.filtro")
-  const { role } = await getTenant()
-  if (role !== "OWNER" && role !== "ADMIN") redirect("/dashboard")
+  // Sem trava de cargo aqui: o layout do painel barra a rota pela ABA
+  // (ver abaDaRota em lib/codigos-abas.ts). Fixar OWNER/ADMIN nesta linha
+  // fazia o menu prometer e a tela expulsar — o GERENTE e o FINANCEIRO
+  // nascem com esta aba marcada em ABAS_PADRAO. (15/09/2026.)
 
   // Cada unidade fecha o mês dela. O que não tem filial (despesa da empresa)
   // entra em todas — ver lib/filial.ts.
