@@ -3,6 +3,7 @@ import { getTranslator } from "@/lib/i18n"
 import { momentoDoAviso, type Momento } from "@/lib/past-due"
 import { destinoDeEmailDeTeste, ehProducao, prefixoDeAssunto } from "@/lib/ambiente"
 import { EMAIL_FUNDADOR } from "@/lib/admin"
+import { escaparHtml } from "@/lib/html"
 
 let resendClient: Resend | null = null
 
@@ -32,6 +33,12 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://servicoos.com.br"
 // trata tag como rich text e exige um handler pra ela — markup devolve string
 // (o que o corpo HTML espera), rich devolveria nó React, inútil aqui.
 const STRONG = { strong: (chunks: string) => `<strong>${chunks}</strong>` }
+
+// t() e t.markup() inserem os valores LITERALMENTE — não escapam nada. Todo
+// valor que veio do usuário (nome da pessoa, nome da empresa) passa por
+// escaparHtml antes de entrar como value; os nossos (nome do plano, número de
+// dias) não precisam. Ver lib/html.ts. O ASSUNTO nunca é escapado: é cabeçalho
+// de texto puro, e "&amp;" apareceria literal na caixa de entrada.
 
 // O SDK do Resend nunca rejeita a Promise — erro da API (domínio não
 // verificado, destinatário inválido, rate limit) e falha de rede resolvem
@@ -86,7 +93,7 @@ export async function sendWelcomeEmail(to: string, name: string, locale: "pt" | 
     subject: t("welcome.subject"),
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
-        <h1 style="color:#7c3aed;margin-bottom:8px">${t("welcome.heading", { name })}</h1>
+        <h1 style="color:#7c3aed;margin-bottom:8px">${t("welcome.heading", { name: escaparHtml(name) })}</h1>
         <p style="color:#374151;line-height:1.6">
           ${t.markup("welcome.accountCreated", STRONG)}<br>
           ${t("welcome.nextStep")}
@@ -114,8 +121,8 @@ export async function sendTeamInviteEmail(to: string, name: string, companyName:
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
         <h1 style="color:#7c3aed;margin-bottom:8px">${t("teamInvite.heading")}</h1>
         <p style="color:#374151;line-height:1.6">
-          ${t("teamInvite.greeting", { name })}<br>
-          ${t.markup("teamInvite.invitedTo", { companyName, ...STRONG })}
+          ${t("teamInvite.greeting", { name: escaparHtml(name) })}<br>
+          ${t.markup("teamInvite.invitedTo", { companyName: escaparHtml(companyName), ...STRONG })}
         </p>
         <p style="color:#374151;line-height:1.6">
           ${t("teamInvite.instructions")}
@@ -152,7 +159,7 @@ export async function sendPaymentConfirmedEmail(
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
         <h1 style="color:#16a34a;margin-bottom:8px">${t("paymentConfirmed.heading")}</h1>
         <p style="color:#374151;line-height:1.6">
-          ${t.markup("paymentConfirmed.planActive", { name, planName, ...STRONG })}<br>
+          ${t.markup("paymentConfirmed.planActive", { name: escaparHtml(name), planName, ...STRONG })}<br>
           ${t("paymentConfirmed.thanks")}
         </p>
         <a href="${APP_URL}/dashboard"
@@ -183,7 +190,7 @@ export async function sendOnboardingDay3Email(to: string, name: string, locale: 
     subject: t("onboardingDay3.subject"),
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
-        <h1 style="color:#7c3aed;margin-bottom:8px">${t("onboardingDay3.heading", { name })}</h1>
+        <h1 style="color:#7c3aed;margin-bottom:8px">${t("onboardingDay3.heading", { name: escaparHtml(name) })}</h1>
         <p style="color:#374151;line-height:1.6">
           ${t.markup("onboardingDay3.notSubscribed", STRONG)}
         </p>
@@ -249,9 +256,9 @@ export async function sendPastDueWarningEmail(
     ),
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
-        <h1 style="color:${cor};margin-bottom:8px">${t(`${chave}.heading` as "pastDueWarning.heading", { name })}</h1>
+        <h1 style="color:${cor};margin-bottom:8px">${t(`${chave}.heading` as "pastDueWarning.heading", { name: escaparHtml(name) })}</h1>
         <p style="color:#374151;line-height:1.6">
-          ${t.markup(`${chave}.intro` as "pastDueWarning.intro", { ...STRONG, company: companyName })}
+          ${t.markup(`${chave}.intro` as "pastDueWarning.intro", { ...STRONG, company: escaparHtml(companyName) })}
         </p>
         <div style="background:#fef3c7;border-left:4px solid ${cor};padding:12px 16px;margin:20px 0;border-radius:4px">
           <p style="color:#92400e;margin:0;line-height:1.6">
@@ -281,7 +288,7 @@ export async function sendNpsEmail(to: string, name: string, osToken: string, lo
     subject: t("nps.subject"),
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
-        <h1 style="color:#7c3aed;margin-bottom:8px">${t("nps.heading", { name })}</h1>
+        <h1 style="color:#7c3aed;margin-bottom:8px">${t("nps.heading", { name: escaparHtml(name) })}</h1>
         <p style="color:#374151;line-height:1.6">
           ${t("nps.intro")}<br>
           ${t.markup("nps.question", STRONG)}
@@ -311,7 +318,7 @@ export async function sendPasswordResetEmail(to: string, name: string, resetUrl:
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
         <h1 style="color:#7c3aed;margin-bottom:8px">${t("passwordReset.heading")}</h1>
         <p style="color:#374151;line-height:1.6">
-          ${name ? t("passwordReset.greeting", { name }) : t("passwordReset.greetingNoName")}<br>
+          ${name ? t("passwordReset.greeting", { name: escaparHtml(name) }) : t("passwordReset.greetingNoName")}<br>
           ${t("passwordReset.requestReceived")}
         </p>
         <a href="${resetUrl}"
@@ -338,8 +345,15 @@ export async function sendPasswordResetEmail(to: string, name: string, resetUrl:
  *
  * O corpo é sempre o mesmo — nome da empresa e um texto já montado —, e o que
  * muda entre os usos é o assunto. Extraído quando a régua de cobrança passou a
- * precisar de um assunto por tom: duplicar o HTML duplicaria junto o escape de
- * `& < >`, que é a única coisa aqui que, esquecida, vira defeito de verdade.
+ * precisar de um assunto por tom: duplicar o HTML duplicaria junto o escape,
+ * que é a única coisa aqui que, esquecida, vira defeito de verdade.
+ *
+ * E foi esquecida: até 15/09/2026 só o `texto` era escapado, e o nome da
+ * empresa — digitado por ela, sem validação além de 2 caracteres — entrava cru
+ * no <h2>, na linha de cima. "Silva & Cia <Refrigeração>" perdia a palavra
+ * entre < >; um `<img onerror=...>` no nome sairia por noreply@servicoos.com.br
+ * para a caixa de um terceiro. Os dois passam por escaparHtml agora.
+ * (Achado na auditoria de 13/09/2026.)
  */
 function emailEmNomeDaEmpresa(
   to: string,
@@ -369,11 +383,8 @@ function emailEmNomeDaEmpresa(
     subject,
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
-        <h2 style="margin:0 0 16px">${companyName}</h2>
-        <p style="white-space:pre-line;line-height:1.6">${texto
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")}</p>
+        <h2 style="margin:0 0 16px">${escaparHtml(companyName)}</h2>
+        <p style="white-space:pre-line;line-height:1.6">${escaparHtml(texto)}</p>
       </div>`,
   })
 }
@@ -417,7 +428,7 @@ export async function sendTrialEndingEmail(
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
         <h2 style="margin:0 0 16px">${t(`trialEnding.title.${chave}` as "trialEnding.title.faltam", { n: String(diasRestantes) })}</h2>
-        <p style="line-height:1.6">${t("trialEnding.body", { name, company: companyName })}</p>
+        <p style="line-height:1.6">${t("trialEnding.body", { name: escaparHtml(name), company: escaparHtml(companyName) })}</p>
         <p style="margin:24px 0">
           <a href="${APP_URL}/billing"
              style="background:#7c3aed;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;display:inline-block">

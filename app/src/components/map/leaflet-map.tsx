@@ -1,6 +1,7 @@
 "use client"
 
 import "leaflet/dist/leaflet.css"
+import { escaparHtml } from "@/lib/html"
 import L from "leaflet"
 import { useTranslations } from "next-intl"
 import { useEffect, useRef } from "react"
@@ -33,15 +34,9 @@ const STATUS_COLOR: Record<string, string> = {
 // Leaflet's bindPopup(string) sets it as innerHTML — nome/título/cidade vêm
 // de Client/ServiceOrder/User (qualquer papel pode criar/editar cliente), e
 // sem escapar isso é XSS armazenado que executa na sessão de quem abrir o
-// mapa (só OWNER/ADMIN). (Achado em revisão de segurança 2026-07-19.)
-function escapeHtml(str: string) {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
-}
+// mapa. (Achado em revisão de segurança 2026-07-19.) A regra é a mesma dos
+// e-mails e mora em lib/html.ts desde 15/09/2026 — uma definição só.
+const escapeHtml = escaparHtml
 
 function buildSvgIcon(L: typeof import("leaflet"), color: string, label: string) {
   const svg = `
