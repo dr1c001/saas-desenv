@@ -891,11 +891,11 @@
       "cta": "Regularizar e voltar a acessar"
     },
     "nps": {
-      "subject": "Como foi sua experiência com o ServiçoOS?",
-      "heading": "Olá, {name}! 🙏",
-      "intro": "[[OsArt]] [[os]] foi concluíd[[osFim]] no ServiçoOS. Queremos saber sua opinião!",
-      "question": "Em uma escala de 0 a 10, <strong>o quanto você indicaria o ServiçoOS</strong> para outros empresários?",
-      "scaleHint": "0 = não indicaria · 10 = com certeza indicaria",
+      "subject": "como foi o atendimento?",
+      "heading": "Olá, {name}!",
+      "intro": "[[OsArt]] [[os]] foi concluíd[[osFim]]. {company} quer saber como foi o atendimento.",
+      "question": "De 0 a 10, <strong>qual a probabilidade de você recomendar {company}</strong> a um amigo ou familiar?",
+      "scaleHint": "0 = não recomendaria · 10 = com certeza recomendaria",
       "ignoreNotice": "Se preferir não responder, ignore este e-mail."
     },
     "passwordReset": {

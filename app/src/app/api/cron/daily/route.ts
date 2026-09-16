@@ -3,10 +3,10 @@ import { prisma } from "@/lib/prisma"
 import {
   sendOnboardingDay3Email,
   sendTrialEndingEmail,
-  sendNpsEmail,
   sendPastDueWarningEmail,
   avisarFalhaDoCron,
 } from "@/lib/resend"
+import { enviarPesquisasDeSatisfacao } from "@/lib/nps-fila"
 import { decidirAviso, diasDeAtraso, AVISOS_ATRASO } from "@/lib/past-due"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 import { provedor } from "@/lib/geocode"
@@ -15,7 +15,6 @@ import { ambiente, ehProducao } from "@/lib/ambiente"
 import { gerarOsDosContratos } from "@/lib/gerar-os-de-contrato"
 import { DIAS_DE_ANTECEDENCIA } from "@/lib/contrato-recorrente"
 import { gravarRetratoDoMes } from "@/lib/snapshot"
-import { temFuncao } from "@/lib/plan"
 import { conciliarNotasPendentes } from "@/lib/nfse-conciliar"
 import { conferirComissoes, resumirDivergencias } from "@/lib/comissao-conferente"
 import { AVISOS_DE_FIM, decidirAvisoDeFim, diasRestantes, lembreteDoDia3 } from "@/lib/teste-gratis"
@@ -223,53 +222,17 @@ export async function GET(req: NextRequest) {
   }
 
   // ── NPS: OS concluída há 7+ dias, nunca contatada ────────────────────────────
-  // Três correções juntas aqui (achado verificando o cron de NPS, 2026-07-28):
-  // 1. status só considerava "DONE" — completeServiceOrder com
-  //    invoiceImmediately=true vai direto pra "INVOICED" sem nunca passar por
-  //    "DONE" (concludedAt é setado nos dois casos). Na prática, a maioria
-  //    das OS concluídas em produção está em "INVOICED" e nunca era pega.
-  // 2. concludedAt exigia bater EXATAMENTE 7 dias atrás — se o cron não
-  //    rodasse naquele dia exato (ou clientToken estivesse nulo, como estava
-  //    até a correção anterior), a OS ficava pra sempre sem chance de NPS.
-  //    Agora pega qualquer OS com 7+ dias ainda não contatada, cobrindo
-  //    atrasados.
-  // 3. usava npsScore como trava de "já processado" — só é setado quando o
-  //    cliente responde, então quem ignora o e-mail (a própria mensagem diz
-  //    "se preferir não responder, ignore") receberia um e-mail novo por dia,
-  //    pra sempre. npsSentAt marca a tentativa, independente da resposta.
-  const sevenDaysAgo = new Date(now)
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-  // Mesmo motivo do bloco acima: a CONSULTA também dentro do try, senão um
-  // erro aqui derruba a cobrança e o retrato mensal que vêm depois.
+  // A fila inteira mora em lib/nps-fila.ts — quem entra, em que ordem, o que
+  // sai sem receber. Ficava aqui, e a versão daqui PULAVA (`continue`) quem
+  // não tinha e-mail ou tinha o NPS desligado, sem marcar nada: a linha voltava
+  // amanhã na mesma vaga, e 100 clientes sem e-mail travavam o NPS da
+  // plataforma inteira, para sempre. (Achado na auditoria de 13/09/2026;
+  // as três correções de 28/07/2026 — INVOICED conta, 7+ dias e não
+  // exatamente 7, npsSentAt marca a tentativa — continuam lá.)
   try {
-    const npsOrders = await prisma.serviceOrder.findMany({
-      where: {
-        status: { in: ["DONE", "INVOICED"] },
-        concludedAt: { lte: sevenDaysAgo },
-        npsSentAt: null,
-        npsScore: null,
-        clientToken: { not: null },
-      },
-      include: {
-        client: { select: { email: true, name: true } },
-        // A pesquisa vai pro cliente final, mas quem "fala" é a empresa: sai no
-        // idioma dela (Tenant.locale), igual à OS e ao PDF. (i18n, item 1.)
-        tenant: { select: { id: true, locale: true } },
-      },
-      take: 100,
-    })
-    for (const os of npsOrders) {
-      if (!os.client.email || !os.clientToken) continue
-      // A pesquisa fala com o cliente FINAL da empresa. Quem desligou não quer
-      // que a gente escreva para a base dela.
-      if (!(await temFuncao(os.tenant.id, "nps"))) continue
-      try {
-        await sendNpsEmail(os.client.email, os.client.name, os.clientToken, os.tenant.locale)
-        await prisma.serviceOrder.update({ where: { id: os.id }, data: { npsSentAt: new Date() } })
-        results.nps++
-      } catch { results.errors++ }
-    }
+    const nps = await enviarPesquisasDeSatisfacao(now)
+    results.nps = nps.enviadas
+    results.errors += nps.erros
   } catch (e) {
     console.error("[cron] pesquisa de satisfação falhou:", e)
     results.errors++

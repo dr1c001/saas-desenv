@@ -891,12 +891,12 @@
       "cta": "Pay and restore access"
     },
     "nps": {
-      "subject": "How was your experience with ServiçoOS?",
-      "heading": "Hi, {name}! 🙏",
-      "intro": "Your [[os]] was completed in ServiçoOS. We would love your feedback!",
-      "question": "On a scale of 0 to 10, <strong>how likely are you to recommend ServiçoOS</strong> to other business owners?",
+      "subject": "how was your experience?",
+      "heading": "Hi, {name}!",
+      "intro": "Your [[os]] has been completed. {company} would love to know how it went.",
+      "question": "On a scale of 0 to 10, <strong>how likely are you to recommend {company}</strong> to a friend or family member?",
       "scaleHint": "0 = would not recommend · 10 = would definitely recommend",
-      "ignoreNotice": "If you'd rather not answer, just ignore this email."
+      "ignoreNotice": "If you would rather not answer, just ignore this email."
     },
     "passwordReset": {
       "subject": "Password recovery — ServiçoOS",

@@ -310,34 +310,6 @@ export async function sendPastDueWarningEmail(
   })
 }
 
-export async function sendNpsEmail(to: string, name: string, osToken: string, locale: "pt" | "en") {
-  const t = getTranslator(locale, "emails")
-  return send({
-    from: FROM,
-    replyTo: REPLY_TO,
-    to,
-    subject: t("nps.subject"),
-    html: `
-      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
-        <h1 style="color:#7c3aed;margin-bottom:8px">${t("nps.heading", { name: escaparHtml(name) })}</h1>
-        <p style="color:#374151;line-height:1.6">
-          ${t("nps.intro")}<br>
-          ${t.markup("nps.question", STRONG)}
-        </p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:24px 0">
-          ${[0,1,2,3,4,5,6,7,8,9,10].map(n => `
-            <a href="${APP_URL}/api/nps?token=${osToken}&score=${n}"
-               style="display:inline-block;width:40px;height:40px;line-height:40px;text-align:center;border:1px solid #e5e7eb;border-radius:8px;color:#374151;text-decoration:none;font-weight:600;font-size:14px">
-              ${n}
-            </a>`).join("")}
-        </div>
-        <p style="color:#6b7280;font-size:12px;margin-top:8px">${t("nps.scaleHint")}</p>
-        <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
-        <p style="color:#6b7280;font-size:12px">${t("nps.ignoreNotice")}</p>
-      </div>`,
-  })
-}
-
 export async function sendPasswordResetEmail(to: string, name: string, resetUrl: string, locale: "pt" | "en") {
   const t = getTranslator(locale, "emails")
   return send({
@@ -386,6 +358,28 @@ export async function sendPasswordResetEmail(to: string, name: string, resetUrl:
  * para a caixa de um terceiro. Os dois passam por escaparHtml agora.
  * (Achado na auditoria de 13/09/2026.)
  */
+function envelopeDaEmpresa(
+  to: string,
+  companyName: string,
+  subject: string,
+  /** HTML já pronto — quem chama escapou o que veio do usuário. */
+  corpoHtml: string,
+  responderPara?: string | null,
+  anexos?: { filename: string; content: Buffer }[]
+) {
+  return send({
+    from: FROM,
+    replyTo: responderPara?.trim() || REPLY_TO,
+    ...(anexos && anexos.length > 0 ? { attachments: anexos } : {}),
+    to,
+    subject,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
+        <h2 style="margin:0 0 16px">${escaparHtml(companyName)}</h2>${corpoHtml}
+      </div>`,
+  })
+}
+
 function emailEmNomeDaEmpresa(
   to: string,
   companyName: string,
@@ -406,18 +400,60 @@ function emailEmNomeDaEmpresa(
   // podem falhar em silêncio (ver baixarNotaFiscal em lib/fatura.ts).
   anexos?: { filename: string; content: Buffer }[]
 ) {
-  return send({
-    from: FROM,
-    replyTo: responderPara?.trim() || REPLY_TO,
-    ...(anexos && anexos.length > 0 ? { attachments: anexos } : {}),
+  return envelopeDaEmpresa(
     to,
+    companyName,
     subject,
-    html: `
-      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
-        <h2 style="margin:0 0 16px">${escaparHtml(companyName)}</h2>
-        <p style="white-space:pre-line;line-height:1.6">${escaparHtml(texto)}</p>
-      </div>`,
-  })
+    `
+        <p style="white-space:pre-line;line-height:1.6">${escaparHtml(texto)}</p>`,
+    responderPara,
+    anexos
+  )
+}
+
+/**
+ * A pesquisa de satisfação, em NOME DA EMPRESA, para o cliente final dela.
+ *
+ * Saía assinada pelo ServiçoOS: "como foi sua experiência com o ServiçoOS?",
+ * "o quanto você indicaria o ServiçoOS para outros empresários?", resposta
+ * para o nosso suporte. Mas o destinatário é o morador que chamou a
+ * desentupidora — ele nunca ouviu falar de ServiçoOS, o link abre o portal
+ * com o cabeçalho da EMPRESA perguntando "qual a probabilidade de você NOS
+ * recomendar?", e a nota vira ServiceOrder.npsScore, que o relatório soma
+ * como satisfação do atendimento da empresa. E-mail e portal faziam duas
+ * perguntas diferentes para a mesma nota. Agora fazem a mesma.
+ * (Achado na auditoria de 13/09/2026.)
+ *
+ * A resposta vai para o dono da empresa: "o técnico esqueceu a ferramenta"
+ * precisa chegar em quem pode fazer algo, e não no nosso suporte.
+ */
+export async function sendNpsEmail(
+  to: string,
+  name: string,
+  companyName: string,
+  osToken: string,
+  locale: "pt" | "en",
+  responderPara: string | null
+) {
+  const t = getTranslator(locale, "emails")
+  const company = escaparHtml(companyName)
+  const corpo = `
+        <p style="line-height:1.6">${t("nps.heading", { name: escaparHtml(name) })}</p>
+        <p style="color:#374151;line-height:1.6">
+          ${t("nps.intro", { company })}<br>
+          ${t.markup("nps.question", { company, ...STRONG })}
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:24px 0">
+          ${[0,1,2,3,4,5,6,7,8,9,10].map(n => `
+            <a href="${APP_URL}/api/nps?token=${osToken}&score=${n}"
+               style="display:inline-block;width:40px;height:40px;line-height:40px;text-align:center;border:1px solid #e5e7eb;border-radius:8px;color:#374151;text-decoration:none;font-weight:600;font-size:14px">
+              ${n}
+            </a>`).join("")}
+        </div>
+        <p style="color:#6b7280;font-size:12px;margin-top:8px">${t("nps.scaleHint")}</p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
+        <p style="color:#6b7280;font-size:12px">${t("nps.ignoreNotice")}</p>`
+  return envelopeDaEmpresa(to, companyName, `${companyName} — ${t("nps.subject")}`, corpo, responderPara)
 }
 
 export async function sendClientNoticeEmail(
