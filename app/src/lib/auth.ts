@@ -151,7 +151,7 @@ export const getTenant = cache(async function getTenant() {
     const tenantStatus = { subscriptionStatus: tenant.subscriptionStatus, trialEndsAt: tenant.trialEndsAt }
     // Tenant recém-criado: locale ainda é o default (pt) — o idioma da empresa
     // só é escolhido depois, em Configurações. (i18n, item 1.)
-    sendWelcomeEmail(user.email!, name, tenant.locale).catch(() => null)
+    sendWelcomeEmail(user.email!, name, tenant).catch(() => null)
 
     try {
       await prisma.user.create({

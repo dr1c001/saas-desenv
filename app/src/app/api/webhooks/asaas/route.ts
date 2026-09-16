@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
             // roda fora de qualquer request de navegador, então não há contexto
             // pra resolver isso sozinho. (i18n, item 1.)
             locale: true,
+            vocabulary: true,
             users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } },
           },
         },
@@ -212,7 +213,7 @@ export async function POST(req: NextRequest) {
                 owner.email,
                 owner.name ?? "Cliente",
                 sub.plan.name,
-                sub.tenant.locale,
+                sub.tenant,
                 contrato ? { nomeArquivo: contrato.nomeArquivo, buffer: contrato.buffer } : undefined
               )
             )

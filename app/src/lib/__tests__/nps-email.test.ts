@@ -37,7 +37,7 @@ afterEach(() => {
 
 async function enviar(locale: "pt" | "en" = "pt", responderPara: string | null = "dona@silva.com.br") {
   const { sendNpsEmail } = await import("@/lib/resend")
-  await sendNpsEmail("morador@ex.com", "João", "Desentupidora Silva", "tok123", locale, responderPara)
+  await sendNpsEmail("morador@ex.com", "João", "Desentupidora Silva", "tok123", { locale, vocabulary: null }, responderPara)
   return enviados[0]
 }
 
@@ -79,7 +79,7 @@ describe("a pesquisa de satisfação", () => {
 
   it("o nome da empresa entra escapado no corpo", async () => {
     const { sendNpsEmail } = await import("@/lib/resend")
-    await sendNpsEmail("morador@ex.com", "João", "Silva & Cia <Refrigeração>", "tok", "pt", null)
+    await sendNpsEmail("morador@ex.com", "João", "Silva & Cia <Refrigeração>", "tok", { locale: "pt", vocabulary: null }, null)
     expect(enviados[0].html).toContain("recomendar Silva &amp; Cia &lt;Refrigeração&gt;")
     expect(enviados[0].html).not.toContain("<Refrigeração>")
   })

@@ -143,7 +143,10 @@ export async function inviteTeamMember(
       }
 
       // Get tenant name for the email
-      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } })
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { name: true, vocabulary: true },
+      })
 
       // generate_link so cria o link, nao envia e-mail — o Resend e o unico envio,
       // entao uma falha aqui precisa aparecer pro usuario (nao ha fallback do Supabase).
@@ -161,8 +164,9 @@ export async function inviteTeamMember(
         // O convite sai no idioma da empresa (Tenant.locale, já resolvido pelo
         // getTenant acima) — inclusive o nome genérico de fallback, que também
         // aparece no corpo do e-mail. (i18n, item 1.)
-        const t = getTranslator(locale, "emails")
-        emailSent = await sendTeamInviteEmail(email, name, tenant?.name ?? t("teamInvite.fallbackCompany"), inviteLink, locale)
+        const empresa = { locale, vocabulary: tenant?.vocabulary ?? null }
+        const t = getTranslator(locale, "emails", empresa.vocabulary)
+        emailSent = await sendTeamInviteEmail(email, name, tenant?.name ?? t("teamInvite.fallbackCompany"), inviteLink, empresa)
           .then(() => true)
           .catch((err) => {
             console.error("Resend invite email error:", err)

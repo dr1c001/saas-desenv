@@ -114,14 +114,19 @@ export async function requestPasswordReset(email: string) {
       // (i18n, item 1.)
       const user = await prisma.user.findFirst({
         where: { email },
-        select: { name: true, tenant: { select: { locale: true } } },
+        select: { name: true, tenant: { select: { locale: true, vocabulary: true } } },
       })
       // A mensagem pro usuário fica genérica de propósito (não vazar se o
       // e-mail existe), mas uma falha de envio de verdade precisa aparecer
       // em algum log — senão ninguém percebe que ninguém está recebendo o
       // link de recuperação. (Achado verificando o sistema antes da
       // primeira venda, 2026-08-03.)
-      await sendPasswordResetEmail(email, user?.name ?? "", resetLink, user?.tenant.locale ?? "pt").catch((err) => {
+      await sendPasswordResetEmail(
+        email,
+        user?.name ?? "",
+        resetLink,
+        user?.tenant ?? { locale: "pt", vocabulary: null }
+      ).catch((err) => {
         console.error("Falha ao enviar e-mail de recuperação de senha:", err)
       })
     }

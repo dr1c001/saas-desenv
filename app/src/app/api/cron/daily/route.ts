@@ -200,6 +200,7 @@ export async function GET(req: NextRequest) {
       where: { createdAt: { gte: day3Start, lt: day3End }, subscriptionStatus: "TRIAL" },
       select: {
         locale: true,
+        vocabulary: true,
         trialEndsAt: true,
         _count: { select: { orders: true } },
         users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } },
@@ -212,7 +213,7 @@ export async function GET(req: NextRequest) {
       const owner = t.users[0]
       if (!owner?.email) continue
       try {
-        await sendOnboardingDay3Email(owner.email, owner.name, decisao.diasRestantes, t.locale)
+        await sendOnboardingDay3Email(owner.email, owner.name, decisao.diasRestantes, t)
         results.day3++
       } catch { results.errors++ }
     }
@@ -340,6 +341,7 @@ export async function GET(req: NextRequest) {
         id: true,
         name: true,
         locale: true,
+        vocabulary: true,
         trialEndsAt: true,
         trialWarningsSent: true,
         users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } },
@@ -371,7 +373,7 @@ export async function GET(req: NextRequest) {
           dono.name,
           empresa.name,
           decisao.diasRestantes,
-          empresa.locale === "en" ? "en" : "pt"
+          empresa
         )
         results.avisosDeTeste++
       } catch (e) {
@@ -495,6 +497,7 @@ export async function GET(req: NextRequest) {
           select: {
             name: true,
             locale: true,
+            vocabulary: true,
             users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } },
           },
         },
@@ -526,7 +529,7 @@ export async function GET(req: NextRequest) {
           dono.name,
           sub.tenant.name,
           diasRestantes,
-          sub.tenant.locale,
+          sub.tenant,
           // O tom vem da regra, e não de um número decidido no módulo de
           // e-mail: no dia 30 o texto é de BLOQUEIO, não de "faltam 0 dias".
           momento

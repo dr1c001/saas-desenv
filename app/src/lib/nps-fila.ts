@@ -64,7 +64,7 @@ export async function enviarPesquisasDeSatisfacao(agora: Date): Promise<Resultad
       id: true,
       clientToken: true,
       client: { select: { email: true, name: true } },
-      tenant: { select: { id: true, name: true, locale: true, disabledFeatures: true } },
+      tenant: { select: { id: true, name: true, locale: true, vocabulary: true, disabledFeatures: true } },
     },
   })
 
@@ -92,7 +92,7 @@ export async function enviarPesquisasDeSatisfacao(agora: Date): Promise<Resultad
         os.client.name,
         os.tenant.name,
         os.clientToken!,
-        os.tenant.locale,
+        os.tenant,
         respostaPorEmpresa.get(os.tenant.id) ?? null
       )
       r.enviadas++

@@ -35,7 +35,7 @@ describe("envio de e-mail por ambiente", () => {
     process.env.VERCEL_ENV = "production"
     const { sendWelcomeEmail } = await import("@/lib/resend")
 
-    await sendWelcomeEmail("cliente@empresa.com.br", "Ana", "pt")
+    await sendWelcomeEmail("cliente@empresa.com.br", "Ana", { locale: "pt", vocabulary: null })
 
     const payload = enviar.mock.calls[0][0]
     expect(payload.to).toBe("cliente@empresa.com.br")
@@ -47,7 +47,7 @@ describe("envio de e-mail por ambiente", () => {
     process.env.STAGING_EMAIL = "dono@exemplo.com"
     const { sendWelcomeEmail } = await import("@/lib/resend")
 
-    await sendWelcomeEmail("cliente@empresa.com.br", "Ana", "pt")
+    await sendWelcomeEmail("cliente@empresa.com.br", "Ana", { locale: "pt", vocabulary: null })
 
     const payload = enviar.mock.calls[0][0]
     expect(payload.to).toBe("dono@exemplo.com")
@@ -63,7 +63,7 @@ describe("envio de e-mail por ambiente", () => {
     process.env.VERCEL_ENV = "preview"
     const { sendWelcomeEmail } = await import("@/lib/resend")
 
-    await expect(sendWelcomeEmail("cliente@empresa.com.br", "Ana", "pt")).rejects.toThrow(
+    await expect(sendWelcomeEmail("cliente@empresa.com.br", "Ana", { locale: "pt", vocabulary: null })).rejects.toThrow(
       /STAGING_EMAIL/
     )
     expect(enviar).not.toHaveBeenCalled()
@@ -73,7 +73,7 @@ describe("envio de e-mail por ambiente", () => {
     process.env.SUPER_ADMIN_EMAIL = "dono@exemplo.com"
     const { sendWelcomeEmail } = await import("@/lib/resend")
 
-    await sendWelcomeEmail("cliente@empresa.com.br", "Ana", "pt")
+    await sendWelcomeEmail("cliente@empresa.com.br", "Ana", { locale: "pt", vocabulary: null })
 
     expect(enviar.mock.calls[0][0].to).toBe("dono@exemplo.com")
   })

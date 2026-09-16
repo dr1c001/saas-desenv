@@ -41,6 +41,28 @@ const STRONG = { strong: (chunks: string) => `<strong>${chunks}</strong>` }
 // dias) não precisam. Ver lib/html.ts. O ASSUNTO nunca é escapado: é cabeçalho
 // de texto puro, e "&amp;" apareceria literal na caixa de entrada.
 
+/**
+ * O que o e-mail precisa saber da empresa que fala: o idioma e as palavras
+ * que ela escolheu em Configurações › Vocabulário.
+ *
+ * É a forma exata de `select: { locale: true, vocabulary: true }` do Tenant —
+ * quem tem o tenant em mãos passa o objeto inteiro. `vocabulary` é
+ * OBRIGATÓRIO de propósito: opcional, o próximo chamador esquece e o defeito
+ * volta; obrigatório, o typecheck recusa um select de tenant sem ele. Quem
+ * não tem empresa passa `null` por escrito.
+ *
+ * Até 15/09/2026 os nove envios recebiam só o idioma, e o vocabulário nunca
+ * chegava ao tradutor: a empresa de TI trocava "OS" por "Chamado", a ajuda da
+ * tela prometia "e nos e-mails", telas, PDF e WhatsApp obedeciam — e o e-mail
+ * continuava dizendo "ordem de serviço". (Achado na auditoria de 13/09/2026.)
+ */
+export type EmpresaDoEmail = { locale: "pt" | "en"; vocabulary: unknown }
+
+/** Ponto ÚNICO deste arquivo que monta tradutor — o teste garante que continua único. */
+function tradutorDeEmail(empresa: EmpresaDoEmail) {
+  return getTranslator(empresa.locale, "emails", empresa.vocabulary)
+}
+
 // O SDK do Resend nunca rejeita a Promise — erro da API (domínio não
 // verificado, destinatário inválido, rate limit) e falha de rede resolvem
 // como { data: null, error }, não como exception. Todo try/catch/.catch()
@@ -97,8 +119,8 @@ function desviarSeForTeste<T extends { to: unknown; subject?: string }>(payload:
  * DIAS_DE_TESTE, para o e-mail nunca desmentir a regra.
  * (Achado na auditoria de 13/09/2026.)
  */
-export async function sendWelcomeEmail(to: string, name: string, locale: "pt" | "en") {
-  const t = getTranslator(locale, "emails")
+export async function sendWelcomeEmail(to: string, name: string, empresa: EmpresaDoEmail) {
+  const t = tradutorDeEmail(empresa)
   const dias = DIAS_DE_TESTE
   return send({
     from: FROM,
@@ -127,8 +149,8 @@ export async function sendWelcomeEmail(to: string, name: string, locale: "pt" | 
   })
 }
 
-export async function sendTeamInviteEmail(to: string, name: string, companyName: string, inviteUrl: string, locale: "pt" | "en") {
-  const t = getTranslator(locale, "emails")
+export async function sendTeamInviteEmail(to: string, name: string, companyName: string, inviteUrl: string, empresa: EmpresaDoEmail) {
+  const t = tradutorDeEmail(empresa)
   return send({
     from: FROM,
     replyTo: REPLY_TO,
@@ -160,13 +182,13 @@ export async function sendPaymentConfirmedEmail(
   to: string,
   name: string,
   planName: string,
-  locale: "pt" | "en",
+  empresa: EmpresaDoEmail,
   /** Contrato + termo de LGPD. Vai anexado à confirmação de pagamento porque é
    *  o único e-mail que o cliente com certeza abre — mandar em separado seria
    *  mandar pro arquivo morto. */
   contrato?: { nomeArquivo: string; buffer: Buffer }
 ) {
-  const t = getTranslator(locale, "emails")
+  const t = tradutorDeEmail(empresa)
   return send({
     from: FROM,
     replyTo: REPLY_TO,
@@ -208,9 +230,9 @@ export async function sendOnboardingDay3Email(
   to: string,
   name: string,
   diasRestantes: number,
-  locale: "pt" | "en"
+  empresa: EmpresaDoEmail
 ) {
-  const t = getTranslator(locale, "emails")
+  const t = tradutorDeEmail(empresa)
   return send({
     from: FROM,
     replyTo: REPLY_TO,
@@ -263,10 +285,10 @@ export async function sendPastDueWarningEmail(
   name: string,
   companyName: string,
   diasRestantes: number,
-  locale: "pt" | "en",
+  empresa: EmpresaDoEmail,
   momento: Momento = momentoDoAviso(diasRestantes)
 ) {
-  const t = getTranslator(locale, "emails")
+  const t = tradutorDeEmail(empresa)
   // Três tons: lembrete, aperto e corte. O do corte é outro texto — dizer
   // "faltam 0 dias" para quem acabou de perder o acesso é pior que não avisar.
   const bloqueado = momento === "bloqueio"
@@ -310,8 +332,8 @@ export async function sendPastDueWarningEmail(
   })
 }
 
-export async function sendPasswordResetEmail(to: string, name: string, resetUrl: string, locale: "pt" | "en") {
-  const t = getTranslator(locale, "emails")
+export async function sendPasswordResetEmail(to: string, name: string, resetUrl: string, empresa: EmpresaDoEmail) {
+  const t = tradutorDeEmail(empresa)
   return send({
     from: FROM,
     replyTo: REPLY_TO,
@@ -432,10 +454,10 @@ export async function sendNpsEmail(
   name: string,
   companyName: string,
   osToken: string,
-  locale: "pt" | "en",
+  empresa: EmpresaDoEmail,
   responderPara: string | null
 ) {
-  const t = getTranslator(locale, "emails")
+  const t = tradutorDeEmail(empresa)
   const company = escaparHtml(companyName)
   const corpo = `
         <p style="line-height:1.6">${t("nps.heading", { name: escaparHtml(name) })}</p>
@@ -460,9 +482,9 @@ export async function sendClientNoticeEmail(
   to: string,
   companyName: string,
   texto: string,
-  locale: "pt" | "en"
+  empresa: EmpresaDoEmail
 ) {
-  const t = getTranslator(locale, "emails")
+  const t = tradutorDeEmail(empresa)
   return emailEmNomeDaEmpresa(to, companyName, `${companyName} — ${t("clientNotice.subject")}`, texto)
 }
 
@@ -481,9 +503,9 @@ export async function sendTrialEndingEmail(
   name: string,
   companyName: string,
   diasRestantes: number,
-  locale: "pt" | "en"
+  empresa: EmpresaDoEmail
 ) {
-  const t = getTranslator(locale, "emails")
+  const t = tradutorDeEmail(empresa)
   const chave = diasRestantes <= 1 ? "ultimoDia" : "faltam"
   return send({
     from: FROM,

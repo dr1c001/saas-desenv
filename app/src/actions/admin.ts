@@ -586,7 +586,10 @@ async function enviarConviteAdmin(email: string, name: string): Promise<boolean>
     // O link leva direto pro painel, não pro dashboard: quem é da equipe de
     // administração não tem empresa pra ver no dashboard.
     const link = `${appUrl}/api/auth/confirm?token_hash=${data.hashed_token}&type=invite&next=/admin`
-    await sendTeamInviteEmail(email, name, "ServiçoOS — Equipe de Administração", link, "pt")
+    await sendTeamInviteEmail(email, name, "ServiçoOS — Equipe de Administração", link, {
+      locale: "pt",
+      vocabulary: null,
+    })
     return true
   } catch (err) {
     console.error("[convite de admin] falhou:", err)

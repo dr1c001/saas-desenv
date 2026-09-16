@@ -44,7 +44,7 @@ const PALAVRAS_DE_BLOQUEIO = /bloquead|blocked|liberar o acesso|unlock access|es
 describe("o boas-vindas", () => {
   it("diz quantos dias grátis a pessoa tem — o número da regra, não um escrito à mão", async () => {
     const { sendWelcomeEmail } = await import("@/lib/resend")
-    await sendWelcomeEmail("dona@exemplo.com", "Priscila", "pt")
+    await sendWelcomeEmail("dona@exemplo.com", "Priscila", { locale: "pt", vocabulary: null })
 
     expect(enviados[0].subject).toContain(`${DIAS_DE_TESTE} dias grátis`)
     expect(enviados[0].html).toContain(`${DIAS_DE_TESTE} dias de acesso completo`)
@@ -52,7 +52,7 @@ describe("o boas-vindas", () => {
 
   it("não fala em bloqueio, e o botão leva para DENTRO do sistema", async () => {
     const { sendWelcomeEmail } = await import("@/lib/resend")
-    await sendWelcomeEmail("dona@exemplo.com", "Priscila", "pt")
+    await sendWelcomeEmail("dona@exemplo.com", "Priscila", { locale: "pt", vocabulary: null })
 
     expect(enviados[0].subject).not.toMatch(PALAVRAS_DE_BLOQUEIO)
     expect(enviados[0].html).not.toMatch(PALAVRAS_DE_BLOQUEIO)
@@ -62,7 +62,7 @@ describe("o boas-vindas", () => {
 
   it("em inglês também", async () => {
     const { sendWelcomeEmail } = await import("@/lib/resend")
-    await sendWelcomeEmail("owner@example.com", "Jane", "en")
+    await sendWelcomeEmail("owner@example.com", "Jane", { locale: "en", vocabulary: null })
 
     expect(enviados[0].subject).toContain(`${DIAS_DE_TESTE} free days`)
     expect(enviados[0].html).not.toMatch(PALAVRAS_DE_BLOQUEIO)
@@ -72,7 +72,7 @@ describe("o boas-vindas", () => {
 describe("a dica do dia 3", () => {
   it("é uma dica de ativação: aponta para criar a primeira OS e diz quanto teste falta", async () => {
     const { sendOnboardingDay3Email } = await import("@/lib/resend")
-    await sendOnboardingDay3Email("dona@exemplo.com", "Priscila", 12, "pt")
+    await sendOnboardingDay3Email("dona@exemplo.com", "Priscila", 12, { locale: "pt", vocabulary: null })
 
     const e = enviados[0]
     expect(e.html).toContain("/service-orders/new")
@@ -86,7 +86,7 @@ describe("a dica do dia 3", () => {
     // `n` vai como número para o plural ICU. Passar String quebraria a regra
     // em silêncio — é o que este caso guarda.
     const { sendOnboardingDay3Email } = await import("@/lib/resend")
-    await sendOnboardingDay3Email("dona@exemplo.com", "Priscila", 1, "pt")
+    await sendOnboardingDay3Email("dona@exemplo.com", "Priscila", 1, { locale: "pt", vocabulary: null })
 
     expect(enviados[0].html).toContain("1 dia<")
     expect(enviados[0].html).not.toContain("1 dias")
@@ -94,7 +94,7 @@ describe("a dica do dia 3", () => {
 
   it("o vocabulário padrão entra no lugar dos marcadores — nenhum [[...]] vaza", async () => {
     const { sendOnboardingDay3Email } = await import("@/lib/resend")
-    await sendOnboardingDay3Email("dona@exemplo.com", "Priscila", 12, "pt")
+    await sendOnboardingDay3Email("dona@exemplo.com", "Priscila", 12, { locale: "pt", vocabulary: null })
 
     expect(enviados[0].subject).not.toContain("[[")
     expect(enviados[0].html).not.toContain("[[")

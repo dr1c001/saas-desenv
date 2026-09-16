@@ -76,7 +76,7 @@ describe("o e-mail em nome da empresa", () => {
 
   it("o corpo continua escapado depois da extração do helper", async () => {
     const { sendClientNoticeEmail } = await import("@/lib/resend")
-    await sendClientNoticeEmail("cliente@exemplo.com", "Empresa", "1 < 2 & 3 > 2 <b>x</b>", "pt")
+    await sendClientNoticeEmail("cliente@exemplo.com", "Empresa", "1 < 2 & 3 > 2 <b>x</b>", { locale: "pt", vocabulary: null })
 
     expect(enviados[0].html).toContain("1 &lt; 2 &amp; 3 &gt; 2 &lt;b&gt;x&lt;/b&gt;")
     expect(enviados[0].html).not.toContain("<b>x</b>")
@@ -93,7 +93,7 @@ describe("o e-mail em nome da empresa", () => {
 describe("os e-mails do ServiçoOS para o dono e a equipe", () => {
   it("o convite de equipe escapa o nome da empresa — quem recebe é um terceiro", async () => {
     const { sendTeamInviteEmail } = await import("@/lib/resend")
-    await sendTeamInviteEmail("novo@exemplo.com", "Ana <b>", NOME, "https://x/convite", "pt")
+    await sendTeamInviteEmail("novo@exemplo.com", "Ana <b>", NOME, "https://x/convite", { locale: "pt", vocabulary: null })
 
     expect(enviados[0].html).toContain("Silva &amp; Cia &lt;Refrigeração&gt;")
     expect(enviados[0].html).toContain("Ana &lt;b&gt;")
@@ -102,7 +102,7 @@ describe("os e-mails do ServiçoOS para o dono e a equipe", () => {
 
   it("o aviso de atraso escapa nome e empresa", async () => {
     const { sendPastDueWarningEmail } = await import("@/lib/resend")
-    await sendPastDueWarningEmail("dona@exemplo.com", "Priscila <i>", NOME, 10, "pt")
+    await sendPastDueWarningEmail("dona@exemplo.com", "Priscila <i>", NOME, 10, { locale: "pt", vocabulary: null })
 
     expect(enviados[0].html).toContain("Priscila &lt;i&gt;")
     expect(enviados[0].html).toContain("&lt;Refrigeração&gt;")

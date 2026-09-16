@@ -42,6 +42,7 @@ export async function avisarClienteDaOs(
           select: {
             name: true,
             locale: true,
+            vocabulary: true,
             clientNotifications: true,
             zapiInstance: true,
             zapiToken: true,
@@ -61,7 +62,8 @@ export async function avisarClienteDaOs(
     if (!canais.whatsapp && !canais.email) return
 
     const locale = os.tenant.locale === "en" ? "en" : "pt"
-    const t = getTranslator(locale, "whatsapp")
+    // Com o vocabulário da empresa: o aviso diz "chamado" se ela diz "chamado".
+    const t = getTranslator(locale, "whatsapp", os.tenant.vocabulary)
     const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://servicoos.com.br"
     const portalUrl = os.clientToken ? `${base}/p/${os.clientToken}` : null
 
@@ -85,7 +87,10 @@ export async function avisarClienteDaOs(
         ? sendWhatsApp(os.tenant.zapiInstance!, os.tenant.zapiToken!, numero, texto)
         : Promise.resolve(),
       canais.email && os.client.email
-        ? sendClientNoticeEmail(os.client.email, os.tenant.name, texto, locale)
+        ? sendClientNoticeEmail(os.client.email, os.tenant.name, texto, {
+            locale,
+            vocabulary: os.tenant.vocabulary,
+          })
         : Promise.resolve(),
     ])
   } catch (e) {

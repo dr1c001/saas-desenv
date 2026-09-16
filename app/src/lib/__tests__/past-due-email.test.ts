@@ -35,7 +35,7 @@ afterEach(() => {
 
 async function enviar(dias: number, locale: "pt" | "en" = "pt") {
   const { sendPastDueWarningEmail } = await import("@/lib/resend")
-  await sendPastDueWarningEmail("dona@livela.com.br", "Priscila", "Livela store", dias, locale)
+  await sendPastDueWarningEmail("dona@livela.com.br", "Priscila", "Livela store", dias, { locale, vocabulary: null })
   return enviados[0]
 }
 
