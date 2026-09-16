@@ -1045,6 +1045,55 @@ ponta a ponta: recebimento (e-mail externo → chega na caixa do Zoho) e envio
 (Gmail → sai como `suporte@servicoos.com.br`, cópia fica no enviados do Zoho)
 confirmados funcionando.
 
+### 7.3.2 O DNS de e-mail inteiro, e o DMARC que faltava — 15/09/2026
+
+O 7.3.1 promete uma tabela de DNS ("ver DNS abaixo") que nunca foi escrita. Ela
+está aqui, conferida contra o DNS público em 15/09/2026:
+
+| Nome | Tipo | Valor | Para quê |
+|---|---|---|---|
+| `servicoos.com.br` | MX | `mx.zoho.com` 10, `mx2.zoho.com` 20, `mx3.zoho.com` 50 | receber em suporte@ (Zoho) |
+| `servicoos.com.br` | TXT | `v=spf1 include:zohomail.com ~all` | SPF do Zoho (From da caixa suporte@) |
+| `zmail._domainkey` | TXT | chave do Zoho | DKIM do Zoho |
+| `resend._domainkey` | TXT | chave da Resend | DKIM da Resend — assina `d=servicoos.com.br` em TODO e-mail do sistema |
+| `send.servicoos.com.br` | MX | `feedback-smtp.sa-east-1.amazonses.com` 10 | return-path da Resend (SES) |
+| `send.servicoos.com.br` | TXT | `v=spf1 include:amazonses.com ~all` | SPF do MAIL FROM da Resend |
+| **`_dmarc.servicoos.com.br`** | **TXT** | **NÃO EXISTIA** (NXDOMAIN) | política DMARC |
+
+**O achado (auditoria de 13/09/2026):** sem `_dmarc`, todo e-mail do sistema —
+inclusive cobrança, orçamento e OS **em nome das empresas clientes**, saindo
+de `noreply@servicoos.com.br` — viajava sem política. Um remetente forjado
+com o nosso domínio chegava à caixa do cliente final sem instrução para o
+Gmail rejeitar ou quarentenar, e ninguém recebia relatório. Passou por duas
+migrações de DNS (05/08 e 06/08) porque nada no sistema olhava: a Resend
+devolve sucesso porque ELA aceitou a mensagem.
+
+**A correção tem duas metades.**
+
+1. **Fora do código (o dono publica, no registro.br):** TXT, nome `_dmarc`,
+   valor `v=DMARC1; p=quarantine; rua=mailto:suporte@servicoos.com.br`. Um
+   registro só — dois registros DMARC fazem os provedores ignorarem todos.
+   `p=quarantine` já, e não `p=none`: as duas únicas fontes legítimas (Resend
+   com DKIM alinhado; Zoho com DKIM + SPF na raiz) estão comprovadamente
+   alinhadas e o volume é baixo. Subir para `p=reject` depois de 2–4 semanas
+   de relatórios em `rua=` sem falha alinhada.
+2. **No código: o vigia.** `lib/dmarc.ts` (regra pura: ausente / fraca / ok)
+   e `lib/conferir-dmarc.ts` (resolve o TXT com timeout de 2 s; NXDOMAIN e
+   ENODATA = ausente; DNS mudo = indisponível, sem contar erro). O cron
+   diário confere por último e, se a política está ausente ou fraca, conta
+   como erro — o que já faz `CronRun.ok=false`, `/api/health` responder 503 e
+   `avisarFalhaDoCron` mandar o e-mail ao fundador. A linha gravada da
+   execução ganhou `dmarc <estado>`. E `lib/resend.ts` passou a montar o FROM
+   a partir de `DOMINIO_DE_EMAIL`, do mesmo módulo: o domínio conferido é o
+   domínio do remetente por construção.
+
+**Consequência esperada:** até o TXT ser publicado, o cron reporta um erro por
+dia e o fundador recebe o aviso — é o comportamento desejado, porque foi a
+invisibilidade que deixou isto passar. Publicado o registro, o próximo cron
+grava `dmarc ok` e os avisos cessam.
+
+---
+
 **Achado confirmado e resolvido — 06/08/2026:** `api/webhooks/supabase/route.ts` era mesmo um SEGUNDO caminho de criação de tenant/usuário, e estava ativo. Confirmado direto no banco (Database Webhooks do Supabase viram triggers reais no Postgres) — `information_schema.triggers` mostrou `auth.users → INSERT → supabase_functions.on_auth_user_created()`, a assinatura exata de um Database Webhook configurado pelo painel apontando pro INSERT de `auth.users`. Como o `getTenant()` (lib/auth.ts) já cobre 100% dessa criação sozinho, o trigger foi removido (`DROP TRIGGER on_auth_user_created ON auth.users`) — confirmado sem nenhum trigger restante na tabela. A rota HTTP (já desativada como no-op desde a auditoria) pode ser deletada do código numa limpeza futura.
 
 ---

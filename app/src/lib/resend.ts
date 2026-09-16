@@ -5,6 +5,7 @@ import { destinoDeEmailDeTeste, ehProducao, prefixoDeAssunto } from "@/lib/ambie
 import { EMAIL_FUNDADOR } from "@/lib/admin"
 import { escaparHtml } from "@/lib/html"
 import { DIAS_DE_TESTE } from "@/lib/teste-gratis"
+import { DOMINIO_DE_EMAIL } from "@/lib/dmarc"
 
 let resendClient: Resend | null = null
 
@@ -19,7 +20,9 @@ function getResend(): Resend {
   return resendClient
 }
 
-const FROM = "ServiçoOS <noreply@servicoos.com.br>"
+// O domínio do remetente é O MESMO que o vigia de DMARC do cron confere
+// (lib/dmarc.ts) — por construção, e não por coincidência de duas strings.
+const FROM = `ServiçoOS <noreply@${DOMINIO_DE_EMAIL}>`
 // Boas-vindas e onboarding convidam o cliente a "responder este e-mail", mas
 // o remetente é um noreply — sem reply-to a resposta ia pra um endereço que
 // não existe. (Achado em auditoria pré-venda, 2026-08-05.)

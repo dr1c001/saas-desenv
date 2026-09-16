@@ -7,6 +7,7 @@ import {
   avisarFalhaDoCron,
 } from "@/lib/resend"
 import { enviarPesquisasDeSatisfacao } from "@/lib/nps-fila"
+import { conferirDmarc } from "@/lib/conferir-dmarc"
 import { decidirAviso, diasDeAtraso, AVISOS_ATRASO } from "@/lib/past-due"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 import { provedor } from "@/lib/geocode"
@@ -65,7 +66,7 @@ export async function GET(req: NextRequest) {
     .create({ data: { name: "daily" }, select: { id: true } })
     .catch(() => null)
 
-  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, cobrancasEnviadas: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, avisosDeTeste: 0, comissoesConferidas: 0, comissoesDivergentes: 0, comissoesForaDaJanela: 0, retrato: "", errors: 0 }
+  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, cobrancasEnviadas: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, avisosDeTeste: 0, comissoesConferidas: 0, comissoesDivergentes: 0, comissoesForaDaJanela: 0, retrato: "", dmarc: "", errors: 0 }
 
   // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
   // Em 07/08/2026 uma cliente pagou e ficou sem acesso por ~1 dia: os webhooks
@@ -574,6 +575,26 @@ export async function GET(req: NextRequest) {
     results.errors++
   }
 
+  // ── DMARC do domínio de e-mail ───────────────────────────────────────────
+  // Sem política publicada qualquer um forja noreply@servicoos.com.br — e o
+  // sistema manda cobrança em nome das empresas. Ninguém vê isso em log: a
+  // Resend devolve sucesso porque ELA aceitou. Conferir uma vez por dia e
+  // contar como erro é o que leva o aviso ao fundador (CronRun.ok=false →
+  // /api/health 503 → avisarFalhaDoCron). Por último de propósito: é a etapa
+  // menos urgente, e não pode roubar tempo das etapas de dinheiro.
+  // (Achado na auditoria de 13/09/2026.)
+  try {
+    const veredito = await conferirDmarc()
+    results.dmarc = veredito.estado
+    if (veredito.precisaDeAcao) {
+      console.error("[dmarc]", veredito.motivo)
+      results.errors++
+    }
+  } catch (err) {
+    console.error("[dmarc] falhou:", err)
+    results.errors++
+  }
+
   // ── Fecha o registro da execucao ─────────────────────────────────────────
   // ok = false quando houve QUALQUER erro: e o que faz /api/health devolver
   // 503 e o monitor externo alertar. Cron que falha metade e conta como
@@ -623,6 +644,7 @@ export async function GET(req: NextRequest) {
                 : ""),
             `geocodificados ${results.geocoded}`,
             `limpeza ${results.rateLimitCleanup}`,
+            `dmarc ${results.dmarc}`,
           ].join("; "),
         },
       })
