@@ -66,6 +66,33 @@ export function diasRestantes(trialEndsAt: Date | null | undefined, agora: Date)
   return ms <= 0 ? 0 : Math.ceil(ms / (24 * 60 * 60 * 1000))
 }
 
+export type LembreteDoDia3 = { enviar: false } | { enviar: true; diasRestantes: number }
+
+/**
+ * O e-mail do dia 3 é uma DICA para quem está no teste e ainda não criou a
+ * primeira OS — nunca uma cobrança.
+ *
+ * Ele nasceu assim em julho. Quando o teste grátis foi removido, o texto virou
+ * "você ainda não escolheu um plano, por isso o acesso continua bloqueado" — e
+ * quando o teste VOLTOU (14/09/2026), o texto ficou: 100% dos destinatários
+ * estavam no dia 3 de um teste válido, com acesso total e doze dias pela
+ * frente, lendo que estavam bloqueados. Cinco dias depois recebiam "faltam 7
+ * dias do seu teste". (Achado na auditoria de 13/09/2026.)
+ *
+ * A regra mora aqui, e não no cron, para ser a MESMA regra de acesso do resto
+ * do sistema (`testeAtivo`): sem teste ativo não vai nada — falar de "seu
+ * teste" para quem não tem teste é o mesmo defeito ao contrário. E quem já
+ * criou OS não recebe "crie a sua primeira": para essa pessoa é ruído.
+ */
+export function lembreteDoDia3(
+  empresa: { trialEndsAt: Date | null | undefined; ordens: number },
+  agora: Date
+): LembreteDoDia3 {
+  if (!testeAtivo(empresa.trialEndsAt, agora)) return { enviar: false }
+  if (empresa.ordens > 0) return { enviar: false }
+  return { enviar: true, diasRestantes: diasRestantes(empresa.trialEndsAt, agora) }
+}
+
 /**
  * Os dias em que a pessoa é avisada de que o teste está acabando.
  *

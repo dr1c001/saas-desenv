@@ -18,7 +18,7 @@ import { gravarRetratoDoMes } from "@/lib/snapshot"
 import { temFuncao } from "@/lib/plan"
 import { conciliarNotasPendentes } from "@/lib/nfse-conciliar"
 import { conferirComissoes, resumirDivergencias } from "@/lib/comissao-conferente"
-import { AVISOS_DE_FIM, decidirAvisoDeFim, diasRestantes } from "@/lib/teste-gratis"
+import { AVISOS_DE_FIM, decidirAvisoDeFim, diasRestantes, lembreteDoDia3 } from "@/lib/teste-gratis"
 import { notificar } from "@/lib/notificar"
 import { cobrarVencidas } from "@/lib/cobrar-vencidas"
 
@@ -174,7 +174,13 @@ export async function GET(req: NextRequest) {
     results.rateLimitCleanup = deleted.count
   } catch { results.errors++ }
 
-  // ── Lembrete no dia 3 pra quem se cadastrou e ainda não assinou ──────────────
+  // ── Dica no dia 3 pra quem está no teste e ainda não criou a primeira OS ─────
+  // Era "pra quem ainda não assinou", com texto dizendo que o acesso estava
+  // bloqueado — escrito quando não havia teste grátis. O teste voltou em
+  // 14/09/2026 e o texto ficou: todo destinatário tinha acesso total e lia que
+  // estava bloqueado. A regra do que mandar mora em lib/teste-gratis.ts
+  // (lembreteDoDia3) e é a mesma regra de acesso do resto do sistema.
+  // (Achado na auditoria de 13/09/2026.)
   // new Date() + setHours(0,0,0,0) zera pra meia-noite UTC (horário do
   // servidor), não meia-noite de Brasília — um tenant criado à noite (BRT)
   // podia cair no dia UTC seguinte e nunca bater exatamente com essa janela,
@@ -193,13 +199,21 @@ export async function GET(req: NextRequest) {
   try {
     const day3Tenants = await prisma.tenant.findMany({
       where: { createdAt: { gte: day3Start, lt: day3End }, subscriptionStatus: "TRIAL" },
-      include: { users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } } },
+      select: {
+        locale: true,
+        trialEndsAt: true,
+        _count: { select: { orders: true } },
+        users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } },
+      },
     })
     for (const t of day3Tenants) {
+      // Regra em lib/teste-gratis.ts, testada lá — aqui só o efeito colateral.
+      const decisao = lembreteDoDia3({ trialEndsAt: t.trialEndsAt, ordens: t._count.orders }, now)
+      if (!decisao.enviar) continue
       const owner = t.users[0]
       if (!owner?.email) continue
       try {
-        await sendOnboardingDay3Email(owner.email, owner.name, t.locale)
+        await sendOnboardingDay3Email(owner.email, owner.name, decisao.diasRestantes, t.locale)
         results.day3++
       } catch { results.errors++ }
     }

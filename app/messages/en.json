@@ -831,11 +831,12 @@
   },
   "emails": {
     "welcome": {
-      "subject": "Welcome to ServiçoOS — choose your plan to get started",
+      "subject": "Welcome to ServiçoOS — your {dias} free days start now",
       "heading": "Welcome, {name}! 🎉",
       "accountCreated": "Your <strong>ServiçoOS</strong> account was created successfully.",
-      "nextStep": "Just one step left: choose a plan to unlock access to the system.",
-      "cta": "View plans and subscribe",
+      "nextStep": "You have <strong>{dias} days of full access, no card needed</strong>. Register a client, create your first [[os]] and see how it looks.",
+      "cta": "Go to the system",
+      "planLater": "Like it? Choose a plan under Billing whenever you want. Nothing is charged automatically: when the trial ends, access just pauses and your data stays here.",
       "support": "Questions? Just reply to this email and we'll help you out."
     },
     "teamInvite": {
@@ -858,15 +859,16 @@
       "contractHint": "Keep this file. You can download it again at any time from the Billing screen inside the system."
     },
     "onboardingDay3": {
-      "subject": "Your company isn't using ServiçoOS yet",
+      "subject": "ServiçoOS tip: create your first [[os]] in 2 minutes",
       "heading": "Hi, {name}! 👋",
-      "notSubscribed": "You created your <strong>ServiçoOS</strong> account 3 days ago, but you haven't chosen a plan yet — so access to the system is still blocked.",
-      "startNow": "Subscribe now and start using it right away:",
+      "intro": "You have been on your free <strong>ServiçoOS</strong> trial for 3 days and have not created your first [[os]] yet. How about doing it now?",
+      "startNow": "It is simple:",
       "step1": "Register a client (or use an existing one)",
       "step2": "Click <strong>+ New [[osC]]</strong>",
       "step3": "Fill in the details and save",
       "step4": "Send the PDF straight to your client 🎉",
-      "cta": "View plans and subscribe",
+      "cta": "Create my first [[os]]",
+      "diasRestantes": "Your free trial still has <strong>{n, plural, one {# day} other {# days}}</strong> left — make the most of it.",
       "support": "Need help? Just reply to this email and we'll help you out."
     },
     "pastDueWarning": {

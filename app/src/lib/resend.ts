@@ -4,6 +4,7 @@ import { momentoDoAviso, type Momento } from "@/lib/past-due"
 import { destinoDeEmailDeTeste, ehProducao, prefixoDeAssunto } from "@/lib/ambiente"
 import { EMAIL_FUNDADOR } from "@/lib/admin"
 import { escaparHtml } from "@/lib/html"
+import { DIAS_DE_TESTE } from "@/lib/teste-gratis"
 
 let resendClient: Resend | null = null
 
@@ -84,24 +85,40 @@ function desviarSeForTeste<T extends { to: unknown; subject?: string }>(payload:
   }
 }
 
+/**
+ * Boas-vindas. Quem recebe está no DIA 1 de um teste grátis com acesso total.
+ *
+ * O texto dizia "escolha um plano para liberar o acesso" e o botão ia para
+ * /billing — escrito quando não havia teste. O teste voltou em 14/09/2026 e o
+ * e-mail continuou: a pessoa acabava de entrar no sistema, aberto, e lia que
+ * estava bloqueada. O botão agora leva para dentro; assinar é convite
+ * secundário, sem pressão — é o que a landing promete ("você só paga depois
+ * dos 15 dias, se decidir continuar"). O número de dias vem de
+ * DIAS_DE_TESTE, para o e-mail nunca desmentir a regra.
+ * (Achado na auditoria de 13/09/2026.)
+ */
 export async function sendWelcomeEmail(to: string, name: string, locale: "pt" | "en") {
   const t = getTranslator(locale, "emails")
+  const dias = DIAS_DE_TESTE
   return send({
     from: FROM,
     replyTo: REPLY_TO,
     to,
-    subject: t("welcome.subject"),
+    subject: t("welcome.subject", { dias }),
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
         <h1 style="color:#7c3aed;margin-bottom:8px">${t("welcome.heading", { name: escaparHtml(name) })}</h1>
         <p style="color:#374151;line-height:1.6">
           ${t.markup("welcome.accountCreated", STRONG)}<br>
-          ${t("welcome.nextStep")}
+          ${t.markup("welcome.nextStep", { dias, ...STRONG })}
         </p>
-        <a href="${APP_URL}/billing"
+        <a href="${APP_URL}/dashboard"
            style="display:inline-block;margin:24px 0;padding:12px 28px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
           ${t("welcome.cta")} →
         </a>
+        <p style="color:#6b7280;font-size:13px;line-height:1.6">
+          ${t("welcome.planLater")}
+        </p>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
         <p style="color:#6b7280;font-size:13px">
           ${t("welcome.support")}
@@ -181,7 +198,18 @@ export async function sendPaymentConfirmedEmail(
   })
 }
 
-export async function sendOnboardingDay3Email(to: string, name: string, locale: "pt" | "en") {
+/**
+ * A dica do dia 3: "crie a sua primeira OS". Só vai para quem está no teste e
+ * ainda não criou nenhuma — a decisão é de lembreteDoDia3, em
+ * lib/teste-gratis.ts. `diasRestantes` entra no texto para a pessoa saber
+ * quanto teste ainda tem, e vai como NÚMERO: a chave usa plural ICU.
+ */
+export async function sendOnboardingDay3Email(
+  to: string,
+  name: string,
+  diasRestantes: number,
+  locale: "pt" | "en"
+) {
   const t = getTranslator(locale, "emails")
   return send({
     from: FROM,
@@ -192,7 +220,7 @@ export async function sendOnboardingDay3Email(to: string, name: string, locale: 
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
         <h1 style="color:#7c3aed;margin-bottom:8px">${t("onboardingDay3.heading", { name: escaparHtml(name) })}</h1>
         <p style="color:#374151;line-height:1.6">
-          ${t.markup("onboardingDay3.notSubscribed", STRONG)}
+          ${t.markup("onboardingDay3.intro", STRONG)}
         </p>
         <p style="color:#374151;line-height:1.6">${t("onboardingDay3.startNow")}</p>
         <ol style="color:#374151;line-height:2;padding-left:20px">
@@ -201,10 +229,13 @@ export async function sendOnboardingDay3Email(to: string, name: string, locale: 
           <li>${t("onboardingDay3.step3")}</li>
           <li>${t("onboardingDay3.step4")}</li>
         </ol>
-        <a href="${APP_URL}/billing"
+        <a href="${APP_URL}/service-orders/new"
            style="display:inline-block;margin:24px 0;padding:12px 28px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
           ${t("onboardingDay3.cta")} →
         </a>
+        <p style="color:#374151;line-height:1.6">
+          ${t.markup("onboardingDay3.diasRestantes", { ...STRONG, n: diasRestantes })}
+        </p>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
         <p style="color:#6b7280;font-size:13px">
           ${t("onboardingDay3.support")}

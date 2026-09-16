@@ -5,6 +5,7 @@ import {
   diasRestantes,
   DIAS_DE_TESTE,
   fimDoTeste,
+  lembreteDoDia3,
   testeAtivo,
 } from "@/lib/teste-gratis"
 
@@ -122,5 +123,35 @@ describe("os avisos de que o teste está acabando", () => {
 
   it("quem já recebeu os três não recebe um quarto", () => {
     expect(decidirAvisoDeFim(1, AVISOS_DE_FIM.length).enviar).toBe(false)
+  })
+})
+
+describe("a dica do dia 3", () => {
+  // Cadastro em 08/09 ao meio-dia; o cron roda no dia 3, 11/09.
+  const agora = new Date("2026-09-11T12:00:00Z")
+  const fim = fimDoTeste(new Date("2026-09-08T12:00:00Z"))
+
+  it("vai para quem está no teste e ainda não criou OS, dizendo quantos dias faltam", () => {
+    expect(lembreteDoDia3({ trialEndsAt: fim, ordens: 0 }, agora)).toEqual({
+      enviar: true,
+      diasRestantes: diasRestantes(fim, agora),
+    })
+  })
+
+  it("SEM teste (data nula) não vai — o texto fala de 'seu teste'", () => {
+    // O e-mail dizia "seu acesso continua bloqueado" para quem estava no dia 3
+    // de um teste válido. Mandar "aproveite seu teste" para quem não tem teste
+    // seria o mesmo defeito ao contrário.
+    expect(lembreteDoDia3({ trialEndsAt: null, ordens: 0 }, agora).enviar).toBe(false)
+  })
+
+  it("teste já vencido não vai", () => {
+    expect(
+      lembreteDoDia3({ trialEndsAt: new Date("2026-09-10T03:00:00Z"), ordens: 0 }, agora).enviar
+    ).toBe(false)
+  })
+
+  it("quem já criou OS não recebe 'crie a sua primeira'", () => {
+    expect(lembreteDoDia3({ trialEndsAt: fim, ordens: 1 }, agora).enviar).toBe(false)
   })
 })

@@ -831,11 +831,12 @@
   },
   "emails": {
     "welcome": {
-      "subject": "Bem-vindo ao ServiçoOS — escolha seu plano para começar",
+      "subject": "Bem-vindo ao ServiçoOS — seus {dias} dias grátis começam agora",
       "heading": "Bem-vindo, {name}! 🎉",
       "accountCreated": "Sua conta no <strong>ServiçoOS</strong> foi criada com sucesso.",
-      "nextStep": "Falta só um passo: escolha um plano para liberar o acesso ao sistema.",
-      "cta": "Ver planos e assinar",
+      "nextStep": "Você tem <strong>{dias} dias de acesso completo, sem cartão</strong>. Cadastre um cliente, crie [[osArt]] primeir[[osFim]] [[os]] e veja como fica.",
+      "cta": "Entrar no sistema",
+      "planLater": "Gostou? Quando quiser, escolha um plano em Assinatura. Nada é cobrado automaticamente: no fim do teste o acesso só pausa, e seus dados continuam aqui.",
       "support": "Tem dúvidas? Responda este e-mail que te ajudamos."
     },
     "teamInvite": {
@@ -858,15 +859,16 @@
       "contractHint": "Guarde este arquivo. Você pode baixá-lo de novo a qualquer momento na tela de Assinatura, dentro do sistema."
     },
     "onboardingDay3": {
-      "subject": "Sua empresa ainda não está usando o ServiçoOS",
+      "subject": "Dica do ServiçoOS: crie [[osArt]] primeir[[osFim]] [[os]] em 2 minutos",
       "heading": "Olá, {name}! 👋",
-      "notSubscribed": "Você criou sua conta no <strong>ServiçoOS</strong> há 3 dias, mas ainda não escolheu um plano — por isso o acesso ao sistema continua bloqueado.",
-      "startNow": "Assine agora e comece a usar na hora:",
+      "intro": "Você está há 3 dias no teste grátis do <strong>ServiçoOS</strong> e ainda não criou [[osArt]] primeir[[osFim]] [[os]]. Que tal fazer isso agora?",
+      "startNow": "É simples:",
       "step1": "Cadastre um cliente (ou use um existente)",
       "step2": "Clique em <strong>+ Nov[[osFim]] [[osC]]</strong>",
       "step3": "Preencha os dados e salve",
       "step4": "Envie o PDF direto para o cliente 🎉",
-      "cta": "Ver planos e assinar",
+      "cta": "Criar [[osArt]] primeir[[osFim]] [[os]]",
+      "diasRestantes": "Seu teste grátis ainda tem <strong>{n, plural, one {# dia} other {# dias}}</strong> — aproveite ao máximo.",
       "support": "Precisa de ajuda? Responda este e-mail que te ajudamos."
     },
     "pastDueWarning": {
