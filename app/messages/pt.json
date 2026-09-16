@@ -288,7 +288,8 @@
       "planNotFound": "Plano não encontrado.",
       "ownerNotFound": "Proprietário da conta não encontrado.",
       "missingDocument": "Preencha o CNPJ/CPF da empresa em Configurações antes de assinar um plano.",
-      "cancelFailed": "Não foi possível cancelar agora. Tente novamente em instantes."
+      "cancelFailed": "Não foi possível cancelar agora. Tente novamente em instantes.",
+      "providerTimeout": "A Asaas não respondeu a tempo. A tentativa ficou registrada — aguarde alguns minutos e recarregue antes de tentar de novo; se persistir, fale com o suporte."
     }
   },
   "buscaAbas": {
@@ -987,7 +988,8 @@
     "tooManyAttempts": "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
     "inviteLinkUsed": "Este convite já foi usado ou expirou. Se você já criou sua senha, basta entrar abaixo. Se ainda não criou, use \"Esqueci minha senha\" com o e-mail que recebeu o convite — não crie uma empresa nova.",
     "recoveryLinkUsed": "Este link de recuperação já foi usado ou expirou. Peça um novo em \"Esqueci minha senha\".",
-    "funcaoDesligada": "Esta função está desligada para a sua empresa. Fale com o suporte."
+    "funcaoDesligada": "Esta função está desligada para a sua empresa. Fale com o suporte.",
+    "nfseSemResposta": "O emissor não respondeu ou a resposta se perdeu. A nota pode ter sido emitida — est[[osFim]] [[os]] ficou travada de propósito; fale com o suporte antes de tentar de novo."
   },
   "estoque": {
     "title": "Estoque de peças",
@@ -2653,7 +2655,8 @@
       "confirmEmit": "Emitir NFS-e para est[[osFim]] [[os]]?",
       "emitButton": "Emitir NFS-e",
       "baixarPdf": "Nota (PDF)",
-      "baixarXml": "XML"
+      "baixarXml": "XML",
+      "travada": "NFS-e — emissão sem resposta; fale com o suporte"
     },
     "signaturePad": {
       "emptyError": "Por favor, assine antes de salvar.",

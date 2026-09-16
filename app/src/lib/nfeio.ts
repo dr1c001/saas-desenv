@@ -1,4 +1,10 @@
 import { bloquearForaDeProducao } from "@/lib/ambiente"
+import {
+  RecusaExterna,
+  TEMPO_LIMITE_NFEIO_CONSULTA_MS,
+  TEMPO_LIMITE_NFEIO_MS,
+  TEMPO_LIMITE_NFEIO_UPLOAD_MS,
+} from "@/lib/tempo-limite"
 
 const BASE = "https://api.nfe.io/v1"
 
@@ -14,7 +20,13 @@ function limparIndefinidos(h: Record<string, string | undefined>): Record<string
   ) as Record<string, string>
 }
 
-async function req<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function req<T>(
+  path: string,
+  options: RequestInit = {},
+  // Sem timeout, um emissor pendurado segurava a função até a Vercel matá-la
+  // — e, no cron, a falha apagava o próprio alarme. Ver lib/tempo-limite.ts.
+  tempoLimiteMs: number = TEMPO_LIMITE_NFEIO_MS
+): Promise<T> {
   // Emitir NFS-e gera documento fiscal de verdade, com número, na prefeitura.
   // Não existe "modo de teste" — ou emite, ou não emite. Fora de produção nem
   // tenta: uma nota emitida por engano precisa de cancelamento formal, com
@@ -30,10 +42,15 @@ async function req<T>(path: string, options: RequestInit = {}): Promise<T> {
       "Content-Type": "application/json",
       ...((options.headers ?? {}) as Record<string, string | undefined>),
     }),
+    // DEPOIS do spread, para nenhum chamador sobrescrever sem querer.
+    signal: AbortSignal.timeout(tempoLimiteMs),
   })
   if (!res.ok) {
+    // RecusaExterna, e não Error cru: é o que diz aos chamadores "o emissor
+    // respondeu e disse não" — a única falha em que se sabe que nada foi
+    // criado do outro lado.
     const body = await res.text().catch(() => "")
-    throw new Error(`nfe.io ${path} → ${res.status}: ${body}`)
+    throw new RecusaExterna(`nfe.io ${path}`, res.status, body)
   }
   return res.json()
 }
@@ -111,7 +128,9 @@ export const nfeio = {
 
     return req<{ id?: string; status?: string; expiresOn?: string }>(
       `/companies/${companyId}/certificate`,
-      { method: "POST", body: form, headers: { "Content-Type": undefined as unknown as string } }
+      { method: "POST", body: form, headers: { "Content-Type": undefined as unknown as string } },
+      // Binário, uma vez: mais folga que o padrão.
+      TEMPO_LIMITE_NFEIO_UPLOAD_MS
     )
   },
 
@@ -150,7 +169,12 @@ export const nfeio = {
    *  de novo o sistema nunca soube se a prefeitura aceitou. Passou a ser usada
    *  pela conciliação diária em lib/nfse-conciliar.ts. */
   async getInvoice(companyId: string, invoiceId: string) {
-    return req<NfeioInvoice>(`/companies/${companyId}/serviceinvoices/${invoiceId}`)
+    return req<NfeioInvoice>(
+      `/companies/${companyId}/serviceinvoices/${invoiceId}`,
+      {},
+      // Roda no cron, até 30 vezes por dia: mais curta que o padrão.
+      TEMPO_LIMITE_NFEIO_CONSULTA_MS
+    )
   },
 
   async cancelInvoice(companyId: string, invoiceId: string) {

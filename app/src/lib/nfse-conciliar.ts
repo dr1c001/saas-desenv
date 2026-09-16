@@ -14,6 +14,7 @@ import { nfeio } from "@/lib/nfeio"
 import { notificar } from "@/lib/notificar"
 import { reconciliarComissao } from "@/lib/comissao-db"
 import { arquivarNota } from "@/lib/arquivo-da-nota"
+import { ehTimeout, ORCAMENTO_CONCILIACAO_MS } from "@/lib/tempo-limite"
 import {
   devePerguntar,
   estadoDaNota,
@@ -29,11 +30,19 @@ export type ResumoDaConciliacao = {
 }
 
 /** Quantas notas por execução. Cada uma é uma chamada externa, e o cron
- *  inteiro vive num orçamento de 60 segundos. O que sobrar entra amanhã. */
+ *  inteiro vive num orçamento de 60 segundos. O que sobrar entra amanhã.
+ *
+ *  Teto de ITENS e orçamento de TEMPO, os dois: 30 consultas a um emissor
+ *  pendurado eram 30 × (sem limite) — e, desde que a consulta tem timeout de
+ *  5 s, seriam 150 s. O laço para quando o orçamento acaba, e para na hora
+ *  ao primeiro timeout: emissor mudo hoje não vai responder à próxima. */
 const MAX_POR_RODADA = 30
 
-export async function conciliarNotasPendentes(): Promise<ResumoDaConciliacao> {
+export async function conciliarNotasPendentes(
+  orcamentoMs: number = ORCAMENTO_CONCILIACAO_MS
+): Promise<ResumoDaConciliacao> {
   const resumo: ResumoDaConciliacao = { consultadas: 0, emitidas: 0, rejeitadas: 0, erros: 0 }
+  const fim = Date.now() + orcamentoMs
 
   const pendentes = await prisma.serviceOrder.findMany({
     where: {
@@ -53,9 +62,22 @@ export async function conciliarNotasPendentes(): Promise<ResumoDaConciliacao> {
   })
 
   for (const os of pendentes) {
+    if (Date.now() > fim) break
     const estadoAtual = estadoDaNota(os.nfseStatus)
     if (!devePerguntar(estadoAtual, os.nfseChecks)) continue
     if (!os.tenant.nfeioCompanyId || !os.nfseId) continue
+
+    // A RESERVA presa: `reservando:<id>` é o que a emissão grava antes de
+    // chamar o emissor e não apaga quando a resposta se perde (ver
+    // actions/nfse.ts). Não é id de nota — perguntar ao emissor seria gastar
+    // 5 s para receber 404 todo dia, e incrementar nfseChecks a faria sumir do
+    // radar em 30 dias. Conta como erro para o alarme diário chegar ao
+    // fundador até o suporte destravar a OS.
+    if (os.nfseId.startsWith("reservando:")) {
+      resumo.erros++
+      console.error(`[nfse] OS ${os.number} está travada com a reserva de emissão — precisa de suporte`)
+      continue
+    }
 
     try {
       const nota = await nfeio.getInvoice(os.tenant.nfeioCompanyId, os.nfseId)
@@ -124,6 +146,12 @@ export async function conciliarNotasPendentes(): Promise<ResumoDaConciliacao> {
       }
     } catch (err) {
       resumo.erros++
+      // Emissor mudo: para a rodada. As próximas 29 consultas iam bater no
+      // mesmo timeout, e a nota não tem culpa — não conta como tentativa dela.
+      if (ehTimeout(err)) {
+        console.error(`[nfse] o emissor não respondeu a tempo (OS ${os.number}) — rodada encerrada`)
+        break
+      }
       // Conta a tentativa mesmo com erro: senão uma nota cujo id o emissor não
       // reconhece seria consultada todo dia, para sempre.
       await prisma.serviceOrder

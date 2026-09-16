@@ -2,6 +2,7 @@
 // Tenant configures zapiInstance + zapiToken in /settings
 
 import { getTranslator } from "@/lib/i18n"
+import { TEMPO_LIMITE_ZAPI_MS } from "@/lib/tempo-limite"
 import { ehProducao } from "@/lib/ambiente"
 
 type Locale = "pt" | "en"
@@ -44,6 +45,9 @@ export async function sendWhatsApp(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: normalized, message } satisfies SendTextPayload),
+        // A régua de cobrança chama isto até 200 vezes dentro do cron de 60 s.
+        // Ver lib/tempo-limite.ts. O catch abaixo já converte em `false`.
+        signal: AbortSignal.timeout(TEMPO_LIMITE_ZAPI_MS),
       }
     )
     return res.ok

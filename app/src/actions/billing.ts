@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { getTenant } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { ehRecusaCerta } from "@/lib/tempo-limite"
 import { asaas } from "@/lib/asaas"
 import { getTranslations } from "next-intl/server"
 import { precoCobrado } from "@/lib/preco"
@@ -172,10 +173,22 @@ export async function subscribeToPlan(formData: FormData) {
         description: `${plan.name} — ${cycle === "YEARLY" ? "Anual" : "Mensal"}`,
       })
     } catch (e) {
-      // A Asaas recusou: não há cobrança lá fora, então a linha local não deve
-      // ficar bloqueando uma nova tentativa.
-      await prisma.subscription.delete({ where: { id: local.id } }).catch(() => null)
-      throw e
+      // A Asaas RESPONDEU e recusou (4xx): não há cobrança lá fora, e a linha
+      // local não deve ficar bloqueando uma nova tentativa.
+      //
+      // Qualquer outra falha — timeout (lib/asaas.ts tem AbortSignal.timeout
+      // desde 15/09/2026), socket caído depois do POST, 5xx de gateway — é
+      // "não sei se a assinatura foi criada". A linha FICA: ela é o que faz a
+      // guarda de duplicidade lá em cima enxergar a tentativa, e o suporte
+      // resolve uma linha presa; ninguém enxerga uma segunda cobrança
+      // recorrente que o sistema não conhece. (Achado na auditoria de
+      // 13/09/2026.)
+      if (ehRecusaCerta(e)) {
+        await prisma.subscription.delete({ where: { id: local.id } }).catch(() => null)
+        throw e
+      }
+      console.error("[assinatura] Asaas sem resposta conclusiva — linha local mantida:", local.id, e)
+      throw new Error(tb("errors.providerTimeout"))
     }
 
     // Fica PENDING até o webhook do Asaas confirmar o pagamento (evento

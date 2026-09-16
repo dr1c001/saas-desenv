@@ -144,3 +144,81 @@ describe("coerência entre o filtro do banco e a regra", () => {
     expect(estadosFinaisConferem()).toBe(true)
   })
 })
+
+describe("o emissor pendurado não segura o cron", () => {
+  // Até 15/09/2026 a consulta não tinha timeout: 30 consultas a um emissor
+  // mudo seguravam a função até a Vercel matá-la — e o fechamento do CronRun
+  // e o aviso ao fundador vêm DEPOIS, então a falha apagava o próprio alarme.
+  // (Achado na auditoria de 13/09/2026.)
+  const timeout = () => Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" })
+
+  it("ao primeiro TIMEOUT a rodada para — as outras 29 iam bater no mesmo muro", async () => {
+    const { tenant } = await osComNota("Processing")
+    const cliente = await testDb.db.client.create({ data: { tenantId: tenant.id, name: "C2" } })
+    for (let n = 2; n <= 3; n++) {
+      await testDb.db.serviceOrder.create({
+        data: {
+          tenantId: tenant.id, clientId: cliente.id, number: n, title: "Outra",
+          status: "INVOICED", nfseId: `nf-${n}`, nfseStatus: "Processing", nfseChecks: 0,
+          nfseIssuedAt: new Date(`2026-08-2${n}T12:00:00Z`),
+        },
+      })
+    }
+    mockGetInvoice.mockRejectedValue(timeout())
+    const { conciliarNotasPendentes } = await import("@/lib/nfse-conciliar")
+
+    const r = await conciliarNotasPendentes()
+
+    expect(mockGetInvoice).toHaveBeenCalledTimes(1)
+    expect(r.erros).toBe(1)
+    // E a nota não leva a culpa: o timeout não conta como tentativa dela.
+    const todas = await testDb.db.serviceOrder.findMany({ where: { tenantId: tenant.id } })
+    expect(todas.every((o) => o.nfseChecks === 0)).toBe(true)
+  })
+
+  it("o orçamento de tempo esgotado encerra a rodada antes da próxima consulta", async () => {
+    const { tenant } = await osComNota("Processing")
+    const cliente = await testDb.db.client.create({ data: { tenantId: tenant.id, name: "C2" } })
+    for (let n = 2; n <= 3; n++) {
+      await testDb.db.serviceOrder.create({
+        data: {
+          tenantId: tenant.id, clientId: cliente.id, number: n, title: "Outra",
+          status: "INVOICED", nfseId: `nf-${n}`, nfseStatus: "Processing", nfseChecks: 0,
+          nfseIssuedAt: new Date(`2026-08-2${n}T12:00:00Z`),
+        },
+      })
+    }
+    // Cada consulta "demora" 30 ms; o orçamento é 10 ms. `fim` é calculado
+    // depois do findMany, então a primeira passa e a segunda já estourou.
+    mockGetInvoice.mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 30))
+      return { id: "nf", flowStatus: "Processing" }
+    })
+    const { conciliarNotasPendentes } = await import("@/lib/nfse-conciliar")
+
+    const r = await conciliarNotasPendentes(10)
+
+    expect(r.consultadas).toBe(1)
+    expect(mockGetInvoice).toHaveBeenCalledTimes(1)
+  })
+
+  it("a reserva presa (`reservando:`) não é consultada: conta como erro para o alarme, sem gastar 5 s", async () => {
+    const { tenant } = await osComNota("Processing")
+    const cliente = await testDb.db.client.create({ data: { tenantId: tenant.id, name: "C2" } })
+    const presa = await testDb.db.serviceOrder.create({
+      data: {
+        tenantId: tenant.id, clientId: cliente.id, number: 9, title: "Presa",
+        status: "INVOICED", nfseId: "reservando:abc", nfseStatus: null, nfseChecks: 0,
+      },
+    })
+    mockGetInvoice.mockResolvedValue({ id: "nf-1", flowStatus: "Processing" })
+    const { conciliarNotasPendentes } = await import("@/lib/nfse-conciliar")
+
+    const r = await conciliarNotasPendentes()
+
+    expect(r.erros).toBe(1)
+    expect(mockGetInvoice).toHaveBeenCalledTimes(1) // só a nota de verdade
+    // E ela não some do radar: nfseChecks fica em zero.
+    expect((await releu(presa.id))!.nfseChecks).toBe(0)
+  })
+})

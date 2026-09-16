@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { createTestDatabase, type TestDatabase } from "@/test-utils/pglite-db"
+import { RecusaExterna } from "@/lib/tempo-limite"
 
 // A nota fiscal não sai duas vezes para a mesma OS.
 //
@@ -128,9 +129,10 @@ describe("emitir nota fiscal", () => {
 
   it("recusa da nfe.io DEVOLVE a reserva, para dar para tentar de novo", async () => {
     // Sem isto, um erro da prefeitura deixaria a OS travada para sempre com uma
-    // reserva que não é nota nenhuma.
+    // reserva que não é nota nenhuma. RECUSA é o emissor respondendo "não"
+    // (HTTP 4xx) — a única falha em que se sabe que nada foi criado lá.
     const { os } = await cenario()
-    mockEmitir.mockRejectedValueOnce(new Error("CNPJ do tomador inválido"))
+    mockEmitir.mockRejectedValueOnce(new RecusaExterna("nfe.io /serviceinvoices", 400, "CNPJ do tomador inválido"))
     const { emitNfse } = await acoes()
 
     await expect(emitNfse(os.id)).rejects.toThrow("CNPJ do tomador inválido")
@@ -141,5 +143,28 @@ describe("emitir nota fiscal", () => {
     // E a tentativa seguinte funciona.
     await emitNfse(os.id)
     expect((await testDb.db.serviceOrder.findUnique({ where: { id: os.id } }))?.nfseId).toBe("nf-1")
+  })
+
+  it.each([
+    ["timeout", Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" })],
+    ["socket caído DEPOIS do POST", Object.assign(new TypeError("fetch failed"), { cause: { code: "UND_ERR_SOCKET" } })],
+    ["502 de gateway", new RecusaExterna("nfe.io /serviceinvoices", 502, "Bad Gateway")],
+    ["JSON malformado num 200", new SyntaxError("Unexpected token < in JSON")],
+  ])("%s MANTÉM a reserva — a nota pode ter saído, e ninguém desfaz nota fiscal", async (_, erro) => {
+    // lib/nfeio.ts tem timeout desde 15/09/2026, e "não sei se saiu" virou
+    // rotina. Soltar a reserva num "não sei" é emitir a segunda nota no clique
+    // seguinte. A OS trava, e o suporte destrava. (Auditoria de 13/09/2026.)
+    const { os } = await cenario()
+    mockEmitir.mockRejectedValueOnce(erro)
+    const { emitNfse } = await acoes()
+
+    await expect(emitNfse(os.id)).rejects.toThrow("nfseSemResposta")
+
+    const depois = await testDb.db.serviceOrder.findUnique({ where: { id: os.id } })
+    expect(depois?.nfseId).toBe(`reservando:${os.id}`)
+
+    // E a tentativa seguinte NÃO emite de novo: a reserva barra.
+    await expect(emitNfse(os.id)).rejects.toThrow()
+    expect(mockEmitir).toHaveBeenCalledTimes(1)
   })
 })

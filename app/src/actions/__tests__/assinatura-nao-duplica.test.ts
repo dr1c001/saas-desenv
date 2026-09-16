@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { createTestDatabase, type TestDatabase } from "@/test-utils/pglite-db"
+import { RecusaExterna } from "@/lib/tempo-limite"
 
 // Uma falha no meio de assinar não pode gerar DUAS cobranças recorrentes.
 //
@@ -97,11 +98,28 @@ describe("assinar um plano", () => {
     // Se a Asaas disse não, não há cobrança lá fora — e a pessoa precisa poder
     // tentar de novo.
     const { tenant, plano } = await cenario()
-    mockCriarAssinatura.mockRejectedValueOnce(new Error("cartão recusado"))
+    mockCriarAssinatura.mockRejectedValueOnce(new RecusaExterna("Asaas /subscriptions", 400, "cartão recusado"))
 
     await assinar(plano.id)
 
     expect(await testDb.db.subscription.count({ where: { tenantId: tenant.id } })).toBe(0)
+  })
+
+  it("Asaas SEM resposta conclusiva MANTÉM a linha — a assinatura pode ter sido criada lá", async () => {
+    // lib/asaas.ts tem timeout desde 15/09/2026. Apagar a linha num "não sei"
+    // deixaria a guarda de duplicidade cega, e o clique seguinte criaria a
+    // SEGUNDA cobrança recorrente no cartão. (Auditoria de 13/09/2026.)
+    const { tenant, plano } = await cenario()
+    mockCriarAssinatura.mockRejectedValueOnce(
+      Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" })
+    )
+
+    await assinar(plano.id)
+
+    expect(await testDb.db.subscription.count({ where: { tenantId: tenant.id } })).toBe(1)
+    // E a segunda tentativa esbarra na linha, em vez de criar outra na Asaas.
+    await assinar(plano.id)
+    expect(mockCriarAssinatura).toHaveBeenCalledTimes(1)
   })
 
   it("dando certo, a linha guarda o id da Asaas", async () => {

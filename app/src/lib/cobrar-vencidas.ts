@@ -1,6 +1,7 @@
 import { Prisma } from "@/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { getTranslator } from "@/lib/i18n"
+import { ORCAMENTO_REGUA_MS } from "@/lib/tempo-limite"
 import { sendWhatsApp } from "@/lib/whatsapp"
 import { sendDunningEmail } from "@/lib/resend"
 import { hasActiveSubscription } from "@/lib/auth"
@@ -57,7 +58,13 @@ export type ResultadoDaRegua = { enviadas: number; erros: number }
  * Os erros voltam contados, e o cron os soma ao próprio total — que é o que
  * faz /api/health devolver 503.
  */
-export async function cobrarVencidas(agora: Date): Promise<ResultadoDaRegua> {
+export async function cobrarVencidas(
+  agora: Date,
+  // Além do teto de mensagens, um teto de TEMPO: 200 chamadas ao Z-API com
+  // 8 s de timeout cada seriam 1600 s. Ver lib/tempo-limite.ts.
+  orcamentoMs: number = ORCAMENTO_REGUA_MS
+): Promise<ResultadoDaRegua> {
+  const fim = Date.now() + orcamentoMs
   const resultado: ResultadoDaRegua = { enviadas: 0, erros: 0 }
 
   // Só quem LIGOU. `dunningConfig` nulo é a esmagadora maioria, e filtrar no
@@ -82,7 +89,7 @@ export async function cobrarVencidas(agora: Date): Promise<ResultadoDaRegua> {
   })
 
   for (const empresa of empresas) {
-    if (resultado.enviadas >= MAX_POR_EXECUCAO) break
+    if (resultado.enviadas >= MAX_POR_EXECUCAO || Date.now() > fim) break
 
     try {
       const config = lerRegua(empresa.dunningConfig)
@@ -195,7 +202,7 @@ export async function cobrarVencidas(agora: Date): Promise<ResultadoDaRegua> {
         .filter((x): x is NonNullable<typeof x> => x !== null)
 
       for (const grupo of agruparPorPagador(comPagador)) {
-        if (resultado.enviadas >= MAX_POR_EXECUCAO) break
+        if (resultado.enviadas >= MAX_POR_EXECUCAO || Date.now() > fim) break
 
         const decisao = decidirCobranca({
           // O TOM e o degrau saem da conta MAIS ATRASADA do grupo: uma dívida

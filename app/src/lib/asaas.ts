@@ -1,4 +1,5 @@
 import { ehProducao } from "@/lib/ambiente"
+import { RecusaExterna, TEMPO_LIMITE_ASAAS_MS } from "@/lib/tempo-limite"
 
 // Fora de produção usa SEMPRE o sandbox, independente da variável: um deploy
 // de teste que herde a chave de produção por engano criaria cobrança de
@@ -32,10 +33,15 @@ async function asaasRequest<T>(path: string, options: RequestInit = {}): Promise
       "Content-Type": "application/json",
       ...(options.headers ?? {}),
     },
+    // Sem isto, uma Asaas travada segurava a Server Action até a Vercel
+    // matá-la. Ver lib/tempo-limite.ts. DEPOIS do spread, de propósito.
+    signal: AbortSignal.timeout(TEMPO_LIMITE_ASAAS_MS),
   })
   if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`Asaas ${path} → ${res.status}: ${body}`)
+    // RecusaExterna: "a Asaas respondeu e disse não". É a única falha em que
+    // subscribeToPlan pode apagar a linha local com segurança.
+    const body = await res.text().catch(() => "")
+    throw new RecusaExterna(`Asaas ${path}`, res.status, body)
   }
   return res.json()
 }

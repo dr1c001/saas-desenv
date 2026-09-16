@@ -288,7 +288,8 @@
       "planNotFound": "Plan not found.",
       "ownerNotFound": "Account owner not found.",
       "missingDocument": "Fill in your company's tax ID under Settings before subscribing to a plan.",
-      "cancelFailed": "We couldn't cancel right now. Please try again in a moment."
+      "cancelFailed": "We couldn't cancel right now. Please try again in a moment.",
+      "providerTimeout": "Asaas did not respond in time. The attempt was recorded — wait a few minutes and reload before trying again; if it persists, contact support."
     }
   },
   "buscaAbas": {
@@ -987,7 +988,8 @@
     "tooManyAttempts": "Too many attempts. Please wait a few minutes and try again.",
     "inviteLinkUsed": "This invite has already been used or has expired. If you already set your password, just sign in below. If you haven't, use \"Forgot my password\" with the email that received the invite — do not create a new company.",
     "recoveryLinkUsed": "This recovery link has already been used or has expired. Request a new one under \"Forgot my password\".",
-    "funcaoDesligada": "This feature is turned off for your company. Contact support."
+    "funcaoDesligada": "This feature is turned off for your company. Contact support.",
+    "nfseSemResposta": "The issuer did not respond or the response was lost. The invoice may have been issued — this [[os]] was locked on purpose; contact support before trying again."
   },
   "estoque": {
     "title": "Parts inventory",
@@ -2653,7 +2655,8 @@
       "confirmEmit": "Issue an e-invoice for this [[os]]?",
       "emitButton": "Issue NFS-e",
       "baixarPdf": "Invoice (PDF)",
-      "baixarXml": "XML"
+      "baixarXml": "XML",
+      "travada": "NFS-e — no response from issuer; contact support"
     },
     "signaturePad": {
       "emptyError": "Please sign before saving.",

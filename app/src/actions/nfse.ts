@@ -5,6 +5,7 @@ import { reconciliarComissao } from "@/lib/comissao-db"
 import { formatOsNumber } from "@/lib/utils"
 import { getTenant, requireActiveSubscription } from "@/lib/auth"
 import { requireCotaDeNfse, requireRecurso } from "@/lib/plan"
+import { ehRecusaCerta } from "@/lib/tempo-limite"
 import { nfeio } from "@/lib/nfeio"
 import { revalidatePath } from "next/cache"
 import { getTranslations } from "next-intl/server"
@@ -195,24 +196,28 @@ export async function emitNfse(orderId: string) {
       },
     })
   } catch (e) {
-    // A emissão não saiu: devolve a reserva para a pessoa poder tentar de novo.
+    // Dois destinos, e a diferença é uma nota fiscal duplicada.
     //
-    // Isto solta a reserva em QUALQUER erro capturado, e vale dizer por que
-    // hoje é seguro: `lib/nfeio.ts` não tem `AbortSignal.timeout`, então um
-    // erro aqui é sempre uma resposta da nfe.io dizendo não — nunca um "não sei
-    // se saiu". O outro caso, a função inteira ser morta por tempo na Vercel,
-    // não passa por este `catch`: o processo acaba, a reserva fica de pé, e a
-    // OS trava. Travada é o lado certo — o suporte destrava uma OS, mas
-    // ninguém desfaz uma nota fiscal.
+    // O emissor RESPONDEU e disse não (RecusaExterna, 4xx): nada foi criado do
+    // outro lado, a reserva volta e a pessoa tenta de novo.
     //
-    // No dia em que o timeout entrar em lib/nfeio.ts (está na lista da
-    // auditoria), este `catch` precisa distinguir os dois: recusa devolve a
-    // reserva, tempo esgotado mantém.
-    await prisma.serviceOrder.updateMany({
-      where: { id: orderId, tenantId, nfseId: RESERVA },
-      data: { nfseId: null },
-    })
-    throw e
+    // Qualquer outra coisa — timeout (lib/nfeio.ts tem AbortSignal.timeout
+    // desde 15/09/2026), `fetch failed` com o socket caído DEPOIS do POST,
+    // JSON malformado num 200, 502/504 de gateway — é "não sei se saiu". A
+    // reserva FICA, a OS trava, e o suporte destrava. Travada é o lado certo:
+    // o suporte destrava uma OS, mas ninguém desfaz uma nota fiscal. Até
+    // 15/09/2026 este catch soltava a reserva em qualquer erro, e o próprio
+    // comentário dizia que isso só era seguro porque não havia timeout.
+    // (Achado na auditoria de 13/09/2026.)
+    if (ehRecusaCerta(e)) {
+      await prisma.serviceOrder.updateMany({
+        where: { id: orderId, tenantId, nfseId: RESERVA },
+        data: { nfseId: null },
+      })
+      throw e
+    }
+    console.error(`[nfse] emissão sem resposta conclusiva na OS ${orderId} — reserva mantida:`, e)
+    throw new Error(te("nfseSemResposta"))
   }
 
   await prisma.serviceOrder.update({

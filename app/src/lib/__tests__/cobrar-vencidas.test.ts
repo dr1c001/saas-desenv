@@ -53,9 +53,9 @@ beforeEach(async () => {
 })
 
 /** Importa depois dos mocks — doMock não é içado. */
-const rodar = async (agora: Date) => {
+const rodar = async (agora: Date, orcamentoMs?: number) => {
   const { cobrarVencidas } = await import("@/lib/cobrar-vencidas")
-  return cobrarVencidas(agora)
+  return cobrarVencidas(agora, orcamentoMs)
 }
 
 const HOJE = new Date("2026-09-10T12:00:00Z")
@@ -713,5 +713,25 @@ describe("os anexos: a fatura e a nota fiscal", () => {
     await rodar(HOJE)
 
     expect(mockEmail.mock.calls[0][4]).toBeTruthy()
+  })
+})
+
+describe("o orçamento de tempo", () => {
+  it("esgotado, a régua para antes do próximo grupo — o cron tem 60 s para tudo", async () => {
+    // 200 chamadas ao Z-API com 8 s de timeout cada seriam 1600 s. O teto de
+    // mensagens não protege disso; o de tempo protege. (Auditoria de 13/09/2026.)
+    const empresa = await empresaComRegua()
+    // Dois pagadores diferentes = dois grupos = duas mensagens.
+    await contaDe(empresa.id, { diasAtras: 7, clienteEmail: "a@ex.com" })
+    await contaDe(empresa.id, { diasAtras: 7, clienteEmail: "b@ex.com" })
+    mockWhats.mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 30))
+      return true
+    })
+
+    const r = await rodar(HOJE, 10)
+
+    expect(r.enviadas).toBe(1)
+    expect(mockWhats).toHaveBeenCalledTimes(1)
   })
 })

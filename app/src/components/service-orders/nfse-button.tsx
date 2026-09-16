@@ -19,6 +19,19 @@ export function NfseButton({ orderId, nfseId, nfseStatus, nfseUrl, nfseNumber }:
   const [error, setError] = useState<string | null>(null)
   const [emitted, setEmitted] = useState(false)
 
+  // A RESERVA presa (`reservando:<id>`, ver actions/nfse.ts) não é nota: é a
+  // emissão que ficou sem resposta conclusiva. Mostrar o selo verde aqui — com
+  // links de PDF que não resolvem — era o que acontecia, e é o que enganaria
+  // o dono a achar que a nota saiu.
+  if (nfseId?.startsWith("reservando:")) {
+    return (
+      <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
+        <FileText className="size-3.5" />
+        {t("nfseButton.travada")}
+      </span>
+    )
+  }
+
   if (nfseId || emitted) {
     return (
       <div className="flex items-center gap-2">
