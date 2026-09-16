@@ -8,6 +8,7 @@ import {
 } from "@/lib/resend"
 import { enviarPesquisasDeSatisfacao } from "@/lib/nps-fila"
 import { conferirDmarc } from "@/lib/conferir-dmarc"
+import { confirmarPagamento } from "@/lib/confirmar-pagamento"
 import { decidirAviso, diasDeAtraso, AVISOS_ATRASO } from "@/lib/past-due"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 import { provedor } from "@/lib/geocode"
@@ -78,7 +79,11 @@ export async function GET(req: NextRequest) {
   // não confirmado", parece "o sistema todo quebrou".
   //
   // Isto reconcilia direto na fonte da verdade (a Asaas) uma vez por dia, e é
-  // idempotente: usa exatamente o mesmo caminho do webhook.
+  // idempotente: chama lib/confirmar-pagamento.ts, o MESMO que o webhook. Este
+  // comentário dizia isso desde agosto, e o código não fazia: reimplementava
+  // só a troca de status, e quem era reativado por aqui pagava sem receber
+  // contrato, quem o indicou não ganhava o bônus, e o desconto de indicação
+  // ficava vitalício na Asaas. (Achado na auditoria de 13/09/2026.)
   try {
     // PAST_DUE entrou junto com o PENDING: o cliente inadimplente que paga é
     // reliberado pelo webhook, mas se ESSE webhook se perder ele fica bloqueado
@@ -137,29 +142,17 @@ export async function GET(req: NextRequest) {
             )
       if (!paid) continue
 
-      // Renovação estende o período; primeira confirmação não — mesmo cálculo
-      // do webhook (ver api/webhooks/asaas/route.ts), que não pode divergir
-      // deste sob pena de dar ou tirar um ciclo de acesso de graça.
-      const periodEnd = new Date(sub.currentPeriodEnd)
-      if (sub.status === "PAST_DUE") {
-        periodEnd.setMonth(periodEnd.getMonth() + (sub.billingCycle === "YEARLY" ? 12 : 1))
-      }
-
       console.error(
         `[reconciliacao] assinatura ${sub.asaasId} paga na Asaas (${paid.id}) mas ${sub.status} aqui — ` +
           `webhook provavelmente nao chegou. Reativando tenant ${sub.tenantId}.`
       )
-      await prisma.$transaction([
-        prisma.subscription.update({
-          where: { id: sub.id },
-          data: { status: "ACTIVE", lastProcessedPaymentId: paid.id, currentPeriodEnd: periodEnd, pastDueWarningsSent: 0 },
-        }),
-        prisma.tenant.update({
-          where: { id: sub.tenantId },
-          data: { subscriptionStatus: "ACTIVE", planId: sub.planId },
-        }),
-      ])
-      results.reconciled++
+      // O mesmo caminho do webhook: reivindicar + ativar numa escrita só, e os
+      // efeitos (push, preço cheio, bônus de indicação, contrato por e-mail).
+      // Aqui se AGUARDA o e-mail em vez de after(): o cron é processo de fundo
+      // com 60 s de orçamento, e reconciliação de verdade é rara.
+      const confirmacao = await confirmarPagamento({ subscriptionId: sub.id, paymentId: paid.id })
+      await confirmacao.pendente
+      if (confirmacao.resultado === "ativada") results.reconciled++
     }
   } catch (err) {
     console.error("[reconciliacao] falhou:", err)

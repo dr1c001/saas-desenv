@@ -1,17 +1,9 @@
 import { after, NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { avisarPlataforma } from "@/lib/avisar-plataforma"
-import { sendPaymentConfirmedEmail } from "@/lib/resend"
-import { gerarContrato } from "@/lib/contrato"
-import { notificar } from "@/lib/notificar"
 import { asaas } from "@/lib/asaas"
-import { precoCobrado } from "@/lib/preco"
-
-// Espelha REFERRAL_DISCOUNT_PERCENT/NEW_SIGNUP_DISCOUNT_PERCENT em
-// lib/auth.ts e api/referral/join/route.ts — bônus de quem indicou, creditado
-// só na primeira confirmação de pagamento do indicado (não em renovações).
-const REFERRER_DISCOUNT_PERCENT = 20
-const MAX_DISCOUNT_PERCENT = 100
+import { confirmarPagamento } from "@/lib/confirmar-pagamento"
+import { decidirEstorno, ehContestacao, ehEstorno, idDaAssinaturaNoEvento } from "@/lib/estorno"
 
 export async function POST(req: NextRequest) {
   // Asaas ecoa o token configurado no dashboard (Integrações → Webhooks) no
@@ -23,202 +15,55 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  let event: unknown = undefined
+  let asaasSubId: string | null = null
   try {
     const body = await req.json()
-    const { event, payment } = body
+    event = body?.event
+    const payment = body?.payment
 
-    const asaasSubId: string | undefined = payment?.subscription
+    // Evento de pagamento traz `payment.subscription`; evento de ASSINATURA
+    // (SUBSCRIPTION_DELETED) traz `subscription.id` e não tem `payment`. Lendo
+    // só o primeiro, o handler desistia aqui e o ramo de cancelamento lá
+    // embaixo era inalcançável. (Achado na auditoria de 13/09/2026.)
+    asaasSubId = idDaAssinaturaNoEvento(body ?? {})
     if (!asaasSubId) return NextResponse.json({ ok: true })
 
     const sub = await prisma.subscription.findFirst({
       where: { asaasId: asaasSubId },
-      include: {
-        plan: { select: { name: true, priceMonthly: true, priceYearly: true } },
-        tenant: {
-          select: {
-            id: true,
-            name: true,
-            referredByCode: true,
-            // Para devolver o preço cheio depois do primeiro pagamento com
-            // desconto de indicação — o combinado, quando existe, é o teto.
-            customPriceMonthly: true,
-            // locale: o e-mail de confirmação sai no idioma da empresa — webhook
-            // roda fora de qualquer request de navegador, então não há contexto
-            // pra resolver isso sozinho. (i18n, item 1.)
-            locale: true,
-            vocabulary: true,
-            users: { where: { role: "OWNER" }, take: 1, select: { email: true, name: true } },
-          },
-        },
+      select: {
+        id: true,
+        tenantId: true,
+        asaasId: true,
+        status: true,
+        currentPeriodEnd: true,
+        lastProcessedPaymentId: true,
+        plan: { select: { name: true } },
+        tenant: { select: { name: true } },
       },
     })
     if (!sub) return NextResponse.json({ ok: true })
 
-    // Só a primeira confirmação de pagamento desse tenant conta como
-    // "conversão" pro bônus de quem indicou — renovações (sub já ACTIVE) e
-    // recuperação de inadimplência (PAST_DUE) não geram um bônus novo.
-    const isFirstConfirmation = sub.status === "PENDING"
-
-    // Uma assinatura já CANCELLED (localmente) não deve ser reativada por um
-    // pagamento atrasado/duplicado/reenviado do Asaas — isso "ressuscitava"
-    // silenciosamente uma assinatura abandonada e sobrescrevia o plano do
-    // tenant. PENDING/PAST_DUE → ACTIVE continuam permitidos (primeiro
-    // pagamento e recuperação de inadimplência são fluxos legítimos).
-    // (Achado em revisão de segurança 2026-07-19.)
-    if ((event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") && sub.status !== "CANCELLED") {
-      // Idempotência por pagamento: o Asaas manda PAYMENT_CONFIRMED
-      // (autorização) e depois PAYMENT_RECEIVED (liquidação) pro MESMO
-      // pagamento em cartão — fluxo normal, não reenvio de falha. Sem isso,
-      // cada pagamento em cartão (toda renovação, não só a primeira) somava
-      // um ciclo de acesso duas vezes. Update condicionado (não um read
-      // separado) — seguro mesmo com as duas entregas chegando quase juntas.
-      // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
+    // ── Pagamento confirmado ─────────────────────────────────────────────────
+    // A regra inteira — reivindicar + ativar numa escrita só, push, preço cheio
+    // depois do desconto de indicação, bônus a quem indicou, contrato no e-mail
+    // — mora em lib/confirmar-pagamento.ts, e é a MESMA que a reconciliação
+    // diária do cron usa. Aqui só o despacho.
+    //
+    // O Asaas manda PAYMENT_CONFIRMED (autorização) e depois PAYMENT_RECEIVED
+    // (liquidação) para o MESMO pagamento em cartão; a segunda chegada volta
+    // "repetida" e não soma um segundo ciclo (achado de 03/08/2026).
+    if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") {
       const paymentId: string | undefined = payment?.id
-      const claim = paymentId
-        ? await prisma.subscription.updateMany({
-            where: {
-              id: sub.id,
-              OR: [{ lastProcessedPaymentId: null }, { lastProcessedPaymentId: { not: paymentId } }],
-            },
-            data: { lastProcessedPaymentId: paymentId },
-          })
-        : { count: 1 }
-      if (claim.count === 0) {
-        return NextResponse.json({ ok: true })
-      }
-
-      // Na primeira confirmação, currentPeriodEnd já foi calculado certo em
-      // subscribeToPlan (criação + 1 ciclo) — somar mais um ciclo aqui em cima
-      // dava 2 ciclos de acesso pelo preço de 1. Só renovação (assinatura já
-      // tinha sido ACTIVE/PAST_DUE antes) de fato estende o período.
-      // (Achado em revisão de segurança 2026-07-21.)
-      const periodEnd = new Date(sub.currentPeriodEnd)
-      if (!isFirstConfirmation) {
-        periodEnd.setMonth(periodEnd.getMonth() + (sub.billingCycle === "YEARLY" ? 12 : 1))
-      }
-
-      // Primeira confirmação de pagamento é o único lugar que efetivamente
-      // ativa o tenant — subscribeToPlan só cria a Subscription como PENDING
-      // e não mexe no plano do tenant, então planId precisa ser setado aqui.
-      await prisma.$transaction([
-        prisma.subscription.update({
-          where: { id: sub.id },
-          // Zera os avisos de atraso: se este cliente ficar inadimplente de
-          // novo daqui a alguns meses, o ciclo de avisos precisa recomeçar do
-          // primeiro, não continuar de onde parou.
-          data: { status: "ACTIVE", currentPeriodEnd: periodEnd, pastDueWarningsSent: 0 },
-        }),
-        prisma.tenant.update({
-          where: { id: sub.tenantId },
-          data: { subscriptionStatus: "ACTIVE", planId: sub.planId },
-        }),
-      ])
-
-      // Avisa o escritório no celular. O e-mail de confirmação já ia, mas
-      // e-mail de cobrança é o que mais cai em spam e o que menos se abre —
-      // e a informação aqui é boa: o acesso voltou.
-      await notificar({
-        tenantId: sub.tenantId,
-        evento: "pagamentoConfirmado",
-        corpo: sub.plan.name,
-        url: "/billing",
-        referencia: sub.id,
-      })
-
-      // O desconto de indicação acaba AQUI — ele é de um pagamento só.
-      //
-      // A assinatura da Asaas cobra o mesmo `value` em todo ciclo, então criar
-      // a assinatura já descontada transformava "10% no primeiro pagamento"
-      // (o texto da landing, do manual e do próprio comentário em billing.ts)
-      // num desconto vitalício. Com os 20% por indicação acumulando até 100%,
-      // cinco conversões davam assinatura de R$ 0,00 para sempre.
-      //
-      // Melhor esforço, e de propósito: se a chamada falhar, o cliente segue
-      // com o desconto. Perder alguns por cento de um cliente é muito melhor
-      // que derrubar a ativação de quem acabou de pagar — e o log diz o que
-      // não foi corrigido. (Auditoria de 13/09/2026.)
-      if (isFirstConfirmation && sub.asaasId) {
-        try {
-          const cheio = precoCobrado(
-            {
-              priceMonthly: Number(sub.plan.priceMonthly),
-              priceYearly: Number(sub.plan.priceYearly),
-            },
-            sub.tenant.customPriceMonthly === null ? null : Number(sub.tenant.customPriceMonthly),
-            sub.billingCycle === "YEARLY" ? "YEARLY" : "MONTHLY",
-            0
-          )
-          await asaas.updateSubscription(sub.asaasId, { value: cheio })
-        } catch (e) {
-          console.error(
-            "Falha ao devolver o preço cheio da assinatura após o primeiro pagamento:",
-            sub.asaasId,
-            e
-          )
-        }
-      }
-
-      // Bônus de quem indicou — melhor esforço, nunca deve derrubar a
-      // ativação do tenant que acabou de pagar nem o e-mail de confirmação.
-      if (isFirstConfirmation && sub.tenant.referredByCode) {
-        try {
-          const referrer = await prisma.tenant.findUnique({
-            where: { referralCode: sub.tenant.referredByCode },
-            select: { id: true },
-          })
-          if (referrer) {
-            // increment é atômico no banco (SET col = col + N) — não lê o
-            // valor antes, então duas confirmações concorrentes pro mesmo
-            // indicador não perdem incremento uma da outra (o que acontecia
-            // com o Math.min(valor lido + 20, 100) anterior, um lost update
-            // clássico). O teto vem depois, num update condicionado no valor
-            // atual da linha — também seguro sob corrida.
-            // (Achado em revisão de segurança 2026-07-21.)
-            await prisma.tenant.update({
-              where: { id: referrer.id },
-              data: { referralDiscountPercent: { increment: REFERRER_DISCOUNT_PERCENT } },
-            })
-            await prisma.tenant.updateMany({
-              where: { id: referrer.id, referralDiscountPercent: { gt: MAX_DISCOUNT_PERCENT } },
-              data: { referralDiscountPercent: MAX_DISCOUNT_PERCENT },
-            })
-          }
-        } catch (err) {
-          console.error("Falha ao creditar bônus de indicação:", err)
-        }
-      }
-
-      const owner = sub.tenant.users[0]
-      if (owner?.email) {
-        // Gera o contrato e anexa. Melhor esforço, e DEPOIS da resposta: o
-        // webhook precisa responder rápido pra Asaas, e falhar em gerar PDF
-        // nunca pode impedir a ativação do cliente que acabou de pagar.
-        //
-        // Dentro de after(). Sem ele, a promessa era só disparada e esquecida:
-        // em runtime serverless a instância pode ser congelada assim que o
-        // handler retorna, e o trabalho pendente morre no meio. O cliente
-        // pagava, era ativado, e simplesmente não recebia o e-mail de
-        // confirmação nem o contrato — que é o documento da relação comercial.
-        // Sem erro no Sentry (o catch engole) e sem linha no log. after() é a
-        // forma que o Next.js dá de dizer "só congele depois disto".
+      if (paymentId) {
+        const r = await confirmarPagamento({ subscriptionId: sub.id, paymentId })
+        // O e-mail com o contrato DEPOIS da resposta: o webhook precisa
+        // responder rápido, e em runtime serverless a instância pode congelar
+        // assim que o handler retorna — after() é como se diz "só depois disto".
         // (Achado em auditoria, 20/08/2026.)
-        after(
-          gerarContrato(sub.tenantId)
-            .catch((err) => {
-              console.error("[contrato] falha ao gerar:", err)
-              return null
-            })
-            .then((contrato) =>
-              sendPaymentConfirmedEmail(
-                owner.email,
-                owner.name ?? "Cliente",
-                sub.plan.name,
-                sub.tenant,
-                contrato ? { nomeArquivo: contrato.nomeArquivo, buffer: contrato.buffer } : undefined
-              )
-            )
-            .catch(() => null)
-        )
+        after(r.pendente)
+      } else {
+        console.error("[webhook asaas] pagamento confirmado sem id:", asaasSubId, event)
       }
     }
 
@@ -266,9 +111,13 @@ export async function POST(req: NextRequest) {
             where: { id: sub.id, status: "ACTIVE" },
             data: { status: "CANCELLED", cancelledAt: new Date() },
           }),
+          // O PLANO fica — mesma regra de cancelSubscription em actions/billing.ts:
+          // o cancelamento honra o período já pago, e sem plano a empresa cairia
+          // no PERMISSIVO, recebendo mais do que comprou. Quem decide o acesso é
+          // o status mais `currentPeriodEnd`.
           prisma.tenant.update({
             where: { id: sub.tenantId },
-            data: { subscriptionStatus: "CANCELLED", planId: null },
+            data: { subscriptionStatus: "CANCELLED" },
           }),
         ])
 
@@ -288,14 +137,81 @@ export async function POST(req: NextRequest) {
           )
         }
       } else {
-        await prisma.subscription.update({
-          where: { id: sub.id },
+        await prisma.subscription.updateMany({
+          where: { id: sub.id, status: { not: "CANCELLED" } },
           data: { status: "CANCELLED", cancelledAt: new Date() },
         })
       }
     }
-  } catch {
-    // never return 5xx to Asaas or it will retry indefinitely
+
+    // ── Estorno e chargeback ─────────────────────────────────────────────────
+    // O dinheiro voltou ao cliente. Regra em lib/estorno.ts: só o pagamento
+    // que COMPROU o período corrente revoga o acesso; outro pagamento só avisa.
+    if (ehEstorno(event)) {
+      const pagamentoId: string | undefined = payment?.id
+      const decisao = decidirEstorno(sub, pagamentoId)
+      if (decisao === "ignorar") {
+        console.error("[webhook asaas] estorno sem id de pagamento:", asaasSubId, event)
+      } else {
+        const agora = new Date()
+        let cortou = false
+        if (decisao === "revogar") {
+          // `currentPeriodEnd: agora` é o que corta de fato — CANCELLED sozinho
+          // honra o período (lib/auth.ts), e aqui o período NÃO foi pago.
+          // Condicionado ao pagamento: reenvio da Asaas e chargeback + estorno
+          // do mesmo pagamento revogam UMA vez.
+          const [mudou] = await prisma.$transaction([
+            prisma.subscription.updateMany({
+              where: {
+                id: sub.id,
+                lastProcessedPaymentId: pagamentoId,
+                OR: [{ status: { not: "CANCELLED" } }, { currentPeriodEnd: { gt: agora } }],
+              },
+              data: { status: "CANCELLED", cancelledAt: agora, currentPeriodEnd: agora },
+            }),
+            // Só quando ESTA assinatura era a viva do tenant. Se ela já estava
+            // CANCELLED (o cliente cancelou e ainda estava no período pago) o
+            // tenant pode ter outra assinatura nova — não se mexe nele.
+            ...(sub.status !== "CANCELLED"
+              ? [prisma.tenant.update({ where: { id: sub.tenantId }, data: { subscriptionStatus: "CANCELLED" } })]
+              : []),
+          ])
+          cortou = mudou.count === 1
+          // Encerra a cobrança recorrente: uma Subscription CANCELLED ignora
+          // pagamentos futuros, então deixar a Asaas cobrando seria cobrar sem
+          // entregar nada — e, em chargeback, provocar outro chargeback com
+          // taxa. Melhor esforço, depois da resposta.
+          if (cortou && sub.asaasId) {
+            after(
+              asaas
+                .cancelSubscription(sub.asaasId)
+                .catch((e) => console.error("[webhook asaas] falha ao encerrar a cobrança após estorno:", sub.asaasId, e))
+            )
+          }
+        }
+        if (decisao === "avisar" || cortou) {
+          after(
+            avisarPlataforma("pagamentoEstornado", {
+              tenantId: sub.tenantId,
+              subscriptionId: sub.id,
+              pagamentoId,
+              empresa: sub.tenant.name,
+              plano: sub.plan?.name ?? null,
+              valor: typeof payment?.value === "number" ? payment.value : null,
+              contestacao: ehContestacao(event),
+              acessoCortado: cortou,
+            })
+          )
+        }
+      }
+    }
+  } catch (err) {
+    // Responde 200 de propósito: 5xx faz a Asaas reenviar, e falhas repetidas
+    // põem a fila de webhooks em "interrupted" — foi o incidente de 07/08/2026.
+    // Mas NUNCA em silêncio: até 15/09/2026 este catch era vazio, e uma falha
+    // no processamento de pagamento não deixava uma linha em lugar nenhum.
+    // (Achado na auditoria de 13/09/2026.)
+    console.error("[webhook asaas] falhou (respondendo 200 de propósito):", { event, asaasSubId }, err)
   }
 
   return NextResponse.json({ ok: true })

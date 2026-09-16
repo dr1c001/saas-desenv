@@ -3626,6 +3626,13 @@
       "title": "Subscription cancelled",
       "body": "{empresa} cancelled the {plano}. Access has been cut."
     },
+    "pagamentoEstornado": {
+      "title": "Payment refunded",
+      "body": "The {valor} payment from {empresa} ({plano}) was refunded.",
+      "bodyContestacao": "{empresa} disputed the {valor} card payment ({plano}).",
+      "acessoCortado": "Access was cut and billing stopped.",
+      "acessoMantido": "It was not the current period's payment — access continues; check the admin panel."
+    },
     "testeDeAviso": {
       "title": "Test alert",
       "body": "If you are reading this on your phone, alerts are working."

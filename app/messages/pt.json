@@ -3626,6 +3626,13 @@
       "title": "Assinatura cancelada",
       "body": "{empresa} cancelou o {plano}. O acesso foi cortado."
     },
+    "pagamentoEstornado": {
+      "title": "Pagamento estornado",
+      "body": "O pagamento de {valor} de {empresa} ({plano}) foi estornado.",
+      "bodyContestacao": "{empresa} contestou no cartão o pagamento de {valor} ({plano}).",
+      "acessoCortado": "O acesso foi cortado e a cobrança encerrada.",
+      "acessoMantido": "Não era o pagamento do período atual — o acesso continua; veja no painel."
+    },
     "testeDeAviso": {
       "title": "Teste de aviso",
       "body": "Se você está lendo isto no celular, o aviso está funcionando."

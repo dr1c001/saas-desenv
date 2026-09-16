@@ -24,6 +24,8 @@ export type AvisoDaPlataforma =
   | "novaEmpresa"
   | "assinaturaEmAtraso"
   | "assinaturaCancelada"
+  /** O dinheiro de um pagamento voltou ao cliente (estorno ou chargeback). */
+  | "pagamentoEstornado"
   | "duvidaNova"
   /** Só o botão de teste do painel. Não tem gatilho automático. */
   | "testeDeAviso"
@@ -32,6 +34,7 @@ export const AVISOS: readonly AvisoDaPlataforma[] = [
   "novaEmpresa",
   "assinaturaEmAtraso",
   "assinaturaCancelada",
+  "pagamentoEstornado",
   "duvidaNova",
   "testeDeAviso",
 ]
@@ -42,6 +45,7 @@ export const PERMISSAO_DO_AVISO: Record<AvisoDaPlataforma, Permissao> = {
   // Dinheiro só para quem cuida de dinheiro.
   assinaturaEmAtraso: "verFinanceiro",
   assinaturaCancelada: "verFinanceiro",
+  pagamentoEstornado: "verFinanceiro",
   // Quem atende duvida, e nao quem ve dinheiro.
   duvidaNova: "atenderDuvida",
   testeDeAviso: "verPainel",
@@ -58,6 +62,8 @@ export const PERMISSAO_DO_AVISO: Record<AvisoDaPlataforma, Permissao> = {
 export const INSISTENTE: ReadonlySet<AvisoDaPlataforma> = new Set([
   "assinaturaEmAtraso",
   "assinaturaCancelada",
+  // Dinheiro que já era nosso voltou: o dono decide na hora se liga para o cliente.
+  "pagamentoEstornado",
   // O cliente perguntou e parou de trabalhar por causa disso.
   "duvidaNova",
 ])
@@ -87,6 +93,7 @@ export function chaveDoAviso(
     tenantId?: string | null
     subscriptionId?: string | null
     fimDoPeriodo?: Date | null
+    pagamentoId?: string | null
     duvidaId?: string | null
     mensagemId?: string | null
   }
@@ -99,6 +106,10 @@ export function chaveDoAviso(
       return `atraso:${dados.subscriptionId ?? "?"}:${periodo}`
     case "assinaturaCancelada":
       return `cancelamento:${dados.subscriptionId ?? "?"}`
+    case "pagamentoEstornado":
+      // Pelo PAGAMENTO: chargeback e estorno do mesmo pagamento são um fato só;
+      // estorno de outro pagamento da mesma empresa é fato novo.
+      return `estorno:${dados.pagamentoId ?? "?"}`
     case "duvidaNova":
       // Pela MENSAGEM, e não pela conversa: a mesma conversa recebe pergunta de
       // volta depois da resposta, e cada uma delas é um fato novo que o dono
@@ -126,6 +137,10 @@ export type DadosDoAviso = {
   plano?: string | null
   valor?: number | null
   indicador?: string | null
+  /** Só no estorno: qual pagamento voltou, se foi contestação no cartão, e se o acesso caiu. */
+  pagamentoId?: string | null
+  contestacao?: boolean | null
+  acessoCortado?: boolean | null
   /** Só na dúvida: para onde o toque leva, e o que a linha diz. */
   duvidaId?: string | null
   /** O resumo da pergunta, já cortado (ver lib/duvida.ts). */
@@ -172,6 +187,13 @@ export function montarAviso(
           : traduzir("assinaturaEmAtraso.body", { empresa })
       case "assinaturaCancelada":
         return traduzir("assinaturaCancelada.body", { empresa, plano: dados.plano ?? "—" })
+      case "pagamentoEstornado": {
+        const chave = dados.contestacao ? "pagamentoEstornado.bodyContestacao" : "pagamentoEstornado.body"
+        const corpo = traduzir(chave, { empresa, plano: dados.plano ?? "—", valor: dados.valor ?? 0 })
+        return dados.acessoCortado
+          ? `${corpo} ${traduzir("pagamentoEstornado.acessoCortado")}`
+          : `${corpo} ${traduzir("pagamentoEstornado.acessoMantido")}`
+      }
       case "duvidaNova":
         // A PERGUNTA no corpo, e não "você tem uma dúvida nova": metade delas o
         // dono responde de cabeça, e ler a pergunta na tela de bloqueio já diz
