@@ -815,7 +815,7 @@ export async function enviarOsPorEmail(id: string): Promise<EstadoDeEnvioDaOs> {
       clientSignatureUrl: true,
       sentAt: true,
       client: { select: { name: true, email: true } },
-      tenant: { select: { name: true } },
+      tenant: { select: { name: true, locale: true } },
     },
   })
   if (!os) return { erro: "naoEncontrado" }
@@ -839,6 +839,7 @@ export async function enviarOsPorEmail(id: string): Promise<EstadoDeEnvioDaOs> {
     numero,
     cliente: os.client?.name ?? "",
     link: `${urlPublica()}/p/${os.clientToken}`,
+    locale: os.tenant.locale,
   })
 
   try {

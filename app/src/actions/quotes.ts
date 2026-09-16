@@ -310,6 +310,7 @@ export async function enviarOrcamentoPorEmail(id: string): Promise<EstadoDeEnvio
     cliente: quote.client?.name ?? quote.clientName,
     validade: quote.validUntil,
     link: `${urlPublica()}/q/${quote.clientToken}`,
+    locale: quote.tenant.locale,
   })
 
   try {

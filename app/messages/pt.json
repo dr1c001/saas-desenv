@@ -910,6 +910,18 @@
     "clientNotice": {
       "subject": "atualização do seu serviço"
     },
+    "envioDeDocumento": {
+      "saudacao": "Olá, {cliente}.",
+      "orcamento": {
+        "segue": "Segue o orçamento {numero} da {empresa}.",
+        "validade": "Válido até {data}.",
+        "link": "Você pode ver o orçamento completo e responder pelo link abaixo:"
+      },
+      "os": {
+        "concluida": "O serviço {numero} foi concluído e o comprovante já está assinado.",
+        "link": "Você pode ver os detalhes pelo link abaixo:"
+      }
+    },
     "trialEnding": {
       "subject": {
         "faltam": "Faltam {n} dias do seu teste no ServiçoOS",

@@ -128,6 +128,7 @@ describe("o texto que o cliente lê", () => {
     cliente: "Auto Posto Rodovia",
     validade: new Date("2026-09-20T12:00:00Z"),
     link: "https://servicoos.com.br/q/tok-123",
+    locale: "pt" as const,
   }
 
   it("traz empresa, número, cliente e link", () => {
@@ -164,10 +165,51 @@ describe("o texto que o cliente lê", () => {
       numero: "OS20260042",
       cliente: "Auto Posto Rodovia",
       link: "https://servicoos.com.br/p/tok-9",
+      locale: "pt",
     })
     expect(texto).toContain("OS20260042")
     expect(texto).toContain("assinado")
     expect(texto.split("\n")).toContain("https://servicoos.com.br/p/tok-9")
+  })
+
+  it("sai no idioma da EMPRESA — a tela de Idioma promete isso para os e-mails", () => {
+    // Até 15/09/2026 estes dois textos eram português fixo: a empresa em
+    // inglês clicava "enviar por e-mail" e o cliente dela recebia "Segue o
+    // orçamento", com a data em pt-BR. PDF, portal e WhatsApp já respeitavam
+    // o idioma. (Achado na auditoria de 13/09/2026.)
+    const orcamento = textoDoOrcamento({ ...dados, locale: "en" })
+    expect(orcamento).toContain("Hello, Auto Posto Rodovia.")
+    expect(orcamento).toContain("quote ORC20260012 from Polar Clima")
+    expect(orcamento).toContain("Valid until 9/20/2026")
+    expect(orcamento).not.toMatch(/Segue|Válido|Olá/)
+
+    const os = textoDaOs({
+      empresa: "Polar Clima",
+      numero: "OS20260042",
+      cliente: "Auto Posto Rodovia",
+      link: "https://servicoos.com.br/p/tok-9",
+      locale: "en",
+    })
+    expect(os).toContain("Service OS20260042 has been completed")
+    expect(os).not.toMatch(/concluído|assinado/)
+  })
+
+  it("em português, o texto é o mesmo de sempre", () => {
+    // Para a maioria das empresas nada muda: as chaves em pt.json repetem as
+    // frases que estavam escritas no código.
+    expect(textoDoOrcamento(dados)).toBe(
+      [
+        "Olá, Auto Posto Rodovia.",
+        "",
+        "Segue o orçamento ORC20260012 da Polar Clima.",
+        "Válido até 20/09/2026.",
+        "",
+        "Você pode ver o orçamento completo e responder pelo link abaixo:",
+        "https://servicoos.com.br/q/tok-123",
+        "",
+        "Polar Clima",
+      ].join("\n")
+    )
   })
 
   it("não promete o que o sistema não cumpre", () => {

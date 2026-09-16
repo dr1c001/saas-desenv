@@ -910,6 +910,18 @@
     "clientNotice": {
       "subject": "update on your service"
     },
+    "envioDeDocumento": {
+      "saudacao": "Hello, {cliente}.",
+      "orcamento": {
+        "segue": "Here is quote {numero} from {empresa}.",
+        "validade": "Valid until {data}.",
+        "link": "You can view the full quote and respond using the link below:"
+      },
+      "os": {
+        "concluida": "Service {numero} has been completed and the signed confirmation is ready.",
+        "link": "You can see the details using the link below:"
+      }
+    },
     "trialEnding": {
       "subject": {
         "faltam": "{n} days left in your ServiçoOS trial",

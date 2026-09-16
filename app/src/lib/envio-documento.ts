@@ -31,6 +31,9 @@
  * Reenvio DELIBERADO continua permitido — é pedido comum ("não chegou, manda
  * de novo") e travar isso seria inventar uma recusa que ninguém pediu.
  */
+import { getTranslator } from "@/lib/i18n"
+import type { Idioma } from "@/lib/mensagens"
+
 export const JANELA_DE_CLIQUE_DUPLO_MS = 30_000
 
 export type ProblemaDeEnvio =
@@ -118,6 +121,16 @@ export function pareceEmail(valor: string): boolean {
  * O link vem por último e sozinho na linha: é a única coisa que a pessoa
  * precisa clicar, e enterrá-lo no meio de um parágrafo é a forma mais rápida de
  * ele não ser visto no celular.
+ *
+ * ─── No idioma da EMPRESA ────────────────────────────────────────────────────
+ *
+ * A tela de Idioma promete "inclusive os e-mails, PDFs e mensagens enviados
+ * aos seus clientes". O PDF, o portal e o WhatsApp já cumpriam; estes dois
+ * textos eram português fixo — a empresa em inglês clicava "enviar por e-mail"
+ * e o cliente dela recebia "Segue o orçamento", com a data em pt-BR. Os textos
+ * moram em messages/*.json, em `emails.envioDeDocumento`, e este módulo segue
+ * PURO: getTranslator só lê os JSONs (precedente: lib/whatsapp.ts).
+ * (Achado na auditoria de 13/09/2026.)
  */
 export function textoDoOrcamento(dados: {
   empresa: string
@@ -125,22 +138,20 @@ export function textoDoOrcamento(dados: {
   cliente: string
   validade: Date | null
   link: string
+  locale: Idioma
 }): string {
+  const t = getTranslator(dados.locale, "emails")
   const linhas = [
-    `Olá, ${dados.cliente}.`,
+    t("envioDeDocumento.saudacao", { cliente: dados.cliente }),
     "",
-    `Segue o orçamento ${dados.numero} da ${dados.empresa}.`,
+    t("envioDeDocumento.orcamento.segue", { numero: dados.numero, empresa: dados.empresa }),
   ]
   if (dados.validade) {
-    linhas.push(`Válido até ${formatarData(dados.validade)}.`)
+    linhas.push(
+      t("envioDeDocumento.orcamento.validade", { data: formatarData(dados.validade, dados.locale) })
+    )
   }
-  linhas.push(
-    "",
-    "Você pode ver o orçamento completo e responder pelo link abaixo:",
-    dados.link,
-    "",
-    dados.empresa
-  )
+  linhas.push("", t("envioDeDocumento.orcamento.link"), dados.link, "", dados.empresa)
   return linhas.join("\n")
 }
 
@@ -150,13 +161,15 @@ export function textoDaOs(dados: {
   numero: string
   cliente: string
   link: string
+  locale: Idioma
 }): string {
+  const t = getTranslator(dados.locale, "emails")
   return [
-    `Olá, ${dados.cliente}.`,
+    t("envioDeDocumento.saudacao", { cliente: dados.cliente }),
     "",
-    `O serviço ${dados.numero} foi concluído e o comprovante já está assinado.`,
+    t("envioDeDocumento.os.concluida", { numero: dados.numero }),
     "",
-    "Você pode ver os detalhes pelo link abaixo:",
+    t("envioDeDocumento.os.link"),
     dados.link,
     "",
     dados.empresa,
@@ -164,6 +177,8 @@ export function textoDaOs(dados: {
 }
 
 /** Data no formato que o cliente final lê, no fuso do negócio. */
-function formatarData(d: Date): string {
-  return new Date(d).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
+function formatarData(d: Date, locale: Idioma): string {
+  return new Date(d).toLocaleDateString(locale === "en" ? "en-US" : "pt-BR", {
+    timeZone: "America/Sao_Paulo",
+  })
 }

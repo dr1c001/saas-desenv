@@ -218,6 +218,20 @@ describe("enviar o orçamento por e-mail", () => {
     expect(texto).toContain(`/q/${quote.clientToken}`)
   })
 
+  it("sai no idioma da EMPRESA — a empresa em inglês manda inglês ao cliente dela", async () => {
+    // O texto era português fixo, e a tela de Idioma prometia o contrário.
+    // (Achado na auditoria de 13/09/2026.)
+    const { quote, tenant } = await comOrcamento()
+    await testDb.db.tenant.update({ where: { id: tenant.id }, data: { locale: "en" } })
+    const { enviarOrcamentoPorEmail } = await acoes()
+
+    await enviarOrcamentoPorEmail(quote.id)
+
+    const texto = mockSendQuote.mock.calls[0][3] as string
+    expect(texto).toContain("Here is quote")
+    expect(texto).not.toContain("Segue o orçamento")
+  })
+
   it("a RESPOSTA do cliente vai para a empresa, não para o suporte", async () => {
     // Todo e-mail em nome da empresa tinha replyTo fixo no suporte do
     // ServiçoOS. Para aviso automático de status tudo bem — não há o que
