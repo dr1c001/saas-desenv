@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { createTestDatabase, type TestDatabase } from "@/test-utils/pglite-db"
+import { VERSAO_CONTRATO } from "@/components/pdf/contrato-pdf"
 import { RecusaExterna } from "@/lib/tempo-limite"
 
 // Uma falha no meio de assinar não pode gerar DUAS cobranças recorrentes.
@@ -39,6 +40,10 @@ beforeAll(async () => {
     },
   }))
   vi.doMock("next/cache", () => ({ revalidatePath: vi.fn() }))
+  // O IP do aceite: o contrato afirma que ele fica registrado.
+  vi.doMock("next/headers", () => ({
+    headers: async () => new Map([["x-forwarded-for", "200.150.10.20"]]),
+  }))
   vi.doMock("next-intl/server", () => ({ getTranslations: async () => (c: string) => c }))
 })
 
@@ -150,5 +155,23 @@ describe("assinar um plano", () => {
     await assinar(plano.id)
 
     expect(mockCriarAssinatura).not.toHaveBeenCalled()
+  })
+})
+
+describe("o aceite fica registrado", () => {
+  // O quadro de fecho do contrato afirma que ficam registrados o IP, a data, a
+  // hora e a identificação da CONTRATANTE. Nada disso existia: o documento que
+  // deveria sustentar a defesa era o que a desmentia.
+  // (Achado na auditoria de 13/09/2026.)
+  it("versão do contrato, data, IP e quem aceitou", async () => {
+    const { tenant, plano } = await cenario()
+
+    await assinar(plano.id)
+
+    const sub = await testDb.db.subscription.findFirst({ where: { tenantId: tenant.id } })
+    expect(sub!.contractVersion).toBe(VERSAO_CONTRATO)
+    expect(sub!.acceptedAt).toBeInstanceOf(Date)
+    expect(sub!.acceptedIp).toBe("200.150.10.20")
+    expect(sub!.acceptedByUserId).toBeTruthy()
   })
 })

@@ -289,7 +289,8 @@
       "ownerNotFound": "Account owner not found.",
       "missingDocument": "Fill in your company's tax ID under Settings before subscribing to a plan.",
       "cancelFailed": "We couldn't cancel right now. Please try again in a moment.",
-      "providerTimeout": "Asaas did not respond in time. The attempt was recorded — wait a few minutes and reload before trying again; if it persists, contact support."
+      "providerTimeout": "Asaas did not respond in time. The attempt was recorded — wait a few minutes and reload before trying again; if it persists, contact support.",
+      "nadaACancelar": "There is no active subscription to cancel. If you are on the free trial, nothing is being charged — access simply pauses when the trial ends."
     }
   },
   "buscaAbas": {
@@ -1707,7 +1708,9 @@
           "asaas": "Payment processing (bank slip, credit card)",
           "nfeio": "Issuance of electronic service invoices (NFS-e)",
           "resend": "Sending transactional emails",
-          "zapi": "WhatsApp messaging integration (when enabled by the company)"
+          "zapi": "WhatsApp messaging integration (when enabled by the company)",
+          "sentry": "Application error monitoring (records the technical context of the failure)",
+          "anthropic": "Natural language processing for the voice assistant, when enabled by the company"
         },
         "p2": "We may also share data when required by law, court order, or to protect the rights, safety, or property of ServiçoOS or third parties."
       },

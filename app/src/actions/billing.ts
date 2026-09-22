@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma"
 import { getTenant } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { clientIp } from "@/lib/rate-limit"
+import { VERSAO_CONTRATO } from "@/components/pdf/contrato-pdf"
 import { ehRecusaCerta } from "@/lib/tempo-limite"
 import { asaas } from "@/lib/asaas"
 import { getTranslations } from "next-intl/server"
@@ -38,7 +40,7 @@ export async function getPlans() {
 }
 
 export async function subscribeToPlan(formData: FormData) {
-  const { tenantId, role } = await getTenant()
+  const { tenantId, role, userId } = await getTenant()
   const tb = await getTranslations("billingReferral")
   const tc = await getTranslations("common")
   if (role !== "OWNER" && role !== "ADMIN") {
@@ -150,6 +152,20 @@ export async function subscribeToPlan(formData: FormData) {
     // apagada e o dono pode tentar de novo; se a gravação do `asaasId` falhar
     // depois, a linha fica lá e a guarda de duplicidade ENXERGA a tentativa —
     // que é exatamente o que faltava. (Auditoria de 13/09/2026.)
+    // ─── O REGISTRO DO ACEITE ─────────────────────────────────────────────
+    //
+    // O quadro de fecho do contrato afirma que ficam registrados "o endereço
+    // IP, a data, a hora e a identificação da CONTRATANTE" para comprovação de
+    // autoria e integridade. Até 22/09/2026 nada disso era gravado em lugar
+    // nenhum: o documento que deveria sustentar a defesa era o que a desmentia.
+    //
+    // Gravado AQUI, no clique de contratar, porque é este o ato de vontade —
+    // a confirmação do pagamento vem depois, por webhook da Asaas, de onde não
+    // há IP de cliente nenhum para registrar.
+    //
+    // A VERSÃO também: `gerarContrato` montava o PDF sempre na versão e na
+    // carência de hoje, então quem assinou a v1.1 (5 dias) baixava um
+    // documento rotulado v1.2 prometendo 30.
     const local = await prisma.subscription.create({
       data: {
         tenantId,
@@ -158,6 +174,13 @@ export async function subscribeToPlan(formData: FormData) {
         billingCycle: cycle,
         currentPeriodStart: new Date(),
         currentPeriodEnd: periodEnd,
+        contractVersion: VERSAO_CONTRATO,
+        acceptedAt: new Date(),
+        // Melhor esforço: não conseguir ler o IP registra menos, e registrar
+        // menos é muito melhor que impedir alguém de assinar por causa de um
+        // cabeçalho. `clientIp` depende do contexto da requisição.
+        acceptedIp: await clientIp().catch(() => null),
+        acceptedByUserId: userId,
       },
       select: { id: true },
     })
@@ -249,15 +272,30 @@ export async function cancelSubscription() {
   const tb = await getTranslations("billingReferral")
   if (role !== "OWNER" && role !== "ADMIN") return
 
+  // ─── QUEM pode cancelar ──────────────────────────────────────────────────
+  //
+  // Era só `status: "ACTIVE"`. Mas o webhook rebaixa a assinatura para
+  // PAST_DUE assim que uma cobrança falha, e ela nasce PENDING até o primeiro
+  // pagamento — nos dois estados a assinatura na Asaas CONTINUA FATURANDO todo
+  // ciclo. O cliente cujo boleto venceu entrava em Cobrança para cancelar,
+  // como o contrato manda, e não achava o botão; chamando a Action direto, ela
+  // voltava calada. O único jeito de parar era falar com o suporte — enquanto
+  // a cláusula de rescisão promete cancelamento pelo próprio sistema.
+  //
+  // TRIAL continua de fora, e não por esquecimento: ali não existe assinatura
+  // na Asaas, não há o que cancelar, e marcar o tenant como CANCELLED
+  // bloquearia quem só está testando. (Achado na auditoria de 13/09/2026.)
   const sub = await prisma.subscription.findFirst({
-    where: { tenantId, status: "ACTIVE" },
+    where: { tenantId, status: { in: ["ACTIVE", "PAST_DUE", "PENDING"] } },
     orderBy: { createdAt: "desc" },
   })
 
-  // Sem assinatura ACTIVE, não há nada real pra cancelar — antes disso o
+  // Sem assinatura viva, não há nada real pra cancelar — antes disso o
   // tenant era marcado CANCELLED incondicionalmente aqui embaixo, o que
   // bloqueava até um tenant só em TRIAL. (Achado em revisão de segurança 2026-07-19.)
-  if (!sub) return
+  if (!sub) {
+    redirect("/billing?error=" + encodeURIComponent(tb("errors.nadaACancelar")))
+  }
 
   if (sub.asaasId) {
     try {
@@ -271,8 +309,10 @@ export async function cancelSubscription() {
     }
   }
 
-  await prisma.subscription.update({
-    where: { id: sub.id },
+  // `updateMany` condicionado: dois cliques quase simultâneos não gravam dois
+  // cancelamentos, e o que já estiver CANCELLED não é reescrito.
+  await prisma.subscription.updateMany({
+    where: { id: sub.id, status: { not: "CANCELLED" } },
     data: { status: "CANCELLED", cancelledAt: new Date() },
   })
 

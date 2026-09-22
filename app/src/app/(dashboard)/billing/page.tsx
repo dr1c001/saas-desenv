@@ -116,7 +116,11 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           </p>
         )}
 
-        {billing?.subscriptionStatus === "ACTIVE" && (
+        {/* O botão aparece em ATRASO e AGUARDANDO também.
+            A assinatura na Asaas fatura nos três estados, e o cliente cujo
+            boleto venceu entrava aqui para cancelar — como a cláusula de
+            rescisão manda — e não encontrava o botão. (Auditoria de 13/09/2026.) */}
+        {["ACTIVE", "PAST_DUE", "PENDING"].includes(billing?.subscriptionStatus ?? "") && (
           <div className="pt-2">
             <CancelSubscriptionButton />
           </div>

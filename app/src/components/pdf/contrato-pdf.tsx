@@ -31,6 +31,38 @@ import { numeroEExtenso } from "@/lib/extenso"
 
 export const VERSAO_CONTRATO = "1.2"
 
+/**
+ * A carência que CADA versão do contrato declara.
+ *
+ * O documento era montado sempre com a carência de hoje: quem assinou a v1.1
+ * (5 dias) baixava um PDF rotulado v1.2 prometendo 30 — e amanhã, se a
+ * carência caísse para 3, o mesmo cliente rebaixaria um contrato dizendo 3. O
+ * cabeçalho deste arquivo já dizia que "o prazo declarado no documento dela
+ * continua sendo o que ela assinou"; faltava o código fazer isso.
+ *
+ * A versão ATUAL não entra aqui: ela vem de PAST_DUE_GRACE_DAYS, a mesma
+ * constante que o bloqueio usa — uma cláusula que promete prazo diferente do
+ * que o sistema aplica é a pior divergência possível neste documento. Este
+ * mapa é só a memória das versões antigas. (Achado na auditoria de 13/09/2026.)
+ */
+export const CARENCIA_POR_VERSAO: Record<string, number> = {
+  "1.0": 5,
+  "1.1": 5,
+}
+
+/** O contrato que ESTA assinatura aceitou, e o prazo que ele declara. */
+export function versaoDoContrato(
+  aceita: string | null | undefined,
+  carenciaAtual: number
+): { versao: string; diasCarencia: number } {
+  if (!aceita || aceita === VERSAO_CONTRATO) {
+    return { versao: VERSAO_CONTRATO, diasCarencia: carenciaAtual }
+  }
+  // Versão aceita que o mapa não conhece: usa o prazo de hoje e não inventa
+  // um número. Melhor um prazo verdadeiro hoje que um chute sobre o passado.
+  return { versao: aceita, diasCarencia: CARENCIA_POR_VERSAO[aceita] ?? carenciaAtual }
+}
+
 /** Comarca da sede da CONTRATADA, usada na eleição de foro (cláusula 11).
  *  Se a sede mudar, muda aqui — e a versão do contrato sobe junto. */
 const COMARCA_CONTRATADA = "Piracicaba/SP"
@@ -69,10 +101,18 @@ export type DadosContrato = {
   plano: { nome: string; valorMensal: number; ciclo: "MENSAL" | "ANUAL"; valorCobrado: number }
   inicioVigencia: Date
   diasCarencia: number
+  /** A versão que ESTA assinatura aceitou. */
+  versao: string
+  /** O aceite registrado. Nulo nas assinaturas anteriores a 22/09/2026 — e aí
+   *  o quadro de fecho não imprime dado que ninguém registrou. */
+  aceite: { em: Date; ip: string } | null
 }
 
 const brl = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const dia = (d: Date) => new Date(d).toLocaleDateString("pt-BR")
+/** Data E HORA: o quadro de fecho promete as duas. */
+const dataHora = (d: Date) =>
+  new Date(d).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })
 
 /** Bloco "o que isso quer dizer" em português claro, ao lado da cláusula.
  *  O usuário pediu que o contrato explicasse passo a passo — cláusula jurídica
@@ -98,7 +138,7 @@ export function ContratoPDF({ dados }: { dados: DadosContrato }) {
             Contrato de Prestação de Serviços de Software (SaaS) e{"\n"}Termo de Tratamento de Dados Pessoais
           </Text>
           <Text style={styles.meta}>
-            Nº {dados.numero} · versão {VERSAO_CONTRATO} · emitido em {dia(dados.emitidoEm)}
+            Nº {dados.numero} · versão {dados.versao} · emitido em {dia(dados.emitidoEm)}
           </Text>
         </View>
 
@@ -301,7 +341,11 @@ export function ContratoPDF({ dados }: { dados: DadosContrato }) {
         <Text style={styles.li}>· Processamento de pagamentos (Asaas Gestão Financeira S.A.);</Text>
         <Text style={styles.li}>· Envio de e-mails transacionais;</Text>
         <Text style={styles.li}>· Emissão de nota fiscal eletrônica, quando habilitada pela CONTRATANTE;</Text>
-        <Text style={styles.li}>· Monitoramento de erros da aplicação.</Text>
+        <Text style={styles.li}>· Monitoramento de erros da aplicação;</Text>
+        <Text style={styles.li}>
+          · Processamento de linguagem natural para a assistente de voz, quando habilitada pela
+          CONTRATANTE.
+        </Text>
         <Text style={styles.p}>
           A relação atualizada de suboperadores pode ser solicitada pelo e-mail de contato. Alterações
           relevantes serão comunicadas com antecedência razoável.
@@ -437,8 +481,10 @@ export function ContratoPDF({ dados }: { dados: DadosContrato }) {
             eficaz nos termos do art. 107 do Código Civil e do art. 10, §2º, da Medida Provisória nº
             2.200-2/2001, ficando registrados, para fins de comprovação de autoria e integridade, o
             endereço IP, a data, a hora e a identificação da CONTRATANTE no momento da confirmação do
-            pagamento. (parecer) Aceito por {empresa.nome} em {dia(dados.inicioVigencia)}, mediante
-            contratação do plano {plano.nome}.
+            pagamento. (parecer) Aceito por {empresa.nome} em{" "}
+            {dados.aceite ? dataHora(dados.aceite.em) : dia(dados.inicioVigencia)}, mediante
+            contratação do plano {plano.nome}
+            {dados.aceite ? `, a partir do endereço IP ${dados.aceite.ip}` : ""}.
           </Text>
         </View>
 

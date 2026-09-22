@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest"
 import React from "react"
 import { renderToBuffer } from "@react-pdf/renderer"
-import { ContratoPDF, VERSAO_CONTRATO, type DadosContrato } from "@/components/pdf/contrato-pdf"
+import {
+  CARENCIA_POR_VERSAO,
+  ContratoPDF,
+  VERSAO_CONTRATO,
+  versaoDoContrato,
+  type DadosContrato,
+} from "@/components/pdf/contrato-pdf"
 
 // Contrato é documento jurídico enviado a cliente real. Se ele falhar ao
 // gerar, o cliente paga e não recebe nada — e o erro só apareceria no log.
@@ -19,6 +25,8 @@ function dados(over: Partial<DadosContrato> = {}): DadosContrato {
     plano: { nome: "Starter", valorMensal: 97, ciclo: "MENSAL", valorCobrado: 97 },
     inicioVigencia: new Date("2026-08-01T12:00:00Z"),
     diasCarencia: 5,
+    versao: VERSAO_CONTRATO,
+    aceite: null,
     ...over,
   }
 }
@@ -93,5 +101,52 @@ describe("contrato em PDF", () => {
     // O cliente recebeu UMA versão específica no dia em que assinou; sem
     // versionar, não há como saber qual texto ele aceitou.
     expect(VERSAO_CONTRATO).toMatch(/^\d+\.\d+$/)
+  })
+})
+
+describe("a versão que o cliente ACEITOU", () => {
+  // O PDF era montado sempre na versão e na carência de HOJE: quem assinou a
+  // v1.1 (5 dias de carência) baixava um documento rotulado v1.2 prometendo
+  // 30 dias. O cabeçalho do módulo já dizia que "o prazo declarado no
+  // documento dela continua sendo o que ela assinou" — faltava o código
+  // fazer isso. (Achado na auditoria de 13/09/2026.)
+  it("a versão atual usa a carência VIGENTE, e não um número escrito à mão", () => {
+    // A carência de hoje vem de PAST_DUE_GRACE_DAYS, a mesma constante do
+    // bloqueio. Congelá-la aqui faria o contrato prometer um prazo que o
+    // sistema não aplica.
+    expect(versaoDoContrato(VERSAO_CONTRATO, 30)).toEqual({ versao: VERSAO_CONTRATO, diasCarencia: 30 })
+    expect(versaoDoContrato(VERSAO_CONTRATO, 3).diasCarencia).toBe(3)
+  })
+
+  it("quem assinou a v1.1 recebe v1.1, com os 5 dias que ela declarava", () => {
+    expect(versaoDoContrato("1.1", 30)).toEqual({ versao: "1.1", diasCarencia: 5 })
+  })
+
+  it("assinatura SEM versão registrada (anterior ao registro) cai na atual", () => {
+    expect(versaoDoContrato(null, 30)).toEqual({ versao: VERSAO_CONTRATO, diasCarencia: 30 })
+  })
+
+  it("versão desconhecida não inventa prazo: usa o de hoje", () => {
+    expect(versaoDoContrato("9.9", 30)).toEqual({ versao: "9.9", diasCarencia: 30 })
+  })
+
+  it("a versão ATUAL não entra no mapa de versões antigas", () => {
+    // Se entrasse, o prazo do contrato pararia de acompanhar a constante do
+    // bloqueio — e voltaria a divergir do que o sistema aplica.
+    expect(CARENCIA_POR_VERSAO[VERSAO_CONTRATO]).toBeUndefined()
+  })
+})
+
+describe("o quadro de fecho", () => {
+  it("gera com o aceite registrado — IP, data e hora", async () => {
+    const buf = await gerar(
+      dados({ aceite: { em: new Date("2026-09-22T14:30:00Z"), ip: "200.150.10.20" } })
+    )
+    expect(buf.length).toBeGreaterThan(1000)
+  })
+
+  it("e gera sem ele, para quem assinou antes do registro existir", async () => {
+    const buf = await gerar(dados({ aceite: null }))
+    expect(buf.length).toBeGreaterThan(1000)
   })
 })

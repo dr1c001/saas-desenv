@@ -300,6 +300,19 @@ model Subscription {
   // — exatamente o defeito que o cron de NPS já teve (seção 9). Zera quando o
   // pagamento entra.
   pastDueWarningsSent    Int                @default(0)
+  /// O REGISTRO DO ACEITE — o que o quadro de fecho do contrato afirma que
+  /// fica guardado: versao aceita, data, hora, IP e quem aceitou.
+  ///
+  /// A VERSAO importa alem da prova: `gerarContrato` montava o PDF sempre na
+  /// versao e na carencia de HOJE, entao quem assinou a v1.1 (5 dias de
+  /// carencia) baixava um documento rotulado v1.2 prometendo 30.
+  ///
+  /// Nulo nas assinaturas anteriores a 22/09/2026: ninguem inventa um IP que
+  /// nao foi registrado.
+  contractVersion        String?
+  acceptedAt             DateTime?
+  acceptedIp             String?
+  acceptedByUserId       String?
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 

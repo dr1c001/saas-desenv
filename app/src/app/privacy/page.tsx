@@ -100,6 +100,15 @@ export default async function PrivacyPage() {
                 <tr><td>nfe.io</td><td>{t("privacy.section4.table.nfeio")}</td></tr>
                 <tr><td>Resend</td><td>{t("privacy.section4.table.resend")}</td></tr>
                 <tr><td>Z-API</td><td>{t("privacy.section4.table.zapi")}</td></tr>
+                {/* Os dois que faltavam. Estão ligados no código desde sempre —
+                    o Sentry captura payload de erro dos dois lados, e a API da
+                    Anthropic recebe a conversa e o resultado das ferramentas
+                    (nome de cliente, OS, valores) a cada comando da assistente.
+                    Um titular que exerce o art. 18, VII recebia uma lista de
+                    seis nomes, e dois estavam faltando.
+                    (Achado na auditoria de 13/09/2026.) */}
+                <tr><td>Sentry</td><td>{t("privacy.section4.table.sentry")}</td></tr>
+                <tr><td>Anthropic</td><td>{t("privacy.section4.table.anthropic")}</td></tr>
               </tbody>
             </table>
             <p>{t("privacy.section4.p2")}</p>
