@@ -62,9 +62,14 @@ export async function cobrarVencidas(
   agora: Date,
   // Além do teto de mensagens, um teto de TEMPO: 200 chamadas ao Z-API com
   // 8 s de timeout cada seriam 1600 s. Ver lib/tempo-limite.ts.
-  orcamentoMs: number = ORCAMENTO_REGUA_MS
+  orcamentoMs: number = ORCAMENTO_REGUA_MS,
+  // O relógio, injetável. O teste que cronometra isto contra o relógio de
+  // parede fica à mercê de uma consulta lenta do banco e falha sozinho de vez
+  // em quando — e teste instável é pior que teste nenhum, porque ensina a
+  // ignorar o vermelho. Com o relógio de fora, o orçamento é exato.
+  agoraMs: () => number = Date.now
 ): Promise<ResultadoDaRegua> {
-  const fim = Date.now() + orcamentoMs
+  const fim = agoraMs() + orcamentoMs
   const resultado: ResultadoDaRegua = { enviadas: 0, erros: 0 }
 
   // Só quem LIGOU. `dunningConfig` nulo é a esmagadora maioria, e filtrar no
@@ -89,7 +94,7 @@ export async function cobrarVencidas(
   })
 
   for (const empresa of empresas) {
-    if (resultado.enviadas >= MAX_POR_EXECUCAO || Date.now() > fim) break
+    if (resultado.enviadas >= MAX_POR_EXECUCAO || agoraMs() > fim) break
 
     try {
       const config = lerRegua(empresa.dunningConfig)
@@ -202,7 +207,7 @@ export async function cobrarVencidas(
         .filter((x): x is NonNullable<typeof x> => x !== null)
 
       for (const grupo of agruparPorPagador(comPagador)) {
-        if (resultado.enviadas >= MAX_POR_EXECUCAO || Date.now() > fim) break
+        if (resultado.enviadas >= MAX_POR_EXECUCAO || agoraMs() > fim) break
 
         const decisao = decidirCobranca({
           // O TOM e o degrau saem da conta MAIS ATRASADA do grupo: uma dívida

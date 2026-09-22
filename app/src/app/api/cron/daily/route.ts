@@ -5,9 +5,12 @@ import {
   sendTrialEndingEmail,
   sendPastDueWarningEmail,
   avisarFalhaDoCron,
+  avisarPendenciaDeConfiguracao,
 } from "@/lib/resend"
 import { enviarPesquisasDeSatisfacao } from "@/lib/nps-fila"
 import { conferirDmarc } from "@/lib/conferir-dmarc"
+import { NOME_DMARC } from "@/lib/dmarc"
+import { avisarPendenciaUmaVez } from "@/lib/pendencia"
 import { confirmarPagamento } from "@/lib/confirmar-pagamento"
 import { decidirAviso, diasDeAtraso, AVISOS_ATRASO } from "@/lib/past-due"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
@@ -571,19 +574,42 @@ export async function GET(req: NextRequest) {
   // ── DMARC do domínio de e-mail ───────────────────────────────────────────
   // Sem política publicada qualquer um forja noreply@servicoos.com.br — e o
   // sistema manda cobrança em nome das empresas. Ninguém vê isso em log: a
-  // Resend devolve sucesso porque ELA aceitou. Conferir uma vez por dia e
-  // contar como erro é o que leva o aviso ao fundador (CronRun.ok=false →
-  // /api/health 503 → avisarFalhaDoCron). Por último de propósito: é a etapa
-  // menos urgente, e não pode roubar tempo das etapas de dinheiro.
-  // (Achado na auditoria de 13/09/2026.)
+  // Resend devolve sucesso porque ELA aceitou.
+  //
+  // É uma PENDÊNCIA DE CONFIGURAÇÃO, e não uma tarefa que falhou. Entre 15 e
+  // 22/09/2026 isto contava erro do cron, e o preço foi alto: CronRun.ok
+  // virou false todo dia, `/api/health` passou a devolver 503 dizendo "cron
+  // degradado" (ele procura a última execução com ok=true) com o sistema
+  // inteiro de pé, e o fundador recebia um e-mail vermelho diário dizendo que
+  // as tarefas não tinham rodado — com as dezessete completas. Ver
+  // lib/pendencia.ts. (Achado na auditoria de 13/09/2026; corrigido o remédio
+  // em 22/09/2026.)
+  //
+  // Por último de propósito: é a etapa menos urgente, e não pode roubar tempo
+  // das etapas de dinheiro.
   try {
     const veredito = await conferirDmarc()
     results.dmarc = veredito.estado
     if (veredito.precisaDeAcao) {
       console.error("[dmarc]", veredito.motivo)
-      results.errors++
+      // O estado entra na chave: "ausente" e "fraca" são fatos diferentes.
+      await avisarPendenciaUmaVez({
+        chave: `config:dmarc:${veredito.estado}`,
+        detalhe: veredito.motivo,
+        enviar: () =>
+          avisarPendenciaDeConfiguracao({
+            titulo: "política DMARC do domínio de e-mail",
+            motivo: veredito.motivo,
+            comoResolver:
+              `No registro.br, na zona de servicoos.com.br, publique um registro TXT com nome "_dmarc" ` +
+              `e valor: v=DMARC1; p=quarantine; rua=mailto:suporte@servicoos.com.br — ` +
+              `um registro só (dois fazem os provedores ignorarem os dois). ` +
+              `O cron confere ${NOME_DMARC} todo dia e para de avisar quando estiver publicado.`,
+          }),
+      })
     }
   } catch (err) {
+    // Aqui SIM é erro: a checagem em si não rodou.
     console.error("[dmarc] falhou:", err)
     results.errors++
   }

@@ -1080,17 +1080,31 @@ devolve sucesso porque ELA aceitou a mensagem.
 2. **No código: o vigia.** `lib/dmarc.ts` (regra pura: ausente / fraca / ok)
    e `lib/conferir-dmarc.ts` (resolve o TXT com timeout de 2 s; NXDOMAIN e
    ENODATA = ausente; DNS mudo = indisponível, sem contar erro). O cron
-   diário confere por último e, se a política está ausente ou fraca, conta
-   como erro — o que já faz `CronRun.ok=false`, `/api/health` responder 503 e
-   `avisarFalhaDoCron` mandar o e-mail ao fundador. A linha gravada da
+   diário confere por último e, se a política está ausente ou fraca, avisa o
+   fundador UMA VEZ por estado (`lib/pendencia.ts`). A linha gravada da
    execução ganhou `dmarc <estado>`. E `lib/resend.ts` passou a montar o FROM
    a partir de `DOMINIO_DE_EMAIL`, do mesmo módulo: o domínio conferido é o
    domínio do remetente por construção.
 
-**Consequência esperada:** até o TXT ser publicado, o cron reporta um erro por
-dia e o fundador recebe o aviso — é o comportamento desejado, porque foi a
-invisibilidade que deixou isto passar. Publicado o registro, o próximo cron
-grava `dmarc ok` e os avisos cessam.
+**O remédio errado, e o que ele custou — 15 a 22/09/2026.** A primeira versão
+contava a política ausente como `results.errors++`, e o texto desta seção dizia
+que um erro por dia era "o comportamento desejado". Não era. `CronRun.ok` virou
+`false` todo dia; `/api/health` — que procura a última execução com `ok=true` —
+passou a devolver **503 dizendo "cron degradado" por 146 horas**, com o banco
+respondendo e as dezessete etapas completas todos os dias; e o fundador recebia
+um e-mail vermelho diário dizendo "parte das tarefas de fundo não rodou", com
+todas tendo rodado. Um monitor externo teria acusado queda a semana inteira.
+
+A regra que faltava já estava escrita em `lib/saude.ts`, sobre atraso normal do
+cron: *alarme que dispara pelo que não é queda é o alarme que a pessoa aprende
+a ignorar — e aí ele não funciona no dia de verdade.*
+
+**A separação, desde 22/09/2026:** `CronRun.ok` responde UMA pergunta — as
+tarefas rodaram? Pendência de configuração é outro canal: não toca em `ok`, não
+toca em `/api/health`, e avisa uma vez por estado (a chave única de
+`PlatformAlert` faz a dedup, o mesmo mecanismo de `avisarPlataforma`), com
+e-mail próprio que diz o que falta e como resolver. Falha da CHECAGEM em si
+continua sendo erro do cron: aí uma tarefa realmente não rodou.
 
 ---
 

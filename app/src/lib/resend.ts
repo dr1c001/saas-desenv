@@ -594,6 +594,45 @@ export async function sendDunningEmail(
  * Vai em texto simples e sem tradução de propósito: é e-mail de máquina para
  * uma pessoa só, o dono, e o que importa é chegar.
  */
+/**
+ * Uma PENDÊNCIA DE CONFIGURAÇÃO — não é o cron falhando.
+ *
+ * Existe separada de `avisarFalhaDoCron` porque os dois fatos são diferentes e
+ * pedem reações diferentes. "Uma tarefa de fundo não rodou" é urgente e pode
+ * custar dinheiro (cobrança que não sai, OS de contrato que não nasce).
+ * "Falta publicar um registro de DNS" é importante, não é queda, e ninguém
+ * precisa acordar às 3h por causa disso.
+ *
+ * Mandar o alarme errado foi o que aconteceu com o vigia de DMARC entre 15 e
+ * 22/09/2026: e-mail vermelho dizendo que as tarefas não rodaram, todo dia,
+ * com as dezessete completas. Ver lib/pendencia.ts.
+ */
+export async function avisarPendenciaDeConfiguracao(args: {
+  titulo: string
+  motivo: string
+  comoResolver: string
+}) {
+  return send({
+    from: FROM,
+    replyTo: REPLY_TO,
+    to: EMAIL_FUNDADOR,
+    subject: `[ServiçoOS] Configuração pendente: ${args.titulo}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+        <h2 style="color:#b45309;margin-bottom:8px">Falta configurar: ${escaparHtml(args.titulo)}</h2>
+        <p style="color:#374151;line-height:1.6">
+          O sistema está no ar e as tarefas de fundo rodaram normalmente. Isto
+          aqui é uma configuração que ainda falta — e que só você pode resolver.
+        </p>
+        <p style="color:#374151;line-height:1.6"><strong>O que está faltando:</strong><br>${escaparHtml(args.motivo)}</p>
+        <p style="color:#374151;line-height:1.6"><strong>Como resolver:</strong><br>${escaparHtml(args.comoResolver)}</p>
+        <p style="color:#6b7280;font-size:13px">
+          Este aviso vai UMA VEZ. Se a situação mudar, você recebe outro.
+        </p>
+      </div>`,
+  })
+}
+
 export async function avisarFalhaDoCron(
   erros: number,
   detalhe: Record<string, unknown>

@@ -118,7 +118,12 @@ describe("o vigia e o remetente falam do mesmo domínio", () => {
   it("o cron confere todo dia, conta como erro quando precisa de ação, e grava o estado", async () => {
     const fonte = await ler("src/app/api/cron/daily/route.ts")
     expect(fonte).toContain("await conferirDmarc()")
-    expect(fonte).toMatch(/if \(veredito\.precisaDeAcao\) \{[\s\S]*?results\.errors\+\+/)
+    // A política ausente é PENDÊNCIA, e não erro do cron — ver pendencia.test.ts,
+    // que é quem trava isso. Esta linha afirmava o contrário até 22/09/2026, e
+    // passava por acidente: o `[\s\S]*?` atravessava até o `results.errors++`
+    // do catch, então ela teria continuado verde com o defeito corrigido OU no
+    // lugar. Asserção que passa nos dois casos não protege nada.
+    expect(fonte).toContain("avisarPendenciaUmaVez({")
     expect(fonte).toContain("`dmarc ${results.dmarc}`")
   })
 

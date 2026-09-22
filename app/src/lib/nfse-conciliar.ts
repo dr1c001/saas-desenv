@@ -39,10 +39,12 @@ export type ResumoDaConciliacao = {
 const MAX_POR_RODADA = 30
 
 export async function conciliarNotasPendentes(
-  orcamentoMs: number = ORCAMENTO_CONCILIACAO_MS
+  orcamentoMs: number = ORCAMENTO_CONCILIACAO_MS,
+  /** Injetável para o teste não depender do relógio de parede. Ver cobrar-vencidas.ts. */
+  agoraMs: () => number = Date.now
 ): Promise<ResumoDaConciliacao> {
   const resumo: ResumoDaConciliacao = { consultadas: 0, emitidas: 0, rejeitadas: 0, erros: 0 }
-  const fim = Date.now() + orcamentoMs
+  const fim = agoraMs() + orcamentoMs
 
   const pendentes = await prisma.serviceOrder.findMany({
     where: {
@@ -62,7 +64,7 @@ export async function conciliarNotasPendentes(
   })
 
   for (const os of pendentes) {
-    if (Date.now() > fim) break
+    if (agoraMs() > fim) break
     const estadoAtual = estadoDaNota(os.nfseStatus)
     if (!devePerguntar(estadoAtual, os.nfseChecks)) continue
     if (!os.tenant.nfeioCompanyId || !os.nfseId) continue

@@ -53,9 +53,9 @@ beforeEach(async () => {
 })
 
 /** Importa depois dos mocks — doMock não é içado. */
-const rodar = async (agora: Date, orcamentoMs?: number) => {
+const rodar = async (agora: Date, orcamentoMs?: number, agoraMs?: () => number) => {
   const { cobrarVencidas } = await import("@/lib/cobrar-vencidas")
-  return cobrarVencidas(agora, orcamentoMs)
+  return cobrarVencidas(agora, orcamentoMs, agoraMs)
 }
 
 const HOJE = new Date("2026-09-10T12:00:00Z")
@@ -721,17 +721,24 @@ describe("o orçamento de tempo", () => {
     // 200 chamadas ao Z-API com 8 s de timeout cada seriam 1600 s. O teto de
     // mensagens não protege disso; o de tempo protege. (Auditoria de 13/09/2026.)
     const empresa = await empresaComRegua()
-    // Dois pagadores diferentes = dois grupos = duas mensagens.
+    // Três pagadores diferentes = três grupos.
     await contaDe(empresa.id, { diasAtras: 7, clienteEmail: "a@ex.com" })
     await contaDe(empresa.id, { diasAtras: 7, clienteEmail: "b@ex.com" })
+    await contaDe(empresa.id, { diasAtras: 7, clienteEmail: "c@ex.com" })
+    // Relógio FALSO: cada envio "custa" 8 s — o timeout do Z-API. Nada aqui
+    // depende de quanto o banco demora, então o resultado é sempre o mesmo.
+    // Com o relógio de parede este teste falhava sozinho de vez em quando.
+    let relogio = 0
     mockWhats.mockImplementation(async () => {
-      await new Promise((r) => setTimeout(r, 30))
+      relogio += 8_000
       return true
     })
 
-    const r = await rodar(HOJE, 10)
+    const r = await rodar(HOJE, 15_000, () => relogio)
 
-    expect(r.enviadas).toBe(1)
-    expect(mockWhats).toHaveBeenCalledTimes(1)
+    // Primeiro grupo: relógio em 0, passa. Segundo: 8 s < 15 s, passa.
+    // Terceiro: 16 s > 15 s, o orçamento corta. É o teto que decide.
+    expect(r.enviadas).toBe(2)
+    expect(mockWhats).toHaveBeenCalledTimes(2)
   })
 })
