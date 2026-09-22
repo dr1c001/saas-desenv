@@ -47,7 +47,7 @@ function respondeCom(conteudo: Buffer, ok = true) {
   )
 }
 
-async function cenario(opts: { nfseUrl?: string | null } = {}) {
+async function cenario(opts: { nfseUrl?: string | null; nfseXmlUrl?: string | null } = {}) {
   const tenant = await testDb.db.tenant.create({ data: { name: "Polar Clima" } })
   const cliente = await testDb.db.client.create({
     data: { tenantId: tenant.id, name: "Auto Posto Rodovia" },
@@ -64,6 +64,7 @@ async function cenario(opts: { nfseUrl?: string | null } = {}) {
       nfseNumber: "2026000123",
       nfseStatus: "Issued",
       nfseUrl: opts.nfseUrl === undefined ? "https://emissor/nota.pdf" : opts.nfseUrl,
+      nfseXmlUrl: opts.nfseXmlUrl ?? null,
     },
   })
   return { tenant, os }
@@ -249,13 +250,49 @@ describe("baixar a nota depois — o caso do cliente que pede de novo", () => {
     expect(await arquivoDaNota(tenant.id, os.id, "pdf")).toBeNull()
   })
 
-  it("o XML antigo NÃO é recuperável, e o código não finge que é", async () => {
-    // Só o PDF tem URL guardada em campo (`nfseUrl`); a do XML vem na resposta
-    // do emissor e não era gravada. Nota emitida antes desta mudança perdeu o
-    // XML — e devolver o PDF no lugar dele seria pior do que devolver nada.
+  it("o XML de nota ANTIGA não é recuperável, e o código não finge que é", async () => {
+    // Nota emitida antes de `nfseXmlUrl` existir (22/09/2026) não tem endereço
+    // do XML guardado em lugar nenhum — e devolver o PDF no lugar dele seria
+    // pior do que devolver nada.
     const { tenant, os } = await cenario()
     const { arquivoDaNota } = await lib()
 
     expect(await arquivoDaNota(tenant.id, os.id, "xml")).toBeNull()
+  })
+
+  it("mas o XML COM endereço guardado é recuperado e arquivado, igual ao PDF", async () => {
+    // O XML é o documento que vale juridicamente, e a empresa é obrigada a
+    // guardá-lo por cinco anos. Ele ficava de fora só porque a URL não era
+    // gravada. (Achado na auditoria de 13/09/2026.)
+    const { tenant, os } = await cenario({ nfseXmlUrl: "https://emissor/nota.xml" })
+    respondeCom(documento)
+    const { arquivoDaNota } = await lib()
+
+    const r = await arquivoDaNota(tenant.id, os.id, "xml")
+
+    expect(r!.conteudo.length).toBe(documento.length)
+    expect(r!.nomeArquivo).toMatch(/\.xml$/)
+    // E ficou GUARDADO: da próxima vez não se fala com o emissor.
+    const depois = await testDb.db.serviceOrder.findUnique({ where: { id: os.id } })
+    expect(depois!.nfseXmlPath).toBe(`notas-fiscais/${tenant.id}/${os.id}.xml`)
+  })
+})
+
+describe("faltouArquivar", () => {
+  // A regra que o chamador usa para CONTAR o que não entrou. Antes o resultado
+  // de `arquivarNota` era jogado fora, e a falha sumia em silêncio.
+  it("o que foi oferecido e não entrou", async () => {
+    const { faltouArquivar } = await lib()
+    const ambos = { pdfUrl: "a", xmlUrl: "b" }
+
+    expect(faltouArquivar(ambos, { pdf: true, xml: true })).toEqual([])
+    expect(faltouArquivar(ambos, { pdf: true, xml: false })).toEqual(["xml"])
+    expect(faltouArquivar(ambos, { pdf: false, xml: false })).toEqual(["pdf", "xml"])
+  })
+
+  it("o que o emissor NÃO ofereceu não é cobrado", async () => {
+    const { faltouArquivar } = await lib()
+    expect(faltouArquivar({ pdfUrl: "a", xmlUrl: null }, { pdf: true, xml: false })).toEqual([])
+    expect(faltouArquivar({ pdfUrl: null, xmlUrl: null }, { pdf: false, xml: false })).toEqual([])
   })
 })

@@ -989,7 +989,9 @@
     "inviteLinkUsed": "Este convite já foi usado ou expirou. Se você já criou sua senha, basta entrar abaixo. Se ainda não criou, use \"Esqueci minha senha\" com o e-mail que recebeu o convite — não crie uma empresa nova.",
     "recoveryLinkUsed": "Este link de recuperação já foi usado ou expirou. Peça um novo em \"Esqueci minha senha\".",
     "funcaoDesligada": "Esta função está desligada para a sua empresa. Fale com o suporte.",
-    "nfseSemResposta": "O emissor não respondeu ou a resposta se perdeu. A nota pode ter sido emitida — est[[osFim]] [[os]] ficou travada de propósito; fale com o suporte antes de tentar de novo."
+    "nfseSemResposta": "O emissor não respondeu ou a resposta se perdeu. A nota pode ter sido emitida — est[[osFim]] [[os]] ficou travada de propósito; fale com o suporte antes de tentar de novo.",
+    "fiscalJaConfigurado": "A empresa já está cadastrada no emissor fiscal. Para trocar os dados, fale com o suporte — cadastrar de novo criaria uma segunda empresa e o certificado ficaria na antiga.",
+    "fiscalSemResposta": "O emissor fiscal não respondeu ou a resposta se perdeu. A empresa pode ter sido criada — o cadastro ficou travado de propósito; fale com o suporte antes de tentar de novo."
   },
   "estoque": {
     "title": "Estoque de peças",
@@ -2806,6 +2808,10 @@
         "credenciamento": "• Credenciamento na prefeitura da sua cidade. Muitos municípios exigem que você autorize o emissor no sistema deles antes da primeira nota. Isso é feito por você, com o login da sua empresa no site da prefeitura.",
         "inscricao": "• Inscrição municipal ativa e correta. É o número que você informa no formulário abaixo.",
         "rodape": "Não conseguimos fazer esses três por você: são credenciais e cadastros da sua empresa junto ao município."
+      },
+      "travado": {
+        "title": "Cadastro travado — fale com o suporte",
+        "explicacao": "O cadastro foi enviado ao emissor fiscal e a resposta se perdeu. A empresa pode ter sido criada lá; tentar de novo criaria uma segunda, e o certificado digital ficaria na antiga. O suporte confere e destrava."
       }
     }
   },

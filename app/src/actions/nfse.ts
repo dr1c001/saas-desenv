@@ -41,7 +41,29 @@ export async function registerFiscalCompany(formData: FormData) {
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } })
   if (!tenant) throw new Error((await getTranslations("errors"))("tenantNotFound"))
 
-  const company = await nfeio.createCompany({
+  // ─── RESERVA antes de cadastrar no emissor ──────────────────────────────
+  //
+  // O certificado A1 é instalado NA empresa do emissor, pelo id (ver
+  // actions/certificado.ts). Uma SEGUNDA empresa na nfe.io — clique duplo
+  // antes do redirect, retry, ou chamada direta à Action, que é endereço HTTP
+  // — sobrescrevia o id e orfanava o certificado: toda nota passava a sair
+  // contra uma empresa sem certificado, falhando, com a tela mostrando
+  // "Configurado" em verde. A tela escondia o formulário; a Action não tinha
+  // guarda nenhuma.
+  //
+  // Mesmo molde da reserva de `emitNfse` logo abaixo: `updateMany` condicionado
+  // a `nfeioCompanyId: null`. Quem decide quem chegou primeiro é o Postgres, e
+  // o segundo recebe count 0. (Achado na auditoria de 13/09/2026.)
+  const RESERVA = `reservando:${tenantId}`
+  const reserva = await prisma.tenant.updateMany({
+    where: { id: tenantId, nfeioCompanyId: null },
+    data: { nfeioCompanyId: RESERVA },
+  })
+  if (reserva.count === 0) throw new Error((await getTranslations("errors"))("fiscalJaConfigurado"))
+
+  let company
+  try {
+    company = await nfeio.createCompany({
     name: tenant.name,
     federalTaxNumber: cnpj,
     municipalTaxNumber: municipalTaxNumber || undefined,
@@ -57,7 +79,23 @@ export async function registerFiscalCompany(formData: FormData) {
     },
     issRate,
     rpsSerialNumber: "1",
-  })
+    })
+  } catch (e) {
+    // A mesma distinção de `emitNfse`: o emissor RESPONDEU e recusou (dado
+    // inválido no formulário) devolve a reserva, para a pessoa corrigir e
+    // tentar de novo. Tempo esgotado, conexão caída ou 5xx é "não sei se a
+    // empresa foi criada" — e aí a reserva FICA: criar a segunda seria
+    // orfanar o certificado. O suporte destrava.
+    if (ehRecusaCerta(e)) {
+      await prisma.tenant.updateMany({
+        where: { id: tenantId, nfeioCompanyId: RESERVA },
+        data: { nfeioCompanyId: null },
+      })
+      throw e
+    }
+    console.error(`[fiscal] cadastro sem resposta conclusiva no tenant ${tenantId} — reserva mantida:`, e)
+    throw new Error((await getTranslations("errors"))("fiscalSemResposta"))
+  }
 
   await prisma.tenant.update({
     where: { id: tenantId },
@@ -228,6 +266,9 @@ export async function emitNfse(orderId: string) {
       nfseIssuedAt: new Date(),
       nfseStatus: invoice.flowStatus,
       nfseNumber: invoice.number ?? null,
+      // O endereço do XML, guardado desde já: sem ele um arquivamento que
+      // falha perde o documento que vale juridicamente. Ver lib/arquivo-da-nota.ts.
+      nfseXmlUrl: invoice.xml?.url ?? null,
       nfseUrl: invoice.pdf?.url ?? null,
       status: "INVOICED",
     },

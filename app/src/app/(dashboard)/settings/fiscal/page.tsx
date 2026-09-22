@@ -6,7 +6,7 @@ import { temRecurso } from "@/lib/plan"
 import { getTranslations } from "next-intl/server"
 import { redirect } from "next/navigation"
 import { buttonVariants } from "@/components/ui/button"
-import { CheckCircle2, Building2, FileText, Lock } from "lucide-react"
+import { CheckCircle2, Building2, FileText, Lock, AlertTriangle } from "lucide-react"
 
 export default async function FiscalSettingsPage() {
   const { tenantId, role } = await getTenant()
@@ -18,7 +18,13 @@ export default async function FiscalSettingsPage() {
 
   const t = await getTranslations("settingsAdvanced.fiscal")
   const fiscal = await getFiscalStatus()
-  const isConfigured = !!fiscal?.nfeioCompanyId
+  // A RESERVA presa (`reservando:<tenantId>`, ver actions/nfse.ts) não é
+  // empresa cadastrada: é o cadastro que ficou sem resposta conclusiva do
+  // emissor. Tratá-la como "configurado" mostraria o selo verde com a string
+  // da reserva no lugar do id, e esconderia o formulário — exatamente quando a
+  // pessoa precisa saber que algo travou. (Achado na auditoria de 13/09/2026.)
+  const travado = fiscal?.nfeioCompanyId?.startsWith("reservando:") ?? false
+  const isConfigured = !!fiscal?.nfeioCompanyId && !travado
   const tCert = await getTranslations("certificado")
   const cert = await estadoDoCertificado()
 
@@ -34,6 +40,16 @@ export default async function FiscalSettingsPage() {
           {t("subtitle")}
         </p>
       </div>
+
+      {travado && (
+        <div className="rounded-lg border border-amber-600 bg-amber-50 dark:bg-amber-950 p-6 space-y-2">
+          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-semibold">
+            <AlertTriangle className="size-5" />
+            {t("travado.title")}
+          </div>
+          <p className="text-sm text-muted-foreground">{t("travado.explicacao")}</p>
+        </div>
+      )}
 
       {isConfigured ? (
         <div className="rounded-lg border border-green-600 bg-green-50 dark:bg-green-950 p-6 space-y-2">

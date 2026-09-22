@@ -64,6 +64,29 @@ async function baixar(url: string): Promise<Buffer | null> {
 export type ResultadoDoArquivamento = { pdf: boolean; xml: boolean }
 
 /**
+ * O que o emissor OFERECEU e não entrou no arquivo.
+ *
+ * Existe porque `arquivarNota` nunca lança — ela engole a falha de rede e de
+ * storage de propósito, para a conciliação das outras notas não cair junto — e
+ * o resultado dela era JOGADO FORA por quem chamava. A prefeitura aceitava, a
+ * OS era gravada com o estado final, o arquivamento falhava em silêncio, e no
+ * dia seguinte a nota já não voltava à fila: o documento sumia sem contagem e
+ * sem aviso, com o cron marcando o dia como bom.
+ *
+ * Regra pura para quem chama poder CONTAR o que faltou, e tentar de novo.
+ * (Achado na auditoria de 13/09/2026.)
+ */
+export function faltouArquivar(
+  oferecido: { pdfUrl?: string | null; xmlUrl?: string | null },
+  feito: ResultadoDoArquivamento
+): ("pdf" | "xml")[] {
+  const faltou: ("pdf" | "xml")[] = []
+  if (oferecido.pdfUrl && !feito.pdf) faltou.push("pdf")
+  if (oferecido.xmlUrl && !feito.xml) faltou.push("xml")
+  return faltou
+}
+
+/**
  * Baixa o PDF e o XML do emissor e guarda no storage.
  *
  * Só grava o caminho na OS quando o arquivo entrou de verdade — um caminho
@@ -143,6 +166,7 @@ export async function arquivoDaNota(
       createdAt: true,
       nfseNumber: true,
       nfseUrl: true,
+      nfseXmlUrl: true,
       nfsePdfPath: true,
       nfseXmlPath: true,
     },
@@ -159,15 +183,24 @@ export async function arquivoDaNota(
     // Cai para o emissor em vez de devolver "não existe" — a nota existe.
   }
 
-  // Arquivamento tardio. O XML não tem URL guardada (só o PDF tem, em
-  // `nfseUrl`), então só o PDF é recuperável desta forma.
-  if (tipo === "pdf" && os.nfseUrl) {
-    const buf = await baixar(os.nfseUrl)
+  // Arquivamento tardio, para os DOIS tipos.
+  //
+  // O XML ficava de fora porque a URL dele não era guardada em lugar nenhum —
+  // vinha na resposta do emissor e morria com a variável. Com `nfseXmlUrl` em
+  // coluna (22/09/2026), o documento que vale juridicamente é recuperável pelo
+  // mesmo caminho do PDF. Nota emitida ANTES dessa coluna não tem a URL, e
+  // segue sem XML recuperável — não há de onde tirar.
+  const urlDoEmissor = tipo === "pdf" ? os.nfseUrl : os.nfseXmlUrl
+  if (urlDoEmissor) {
+    const buf = await baixar(urlDoEmissor)
     if (!buf) return null
     try {
-      const caminho = caminhoDaNota(tenantId, os.id, "pdf")
-      await enviarArquivo(caminho, buf, "application/pdf")
-      await prisma.serviceOrder.update({ where: { id: os.id }, data: { nfsePdfPath: caminho } })
+      const caminho = caminhoDaNota(tenantId, os.id, tipo)
+      await enviarArquivo(caminho, buf, tipo === "pdf" ? "application/pdf" : "application/xml")
+      await prisma.serviceOrder.update({
+        where: { id: os.id },
+        data: tipo === "pdf" ? { nfsePdfPath: caminho } : { nfseXmlPath: caminho },
+      })
     } catch (e) {
       // Não conseguiu arquivar, mas conseguiu o documento: entrega mesmo assim.
       console.error("[nota] falhou ao arquivar sob demanda:", os.id, e)

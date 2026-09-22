@@ -524,6 +524,10 @@ model ServiceOrder {
   nfseNumber         String?
   nfseStatus         String?
   nfseUrl            String?
+  /// O endereco do XML no emissor, guardado pelo mesmo motivo do `nfseUrl`:
+  /// sem ele, um arquivamento que falha perde o endereco junto com a variavel,
+  /// e o documento que vale juridicamente fica sem de onde voltar.
+  nfseXmlUrl         String?
   /// O PDF e o XML da nota ARQUIVADOS no nosso storage.
   ///
   /// `nfseUrl` aponta para o servidor do emissor: o dia em que a empresa sair

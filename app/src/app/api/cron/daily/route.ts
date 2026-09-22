@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
     .create({ data: { name: "daily" }, select: { id: true } })
     .catch(() => null)
 
-  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, cobrancasEnviadas: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, avisosDeTeste: 0, comissoesConferidas: 0, comissoesDivergentes: 0, comissoesForaDaJanela: 0, retrato: "", dmarc: "", errors: 0 }
+  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, cobrancasEnviadas: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, notasNaoArquivadas: 0, avisosDeTeste: 0, comissoesConferidas: 0, comissoesDivergentes: 0, comissoesForaDaJanela: 0, retrato: "", dmarc: "", errors: 0 }
 
   // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
   // Em 07/08/2026 uma cliente pagou e ficou sem acesso por ~1 dia: os webhooks
@@ -313,6 +313,10 @@ export async function GET(req: NextRequest) {
     const notas = await conciliarNotasPendentes()
     results.notasConsultadas = notas.consultadas
     results.notasRejeitadas = notas.rejeitadas
+    // Nota aceita cujo documento não entrou no arquivo. Já vem somada em
+    // `notas.erros` — a empresa é obrigada a guardar o XML por cinco anos, e
+    // uma tarefa que o cron tentou e não conseguiu É erro dele.
+    results.notasNaoArquivadas = notas.naoArquivadas
     results.errors += notas.erros
   } catch (e) {
     console.error("[cron] conciliação de notas fiscais falhou:", e)
@@ -655,7 +659,10 @@ export async function GET(req: NextRequest) {
             `nps ${results.nps}`,
             `contratos ${results.contratos}`,
             `cobrancas ${results.cobrancasEnviadas}`,
-            `notas ${results.notasConsultadas} consultadas/${results.notasRejeitadas} rejeitadas`,
+            `notas ${results.notasConsultadas} consultadas/${results.notasRejeitadas} rejeitadas` +
+              (results.notasNaoArquivadas > 0
+                ? `/${results.notasNaoArquivadas} NAO ARQUIVADAS`
+                : ""),
             `certificados vencendo ${results.certificadosVencendo}`,
             `comissoes ${results.comissoesConferidas} conferidas/${results.comissoesDivergentes} divergentes` +
               (results.comissoesForaDaJanela > 0

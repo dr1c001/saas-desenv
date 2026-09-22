@@ -989,7 +989,9 @@
     "inviteLinkUsed": "This invite has already been used or has expired. If you already set your password, just sign in below. If you haven't, use \"Forgot my password\" with the email that received the invite — do not create a new company.",
     "recoveryLinkUsed": "This recovery link has already been used or has expired. Request a new one under \"Forgot my password\".",
     "funcaoDesligada": "This feature is turned off for your company. Contact support.",
-    "nfseSemResposta": "The issuer did not respond or the response was lost. The invoice may have been issued — this [[os]] was locked on purpose; contact support before trying again."
+    "nfseSemResposta": "The issuer did not respond or the response was lost. The invoice may have been issued — this [[os]] was locked on purpose; contact support before trying again.",
+    "fiscalJaConfigurado": "The company is already registered with the invoice issuer. To change the details, contact support — registering again would create a second company and leave the certificate on the old one.",
+    "fiscalSemResposta": "The invoice issuer did not respond or the response was lost. The company may have been created — registration was locked on purpose; contact support before trying again."
   },
   "estoque": {
     "title": "Parts inventory",
@@ -2806,6 +2808,10 @@
         "credenciamento": "• Registration with your city hall. Many municipalities require you to authorise the issuer in their system before the first invoice. You do this with your company's login on the city's website.",
         "inscricao": "• An active, correct municipal registration number. It's the number you enter in the form below.",
         "rodape": "We can't do these three for you: they are your company's own credentials and registrations with the municipality."
+      },
+      "travado": {
+        "title": "Registration locked — contact support",
+        "explicacao": "The registration was sent to the invoice issuer and the response was lost. The company may have been created there; trying again would create a second one, and the digital certificate would stay on the old one. Support will check and unlock it."
       }
     }
   },

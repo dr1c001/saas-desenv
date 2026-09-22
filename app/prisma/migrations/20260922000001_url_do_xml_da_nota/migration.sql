@@ -1,0 +1,12 @@
+-- A URL do XML no emissor.
+--
+-- Ate aqui so a do PDF era guardada (`nfseUrl`). A do XML vinha na resposta
+-- transitoria de `getInvoice` e era usada na hora de arquivar; se o
+-- arquivamento falhasse (storage fora, download estourando o tempo), a OS ja
+-- tinha sido gravada com o estado final, saia da fila do dia seguinte, e o
+-- endereco do XML sumia junto com a variavel. O PDF continuava recuperavel
+-- por `nfseUrl`; o XML — que e o documento que vale juridicamente, e que a
+-- empresa e obrigada a guardar por cinco anos — nao tinha de onde voltar.
+--
+-- (Achado na auditoria de 13/09/2026.)
+ALTER TABLE "ServiceOrder" ADD COLUMN "nfseXmlUrl" TEXT;
