@@ -116,9 +116,9 @@
     },
     "register": {
       "title": "Criar conta",
-      "subtitleWithRef": "Você foi indicado — ganhe 10% de desconto no seu plano!",
+      "subtitleWithRef": "Você foi indicado — ganhe {percent}% de desconto no primeiro pagamento!",
       "subtitleDefault": "Crie sua conta e use 15 dias grátis — sem cartão.",
-      "refBanner": "🎁 Código de indicação aplicado! Você ganhou <strong>10% de desconto</strong> no seu primeiro pagamento.",
+      "refBanner": "🎁 Código de indicação conferido! Você ganhou <strong>{percent}% de desconto no primeiro pagamento</strong>. A partir do segundo, o valor cheio do plano.",
       "companyNameLabel": "Nome da empresa",
       "companyNamePlaceholder": "Minha Empresa Ltda",
       "nameLabel": "Seu nome",
@@ -135,7 +135,10 @@
         "rateLimit": "Muitas tentativas de cadastro. Aguarde alguns minutos e tente novamente.",
         "alreadyRegistered": "Este e-mail já está cadastrado. Tente fazer login."
       },
-      "subtitle": "Crie sua conta e use 15 dias grátis — sem cartão."
+      "subtitle": "Crie sua conta e use 15 dias grátis — sem cartão.",
+      "refChecking": "Conferindo o código de indicação…",
+      "refInvalid": "Não encontramos esse código de indicação. Você pode criar a conta normalmente — só não entra o desconto. Se recebeu um link, peça para conferirem se ele chegou inteiro.",
+      "refUnknown": "Não conseguimos conferir o código de indicação agora. Se ele for válido, o desconto entra do mesmo jeito quando você assinar."
     },
     "forgotPassword": {
       "title": "Esqueci minha senha",
@@ -244,7 +247,7 @@
         "mostPopular": "Mais popular",
         "perMonth": "/mês",
         "yearlyNote": "ou {price}/ano (2 meses grátis)",
-        "referralDiscount": "{percent}% de desconto de indicação aplicado",
+        "referralDiscount": "{percent}% de desconto no primeiro pagamento — depois, o valor cheio",
         "currentPlan": "Plano atual",
         "subscribeMonthly": "Assinar — Mensal",
         "subscribeYearly": "Assinar — Anual (economize 2 meses)",
@@ -1011,7 +1014,8 @@
     "funcaoDesligada": "Esta função está desligada para a sua empresa. Fale com o suporte.",
     "nfseSemResposta": "O emissor não respondeu ou a resposta se perdeu. A nota pode ter sido emitida — est[[osFim]] [[os]] ficou travada de propósito; fale com o suporte antes de tentar de novo.",
     "fiscalJaConfigurado": "A empresa já está cadastrada no emissor fiscal. Para trocar os dados, fale com o suporte — cadastrar de novo criaria uma segunda empresa e o certificado ficaria na antiga.",
-    "fiscalSemResposta": "O emissor fiscal não respondeu ou a resposta se perdeu. A empresa pode ter sido criada — o cadastro ficou travado de propósito; fale com o suporte antes de tentar de novo."
+    "fiscalSemResposta": "O emissor fiscal não respondeu ou a resposta se perdeu. A empresa pode ter sido criada — o cadastro ficou travado de propósito; fale com o suporte antes de tentar de novo.",
+    "signatureUnavailable": "Não foi possível registrar sua assinatura. Entre em contato conosco."
   },
   "estoque": {
     "title": "Estoque de peças",
@@ -1444,7 +1448,8 @@
       "items": [
         {
           "title": "Ordens de Serviço",
-          "desc": "Gerencie OS do início ao fim, com histórico completo, PDF profissional e assinatura digital do cliente."
+          "desc": "Gerencie OS do início ao fim, com histórico completo e PDF profissional.",
+          "pro": "Assinatura digital do cliente"
         },
         {
           "title": "Mapa GPS em Tempo Real",
@@ -1464,11 +1469,13 @@
         },
         {
           "title": "Relatórios Inteligentes",
-          "desc": "Painéis com receita, OS por período, desempenho da equipe e muito mais."
+          "desc": "Painéis com receita e OS por período.",
+          "pro": "Desempenho por técnico, ranking de clientes e período personalizado"
         },
         {
           "title": "Gestão de Equipe",
-          "desc": "Controle permissões por cargo, veja a localização de cada profissional em campo e gerencie a agenda."
+          "desc": "Controle permissões por cargo e gerencie a agenda da equipe.",
+          "pro": "Localização de cada profissional em campo"
         },
         {
           "title": "Emissão de NFS-e",
@@ -1482,7 +1489,13 @@
           "title": "Manutenção Interna",
           "desc": "Controle a manutenção da frota e equipamentos internos separado das OS de clientes."
         }
-      ]
+      ],
+      "planBadge": {
+        "pro": "Pro",
+        "enterprise": "Enterprise",
+        "adicional": "Adicional"
+      },
+      "planNote": "Os itens marcados entram a partir do plano indicado. Veja os planos abaixo."
     },
     "segments": {
       "title": "Feito para qualquer empresa de serviço",
@@ -2384,7 +2397,8 @@
       "confirmed": "Serviço confirmado pelo cliente",
       "altText": "Assinatura",
       "clearButton": "Limpar",
-      "confirmButton": "Confirmar assinatura"
+      "confirmButton": "Confirmar assinatura",
+      "saveError": "Não conseguimos registrar sua assinatura. Tente novamente."
     },
     "pix": {
       "title": "Pagar por PIX",

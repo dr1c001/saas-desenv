@@ -55,6 +55,8 @@ async function cenario(opcoes: {
   ultimoPagamento?: string | null
   indicadoPor?: string | null
   tenantStatus?: "TRIAL" | "PENDING" | "ACTIVE" | "PAST_DUE" | "CANCELLED"
+  /** O desconto de indicacao com que a assinatura nasceu. */
+  desconto?: number
 }) {
   const plano = await testDb.db.plan.create({
     data: { name: "Pro", slug: `pro-${Math.random().toString(36).slice(2, 8)}`, priceMonthly: 197, priceYearly: 1970 },
@@ -80,6 +82,7 @@ async function cenario(opcoes: {
       currentPeriodEnd: FIM,
       lastProcessedPaymentId: opcoes.ultimoPagamento ?? null,
       pastDueWarningsSent: 2,
+      referralDiscountPercent: opcoes.desconto ?? 0,
     },
   })
   return { plano, tenant, sub }
@@ -127,9 +130,19 @@ describe("a primeira confirmação", () => {
   })
 
   it("devolve o preço cheio à Asaas — o desconto de indicação é de um pagamento só", async () => {
-    const { sub } = await cenario({ status: "PENDING" })
+    // A assinatura NASCE com o desconto gravado nela. Antes, este teste criava
+    // uma assinatura SEM desconto e afirmava que a Asaas era chamada assim
+    // mesmo — fixando como funcionalidade um POST inútil por cliente novo, e
+    // provando a devolução justamente no caso em que não há o que devolver.
+    const { sub } = await cenario({ status: "PENDING", desconto: 10 })
     await confirmar(sub.id, "pay_1")
     expect(mockUpdateSub).toHaveBeenCalledWith(sub.asaasId, { value: 197 })
+  })
+
+  it("e não chama a Asaas quando não houve desconto nenhum", async () => {
+    const { sub } = await cenario({ status: "PENDING" })
+    await confirmar(sub.id, "pay_1")
+    expect(mockUpdateSub).not.toHaveBeenCalled()
   })
 
   it("credita 20% a quem indicou, com teto em 100", async () => {
@@ -158,7 +171,7 @@ describe("a primeira confirmação", () => {
 
 describe("o mesmo pagamento duas vezes (CONFIRMED e depois RECEIVED)", () => {
   it("a segunda é REPETIDA: nada soma, nada reenvia", async () => {
-    const { sub, tenant } = await cenario({ status: "PENDING" })
+    const { sub, tenant } = await cenario({ status: "PENDING", desconto: 10 })
     await confirmar(sub.id, "pay_1")
     const r = await confirmar(sub.id, "pay_1")
 

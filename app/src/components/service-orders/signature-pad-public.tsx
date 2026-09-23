@@ -41,8 +41,16 @@ export function SignaturePadPublic({ orderId, clientToken, existingSignatureUrl,
       body: JSON.stringify({ orderId, clientToken, signature: dataUrl }),
     })
     const data = await res.json()
-    if (data.ok) setSaved(true)
-    else setError(data.error)
+    // A mensagem de falha e NOSSA, e nao a que o servidor mandou.
+    //
+    // Era `setError(data.error)`: qualquer texto do corpo da resposta ia parar
+    // na tela do cliente final — inclusive "A assinatura digital do cliente faz
+    // parte do plano Pro. Faca upgrade em Configuracoes -> Plano", que e
+    // conversa nossa com a empresa. Os outros dois widgets deste mesmo portal
+    // (quote-approval-buttons, nps-widget) nunca ecoaram servidor; este era o
+    // unico. (Achado na auditoria de 13/09/2026, grupo 9.)
+    if (res.ok && data.ok) setSaved(true)
+    else setError(t("signature.saveError"))
     setSaving(false)
   }
 

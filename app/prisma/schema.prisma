@@ -274,6 +274,17 @@ model Plan {
   priceMonthly Decimal  @db.Decimal(10, 2)
   priceYearly  Decimal  @db.Decimal(10, 2)
   maxUsers     Int?
+  /// MORTA, e a sair num deploy proprio.
+  ///
+  /// Era uma segunda lista de vantagens do plano, gravada pelo seed e lida
+  /// por tela nenhuma: quem mostra vantagens e `planFeatures` no i18n, que e
+  /// bilingue. As duas ja divergiam em tres pontos, em silencio.
+  ///
+  /// Fica aqui de proposito por um deploy: o codigo NO AR ainda seleciona a
+  /// coluna, e derruba-la agora faria a tela de assinatura responder 500 na
+  /// janela entre o `migrate deploy` (que roda no build) e o build novo
+  /// entrar no ar. Primeiro o codigo para de pedir (billing.ts, getPlans e
+  /// subscribeToPlan); no deploy seguinte a coluna cai.
   features     String[]
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -302,6 +313,23 @@ model Subscription {
   // — exatamente o defeito que o cron de NPS já teve (seção 9). Zera quando o
   // pagamento entra.
   pastDueWarningsSent    Int                @default(0)
+  /// O DESCONTO DE INDICACAO com que ESTA assinatura nasceu, e quando a Asaas
+  /// confirmou a volta ao preco cheio.
+  ///
+  /// A promessa e de UM pagamento so, e a assinatura da Asaas cobra o mesmo
+  /// `value` em todo ciclo — entao criar a assinatura ja descontada exige
+  /// devolver o preco cheio quando o primeiro pagamento confirma. Essa
+  /// devolucao existe desde 22/09/2026, mas era MELHOR ESFORCO CEGO: o unico
+  /// registro do desconto era `Tenant.referralDiscountPercent`, zerado assim
+  /// que a assinatura e criada. Se a chamada a Asaas falhasse, o desconto
+  /// virava vitalicio em silencio, e nada no sistema sabia que havia uma
+  /// devolucao pendente — nem para tentar de novo, nem para avisar.
+  ///
+  /// Com as duas colunas a devolucao passa a ser uma TAREFA: quem deve, quanto
+  /// deve, e se ja foi paga. O cron diario varre as pendentes.
+  /// (Achado na auditoria de 13/09/2026, grupo 9.)
+  referralDiscountPercent Int               @default(0)
+  fullPriceRestoredAt    DateTime?
   /// O REGISTRO DO ACEITE — o que o quadro de fecho do contrato afirma que
   /// fica guardado: versao aceita, data, hora, IP e quem aceitou.
   ///

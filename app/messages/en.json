@@ -116,9 +116,9 @@
     },
     "register": {
       "title": "Create account",
-      "subtitleWithRef": "You were referred — get 10% off your plan!",
+      "subtitleWithRef": "You were referred — get {percent}% off your first payment!",
       "subtitleDefault": "Create your account and use it free for 15 days — no card.",
-      "refBanner": "🎁 Referral code applied! You earned <strong>10% off</strong> your first payment.",
+      "refBanner": "🎁 Referral code checked! You earned <strong>{percent}% off your first payment</strong>. From the second one on, the full plan price.",
       "companyNameLabel": "Company name",
       "companyNamePlaceholder": "My Company Ltd.",
       "nameLabel": "Your name",
@@ -135,7 +135,10 @@
         "rateLimit": "Too many registration attempts. Please wait a few minutes and try again.",
         "alreadyRegistered": "This email is already registered. Try signing in instead."
       },
-      "subtitle": "Create your account and use it free for 15 days — no card."
+      "subtitle": "Create your account and use it free for 15 days — no card.",
+      "refChecking": "Checking the referral code…",
+      "refInvalid": "We couldn't find that referral code. You can still create your account — only the discount won't apply. If someone sent you a link, ask them to check whether it arrived complete.",
+      "refUnknown": "We couldn't check the referral code right now. If it is valid, the discount still applies when you subscribe."
     },
     "forgotPassword": {
       "title": "Forgot my password",
@@ -244,7 +247,7 @@
         "mostPopular": "Most popular",
         "perMonth": "/mo",
         "yearlyNote": "or {price}/year (2 months free)",
-        "referralDiscount": "{percent}% referral discount applied",
+        "referralDiscount": "{percent}% off your first payment — full price after that",
         "currentPlan": "Current plan",
         "subscribeMonthly": "Subscribe — Monthly",
         "subscribeYearly": "Subscribe — Yearly (save 2 months)",
@@ -1011,7 +1014,8 @@
     "funcaoDesligada": "This feature is turned off for your company. Contact support.",
     "nfseSemResposta": "The issuer did not respond or the response was lost. The invoice may have been issued — this [[os]] was locked on purpose; contact support before trying again.",
     "fiscalJaConfigurado": "The company is already registered with the invoice issuer. To change the details, contact support — registering again would create a second company and leave the certificate on the old one.",
-    "fiscalSemResposta": "The invoice issuer did not respond or the response was lost. The company may have been created — registration was locked on purpose; contact support before trying again."
+    "fiscalSemResposta": "The invoice issuer did not respond or the response was lost. The company may have been created — registration was locked on purpose; contact support before trying again.",
+    "signatureUnavailable": "We couldn't record your signature. Please get in touch with us."
   },
   "estoque": {
     "title": "Parts inventory",
@@ -1444,7 +1448,8 @@
       "items": [
         {
           "title": "Service Orders",
-          "desc": "Manage service orders from start to finish, with full history, professional PDFs, and digital client signatures."
+          "desc": "Manage service orders from start to finish, with full history and professional PDFs.",
+          "pro": "Digital client signature"
         },
         {
           "title": "Real-Time GPS Map",
@@ -1464,11 +1469,13 @@
         },
         {
           "title": "Smart Reports",
-          "desc": "Dashboards with revenue, service orders by period, team performance, and much more."
+          "desc": "Dashboards with revenue and service orders by period.",
+          "pro": "Performance by technician, client ranking, and custom periods"
         },
         {
           "title": "Team Management",
-          "desc": "Control permissions by role, see each field member's location, and manage the schedule."
+          "desc": "Control permissions by role and manage your team's schedule.",
+          "pro": "Each field member's location"
         },
         {
           "title": "E-Invoice Issuance",
@@ -1482,7 +1489,13 @@
           "title": "Internal Maintenance",
           "desc": "Track fleet and internal equipment maintenance separately from client service orders."
         }
-      ]
+      ],
+      "planBadge": {
+        "pro": "Pro",
+        "enterprise": "Enterprise",
+        "adicional": "Add-on"
+      },
+      "planNote": "Items marked like this start at the plan shown. See the plans below."
     },
     "segments": {
       "title": "Built for any service business",
@@ -2384,7 +2397,8 @@
       "confirmed": "Service confirmed by the client",
       "altText": "Signature",
       "clearButton": "Clear",
-      "confirmButton": "Confirm signature"
+      "confirmButton": "Confirm signature",
+      "saveError": "We couldn't record your signature. Please try again."
     },
     "pix": {
       "title": "Pay by PIX",

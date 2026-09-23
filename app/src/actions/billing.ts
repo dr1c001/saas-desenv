@@ -43,9 +43,27 @@ export async function getBillingStatus() {
 }
 
 export async function getPlans() {
+  // `select` EXPLÍCITO, e não a tabela inteira.
+  //
+  // `Plan.features` é texto de vitrine que nenhuma tela lê há muito tempo: a
+  // lista de vantagens vem de `planFeatures` no i18n, porque ela é bilíngue e a
+  // coluna é de um idioma só. Ela viajava do banco até aqui a cada abertura da
+  // tela de assinatura para ser descartada — e, pior, divergia em silêncio do
+  // que a vitrine promete (o seed dizia "Suporte 24h" onde a tela diz
+  // "Atendimento por WhatsApp em horário comercial").
+  //
+  // Parar de PEDIR a coluna vem antes de apagá-la: enquanto o código no ar
+  // ainda a seleciona, derrubar a coluna faria a tela de assinatura responder
+  // 500 durante a janela entre o `migrate deploy` e o build novo entrar. A
+  // remoção da coluna é o passo seguinte, num deploy próprio.
+  // (Achado na auditoria de 13/09/2026, grupo 9.)
   return prisma.plan.findMany({
     where: { active: true },
     orderBy: { priceMonthly: "asc" },
+    select: {
+      id: true, slug: true, name: true,
+      priceMonthly: true, priceYearly: true, maxUsers: true,
+    },
   })
 }
 
@@ -98,7 +116,11 @@ export async function subscribeToPlan(formData: FormData) {
 
   try {
     const [plan, tenant] = await Promise.all([
-      prisma.plan.findUnique({ where: { id: planId } }),
+      // select explícito: ver o comentário em getPlans sobre Plan.features.
+      prisma.plan.findUnique({
+        where: { id: planId },
+        select: { id: true, slug: true, name: true, priceMonthly: true, priceYearly: true },
+      }),
       prisma.tenant.findUnique({
         where: { id: tenantId },
         include: { users: { where: { role: "OWNER" }, take: 1 } },
@@ -208,6 +230,15 @@ export async function subscribeToPlan(formData: FormData) {
         // cabeçalho. `clientIp` depende do contexto da requisição.
         acceptedIp: await clientIp().catch(() => null),
         acceptedByUserId: userId,
+        // O desconto que ESTA assinatura carrega, gravado na mesma escrita.
+        //
+        // `Tenant.referralDiscountPercent` e zerado logo abaixo, assim que a
+        // assinatura nasce na Asaas — e ate aqui era o unico registro. Sem
+        // esta coluna, uma falha ao devolver o preco cheio depois do primeiro
+        // pagamento deixava o desconto vitalicio em silencio, sem nada no
+        // sistema saber que havia devolucao pendente.
+        // (Achado na auditoria de 13/09/2026, grupo 9.)
+        referralDiscountPercent: discountPercent,
       },
       select: { id: true },
     })

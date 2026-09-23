@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { temFuncao } from "@/lib/plan"
+import { temFuncao, temRecurso } from "@/lib/plan"
 import { prisma } from "@/lib/prisma"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -80,6 +80,24 @@ export default async function ClientPortalPage({
   const year = new Date(order.createdAt).getFullYear()
   const osNum = `OS${year}${String(order.number).padStart(4, "0")}`
   const isDone = order.status === "DONE" || order.status === "INVOICED"
+
+  // A ASSINATURA é do plano Pro para cima, e esta tela não perguntava.
+  //
+  // O cartão "Assine aqui" aparecia para toda OS concluída, de qualquer
+  // empresa. A rota que grava (api/signature) barrava corretamente com 403 — e
+  // a mensagem dela é "A assinatura digital do cliente faz parte do plano Pro.
+  // Faça upgrade em Configurações → Plano para liberar." O resultado prático:
+  // o cliente da empresa no Starter desenhava a assinatura no dedo, confirmava,
+  // e lia A NOSSA COBRANÇA DE UPGRADE numa página que fala em nome de quem o
+  // atendeu. Quem contrata plano é a empresa, não o cliente dela.
+  //
+  // O `|| order.clientSignatureUrl` é deliberado, e segue o precedente do
+  // checklist em (dashboard)/service-orders/[id]/page.tsx: quem assinou
+  // enquanto a empresa era Pro continua vendo a PRÓPRIA confirmação depois de
+  // um rebaixamento — o componente cai sozinho no modo somente-leitura. O que
+  // some é o convite a assinar, não o registro de que ele assinou.
+  // (Achado na auditoria de 13/09/2026, grupo 9.)
+  const podeAssinar = await temRecurso(order.tenant.id, "signature")
 
   // Cobrança por PIX: só depois de concluída, e só se a empresa configurou a
   // chave. Antes da conclusão o valor ainda pode mudar, e um QR com valor
@@ -258,7 +276,7 @@ export default async function ClientPortalPage({
         )}
 
         {/* Signature */}
-        {isDone && (
+        {isDone && (podeAssinar || order.clientSignatureUrl) && (
           <Card>
             <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">{t("serviceOrder.signatureTitle")}</CardTitle></CardHeader>
             <CardContent>

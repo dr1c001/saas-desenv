@@ -37,6 +37,31 @@ export function recursosDoPlano(slug: string | null | undefined): Recurso[] {
   return [...((slug && POR_PLANO[slug]) || PERMISSIVO).recursos]
 }
 
+/**
+ * O PLANO MAIS BARATO que entrega todos estes recursos.
+ *
+ * Existe para o selo da vitrine ser DERIVADO, e não escrito à mão num terceiro
+ * lugar que envelhece — foi assim que a grade da landing passou a vender
+ * assinatura digital, mapa e checklist como se viessem no Starter de R$ 97.
+ * Quem declara o que cada card promete é lib/vitrine.ts; quem decide o selo é
+ * POR_PLANO, aqui. No dia em que um recurso mudar de plano, o selo acompanha
+ * sozinho.
+ *
+ * Devolve null para lista vazia (card livre), e "adicional" para o que nenhum
+ * plano inclui — `ia` e `filiais` são vendidos à parte.
+ * (Achado na auditoria de 13/09/2026, grupo 9.)
+ */
+export function planoMinimo(
+  recursos: readonly Recurso[]
+): "starter" | "pro" | "enterprise" | "adicional" | null {
+  if (recursos.length === 0) return null
+  for (const slug of ["starter", "pro", "enterprise"] as const) {
+    const doPlano = recursosDoPlano(slug)
+    if (recursos.every((r) => doPlano.includes(r))) return slug
+  }
+  return "adicional"
+}
+
 /** Os TETOS do plano, sem ir ao banco. A tela do painel mostra estes ao lado do
  *  ajuste da empresa, para "herdar" não ser uma escolha às cegas. */
 export function limitesDoPlano(slug: string | null | undefined): {

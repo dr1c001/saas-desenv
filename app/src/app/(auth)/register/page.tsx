@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { conferirIndicacao } from "@/actions/conferir-indicacao"
+import { DESCONTO_DE_QUEM_E_INDICADO, type EstadoDaIndicacao } from "@/lib/indicacao"
 import { PublicLanguageToggle } from "@/components/layout/public-language-toggle"
 
 function RegisterForm() {
@@ -21,6 +23,30 @@ function RegisterForm() {
   const t = useTranslations()
   const [serverError, setServerError] = useState<string | null>(null)
   const [emailSent, setEmailSent] = useState(false)
+
+  // A tela CONFERE antes de prometer.
+  //
+  // Qualquer `?ref=` fazia aparecer o banner verde de 10% — e quem concede de
+  // verdade e lib/auth.ts, so quando existe um Tenant com aquele codigo. O
+  // codigo e gerado sob demanda (actions/referral.ts) e fica nulo ate o
+  // indicador abrir /referral, entao bastava o link chegar truncado pelo
+  // WhatsApp: o visitante lia o banner, criava a conta e pagava o preco cheio.
+  //
+  // QUATRO estados, e nao dois. "Nao consegui conferir" (banco fora do ar,
+  // limite por IP) NAO pode virar "seu codigo nao vale": isso recria a mentira
+  // pelo lado oposto, no momento exato da conversao.
+  // (Achado na auditoria de 13/09/2026, grupo 9.)
+  const [estadoDaIndicacao, setEstadoDaIndicacao] = useState<EstadoDaIndicacao>("conferindo")
+  useEffect(() => {
+    if (!refCode) return
+    let vivo = true
+    conferirIndicacao(refCode)
+      .then((r) => vivo && setEstadoDaIndicacao(r))
+      .catch(() => vivo && setEstadoDaIndicacao("naoConferido"))
+    return () => {
+      vivo = false
+    }
+  }, [refCode])
 
   // Schema construído dentro do componente pois as mensagens de validação
   // do zod vêm do next-intl (precisam de acesso ao `t`).
@@ -89,15 +115,33 @@ function RegisterForm() {
       <CardHeader>
         <CardTitle className="text-2xl">{t("auth.register.title")}</CardTitle>
         <CardDescription>
-          {refCode ? t("auth.register.subtitleWithRef") : t("auth.register.subtitleDefault")}
+          {refCode && estadoDaIndicacao === "valido"
+            ? t("auth.register.subtitleWithRef", { percent: DESCONTO_DE_QUEM_E_INDICADO })
+            : t("auth.register.subtitleDefault")}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {refCode && (
+        {refCode && estadoDaIndicacao === "conferindo" && (
+          <div className="mb-4 rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            {t("auth.register.refChecking")}
+          </div>
+        )}
+        {refCode && estadoDaIndicacao === "valido" && (
           <div className="mb-4 rounded-lg border border-green-300 bg-green-50 dark:bg-green-950 px-3 py-2 text-sm text-green-700 dark:text-green-300">
             {t.rich("auth.register.refBanner", {
+              percent: DESCONTO_DE_QUEM_E_INDICADO,
               strong: (chunks) => <strong>{chunks}</strong>,
             })}
+          </div>
+        )}
+        {refCode && estadoDaIndicacao === "invalido" && (
+          <div className="mb-4 rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            {t("auth.register.refInvalid")}
+          </div>
+        )}
+        {refCode && estadoDaIndicacao === "naoConferido" && (
+          <div className="mb-4 rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            {t("auth.register.refUnknown")}
           </div>
         )}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

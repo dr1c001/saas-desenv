@@ -47,13 +47,24 @@ export async function POST(req: NextRequest) {
     // onde não há sessão pro request context resolver nada. (i18n.)
     const t = getTranslator(order.tenant.locale, "errors")
 
-    // "Assinatura digital" é vendida no plano Pro. Vale para os DOIS ramos, e
-    // isso é diferente do bloqueio por assinatura vencida logo acima: lá, o
-    // cliente final não pode ser punido por um pagamento atrasado da empresa
-    // no meio de um serviço; aqui, a empresa nunca comprou o recurso, então
-    // ele não deveria nem ter sido oferecido ao cliente dela.
+    // "Assinatura digital" é vendida no plano Pro. A TRAVA vale para os DOIS
+    // ramos, e isso é diferente do bloqueio por assinatura vencida logo acima:
+    // lá, o cliente final não pode ser punido por um pagamento atrasado da
+    // empresa no meio de um serviço; aqui, a empresa nunca comprou o recurso,
+    // então ele não deveria nem ter sido oferecido ao cliente dela.
+    //
+    // A EXPLICAÇÃO, porém, só vai para o ramo interno. "Faça upgrade em
+    // Configurações → Plano" é conversa nossa com quem contrata; o cliente
+    // final lia isso numa página que fala em nome da empresa que o atendeu —
+    // desenhava a assinatura no dedo, confirmava, e recebia a nossa cobrança
+    // de upgrade. Para ele a resposta é a da empresa dele.
+    // (Achado na auditoria de 13/09/2026, grupo 9.)
     if (!(await temRecurso(order.tenantId, "signature"))) {
-      return NextResponse.json({ ok: false, error: t("planFeature.signature") }, { status: 403 })
+      const paraOCliente = Boolean(clientToken)
+      return NextResponse.json(
+        { ok: false, error: paraOCliente ? t("signatureUnavailable") : t("planFeature.signature") },
+        { status: 403 }
+      )
     }
     // Nada impedia assinar uma OS cancelada — a assinatura confirma execução
     // de um serviço que oficialmente não aconteceu. (Achado verificando o

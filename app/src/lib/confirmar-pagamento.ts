@@ -1,7 +1,7 @@
+import { DESCONTO_DE_QUEM_INDICA, TETO_DE_DESCONTO } from "@/lib/indicacao"
 import { prisma } from "@/lib/prisma"
 import { notificar } from "@/lib/notificar"
-import { asaas } from "@/lib/asaas"
-import { precoCobrado } from "@/lib/preco"
+import { devolverPrecoCheio } from "@/lib/devolver-preco-cheio"
 import { gerarContrato } from "@/lib/contrato"
 import { sendPaymentConfirmedEmail } from "@/lib/resend"
 import { aplicarTrocaAgendada } from "@/lib/troca-de-plano-db"
@@ -44,11 +44,14 @@ import { aplicarTrocaAgendada } from "@/lib/troca-de-plano-db"
  * (precisa responder rápido à Asaas), o cron simplesmente aguarda.
  */
 
-// Espelha REFERRAL_DISCOUNT_PERCENT/NEW_SIGNUP_DISCOUNT_PERCENT em lib/auth.ts
-// e api/referral/join/route.ts — bônus de quem indicou, creditado só na
-// primeira confirmação de pagamento do indicado (não em renovações).
-export const REFERRER_DISCOUNT_PERCENT = 20
-export const MAX_DISCOUNT_PERCENT = 100
+// Bônus de quem indicou, creditado só na PRIMEIRA confirmação de pagamento do
+// indicado (não em renovações). Os números moram em lib/indicacao.ts; estes
+// nomes continuam exportados porque os testes e o painel os usam.
+//
+// O comentário anterior mandava espelhar o valor em `api/referral/join/route.ts`,
+// arquivo que não existe. (Achado na auditoria de 13/09/2026, grupo 9.)
+export const REFERRER_DISCOUNT_PERCENT = DESCONTO_DE_QUEM_INDICA
+export const MAX_DISCOUNT_PERCENT = TETO_DE_DESCONTO
 
 type Status = "PENDING" | "ACTIVE" | "PAST_DUE" | "CANCELLED" | "TRIAL"
 
@@ -164,22 +167,16 @@ export async function confirmarPagamento(args: {
 
   // O desconto de indicação acaba AQUI — ele é de um pagamento só.
   //
-  // A assinatura da Asaas cobra o mesmo `value` em todo ciclo, então criar a
-  // assinatura já descontada transformava "10% no primeiro pagamento" num
-  // desconto vitalício. Melhor esforço: falhar aqui deixa o cliente com o
-  // desconto, o que é muito melhor que derrubar a ativação de quem pagou.
-  if (primeira && sub.asaasId) {
-    try {
-      const cheio = precoCobrado(
-        { priceMonthly: Number(sub.plan.priceMonthly), priceYearly: Number(sub.plan.priceYearly) },
-        sub.tenant.customPriceMonthly === null ? null : Number(sub.tenant.customPriceMonthly),
-        sub.billingCycle === "YEARLY" ? "YEARLY" : "MONTHLY",
-        0
-      )
-      await asaas.updateSubscription(sub.asaasId, { value: cheio })
-    } catch (e) {
-      console.error("Falha ao devolver o preço cheio da assinatura após o primeiro pagamento:", sub.asaasId, e)
-    }
+  // A regra e a retentativa moram em lib/devolver-preco-cheio.ts. Continua
+  // sendo melhor esforço NESTE ponto: falhar aqui nunca pode derrubar a
+  // ativação de quem acabou de pagar. A diferença é que agora a falha deixa
+  // RASTRO — a assinatura guarda o desconto com que nasceu e fica sem
+  // `fullPriceRestoredAt` —, então o cron diário tenta de novo amanhã e avisa
+  // se a devolução encalhar. Antes, um timeout da Asaas devolvia desconto
+  // vitalício em silêncio e nada no sistema sabia.
+  // (Achado na auditoria de 13/09/2026, grupo 9.)
+  if (primeira) {
+    await devolverPrecoCheio(sub)
   }
 
   // Bônus de quem indicou — melhor esforço. `increment` é atômico no banco;

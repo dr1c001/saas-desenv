@@ -7,23 +7,30 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL! })
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
 
-// ─── Estes textos são VITRINE de um sistema que já tem TRAVAS ────────────────
+// ─── A VITRINE NÃO MORA AQUI ────────────────────────────────────────────────
 //
-// `features` é o que a tela de planos mostra. Quem decide de verdade é
-// `POR_PLANO`, em src/lib/plan.ts. Quando os dois discordam, o cliente compra
-// uma coisa e recebe outra — foi exatamente o que aconteceu com o Starter, que
-// anunciava "8 notas fiscais por mês" enquanto `recursos: []` o impedia de
-// emitir uma única (corrigido em 30/08/2026).
+// `Plan.features` era uma SEGUNDA lista de vantagens, gravada no banco e lida
+// por tela nenhuma: quem mostra as vantagens do plano é `planFeatures` em
+// messages/pt.json e en.json, porque a tela é bilíngue e a coluna é de um
+// idioma só. O `upsert` abaixo, além disso, só atualiza preço — então o que
+// estava no banco de produção era o texto do dia em que cada plano foi criado.
 //
-// Três promessas aqui já tinham virado mentira e foram corrigidas em
-// 09/09/2026, todas conferidas contra `POR_PLANO`:
+// As duas listas já tinham divergido em três pontos: o seed dizia "Suporte
+// 24h" onde a vitrine diz "Atendimento por WhatsApp em horário comercial"; o
+// Starter do seed não listava "Orçamentos e PDF" nem "Recibos automáticos"; e
+// o Pro do seed listava "Estoque, compras e fornecedores", que a vitrine não
+// lista. Nada disso aparecia, porque ninguém lia — e era essa a armadilha: no
+// dia em que alguma tela (ou a API) passasse a ler a coluna, publicaria a
+// promessa errada.
 //
-//   - Pro dizia "OS ilimitadas". São 200 por mês.
-//   - Enterprise dizia "Usuários ilimitados". São 30 desde 04/09/2026.
-//   - Enterprise listava "Emissão de NFS-e" como se fosse exclusividade dele.
-//     Os três planos emitem; o que muda é a cota (8 / 70 / 200).
+// Por isso o seed parou de gravar. A coluna ainda existe no banco e sai num
+// deploy próprio, depois que o código no ar deixar de selecioná-la
+// (src/actions/billing.ts, getPlans).
 //
-// Ao mexer em `POR_PLANO`, volte aqui.
+// Quem guarda a concordância entre o que se vende e o que o código entrega é
+// src/lib/__tests__/vitrine-x-plano.test.ts, que lê `POR_PLANO` (src/lib/plan.ts),
+// a grade da landing e `planFeatures` — e quebra quando divergirem.
+// (Achado na auditoria de 13/09/2026, grupo 9.)
 async function main() {
   const plans = [
     {
@@ -32,13 +39,6 @@ async function main() {
       priceMonthly: 97,
       priceYearly: 970,
       maxUsers: 3,
-      features: [
-        "Até 3 usuários",
-        "50 OS por mês",
-        "8 notas fiscais por mês",
-        "Relatórios básicos",
-        "Suporte por e-mail",
-      ],
     },
     {
       name: "Pro",
@@ -46,15 +46,6 @@ async function main() {
       priceMonthly: 197,
       priceYearly: 1970,
       maxUsers: 10,
-      features: [
-        "Até 10 usuários",
-        "200 OS por mês",
-        "70 notas fiscais por mês",
-        "Estoque, compras e fornecedores",
-        "Mapa GPS e régua de cobrança",
-        "Relatórios avançados",
-        "Suporte prioritário",
-      ],
     },
     {
       name: "Enterprise",
@@ -62,14 +53,6 @@ async function main() {
       priceMonthly: 397,
       priceYearly: 3970,
       maxUsers: 30,
-      features: [
-        "Até 30 usuários",
-        "OS ilimitadas",
-        "200 notas fiscais por mês",
-        "Tudo do Pro",
-        "API de integração",
-        "Suporte 24h",
-      ],
     },
   ]
 

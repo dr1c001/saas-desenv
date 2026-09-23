@@ -14,13 +14,18 @@ import { sendWelcomeEmail } from "@/lib/resend"
 import { avisarPlataforma } from "@/lib/avisar-plataforma"
 import { Prisma } from "@/generated/prisma/client"
 import { getTranslations } from "next-intl/server"
+import { DESCONTO_DE_QUEM_E_INDICADO } from "@/lib/indicacao"
 import { abasPadraoDe, ehAdministrativo } from "@/lib/cargos"
 
 // Bônus de indicação pra quem se cadastra com um código válido — antes era
 // dias extra de trial; sem trial (o acesso agora exige assinatura paga),
-// virou desconto no primeiro pagamento. Espelha NEW_SIGNUP_DISCOUNT_PERCENT
-// em api/referral/join/route.ts (mesmo conceito, caminho de cadastro diferente).
-const NEW_SIGNUP_DISCOUNT_PERCENT = 10
+// virou desconto no PRIMEIRO PAGAMENTO.
+//
+// O número mora em lib/indicacao.ts. O comentário que estava aqui mandava
+// espelhar o valor em `api/referral/join/route.ts` — arquivo que não existe:
+// foi removido em algum momento e a instrução ficou apontando para o nada,
+// enquanto o 10 seguia escrito à mão em quatro textos de venda.
+// (Achado na auditoria de 13/09/2026, grupo 9.)
 
 // Allowlist estrita pro parâmetro "next" usado nos redirects pós-autenticação
 // (callback OAuth, confirmação de convite/recuperação de senha): só caminho
@@ -132,7 +137,7 @@ export const getTenant = cache(async function getTenant() {
     let referralDiscountPercent = 0
     if (refCode) {
       const referrer = await prisma.tenant.findFirst({ where: { referralCode: refCode }, select: { id: true } })
-      if (referrer) referralDiscountPercent = NEW_SIGNUP_DISCOUNT_PERCENT
+      if (referrer) referralDiscountPercent = DESCONTO_DE_QUEM_E_INDICADO
     }
 
     // O teste grátis de 15 dias, de volta em 08/09/2026. O tenant nasce em

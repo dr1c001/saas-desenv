@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { ADICIONAIS } from "@/lib/recursos"
+import { CARDS_DA_VITRINE } from "@/lib/vitrine"
+import { planoMinimo, recursosDoPlano } from "@/lib/plan"
 
 // A vitrine tem de prometer o que o plano ENTREGA.
 //
@@ -101,5 +103,133 @@ describe("o Enterprise continua tendo o que oferecer", () => {
     // "Tudo do Pro" não conta: é a referência, não uma vantagem própria.
     const proprias = f.enterprise.filter((l) => !doPro.has(simples(l)) && !simples(l).startsWith("tudo"))
     expect(proprias.length).toBeGreaterThan(0)
+  })
+})
+
+// ─── A GRADE da landing, que fica ACIMA da tabela de precos ──────────────────
+//
+// Os testes acima guardam `planFeatures` — a lista de vantagens do CARD DE
+// PRECO. A grade "Tudo que sua empresa precisa" e outra coisa, aparece ANTES na
+// pagina, e nunca teve nada guardando: dez cards sem marca de plano nenhuma,
+// cinco deles prometendo o que o Starter de R$ 97 nao entrega. Quem le a grade
+// decide ali; a tabela de precos, mais abaixo, ja e confirmacao.
+// (Achado na auditoria de 13/09/2026, grupo 9.)
+
+type CardDoJson = { title: string; desc: string; pro?: string }
+const cards = (idioma: "pt" | "en") =>
+  (mensagens(idioma) as unknown as { landing: { features: { items: CardDoJson[] } } })
+    .landing.features.items
+const selos = (idioma: "pt" | "en") =>
+  (mensagens(idioma) as unknown as {
+    landing: { features: { planBadge: Record<string, string>; planNote: string } }
+  }).landing.features
+
+describe("a grade da landing diz de que plano e cada coisa", () => {
+  it("o Starter continua sendo o plano de UM recurso", () => {
+    // Ancora. Se o Starter passar a entregar tudo, os testes abaixo ficariam
+    // verdes por nao terem mais nada a cobrar — e e melhor falharem alto.
+    expect(recursosDoPlano("starter")).toEqual(["nfse"])
+  })
+
+  it.each(["pt", "en"] as const)("todo card esta classificado — %s", (idioma) => {
+    expect(cards(idioma).length).toBe(CARDS_DA_VITRINE.length)
+  })
+
+  it.each(["pt", "en"] as const)("e a classificacao esta no card CERTO — %s", (idioma) => {
+    // A lista e 1:1 por POSICAO com o JSON, e posicao e fragil: inserir um card
+    // no meio deslocaria todos os selos sem quebrar contagem nenhuma. A ancora
+    // prende a posicao ao conteudo.
+    cards(idioma).forEach((c, i) => {
+      expect(c.title, `card ${i}`).toContain(CARDS_DA_VITRINE[i].ancora[idioma])
+    })
+  })
+
+  it("todo card que o Starter NAO entrega leva selo", () => {
+    const semSelo = CARDS_DA_VITRINE.map((c, i) => ({ i, selo: planoMinimo(c.recursos) }))
+      .filter((x) => x.selo !== null && x.selo !== "starter")
+    // Mapa GPS e Checklist sao os dois cards inteiramente pagos.
+    expect(semSelo.map((x) => x.i)).toEqual([1, 4])
+    for (const x of semSelo) expect(x.selo).toBe("pro")
+  })
+
+  it("os cinco recursos pagos da grade estao declarados, nominalmente", () => {
+    expect(CARDS_DA_VITRINE[0].recursosPro).toContain("signature")
+    expect(CARDS_DA_VITRINE[1].recursos).toContain("gpsMap")
+    expect(CARDS_DA_VITRINE[4].recursos).toContain("checklist")
+    expect(CARDS_DA_VITRINE[5].recursosPro).toContain("advancedReports")
+    expect(CARDS_DA_VITRINE[6].recursosPro).toContain("gpsMap")
+  })
+
+  it.each(["pt", "en"] as const)("a clausula paga saiu do texto livre — %s", (idioma) => {
+    // A REGRESSAO que criou o defeito: devolver a promessa paga para o `desc`,
+    // onde ela passa por recurso incluso.
+    const proibido: Record<string, RegExp> = idioma === "pt"
+      ? { "0": /assinatura digital/i, "5": /desempenho/i, "6": /localiza[cç]/i }
+      : { "0": /signature/i, "5": /performance/i, "6": /location/i }
+    for (const [i, regex] of Object.entries(proibido)) {
+      expect(cards(idioma)[Number(i)].desc, `card ${i}`).not.toMatch(regex)
+    }
+  })
+
+  it.each(["pt", "en"] as const)("quem tem clausula paga tem a linha, e so esses — %s", (idioma) => {
+    cards(idioma).forEach((c, i) => {
+      const temPago = CARDS_DA_VITRINE[i].recursosPro.length > 0
+      expect(Boolean(c.pro), `card ${i}`).toBe(temPago)
+    })
+  })
+
+  it.each(["pt", "en"] as const)("todo rotulo de selo existe — %s", (idioma) => {
+    // `planoMinimo` pode devolver "adicional" no dia em que um card apontar
+    // para `ia` ou `filiais`. Chave faltando = pagina quebrada em producao.
+    const f = selos(idioma)
+    for (const valor of ["pro", "enterprise", "adicional"]) {
+      expect(typeof f.planBadge[valor], valor).toBe("string")
+    }
+    expect(typeof f.planNote).toBe("string")
+  })
+
+  it("e o selo chega mesmo a TELA", () => {
+    // Sem isto, o mapeamento poderia estar perfeito no lib e o JSX nao mostrar
+    // nada — a landing mentindo igual, com a suite verde.
+    const tela = readFileSync(join(process.cwd(), "src/app/page.tsx"), "utf8")
+    expect(tela).toContain("features.planNote")
+    // Ancorado nas DUAS pontas: o selo do card tem de VIR de
+    // planoMinimo(card.recursos) E ser renderizado. Um `toContain("planoMinimo(")`
+    // solto passa mesmo com o selo do card apagado, porque o da clausula
+    // continua chamando a mesma funcao — foi o que a mutacao mostrou.
+    expect(tela).toMatch(/seloDoCard = planoMinimo\(card\?\.recursos/)
+    expect(tela).toMatch(/seloDaClausula = planoMinimo\(card\?\.recursosPro/)
+    expect(tela).toMatch(/\{seloDoCard && seloDoCard !== "starter" && <SeloDePlano/)
+    expect(tela).toMatch(/seloDaClausula !== "starter" && \(/)
+  })
+})
+
+describe("a segunda lista de vantagens nao volta", () => {
+  // `Plan.features` era uma lista gravada no banco que tela nenhuma lia — e que
+  // ja divergia em tres pontos da vitrine de verdade: "Suporte 24h" x
+  // "Atendimento por WhatsApp em horario comercial"; o Starter sem "Orcamentos
+  // e PDF" nem "Recibos automaticos"; o Pro com "Estoque, compras e
+  // fornecedores" que a vitrine nao lista. Nao aparecia porque ninguem lia, e
+  // era essa a armadilha.
+  const fonte = (p: string) => readFileSync(join(process.cwd(), p), "utf8")
+
+  it("o seed nao grava mais texto de vitrine", () => {
+    expect(fonte("prisma/seed.ts")).not.toMatch(/features:\s*\[/)
+  })
+
+  it("e nenhuma consulta pede a coluna", () => {
+    // Parar de PEDIR vem antes de apagar: enquanto o codigo no ar seleciona a
+    // coluna, derruba-la faria a tela de assinatura responder 500 na janela do
+    // deploy. `select` explicito nas duas consultas que traziam a tabela
+    // inteira.
+    // So CODIGO: o comentario que explica a decisao cita `Plan.features` de
+    // proposito, e um `not.toMatch` sobre o arquivo inteiro ficaria vermelho
+    // contra a correcao.
+    const billing = fonte("src/actions/billing.ts")
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("//"))
+      .join("\n")
+    expect(billing).toMatch(/findMany\(\{[\s\S]{0,400}?select: \{[\s\S]{0,200}?maxUsers: true/)
+    expect(billing).not.toMatch(/features/)
   })
 })

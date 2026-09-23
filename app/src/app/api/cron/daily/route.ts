@@ -11,6 +11,7 @@ import { enviarPesquisasDeSatisfacao } from "@/lib/nps-fila"
 import { conferirDmarc } from "@/lib/conferir-dmarc"
 import { NOME_DMARC } from "@/lib/dmarc"
 import { avisarPendenciaUmaVez } from "@/lib/pendencia"
+import { devolucoesPendentes, devolverPrecoCheio } from "@/lib/devolver-preco-cheio"
 import { confirmarPagamento } from "@/lib/confirmar-pagamento"
 import { aplicarTrocaAgendada } from "@/lib/troca-de-plano-db"
 import { decidirAviso, diasDeAtraso, AVISOS_ATRASO } from "@/lib/past-due"
@@ -71,7 +72,7 @@ export async function GET(req: NextRequest) {
     .create({ data: { name: "daily" }, select: { id: true } })
     .catch(() => null)
 
-  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, cobrancasEnviadas: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, notasNaoArquivadas: 0, avisosDeTeste: 0, comissoesConferidas: 0, comissoesDivergentes: 0, comissoesForaDaJanela: 0, trocasDePlano: 0, retrato: "", dmarc: "", errors: 0 }
+  const results = { day3: 0, nps: 0, descontosDevolvidos: 0, descontosEncalhados: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, cobrancasEnviadas: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, notasNaoArquivadas: 0, avisosDeTeste: 0, comissoesConferidas: 0, comissoesDivergentes: 0, comissoesForaDaJanela: 0, trocasDePlano: 0, retrato: "", dmarc: "", errors: 0 }
 
   // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
   // Em 07/08/2026 uma cliente pagou e ficou sem acesso por ~1 dia: os webhooks
@@ -595,6 +596,61 @@ export async function GET(req: NextRequest) {
     results.errors++
   }
 
+  // ── Devoluções de preço que ficaram para trás ────────────────────────────
+  //
+  // O desconto de indicação é de UM pagamento só. Quem paga a primeira fatura
+  // tem o preço cheio devolvido na Asaas na hora (lib/confirmar-pagamento.ts) —
+  // mas essa chamada é melhor esforço, porque derrubar a ativação de quem
+  // acabou de pagar seria pior. Quando ela falha, a assinatura fica marcada
+  // como devendo: nasceu com desconto e nunca teve `fullPriceRestoredAt`.
+  //
+  // Sem esta varredura, aquela falha era definitiva e invisível — o gatilho da
+  // devolução é `status === "PENDING"`, e a assinatura já tinha virado ACTIVE.
+  // Um timeout da Asaas virava desconto vitalício em silêncio.
+  //
+  // Agrava que o verbo `POST /subscriptions/{id}` nunca foi exercitado contra a
+  // Asaas de verdade (ver o comentário em lib/asaas.ts). Se ele estiver errado,
+  // TODAS as devoluções falham — e é aqui que isso aparece, no dia seguinte,
+  // em vez de sangrar receita caladinho.
+  // (Achado na auditoria de 13/09/2026, grupo 9.)
+  try {
+    const pendentes = await devolucoesPendentes()
+    for (const p of pendentes) {
+      const r = await devolverPrecoCheio(p)
+      if (r === "devolvido") results.descontosDevolvidos++
+      else if (r === "falhou") results.descontosEncalhados++
+    }
+    if (results.descontosEncalhados > 0) {
+      // PENDÊNCIA, e não erro do cron: o sistema está de pé e as outras
+      // tarefas rodaram. Contar isto como falha derrubaria /api/health e
+      // mandaria o e-mail vermelho diário — o remédio que já custou caro uma
+      // vez (ver a nota do DMARC logo abaixo).
+      await avisarPendenciaUmaVez({
+        chave: `cobranca:devolucao-de-preco:${results.descontosEncalhados}`,
+        detalhe:
+          `${results.descontosEncalhados} assinatura(s) seguem cobrando com desconto de indicação ` +
+          `porque a Asaas recusou devolver o preço cheio. Cada ciclo que passa é receita perdida. ` +
+          `Confira se o verbo de POST /subscriptions/{id} ainda é o que a Asaas espera.`,
+        enviar: () =>
+          avisarPendenciaDeConfiguracao({
+            titulo: "devolução de preço após o desconto de indicação",
+            motivo:
+              `${results.descontosEncalhados} assinatura(s) continuam cobrando o valor COM desconto. ` +
+              `O desconto de indicação é de um pagamento só, e a chamada que devolve o preço cheio ` +
+              `na Asaas está falhando. Cada ciclo que passa é receita que não entra.`,
+            comoResolver:
+              "Confira no painel da Asaas se a assinatura aceita POST /v3/subscriptions/{id} com " +
+              "{ value }. O verbo nunca foi exercitado contra a API real (ver o comentário em " +
+              "src/lib/asaas.ts). Se a Asaas mudou o contrato, é ali que se corrige — a varredura " +
+              "do cron tenta de novo sozinha no dia seguinte.",
+          }),
+      })
+    }
+  } catch (err) {
+    console.error("[desconto] varredura de devoluções falhou:", err)
+    results.errors++
+  }
+
   // ── DMARC do domínio de e-mail ───────────────────────────────────────────
   // Sem política publicada qualquer um forja noreply@servicoos.com.br — e o
   // sistema manda cobrança em nome das empresas. Ninguém vê isso em log: a
@@ -679,6 +735,10 @@ export async function GET(req: NextRequest) {
             `nps ${results.nps}`,
             `contratos ${results.contratos}`,
             `cobrancas ${results.cobrancasEnviadas}`,
+            `descontos ${results.descontosDevolvidos} devolvidos` +
+              (results.descontosEncalhados > 0
+                ? `/${results.descontosEncalhados} ENCALHADOS`
+                : ""),
             `notas ${results.notasConsultadas} consultadas/${results.notasRejeitadas} rejeitadas` +
               (results.notasNaoArquivadas > 0
                 ? `/${results.notasNaoArquivadas} NAO ARQUIVADAS`

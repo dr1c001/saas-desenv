@@ -10,8 +10,35 @@ import {
 import { BotaoTema } from "@/components/landing/botao-tema"
 import { TelasDoSistema } from "@/components/landing/telas-do-sistema"
 import { Adicionais } from "@/components/shared/adicionais"
+import { CARDS_DA_VITRINE } from "@/lib/vitrine"
+import { planoMinimo } from "@/lib/plan"
 
 // Ícones alinhados 1:1 (mesma ordem) com landing.features.items em messages/*.json
+/**
+ * Chaves LITERAIS do selo.
+ *
+ * `t()` so aceita a uniao de chaves gerada do pt.json (src/global.d.ts), entao
+ * `t("features.planBadge." + selo)` nao compila. O mapa resolve isso e ainda
+ * obriga o TypeScript a cobrar uma entrada nova quando `planoMinimo` ganhar um
+ * valor novo.
+ */
+const ROTULO_DO_SELO = {
+  pro: "features.planBadge.pro",
+  enterprise: "features.planBadge.enterprise",
+  adicional: "features.planBadge.adicional",
+} as const
+
+function SeloDePlano({ plano, rotulo }: { plano: string; rotulo: string }) {
+  return (
+    <span
+      className="shrink-0 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary"
+      data-plano={plano}
+    >
+      {rotulo}
+    </span>
+  )
+}
+
 const featureIcons = [
   ClipboardList, MapPin, DollarSign, FileText, CheckCircle2,
   BarChart2, Users, Shield, Receipt, Wrench,
@@ -57,7 +84,8 @@ export default async function LandingPage() {
   const dashboardItemLabels = t.raw("dashboardPreview.items") as string[]
   const painPointItems = t.raw("painPoints.items") as { before: string; after: string }[]
   const howItWorksSteps = t.raw("howItWorks.steps") as { title: string; desc: string }[]
-  const featureItems = t.raw("features.items") as { title: string; desc: string }[]
+  // `pro` e a clausula PAGA do card, separada do texto livre: ver lib/vitrine.ts.
+  const featureItems = t.raw("features.items") as { title: string; desc: string; pro?: string }[]
   const segmentItems = t.raw("segments.items") as string[]
   const faqItems = t.raw("faq.items") as { q: string; a: string }[]
 
@@ -227,17 +255,34 @@ export default async function LandingPage() {
       <section className="bg-muted/40 py-20">
         <div className="mx-auto max-w-6xl px-4">
           <h2 className="text-3xl font-bold text-center mb-4">{t("features.title")}</h2>
-          <p className="text-center text-muted-foreground mb-12">{t("features.subtitle")}</p>
+          <p className="text-center text-muted-foreground mb-2">{t("features.subtitle")}</p>
+          <p className="text-center text-xs text-muted-foreground mb-12">{t("features.planNote")}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
             {featureItems.map((f, i) => {
               const Icon = featureIcons[i]
+              // O selo vem de POR_PLANO, e nao de um rotulo escrito no texto:
+              // o que a vitrine declara e o RECURSO (lib/vitrine.ts), e o plano
+              // minimo que o entrega e derivado. `recursos` marca o card
+              // inteiro; `recursosPro` marca so a clausula extra.
+              const card = CARDS_DA_VITRINE[i]
+              const seloDoCard = planoMinimo(card?.recursos ?? [])
+              const seloDaClausula = planoMinimo(card?.recursosPro ?? [])
               return (
                 <div key={i} className="rounded-xl border bg-card p-6 space-y-3">
-                  <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Icon className="size-5 text-primary" />
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Icon className="size-5 text-primary" />
+                    </div>
+                    {seloDoCard && seloDoCard !== "starter" && <SeloDePlano plano={seloDoCard} rotulo={t(ROTULO_DO_SELO[seloDoCard])} />}
                   </div>
                   <h3 className="font-semibold text-sm">{f.title}</h3>
                   <p className="text-xs text-muted-foreground">{f.desc}</p>
+                  {f.pro && seloDaClausula && seloDaClausula !== "starter" && (
+                    <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                      <SeloDePlano plano={seloDaClausula} rotulo={t(ROTULO_DO_SELO[seloDaClausula])} />
+                      <span>{f.pro}</span>
+                    </p>
+                  )}
                 </div>
               )
             })}
