@@ -24,9 +24,12 @@ export async function Adicionais({
 }: {
   /** A landing anuncia SEM preco; a tela de planos, com. */
   mostrarPreco: boolean
-  /** WhatsApp do suporte. `null` quando nao configurado — o bloco continua
-   *  aparecendo, so sem o botao: saber que o recurso existe ja vale. */
-  linkContato: string | null
+  /** Para onde vai quem quer contratar. Nunca nulo: sem WhatsApp configurado
+   *  cai no e-mail (ver `linkDeContatoSuporte` em lib/utils.ts). Era
+   *  `string | null`, e o botao ficava atras de `{linkContato && (` — o bloco
+   *  dizia "a contratacao e feita com a nossa equipe" e nao dava como falar
+   *  com ela. */
+  linkContato: string
 }) {
   const t = await getTranslations("adicionais")
   const tNomes = await getTranslations("mapAdmin.admin.actions")
@@ -79,16 +82,14 @@ export async function Adicionais({
                 </p>
               )}
 
-              {linkContato && (
-                <a
-                  href={linkContato}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-                >
-                  {t("falarComAGente")}
-                </a>
-              )}
+              <a
+                href={linkContato}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+              >
+                {t("falarComAGente")}
+              </a>
             </div>
           </details>
         ))}

@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
 import { PublicLanguageToggle } from "@/components/layout/public-language-toggle"
-import { linkWhatsappSuporte } from "@/lib/utils"
+import { linkDeContatoSuporte, linkWhatsappSuporte } from "@/lib/utils"
 import {
   ClipboardList, MapPin, DollarSign, BarChart2, CheckCircle2,
   FileText, Users, Zap, Shield, ArrowRight, CreditCard,
@@ -94,6 +94,10 @@ export default async function LandingPage() {
   // variável configurada — ou com número que não faz sentido — é melhor não
   // mostrar o botão do que mostrar quebrado.
   const suporteWhatsapp = linkWhatsappSuporte(process.env.SUPPORT_WHATSAPP, t("whatsapp.message"))
+  // O botao flutuante so faz sentido com WhatsApp de verdade (`suporteWhatsapp`,
+  // que pode ser nulo); onde o texto PROMETE falar com a equipe, usa-se o
+  // contato que sempre existe.
+  const contatoSuporte = linkDeContatoSuporte(process.env.SUPPORT_WHATSAPP, t("whatsapp.message"))
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -143,10 +147,19 @@ export default async function LandingPage() {
             <ArrowRight className="size-5" />
           </Link>
           {/* A DEMO no segundo lugar do herói, e não o login.
-              Quem chega pela primeira vez não quer entrar — quer ver. E o
-              sistema não tem teste grátis: sem este botão, a única forma de
-              conhecer o produto é assinar antes, que é o pedido mais difícil
-              que existe para uma marca desconhecida. */}
+              Quem chega pela primeira vez não quer entrar — quer ver. A demo é
+              um degrau ABAIXO do teste grátis: deixa ver o sistema funcionando
+              sem cadastrar nada, que é o pedido mais fácil que existe para uma
+              marca desconhecida.
+
+              Este comentário afirmava o contrário do que o botão logo acima
+              vende, de quando o trial foi removido em julho. Ele voltou em
+              08/09/2026 (migration
+              20260908000001_teste_gratis_de_volta, lib/teste-gratis.ts) e o
+              botão primário logo acima vende justamente os 15 dias. Não
+              quebrava a tela; quebrava a próxima pessoa que mexesse aqui, que
+              leria no arquivo mais visível do produto um fato falso e decidiria
+              em cima dele. (Achado na auditoria de 13/09/2026, grupo 9.) */}
           <Link
             href="/demo"
             className="inline-flex items-center gap-2 rounded-xl border px-8 py-4 text-lg font-semibold hover:bg-muted"
@@ -372,7 +385,7 @@ export default async function LandingPage() {
               // configurado, o e-mail atende. O contrário — a porta sumir
               // porque faltou uma variável de ambiente — devolve a página ao
               // problema que esta linha existe para resolver.
-              href={suporteWhatsapp || "mailto:suporte@servicoos.com.br"}
+              href={contatoSuporte}
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium text-primary underline underline-offset-2"
@@ -392,7 +405,7 @@ export default async function LandingPage() {
           conversar. Preco de adicional ao lado do preco do plano rouba a
           atencao da decisao principal, que e escolher o plano. */}
       <section className="mx-auto max-w-4xl px-4 pb-20">
-        <Adicionais mostrarPreco={false} linkContato={suporteWhatsapp} />
+        <Adicionais mostrarPreco={false} linkContato={contatoSuporte} />
       </section>
 
       <section id="faq" className="py-20 mx-auto max-w-3xl px-4">

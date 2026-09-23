@@ -70,7 +70,19 @@ function LoginForm() {
       } else if (msg.includes("rate limit") || msg.includes("too many")) {
         setServerError(t("auth.login.errors.rateLimit"))
       } else {
-        setServerError(error)
+        // A string CRUA do Supabase Auth nunca chega ao DOM.
+        //
+        // Só dois casos eram traduzidos; todo o resto caía aqui e jogava na
+        // tela a frase do Supabase — sempre em inglês, num formulário em
+        // português, no momento exato da conversão. "Database error saving new
+        // user" e "Signups not allowed for this instance" não dizem à pessoa
+        // se ela errou algo ou se o problema é nosso.
+        //
+        // O texto cru continua existindo, no console do servidor do navegador:
+        // perder o diagnóstico seria trocar um defeito por outro.
+        // (Achado na auditoria de 13/09/2026, grupo 9.)
+        console.error("[login] erro não tratado do Supabase:", error)
+        setServerError(t("auth.login.errors.desconhecido"))
       }
       return
     }

@@ -111,3 +111,29 @@ export function linkWhatsappSuporte(
   const numero = normalizarWhatsappBR(valor)
   return numero ? `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}` : null
 }
+
+/**
+ * Para onde vai quem quer falar com a gente. SEMPRE existe.
+ *
+ * `linkWhatsappSuporte` devolve null quando SUPPORT_WHATSAPP não está
+ * configurada — e a landing passava esse null cru para o bloco de Adicionais,
+ * cujo botão fica atrás de `{linkContato && (`. Sem a variável, o visitante
+ * lia os dois adicionais, lia logo abaixo "a contratação é feita com a nossa
+ * equipe" e NÃO TINHA UM ÚNICO LINK para falar com essa equipe. Nem botão, nem
+ * e-mail. O botão flutuante de WhatsApp também some pelo mesmo motivo.
+ *
+ * Vinte linhas acima, no plano sob medida, a mesma página já fazia o certo e
+ * explicava por quê: "o contrário — a porta sumir porque faltou uma variável de
+ * ambiente — devolve a página ao problema que esta linha existe para resolver".
+ * O endereço estava escrito à mão ali, e em outros seis lugares do app; aqui
+ * ele passa a ter um dono.
+ * (Achado na auditoria de 13/09/2026, grupo 9.)
+ */
+export const EMAIL_DE_SUPORTE = "suporte@servicoos.com.br"
+
+export function linkDeContatoSuporte(
+  configurado: string | undefined,
+  mensagem: string
+): string {
+  return linkWhatsappSuporte(configurado, mensagem) ?? `mailto:${EMAIL_DE_SUPORTE}`
+}

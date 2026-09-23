@@ -351,7 +351,7 @@ function Financeiro({ t, s, dinheiro }: Props) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
-        <Cartao rotulo={t("financeiro.recebido")} valor={dinheiro(p.faturadoMes)} />
+        <Cartao rotulo={t("financeiro.recebido")} valor={dinheiro(p.recebido)} />
         <Cartao rotulo={t("financeiro.pendente")} valor={dinheiro(p.aReceber)} />
         <Cartao
           rotulo={t("financeiro.vencido")}

@@ -76,9 +76,16 @@ function RegisterForm() {
       name: data.name,
       companyName: data.companyName,
       refCode,
+      // O aceite ATRAVESSA a rede. O zod acima e UX; quem confere de
+      // verdade e a Server Action, que e endereco HTTP proprio.
+      termsAccepted: data.termsAccepted,
     })
     if (errorCode === "RATE_LIMIT") {
       setServerError(t("auth.register.errors.rateLimit"))
+      return
+    }
+    if (errorCode === "TERMS_REQUIRED") {
+      setServerError(t("auth.register.errors.termsRequired"))
       return
     }
     if (error) {
@@ -88,7 +95,19 @@ function RegisterForm() {
       } else if (msg.includes("already registered") || msg.includes("already been registered")) {
         setServerError(t("auth.register.errors.alreadyRegistered"))
       } else {
-        setServerError(error)
+        // A string CRUA do Supabase Auth nunca chega ao DOM.
+        //
+        // Só dois casos eram traduzidos; todo o resto caía aqui e jogava na
+        // tela a frase do Supabase — sempre em inglês, num formulário em
+        // português, no momento exato da conversão. "Database error saving new
+        // user" e "Signups not allowed for this instance" não dizem à pessoa
+        // se ela errou algo ou se o problema é nosso.
+        //
+        // O texto cru continua existindo, no console do servidor do navegador:
+        // perder o diagnóstico seria trocar um defeito por outro.
+        // (Achado na auditoria de 13/09/2026, grupo 9.)
+        console.error("[register] erro não tratado do Supabase:", error)
+        setServerError(t("auth.register.errors.desconhecido"))
       }
       return
     }

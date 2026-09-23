@@ -111,7 +111,8 @@
       "errors": {
         "emailNotConfirmed": "E-mail não confirmado. Verifique sua caixa de entrada e clique no link de confirmação.",
         "invalidCredentials": "E-mail ou senha incorretos.",
-        "rateLimit": "Muitas tentativas. Aguarde alguns minutos e tente novamente."
+        "rateLimit": "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
+        "desconhecido": "Não foi possível entrar agora. Tente de novo em instantes — se continuar, fale com a gente pelo suporte."
       }
     },
     "register": {
@@ -133,9 +134,10 @@
       "haveAccount": "Já tem conta? <link>Entrar</link>",
       "errors": {
         "rateLimit": "Muitas tentativas de cadastro. Aguarde alguns minutos e tente novamente.",
-        "alreadyRegistered": "Este e-mail já está cadastrado. Tente fazer login."
+        "alreadyRegistered": "Este e-mail já está cadastrado. Tente fazer login.",
+        "termsRequired": "Você precisa aceitar os Termos de Uso e a Política de Privacidade para criar a conta.",
+        "desconhecido": "Não foi possível criar a conta agora. Tente de novo em instantes — se continuar, fale com a gente pelo suporte."
       },
-      "subtitle": "Crie sua conta e use 15 dias grátis — sem cartão.",
       "refChecking": "Conferindo o código de indicação…",
       "refInvalid": "Não encontramos esse código de indicação. Você pode criar a conta normalmente — só não entra o desconto. Se recebeu um link, peça para conferirem se ele chegou inteiro.",
       "refUnknown": "Não conseguimos conferir o código de indicação agora. Se ele for válido, o desconto entra do mesmo jeito quando você assinar."
@@ -1527,12 +1529,7 @@
         "text": "Precisa de mais usuários ou de mais notas fiscais do que o Enterprise?",
         "link": "Monte um plano sob medida"
       },
-      "disclaimer": "Todos os preços em BRL. Você só paga depois dos 15 dias, se decidir continuar. Boleto ou cartão.",
-      "plans": {
-        "starter": {},
-        "pro": {},
-        "enterprise": {}
-      }
+      "disclaimer": "Todos os preços em BRL. Você só paga depois dos 15 dias, se decidir continuar. Boleto ou cartão."
     },
     "faq": {
       "title": "Perguntas frequentes",
@@ -1600,6 +1597,14 @@
         "desc": "A OS faturada vira receita sozinha. Você vê o que já caiu, o que está pendente e o que venceu, sem planilha paralela."
       },
       "aviso": "Telas do sistema com dados de exemplo. Nomes e valores são fictícios."
+    },
+    "meta": {
+      "title": "ServiçoOS — sistema para empresas de serviço",
+      "description": "Chega de controlar ordem de serviço pelo WhatsApp e pela planilha. Orçamento, OS, equipe em campo e financeiro num sistema só."
+    },
+    "og": {
+      "manchete": "Chega de OS no WhatsApp e na planilha",
+      "chamada": "Orçamento, OS, equipe em campo e financeiro num sistema só. Veja funcionando, sem cadastro."
     }
   },
   "legal": {
@@ -2975,7 +2980,9 @@
       "titulo": "O que esta página não consegue dizer",
       "texto": "Ela roda na mesma infraestrutura que descreve. Se tudo cair, esta página cai junto — então ela nunca vai te mostrar uma queda total. O que ela cobre é o caso mais comum: o sistema estar no ar com alguma coisa quebrada por dentro, que é o que você não consegue enxergar sozinho. E ela não exibe percentual de disponibilidade porque não medimos isso daqui de dentro — número inventado numa página de status é pior que página nenhuma."
     },
-    "contato": "Alguma coisa estranha e nada aqui explica? Escreva para"
+    "contato": "Alguma coisa estranha e nada aqui explica? Escreva para",
+    "metaTitulo": "Status — ServiçoOS",
+    "metaDescricao": "Se o ServiçoOS está no ar agora, e desde quando."
   },
   "team": {
     "list": {
@@ -3240,7 +3247,19 @@
     },
     "meta": "Veja o ServiçoOS funcionando com serviços, checklist e valores de uma empresa de {ramo}. Sem cadastro e sem cartão.",
     "ogChamada": "Orçamento, OS, equipe em campo e financeiro num sistema só. Veja funcionando, sem cadastro.",
-    "ogSemRamo": "Chega de OS no WhatsApp e na planilha"
+    "ogSemRamo": "Chega de OS no WhatsApp e na planilha",
+    "ogPrefixo": "O sistema para",
+    "ogModulos": [
+      "Orçamento",
+      "Ordem de serviço",
+      "Equipe em campo",
+      "Financeiro"
+    ],
+    "metaTitulo": "ServiçoOS para {ramo}",
+    "metaCurta": {
+      "titulo": "ServiçoOS — veja o sistema funcionando",
+      "descricao": "Um sistema de verdade, com dados de exemplo: orçamento, ordem de serviço, equipe em campo e financeiro. Sem cadastro."
+    }
   },
   "estoqueHistorico": {
     "titulo": "Histórico desta peça",

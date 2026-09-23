@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { NextIntlClientProvider } from "next-intl"
 import { AmbienteBanner } from "@/components/layout/ambiente-banner"
-import { getLocale, getMessages } from "next-intl/server"
+import { getLocale, getMessages, getTranslations } from "next-intl/server"
 import "./globals.css"
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://servicoos.com.br"
@@ -9,10 +9,17 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://servicoos.com.br"
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale()
   const isEn = locale === "en"
-  const title = isEn ? "ServiçoOS — Service Order Management" : "ServiçoOS — Gestão de Ordens de Serviço"
-  const description = isEn
-    ? "CRM, service orders, finance and dashboard for service companies"
-    : "CRM, OS, Financeiro e Dashboard para empresas de serviço"
+  // O texto que aparece no Google e no preview de QUALQUER link compartilhado.
+  //
+  // Eram quatro literais aqui dentro, fora do next-intl, ainda vendendo o
+  // posicionamento horizontal recolhido em 08/09/2026: "CRM, OS, Financeiro e
+  // Dashboard para empresas de serviço" — lista de módulos internos, em jargão.
+  // "CRM" e "Dashboard" não são palavras de quem tem desentupidora, e o
+  // comentário em demo/page.tsx já registrava isso sobre esta mesma frase.
+  // (Achado na auditoria de 13/09/2026, grupo 9.)
+  const t = await getTranslations("landing.meta")
+  const title = t("title")
+  const description = t("description")
 
   return {
     metadataBase: new URL(appUrl),
@@ -33,7 +40,9 @@ export async function generateMetadata(): Promise<Metadata> {
       type: "website",
     },
     twitter: {
-      card: "summary",
+      // `summary` mostra a figura como miniatura ao lado do texto; o cartão
+      // é 1200×630 e foi desenhado para ocupar a largura toda.
+      card: "summary_large_image",
       title,
       description,
     },

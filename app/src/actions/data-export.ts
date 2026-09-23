@@ -181,6 +181,34 @@ export async function exportTenantData() {
     }),
   ])
 
+  // O REGISTRO DO ACEITE dos Termos e da Política de Privacidade.
+  //
+  // Fora do Promise.all acima de propósito: `TermsAcceptance` não tem tenantId
+  // nem relação — a linha nasce em `signUpUser`, antes de existir User ou
+  // Tenant (ver o comentário no model). Então só dá para procurá-la depois de
+  // saber quem são os usuários desta empresa.
+  //
+  // Procura por userId E por e-mail: a ligação com a conta é melhor esforço,
+  // e o e-mail é a chave que sempre existe. É a mesma razão pela qual nenhuma
+  // varredura por tenantId encontraria estas linhas.
+  const aceiteDosTermos = await prisma.termsAcceptance.findMany({
+    where: {
+      OR: [
+        { userId: { in: users.map((u) => u.id) } },
+        { email: { in: users.map((u) => u.email.toLowerCase()) } },
+      ],
+    },
+    select: {
+      userId: true,
+      email: true,
+      termsVersion: true,
+      privacyVersion: true,
+      acceptedAt: true,
+      acceptedIp: true,
+    },
+    orderBy: { acceptedAt: "asc" },
+  })
+
   return {
     exportadoEm: new Date().toISOString(),
     empresa: tenant,
@@ -196,6 +224,7 @@ export async function exportTenantData() {
     receitas: revenues,
     despesas: expenses,
     assinaturas: subscriptions,
+    aceiteDosTermos,
     contratosRecorrentes: contratos,
     filiais,
     fornecedores,

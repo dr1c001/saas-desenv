@@ -60,6 +60,10 @@ export function adicionaisAVenda(): Adicional[] {
   )
 }
 
-export function precoDoAdicional(recurso: string): number | null {
-  return CATALOGO_DE_ADICIONAIS.find((a) => a.recurso === recurso)?.precoMensal ?? null
-}
+// `precoDoAdicional` foi removida em 23/09/2026. Era exportada, testada e sem
+// nenhum chamador em producao: quem mostra preco le `a.precoMensal` direto do
+// item devolvido por `adicionaisAVenda()`. Alem de morta, era uma armadilha —
+// devolvia null tanto para "preco sob consulta" quanto para "recurso que nao
+// existe", duas coisas que a tela precisa distinguir. Quem for mudar a regra
+// de preco encontrava dois caminhos aparentemente equivalentes e podia alterar
+// o que nao vale. (Achado na auditoria de 13/09/2026, grupo 9.)

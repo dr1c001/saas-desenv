@@ -26,7 +26,10 @@ export async function generateMetadata({
   if (!ehSegmento(ramo)) return {}
   const t = await getTranslations("demo")
   const nome = t(`ramos.${ramo}` as "ramos.desentupidora")
-  const titulo = `ServiçoOS para ${nome}`
+  // A preposição também é tradução: `ServiçoOS para ${nome}` deixava o título
+  // meio em cada língua ("ServiçoOS para HVAC & refrigeration") justamente na
+  // página feita para ser compartilhada.
+  const titulo = t("metaTitulo", { ramo: nome })
   const descricao = t("meta", { ramo: nome })
   // `openGraph` explícito: o layout raiz tem o dele, e mudar só o `title` não
   // o sobrescreve — o cartão do WhatsApp continuaria com o texto genérico do

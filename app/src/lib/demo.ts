@@ -389,11 +389,29 @@ export function ehSegmento(slug: string): boolean {
 export function painelDe(s: Segmento) {
   const aReceber = s.receber.filter((c) => !c.pago).reduce((t, c) => t + c.valor, 0)
   const vencido = s.receber.filter((c) => c.vencida).reduce((t, c) => t + c.valor, 0)
+  // RECEBIDO sai da lista, e não do faturamento do mês.
+  //
+  // O cartão "Recebido" da aba Financeiro mostrava `faturadoMes` — que é
+  // autoral e representa o mês inteiro, enquanto a lista de contas logo abaixo
+  // dele tem só algumas linhas. Na desentupidora o cartão dizia R$ 18.740 e as
+  // duas contas marcadas Pago somavam R$ 3.720. Mentia nos cinco ramos.
+  //
+  // Faturado e recebido não são a mesma coisa, e o mesmo número aparecia como
+  // "Faturado no mês" na aba Painel e como "Recebido" aqui. O dono de empresa
+  // que a demo existe para convencer soma a lista, não bate, e conclui que o
+  // financeiro do sistema não fecha — que é exatamente o que o comentário
+  // acima diz querer evitar.
+  //
+  // Espelha `monthlyRevenue` do produto de verdade (actions/finance.ts), que
+  // soma as receitas com status PAID.
+  // (Achado na auditoria de 13/09/2026, grupo 9.)
+  const recebido = s.receber.filter((c) => c.pago).reduce((t, c) => t + c.valor, 0)
   const osAbertas = s.ordens.filter(
     (o) => o.status === "OPEN" || o.status === "IN_PROGRESS"
   ).length
   return {
     faturadoMes: s.faturadoMes,
+    recebido,
     aReceber,
     vencido,
     osAbertas,

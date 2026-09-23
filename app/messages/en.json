@@ -111,7 +111,8 @@
       "errors": {
         "emailNotConfirmed": "Email not confirmed. Check your inbox and click the confirmation link.",
         "invalidCredentials": "Incorrect email or password.",
-        "rateLimit": "Too many attempts. Please wait a few minutes and try again."
+        "rateLimit": "Too many attempts. Please wait a few minutes and try again.",
+        "desconhecido": "We couldn't sign you in right now. Try again in a moment — if it keeps happening, get in touch with support."
       }
     },
     "register": {
@@ -133,9 +134,10 @@
       "haveAccount": "Already have an account? <link>Sign in</link>",
       "errors": {
         "rateLimit": "Too many registration attempts. Please wait a few minutes and try again.",
-        "alreadyRegistered": "This email is already registered. Try signing in instead."
+        "alreadyRegistered": "This email is already registered. Try signing in instead.",
+        "termsRequired": "You must accept the Terms of Use and the Privacy Policy to create an account.",
+        "desconhecido": "We couldn't create your account right now. Try again in a moment — if it keeps happening, get in touch with support."
       },
-      "subtitle": "Create your account and use it free for 15 days — no card.",
       "refChecking": "Checking the referral code…",
       "refInvalid": "We couldn't find that referral code. You can still create your account — only the discount won't apply. If someone sent you a link, ask them to check whether it arrived complete.",
       "refUnknown": "We couldn't check the referral code right now. If it is valid, the discount still applies when you subscribe."
@@ -1527,12 +1529,7 @@
         "text": "Need more users or more invoices than Enterprise?",
         "link": "Get a custom plan"
       },
-      "disclaimer": "All prices in BRL. You only pay after the 15 days, if you decide to continue. Bank slip or card.",
-      "plans": {
-        "starter": {},
-        "pro": {},
-        "enterprise": {}
-      }
+      "disclaimer": "All prices in BRL. You only pay after the 15 days, if you decide to continue. Bank slip or card."
     },
     "faq": {
       "title": "Frequently asked questions",
@@ -1600,6 +1597,14 @@
         "desc": "An invoiced order becomes revenue on its own. You see what landed, what's pending and what's overdue, with no side spreadsheet."
       },
       "aviso": "System screens with sample data. Names and figures are fictitious."
+    },
+    "meta": {
+      "title": "ServiçoOS — the system for service businesses",
+      "description": "Stop running work orders over WhatsApp and spreadsheets. Quotes, work orders, your field team and finances in one system."
+    },
+    "og": {
+      "manchete": "No more work orders in WhatsApp and spreadsheets",
+      "chamada": "Quotes, work orders, field crew and finances in one system. See it working, no sign-up."
     }
   },
   "legal": {
@@ -2975,7 +2980,9 @@
       "titulo": "What this page cannot tell you",
       "texto": "It runs on the same infrastructure it describes. If everything goes down, this page goes down with it — so it will never show you a full outage. What it does cover is the most common case: the system being up with something broken inside, which is what you cannot see on your own. And it shows no uptime percentage because we do not measure that from in here — an invented number on a status page is worse than no page at all."
     },
-    "contato": "Something odd and nothing here explains it? Write to"
+    "contato": "Something odd and nothing here explains it? Write to",
+    "metaTitulo": "Status — ServiçoOS",
+    "metaDescricao": "Whether ServiçoOS is up right now, and since when."
   },
   "team": {
     "list": {
@@ -3240,7 +3247,19 @@
     },
     "meta": "See ServiçoOS in action with the jobs, checklist and figures of a {ramo} company. No sign-up, no card.",
     "ogChamada": "Quotes, work orders, field crew and finances in one system. See it working, no sign-up.",
-    "ogSemRamo": "No more work orders in WhatsApp and spreadsheets"
+    "ogSemRamo": "No more work orders in WhatsApp and spreadsheets",
+    "ogPrefixo": "The system for",
+    "ogModulos": [
+      "Quotes",
+      "Work orders",
+      "Field crew",
+      "Finances"
+    ],
+    "metaTitulo": "ServiçoOS for {ramo}",
+    "metaCurta": {
+      "titulo": "ServiçoOS — see the system working",
+      "descricao": "A real system, with sample data: quotes, work orders, field crew and finances. No sign-up."
+    }
   },
   "estoqueHistorico": {
     "titulo": "This part's history",

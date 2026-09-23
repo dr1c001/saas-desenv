@@ -3,7 +3,6 @@ import { ADICIONAIS } from "@/lib/recursos"
 import {
   adicionaisAVenda,
   CATALOGO_DE_ADICIONAIS,
-  precoDoAdicional,
 } from "@/lib/adicionais"
 
 // O catálogo aparece em DOIS lugares: a tela de planos, dentro do sistema, e a
@@ -26,11 +25,21 @@ describe("o catálogo e o que existe no sistema", () => {
 })
 
 describe("o preço", () => {
+  // Pelo MESMO caminho que a tela percorre: `adicionaisAVenda()` e o campo
+  // `precoMensal` do item. Estes testes exercitavam `precoDoAdicional`, uma
+  // função exportada que nenhuma tela chamava — provavam um caminho que não
+  // roda em produção, e mantinham viva uma armadilha (ela devolvia `null`
+  // tanto para "sob consulta" quanto para "recurso que não existe", duas
+  // coisas que a tela precisa distinguir).
+  // (Achado na auditoria de 13/09/2026, grupo 9.)
+  const doCatalogo = (recurso: string) =>
+    adicionaisAVenda().find((a) => a.recurso === recurso)
+
   it("filiais tem preço, e ele é menor que o salto de plano", () => {
     // A razão de existir do adicional: sem ele, quem tem duas unidades pularia
     // de R$ 97 para R$ 397. Um adicional que custasse perto de R$ 300 não
     // resolveria nada.
-    const p = precoDoAdicional("filiais")
+    const p = doCatalogo("filiais")?.precoMensal
     expect(p).not.toBeNull()
     expect(p!).toBeGreaterThan(0)
     expect(p!).toBeLessThan(300)
@@ -43,7 +52,7 @@ describe("o preço", () => {
     //
     // Este teste vai falhar no dia em que o preço for definido — e isso é o
     // ponto: é o lembrete de conferir se o número cobre o custo medido.
-    expect(precoDoAdicional("ia")).toBeNull()
+    expect(doCatalogo("ia")?.precoMensal).toBeNull()
   })
 
   it("`null` significa sob consulta, e nunca de graça", () => {
@@ -54,7 +63,9 @@ describe("o preço", () => {
     }
   })
 
-  it("recurso desconhecido não inventa preço", () => {
-    expect(precoDoAdicional("nao-existe")).toBeNull()
+  it("recurso desconhecido não está à venda", () => {
+    // Pela tela, "não existe" e "sob consulta" são coisas diferentes: o item
+    // simplesmente não aparece no catálogo, em vez de aparecer sem preço.
+    expect(doCatalogo("nao-existe")).toBeUndefined()
   })
 })

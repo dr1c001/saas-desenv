@@ -22,5 +22,7 @@ export default async function Image({ params }: { params: Promise<{ ramo: string
     ramo: ehSegmento(ramo) ? t(`ramos.${ramo}` as "ramos.desentupidora") : null,
     chamada: t("ogChamada"),
     semRamo: t("ogSemRamo"),
+    prefixo: t("ogPrefixo"),
+    modulos: t.raw("ogModulos") as string[],
   })
 }

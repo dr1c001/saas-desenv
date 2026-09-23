@@ -31,6 +31,9 @@ function arvoreDaDemo(): string[] {
     // As imagens de compartilhamento também são rotas públicas da demo, e
     // rodam no servidor: valem a mesma trava que as páginas.
     "src/app/demo/opengraph-image.tsx",
+  // O cartao da LANDING importa o mesmo componente: fora desta fila, a trava
+  // anti-banco deixaria de cobrir o arquivo novo.
+  "src/app/opengraph-image.tsx",
     "src/app/demo/[ramo]/opengraph-image.tsx",
     "src/components/demo/cartao-og.tsx",
     "src/components/demo/moldura.tsx",
@@ -179,6 +182,36 @@ describe.each(SEGMENTOS.map((s) => [s.slug, s] as const))("%s: os dados fecham",
   // que os dados autorais são coerentes e que a derivação continua fazendo o
   // que promete.
 
+  it("o RECEBIDO é a soma das contas pagas da lista", () => {
+    // O cartão "Recebido" da aba Financeiro mostrava `faturadoMes`, que é
+    // autoral e do mês inteiro. Na desentupidora o cartão dizia R$ 18.740 e a
+    // lista logo abaixo tinha duas contas Pago somando R$ 3.720. Mentia nos
+    // cinco ramos.
+    const pagas = s.receber.filter((c) => c.pago).reduce((t, c) => t + c.valor, 0)
+    expect(painelDe(s).recebido).toBe(pagas)
+  })
+
+  it("e recebido + a receber fecha a lista INTEIRA", () => {
+    // O que o visitante faz: soma a coluna e confere com os cartões.
+    const tudo = s.receber.reduce((t, c) => t + c.valor, 0)
+    const p = painelDe(s)
+    expect(p.recebido + p.aReceber).toBe(tudo)
+  })
+
+  it("recebido NÃO é o faturado do mês — são coisas diferentes", () => {
+    // A regressão que se quer impedir, nomeada: devolver `faturadoMes` ao
+    // cartão de Recebido. O mesmo número já aparece como "Faturado no mês" na
+    // aba Painel; anunciá-lo como recebido é contar duas coisas com um número.
+    expect(painelDe(s).recebido).not.toBe(s.faturadoMes)
+  })
+
+  it("todo ramo tem conta paga E conta em aberto", () => {
+    // Âncora dos três acima: com a lista toda paga (ou toda em aberto) eles
+    // passariam sem cobrar nada.
+    expect(s.receber.some((c) => c.pago), "nenhuma paga").toBe(true)
+    expect(s.receber.some((c) => !c.pago), "nenhuma em aberto").toBe(true)
+  })
+
   it("o detalhe abre uma OS que está na lista", () => {
     // `ordemDoDetalhe` lança quando não está — este teste é o que transforma
     // isso em erro na hora de rodar os testes, e não na tela do visitante.
@@ -281,5 +314,72 @@ describe("nada aqui pertence a alguém de verdade", () => {
     if (/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/.test(fonte)) suspeitos.push("CNPJ")
     if (/\(\d{2}\)\s?9?\d{4}-\d{4}/.test(fonte)) suspeitos.push("telefone")
     expect(suspeitos).toEqual([])
+  })
+})
+
+describe("cada cartão mostra o número do seu rótulo", () => {
+  // Estrutural: o defeito era um PAR (rótulo, valor) trocado, e nenhum teste de
+  // dados o veria — `painelDe` estava certo; quem mentia era a tela.
+  //
+  // A extração é feita POR ELEMENTO <Cartao>, e não com um regex global
+  // preguiçoso. Um `/rotulo=\{t\("([^"]+)"\)\}[\s\S]*?valor=\{dinheiro\(([^)]+)\)\}/g`
+  // começaria em `painel.abertas` — cujo valor usa `String(...)`, não
+  // `dinheiro(...)` —, atravessaria cento e trinta linhas e casaria com o
+  // `dinheiro()` do cartão de Recebido, CONSUMINDO o rótulo dele no caminho.
+  // O par que importa é justamente o que o atalho perde.
+  const fonte = readFileSync(join(process.cwd(), "src/components/demo/visita.tsx"), "utf8")
+
+  /** Cada <Cartao ... /> como um bloco só, com o rótulo e o valor dele. */
+  function cartoes(): { rotulo: string; valor: string }[] {
+    const achados: { rotulo: string; valor: string }[] = []
+    for (const m of fonte.matchAll(/<Cartao([\s\S]*?)\/>/g)) {
+      const bloco = m[1]
+      const rotulo = bloco.match(/rotulo=\{t\("([^"]+)"\)\}/)
+      const valor = bloco.match(/valor=\{(?:dinheiro|String)\(([^)]+)\)\}/)
+      if (rotulo && valor) achados.push({ rotulo: rotulo[1], valor: valor[1].trim() })
+    }
+    return achados
+  }
+
+  const ESPERADO: Record<string, string> = {
+    "painel.faturado": "p.faturadoMes",
+    "painel.aReceber": "p.aReceber",
+    "painel.vencido": "p.vencido",
+    "painel.ticket": "p.ticketMedio",
+    "painel.abertas": "p.osAbertas",
+    "painel.concluidas": "p.osConcluidasMes",
+    "financeiro.recebido": "p.recebido",
+    "financeiro.pendente": "p.aReceber",
+    "financeiro.vencido": "p.vencido",
+  }
+
+  it("a extração enxerga TODOS os cartões", () => {
+    console.log("DBG tamanho", fonte.length, "temCartao", fonte.includes("<Cartao"), "achados", cartoes().length)
+    // Âncora, e ela JÁ PAGOU por si: a primeira escrita deste bloco tinha um
+    // caractere BACKSPACE no meio do regex — um `\b` que virou 0x08 ao passar
+    // por uma ferramenta de edição. O regex nunca casava, `cartoes()` devolvia
+    // lista vazia, e sem esta linha os nove casos abaixo passariam verdes sem
+    // conferir nada: um teste que passa por não conseguir falhar. É a mesma
+    // armadilha que vitrine-x-plano.test.ts já documenta, por outro caminho.
+    expect(cartoes().length).toBe(Object.keys(ESPERADO).length)
+  })
+
+  it.each(Object.entries(ESPERADO))("%s mostra %s", (rotulo, valor) => {
+    const achado = cartoes().find((c) => c.rotulo === rotulo)
+    expect(achado, `cartão ${rotulo} sumiu da tela`).toBeTruthy()
+    expect(achado!.valor).toBe(valor)
+  })
+})
+
+describe("os rótulos do financeiro existem nos dois idiomas", () => {
+  // Chave faltando no next-intl é exceção na rota pública /demo, e não texto
+  // em branco.
+  it.each(["pt", "en"] as const)("%s", (idioma) => {
+    const m = JSON.parse(
+      readFileSync(join(process.cwd(), `messages/${idioma}.json`), "utf8")
+    ) as { demo: { financeiro: Record<string, string> } }
+    for (const chave of ["recebido", "pendente", "vencido"]) {
+      expect(typeof m.demo.financeiro[chave], `${idioma}/${chave}`).toBe("string")
+    }
   })
 })

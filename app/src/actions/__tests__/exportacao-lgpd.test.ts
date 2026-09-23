@@ -71,6 +71,20 @@ describe("a exportação leva TUDO que é da empresa", () => {
     expect(FONTE).toContain("localizacoesDaEquipe")
   })
 
+  it("o ACEITE DOS TERMOS vai junto, e também não tem tenantId", () => {
+    // Terceiro modelo da mesma família do rastro de GPS: `TermsAcceptance` é
+    // chaveado por usuário e por e-mail, e a linha nasce ANTES de existir User
+    // ou Tenant (ver o model no schema). Nenhuma varredura por `tenantId` o
+    // encontraria — e é o documento que prova que o cliente aceitou, e em que
+    // versão. Pedido do art. 18 sem ele entrega menos do que os documentos
+    // prometem.
+    expect(FONTE).toContain("prisma.termsAcceptance.findMany")
+    expect(FONTE).toContain("termsVersion")
+    // NO OBJETO DE RETORNO, e não só declarado: procurar o nome solto passa
+    // verde com a variável criada e nunca devolvida.
+    expect(FONTE).toMatch(/assinaturas: subscriptions,[\s\S]{0,40}aceiteDosTermos,/)
+  })
+
   it("a lista de exceções não cresce por descuido", () => {
     expect(Object.keys(FORA_DA_EXPORTACAO)).toEqual(["PlatformAlert"])
   })

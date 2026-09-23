@@ -2,17 +2,25 @@ export const dynamic = "force-dynamic"
 
 import Link from "next/link"
 import type { Metadata } from "next"
-import { getTranslations } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { CheckCircle2, AlertTriangle } from "lucide-react"
 import { prisma } from "@/lib/prisma"
 import { diagnosticar } from "@/lib/saude"
 import { resumo, ultimosDias } from "@/lib/status"
 
-export const metadata: Metadata = {
-  title: "Status — ServiçoOS",
-  description: "Estado atual do sistema e histórico das tarefas automáticas.",
-  // Página de status não deve competir com a landing na busca.
-  robots: { index: false },
+// Era a única página pública com metadata FIXA em português, num corpo todo
+// traduzido. O visitante com o seletor em inglês abria /status pelo rodapé e a
+// aba do navegador saía em português. As outras públicas já usam
+// generateMetadata. (Achado na auditoria de 13/09/2026, grupo 9.)
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("status")
+  return {
+    title: t("metaTitulo"),
+    description: t("metaDescricao"),
+    // Página de status não deve competir com a landing na busca. E é por isso
+    // que ela NÃO entra no sitemap: sitemap + noindex é contradição.
+    robots: { index: false },
+  }
 }
 
 /**
@@ -29,6 +37,10 @@ export const metadata: Metadata = {
  */
 export default async function StatusPage() {
   const t = await getTranslations("status")
+  // O FUSO continua São Paulo de propósito — é a hora do servidor que
+  // executa (região gru1, ver vercel.json) —, mas o FORMATO segue o idioma
+  // de quem lê: 23/09/2026 14:05 e 9/23/2026, 2:05 PM são a mesma hora.
+  const locale = await getLocale()
   const agora = new Date()
 
   let bancoRespondeu = false
@@ -89,7 +101,7 @@ export default async function StatusPage() {
                 {saudavel ? t("tudoBem") : t("comProblema")}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {t("verificadoEm", { hora: agora.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) })}
+                {t("verificadoEm", { hora: agora.toLocaleString(locale === "en" ? "en-US" : "pt-BR", { timeZone: "America/Sao_Paulo" }) })}
               </p>
             </div>
           </div>

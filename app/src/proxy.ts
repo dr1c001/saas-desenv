@@ -73,7 +73,17 @@ export async function proxy(request: NextRequest) {
     // /dashboard antes de a pessoa ter senha; e sem sessão precisa renderizar
     // a própria explicação de link vencido, em vez de cair num /login que não
     // diz o que fazer.
-    request.nextUrl.pathname.startsWith("/criar-senha")
+    request.nextUrl.pathname.startsWith("/criar-senha") ||
+    // O cartão de compartilhamento da landing.
+    //
+    // `/opengraph-image` NÃO TEM EXTENSÃO, e o matcher lá embaixo só isenta
+    // caminho com ponto — então esta rota passa por aqui. Sem esta linha, o
+    // scraper do WhatsApp recebe 307 para /login e o link colado continua
+    // saindo pelado, que é exatamente o defeito que o cartão veio corrigir.
+    // Os cartões da demo só escapam hoje porque `startsWith("/demo")`, logo
+    // acima, os cobre por acidente feliz.
+    // (Achado na auditoria de 13/09/2026, grupo 9.)
+    request.nextUrl.pathname === "/opengraph-image"
 
   if (!session && !isAuthRoute && !isPublicRoute) {
     const url = request.nextUrl.clone()

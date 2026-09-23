@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { sendPasswordResetEmail } from "@/lib/resend"
 import { createClient } from "@/lib/supabase/server"
 import { checkRateLimit, clientIp } from "@/lib/rate-limit"
+import { VERSAO_PRIVACIDADE, VERSAO_TERMOS } from "@/lib/versao-legal"
 
 // login/cadastro chamavam o Supabase direto do browser (sem passar pelo
 // nosso servidor), então um rate limit só em rota nossa não protegia nada —
@@ -37,7 +38,25 @@ export async function signUpUser(input: {
   name: string
   companyName: string
   refCode?: string
-}): Promise<{ error?: string; errorCode?: "RATE_LIMIT"; needsEmailConfirmation?: boolean }> {
+  /** O aceite dos Termos e da Política de Privacidade. Ver abaixo. */
+  termsAccepted: boolean
+}): Promise<{
+  error?: string
+  errorCode?: "RATE_LIMIT" | "TERMS_REQUIRED"
+  needsEmailConfirmation?: boolean
+}> {
+  // O ACEITE É CONFERIDO AQUI, e não só no navegador.
+  //
+  // O checkbox e o zod da tela de cadastro são 100% do cliente, e o valor era
+  // DESCARTADO no submit: esta função nunca recebeu o campo. Como Server Action
+  // é endereço HTTP próprio, um POST direto criava conta sem aceite nenhum.
+  // O zod da tela continua onde está — ele é UX, não proteção.
+  // (Achado na auditoria de 13/09/2026, grupo 9.)
+  if (input.termsAccepted !== true) {
+    // Ver comentário em signIn: código estável, texto traduzido na página.
+    return { errorCode: "TERMS_REQUIRED" }
+  }
+
   const ip = await clientIp()
   const [ipCheck, emailCheck] = await Promise.all([
     checkRateLimit(`register:ip:${ip}`, 8, 60),
@@ -47,6 +66,27 @@ export async function signUpUser(input: {
     // Ver comentário em signIn: código estável, texto traduzido na página.
     return { errorCode: "RATE_LIMIT" }
   }
+
+  // O registro nasce ANTES do cadastro no Supabase, e é deliberado.
+  //
+  // O ato de vontade aconteceu quando a pessoa marcou a caixa e enviou — é
+  // isso que se prova. Gravar depois deixaria uma janela em que a conta existe
+  // e o aceite não, que é exatamente o defeito. Se o cadastro falhar adiante, a
+  // linha fica órfã: inofensiva e verdadeira, porque alguém aceitou, naquele
+  // instante, daquele IP.
+  //
+  // A VERSÃO entra junto: a seção 14 dos Termos diz que o uso continuado vale
+  // como concordância com as alterações — o que só se sustenta sabendo o que
+  // cada conta aceitou. Ver lib/versao-legal.ts.
+  const aceite = await prisma.termsAcceptance.create({
+    data: {
+      email: input.email.toLowerCase(),
+      termsVersion: VERSAO_TERMOS,
+      privacyVersion: VERSAO_PRIVACIDADE,
+      acceptedIp: ip,
+    },
+    select: { id: true },
+  })
 
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signUp({
@@ -61,6 +101,16 @@ export async function signUpUser(input: {
     },
   })
   if (error) return { error: error.message }
+
+  // Agora que existe id, o aceite passa a apontar para a conta. Melhor esforço:
+  // falhar aqui não pode derrubar um cadastro concluído, e o `email` continua
+  // ligando os dois — é por isso que a exportação LGPD procura pelos dois.
+  if (data.user?.id) {
+    await prisma.termsAcceptance
+      .update({ where: { id: aceite.id }, data: { userId: data.user.id } })
+      .catch((e) => console.error("[aceite] falha ao ligar o aceite à conta:", e))
+  }
+
   return { needsEmailConfirmation: !data.session }
 }
 

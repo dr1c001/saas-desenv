@@ -63,6 +63,8 @@ repositório** e nenhuma deve entrar:
 | `CRON_SECRET` | protege `/api/cron/daily` |
 | `SUPER_ADMIN_EMAIL` | quem enxerga `/admin` |
 | `CERT_ENCRYPTION_KEY` | cifra o certificado digital das empresas (mín. 32 caracteres) |
+| `SUPPORT_WHATSAPP` | WhatsApp do suporte na landing e no bloco de adicionais. Sem ela, o contato cai em `mailto:suporte@servicoos.com.br` e o botão flutuante não aparece |
+| `ANTHROPIC_API_KEY` | assistente de voz (adicional pago). Sem ela, o recurso é vendido e não responde |
 
 ⚠️ **Não existe banco de desenvolvimento separado.** `DATABASE_URL` aponta para
 produção. Leia **Armadilhas** antes de rodar qualquer comando de schema.

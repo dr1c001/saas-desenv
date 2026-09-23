@@ -9,5 +9,11 @@ export const contentType = "image/png"
 
 export default async function Image() {
   const t = await getTranslations("demo")
-  return cartaoOg({ ramo: null, chamada: t("ogChamada"), semRamo: t("ogSemRamo") })
+  return cartaoOg({
+    ramo: null,
+    chamada: t("ogChamada"),
+    semRamo: t("ogSemRamo"),
+    prefixo: t("ogPrefixo"),
+    modulos: t.raw("ogModulos") as string[],
+  })
 }

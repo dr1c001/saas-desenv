@@ -2138,3 +2138,42 @@ model SupportMessage {
 
   @@index([threadId, createdAt])
 }
+
+/// O ACEITE DOS TERMOS, que ate 23/09/2026 existia so no navegador.
+///
+/// O checkbox e a validacao do zod eram 100% do cliente, e o valor era
+/// DESCARTADO no submit: `signUpUser` nunca recebeu o campo. Como Server Action
+/// e endereco HTTP proprio, um POST direto criava conta sem aceite nenhum — e
+/// nem havia onde mentir, porque nao existia coluna.
+///
+/// Enquanto isso os Termos afirmam, na secao 1, que "ao criar uma conta ou usar
+/// o sistema de qualquer forma, voce concorda com estes Termos", e na secao 14
+/// que "o uso continuado apos a alteracao implica concordancia". A segunda nao
+/// exige re-aceite; exige saber QUAL VERSAO cada conta aceitou, para dizer
+/// "isto mudou em relacao ao que voce aceitou". Era inrespondivel.
+///
+/// ─── Por que SEM chave estrangeira para User ───────────────────────────────
+///
+/// A linha de User (e a de Tenant) nao existe no momento do cadastro: ela nasce
+/// preguicosamente no primeiro `getTenant()` (lib/auth.ts), a partir do
+/// user_metadata do Supabase. Uma FK aqui tornaria impossivel gravar o aceite
+/// no instante do ATO DE VONTADE, que e justamente o que se quer provar. Mesmo
+/// desenho do escalar solto `Subscription.acceptedByUserId`.
+///
+/// `userId` e nulo ate o cadastro no Supabase concluir; o `email` e a chave que
+/// sempre existe. Uma linha orfa (aceite gravado, cadastro falhou depois) e
+/// inofensiva e verdadeira: alguem aceitou, naquele instante, daquele IP.
+model TermsAcceptance {
+  id              String   @id @default(cuid())
+  /// Nulo ate o `supabase.auth.signUp` devolver o id. Ver acima.
+  userId          String?
+  email           String
+  termsVersion    String
+  privacyVersion  String
+  acceptedAt      DateTime @default(now())
+  acceptedIp      String?
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
+}

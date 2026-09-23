@@ -14,7 +14,7 @@ import { getTranslations } from "next-intl/server"
 import { CancelSubscriptionButton } from "@/components/billing/cancel-button"
 import { precoCheio, precoCobrado } from "@/lib/preco"
 import { Adicionais } from "@/components/shared/adicionais"
-import { linkWhatsappSuporte } from "@/lib/utils"
+import { linkDeContatoSuporte } from "@/lib/utils"
 
 const STATUS_COLOR: Record<string, string> = {
   TRIAL: "bg-yellow-500",
@@ -334,7 +334,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           com a decisao principal. */}
       <Adicionais
         mostrarPreco
-        linkContato={linkWhatsappSuporte(process.env.SUPPORT_WHATSAPP, tAd("falarComAGente"))}
+        linkContato={linkDeContatoSuporte(process.env.SUPPORT_WHATSAPP, tAd("falarComAGente"))}
       />
 
       <p className="text-xs text-muted-foreground">

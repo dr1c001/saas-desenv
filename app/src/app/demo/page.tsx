@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server"
 import type { Metadata } from "next"
 import { segmentoPorSlug, SEGMENTO_PADRAO } from "@/lib/demo"
 import { Moldura } from "@/components/demo/moldura"
@@ -23,15 +24,23 @@ import { Moldura } from "@/components/demo/moldura"
 //
 // `summary_large_image` para o cartão sair com a figura grande; com `summary`
 // ela vira uma miniatura ao lado do texto.
-const TITULO = "ServiçoOS — veja o sistema funcionando"
-const DESCRICAO =
-  "Orçamento, ordem de serviço, equipe em campo e financeiro num sistema só. Uma empresa de exemplo, sem cadastro e sem cartão."
-
-export const metadata: Metadata = {
-  title: TITULO,
-  description: DESCRICAO,
-  openGraph: { title: TITULO, description: DESCRICAO, url: "/demo", type: "website" },
-  twitter: { card: "summary_large_image", title: TITULO, description: DESCRICAO },
+// O TÍTULO e a DESCRIÇÃO saem do i18n, como o corpo da página.
+//
+// Eram dois literais em português usados no metadata, no openGraph e no
+// twitter — num arquivo cujo corpo inteiro já é traduzido. Com o seletor em
+// inglês, /demo (o endereço curto, que este mesmo arquivo descreve como "o link
+// que se manda quando não se sabe o ramo") abria com a aba em português.
+// (Achado na auditoria de 13/09/2026, grupo 9.)
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("demo.metaCurta")
+  const titulo = t("titulo")
+  const descricao = t("descricao")
+  return {
+    title: titulo,
+    description: descricao,
+    openGraph: { title: titulo, description: descricao, url: "/demo", type: "website" },
+    twitter: { card: "summary_large_image", title: titulo, description: descricao },
+  }
 }
 
 export default function DemoPage() {

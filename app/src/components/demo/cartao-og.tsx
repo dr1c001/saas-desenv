@@ -23,18 +23,30 @@ import { ImageResponse } from "next/og"
 
 export const TAMANHO_OG = { width: 1200, height: 630 }
 
-/** O que o sistema faz, em quatro palavras que o dono reconhece. */
-const MODULOS = ["Orçamento", "Ordem de serviço", "Equipe em campo", "Financeiro"]
+// As quatro pastilhas e o prefixo VÊM DE FORA, traduzidos.
+//
+// Estavam fixos em português aqui dentro, enquanto `chamada` e `semRamo`
+// já vinham do i18n: com o cookie de idioma em inglês, o cartão saía em
+// DUAS LÍNGUAS — manchete e chamada em inglês, "O sistema para" e as quatro
+// pastilhas em português. É o cartão que a pessoa manda para um contato, e
+// por isso o defeito aparecia justamente para quem compartilhava.
+// (Achado na auditoria de 13/09/2026, grupo 9.)
 
 export function cartaoOg({
   ramo,
   chamada,
   semRamo,
+  prefixo,
+  modulos,
 }: {
   ramo: string | null
   chamada: string
   /** A manchete de quando nao ha ramo — o endereco curto /demo. */
   semRamo: string
+  /** "O sistema para", antes do ramo. So aparece quando ha ramo. */
+  prefixo: string
+  /** As quatro pastilhas. Aparecem SEMPRE, com ou sem ramo. */
+  modulos: readonly string[]
 }) {
   return new ImageResponse(
     (
@@ -81,7 +93,7 @@ export function cartaoOg({
         <div style={{ display: "flex", flexDirection: "column" }}>
           {ramo && (
             <div style={{ color: "#8FB4DC", fontSize: 34, marginBottom: 10 }}>
-              O sistema para
+              {prefixo}
             </div>
           )}
           {/* A linha que carrega tudo. Em miniatura, é praticamente a única
@@ -100,7 +112,7 @@ export function cartaoOg({
         </div>
 
         <div style={{ display: "flex" }}>
-          {MODULOS.map((m) => (
+          {modulos.map((m) => (
             <div
               key={m}
               style={{
