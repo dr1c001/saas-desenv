@@ -1,4 +1,10 @@
-import { getBillingStatus, getPlans, subscribeToPlan } from "@/actions/billing"
+import {
+  cancelarTrocaAgendada,
+  getBillingStatus,
+  getPlans,
+  subscribeToPlan,
+  trocarDePlano,
+} from "@/actions/billing"
 import { formatCurrency } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
@@ -50,6 +56,26 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const combinado = billing?.customPriceMonthly === null || billing?.customPriceMonthly === undefined
     ? null
     : Number(billing.customPriceMonthly)
+
+  // ─── O que a tela de planos oferece ───────────────────────────────────────
+  //
+  // Com assinatura em andamento, o cliente TROCA; sem nenhuma, ele assina.
+  // Antes só existia "assinar", em todo plano que não fosse o atual, e a Action
+  // recusava — ver o comentário nos botões abaixo.
+  const assinatura = billing?.subscriptions[0]
+  const temAssinaturaViva =
+    assinatura !== undefined &&
+    ["ACTIVE", "PAST_DUE", "PENDING"].includes(assinatura.status)
+  // Trocar exige assinatura EM DIA: PENDING ainda não pagou o primeiro
+  // boleto, e PAST_DUE deve uma fatura — trocar ali deixaria a cobrança velha
+  // e a nova convivendo. E não há troca agendada pendente.
+  const podeTrocar = assinatura?.status === "ACTIVE" && !assinatura.pendingPlanId
+  /** O plano do card custa MAIS que o atual? Define o texto do botão. */
+  const ehSubida = (plano: { priceMonthly: unknown; priceYearly: unknown }) => {
+    const anual = assinatura?.billingCycle === "YEARLY"
+    const atual = Number(anual ? billing?.plan?.priceYearly ?? 0 : billing?.plan?.priceMonthly ?? 0)
+    return Number(anual ? plano.priceYearly : plano.priceMonthly) > atual
+  }
 
   return (
     <div className="space-y-8 max-w-5xl">
@@ -147,6 +173,24 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           {t("plans.sectionTitle")}
         </h2>
 
+        {/* A TROCA AGENDADA, acima dos planos: é o que muda no fim do ciclo,
+            e quem está esperando por ela precisa ver antes de olhar os cards. */}
+        {assinatura?.pendingPlan && (
+          <div className="mb-4 rounded-lg border border-amber-600 bg-amber-50 dark:bg-amber-950 p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              {t("plans.trocaAgendada", {
+                plano: assinatura.pendingPlan.name,
+                data: new Date(assinatura.currentPeriodEnd).toLocaleDateString("pt-BR"),
+              })}
+            </p>
+            <form action={cancelarTrocaAgendada}>
+              <button type="submit" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                {t("plans.desfazerTroca")}
+              </button>
+            </form>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {plans.map((plan) => {
             const isCurrentPlan = billing?.plan?.id === plan.id
@@ -229,6 +273,32 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                   <span className="text-center text-sm text-muted-foreground border rounded-lg py-2">
                     {t("plans.currentPlan")}
                   </span>
+                ) : temAssinaturaViva ? (
+                  /* ─── Com assinatura em andamento: TROCAR, não assinar ─────
+                     Até 22/09/2026 os dois botões de *Assinar* eram
+                     renderizados em todo plano que não fosse o atual, em
+                     qualquer status — e a Action recusava com
+                     "cancele antes de assinar outro plano". O cliente clicava e
+                     recebia erro; o caminho que o erro mandava tomar derruba a
+                     equipe inteira em /expired até o pagamento novo ser
+                     confirmado. Agora troca de verdade. */
+                  podeTrocar ? (
+                    <form action={trocarDePlano}>
+                      <input type="hidden" name="planId" value={plan.id} />
+                      <button
+                        type="submit"
+                        className={buttonVariants({ variant: isPro ? "default" : "outline", className: "w-full" })}
+                      >
+                        {ehSubida(plan) ? t("plans.trocarSubindo") : t("plans.trocarDescendo")}
+                      </button>
+                    </form>
+                  ) : (
+                    /* A troca exige assinatura em dia: PENDING ainda não pagou,
+                       PAST_DUE deve uma fatura. */
+                    <span className="text-center text-xs text-muted-foreground border rounded-lg py-2 px-2">
+                      {t("plans.trocaIndisponivel")}
+                    </span>
+                  )
                 ) : (
                   <div className="space-y-2">
                     <form action={subscribeToPlan}>

@@ -280,6 +280,8 @@ model Plan {
 
   tenants       Tenant[]
   subscriptions Subscription[]
+  /// Assinaturas que estao AGENDADAS para virar este plano no fim do ciclo.
+  trocasAgendadas Subscription[] @relation("TrocaAgendada")
 }
 
 model Subscription {
@@ -323,8 +325,10 @@ model Subscription {
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  plan   Plan   @relation(fields: [planId], references: [id])
+  tenant      Tenant @relation(fields: [tenantId], references: [id])
+  plan        Plan   @relation(fields: [planId], references: [id])
+  /// Para onde a assinatura VAI no fim do periodo pago (downgrade agendado).
+  pendingPlan Plan?  @relation("TrocaAgendada", fields: [pendingPlanId], references: [id])
 
   // requireActiveSubscription() consulta por tenantId em PRATICAMENTE TODA
   // requisição do sistema — é a consulta mais quente que existe aqui.

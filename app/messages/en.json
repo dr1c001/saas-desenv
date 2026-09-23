@@ -238,7 +238,12 @@
         "currentPlan": "Current plan",
         "subscribeMonthly": "Subscribe — Monthly",
         "subscribeYearly": "Subscribe — Yearly (save 2 months)",
-        "agreedPrice": "Price agreed with your company."
+        "agreedPrice": "Price agreed with your company.",
+        "trocarSubindo": "Switch to this plan",
+        "trocarDescendo": "Move down to this plan",
+        "trocaIndisponivel": "To change plans, your subscription must be up to date.",
+        "trocaAgendada": "Your subscription changes to {plano} on {data} — nothing changes in your access until then. The next invoice already comes at the new price.",
+        "desfazerTroca": "Undo"
       },
       "contract": {
         "download": "Download agreement and data terms (LGPD)"

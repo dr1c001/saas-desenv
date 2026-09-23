@@ -4,6 +4,7 @@ import { asaas } from "@/lib/asaas"
 import { precoCobrado } from "@/lib/preco"
 import { gerarContrato } from "@/lib/contrato"
 import { sendPaymentConfirmedEmail } from "@/lib/resend"
+import { aplicarTrocaAgendada } from "@/lib/troca-de-plano-db"
 
 /**
  * O que acontece quando um pagamento de assinatura é CONFIRMADO.
@@ -140,6 +141,15 @@ export async function confirmarPagamento(args: {
     return true
   })
   if (!ativou) return { resultado: "repetida", pendente: nada }
+
+  // O DOWNGRADE AGENDADO vale aqui: um ciclo novo comeca, e o periodo que o
+  // cliente pagou no plano antigo acabou. `currentPeriodEnd` ja foi estendido
+  // acima, entao a checagem usa o valor de ANTES — que e o fim do periodo que
+  // de fato terminou. O cron e a rede de seguranca para quem nao renovou.
+  await aplicarTrocaAgendada(
+    { id: sub.id, tenantId: sub.tenantId, pendingPlanId: sub.pendingPlanId, currentPeriodEnd: sub.currentPeriodEnd },
+    new Date()
+  )
 
   // Avisa o escritório no celular. O e-mail de confirmação já vai, mas e-mail
   // de cobrança é o que mais cai em spam — e a informação aqui é boa: o acesso

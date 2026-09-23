@@ -238,7 +238,12 @@
         "currentPlan": "Plano atual",
         "subscribeMonthly": "Assinar — Mensal",
         "subscribeYearly": "Assinar — Anual (economize 2 meses)",
-        "agreedPrice": "Preço combinado com a sua empresa."
+        "agreedPrice": "Preço combinado com a sua empresa.",
+        "trocarSubindo": "Mudar para este plano",
+        "trocarDescendo": "Descer para este plano",
+        "trocaIndisponivel": "Para trocar de plano, a assinatura precisa estar em dia.",
+        "trocaAgendada": "Sua assinatura muda para o {plano} em {data} — até lá, nada muda no seu acesso. A próxima fatura já vem pelo valor novo.",
+        "desfazerTroca": "Desfazer"
       },
       "contract": {
         "download": "Baixar contrato e termo de dados (LGPD)"

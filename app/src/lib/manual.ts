@@ -749,16 +749,23 @@ export const MANUAL: readonly Secao[] = [
       aba(
         "3.5",
         "Assinatura",
-        "O seu plano do ServiçoOS: qual é, quando renova, e como trocar.",
+        "O seu plano do ServiçoOS: qual é, quando renova, como trocar, como baixar o contrato e como cancelar.",
         [
           {
             tipo: "lista",
             itens: [
               "Status da assinatura e data de renovação.",
-              "Troca de plano, mensal ou anual — no anual, dois meses saem de graça.",
+              "Os planos, com o preço mensal e o anual — no anual, dois meses saem de graça.",
+              "*Trocar de plano*, com a assinatura em dia — o botão aparece em cada plano que não é o seu.",
               "*Baixar contrato e termo de dados (LGPD)* — o mesmo arquivo que chega por e-mail quando o pagamento é confirmado.",
               "Cancelamento, sem multa, pelo próprio painel.",
             ],
+          },
+          {
+            tipo: "atencao",
+            titulo: "Subir vale na hora; descer, no fim do período pago",
+            texto:
+              "Ao subir de plano, o acesso novo vale na mesma hora e o valor novo entra na próxima fatura — o que você já pagou não é cobrado de novo. Ao descer, nada muda até o fim do período que você pagou; a próxima fatura já vem menor, e dá para *Desfazer* enquanto a troca não valeu. Trocar entre mensal e anual ainda é pelo suporte.",
           },
           {
             tipo: "atencao",

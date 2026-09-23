@@ -170,3 +170,39 @@ describe("a tabela de cargos diz a verdade", () => {
     expect(sobreOAdmin!.texto).toMatch(/Gerente/)
   })
 })
+
+describe("o verbete da Assinatura descreve a tela que existe", () => {
+  // Ele prometia "troca de plano" desde sempre, e a Action recusava com
+  // "cancele antes de assinar outro plano" — o cliente clicava num botão que
+  // só sabia falhar. Agora a troca existe, e o texto tem de seguir a Action:
+  // se alguém voltar a recusar a troca, é aqui que quebra.
+  const BILLING = ler("src/actions/billing.ts")
+  const TELA = ler("src/app/(dashboard)/billing/page.tsx")
+  const assinatura = verbete("3.5")
+  const itens = (assinatura.blocos.find((b) => b.tipo === "lista") as { itens: string[] }).itens
+  const caixas = assinatura.blocos.filter((b) => b.tipo === "atencao") as {
+    titulo: string
+    texto: string
+  }[]
+
+  it("a troca prometida no texto EXISTE como Action e como botão", () => {
+    expect(itens.some((i) => /trocar de plano/i.test(i))).toBe(true)
+    expect(BILLING).toContain("export async function trocarDePlano(")
+    expect(TELA).toContain("action={trocarDePlano}")
+  })
+
+  it("e o texto diz a regra que o código aplica: subir agora, descer no fim", () => {
+    const regra = caixas.find((c) => /subir/i.test(c.titulo))
+    expect(regra, "falta a caixa explicando quando cada troca vale").toBeTruthy()
+    expect(regra!.texto).toMatch(/pr[óo]xima fatura/i)
+    expect(regra!.texto).toMatch(/desfazer/i)
+    // A regra mora em lib/troca-de-plano.ts, e é ela que o texto descreve.
+    const REGRA = ler("src/lib/troca-de-plano.ts")
+    expect(REGRA).toContain('valeApartirDe: direcao === "subir" ? "agora" : "fimDoPeriodo"')
+  })
+
+  it("o cancelamento prometido também existe", () => {
+    expect(itens.some((i) => /cancelamento/i.test(i))).toBe(true)
+    expect(BILLING).toContain("export async function cancelSubscription(")
+  })
+})

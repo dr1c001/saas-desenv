@@ -12,6 +12,7 @@ import { conferirDmarc } from "@/lib/conferir-dmarc"
 import { NOME_DMARC } from "@/lib/dmarc"
 import { avisarPendenciaUmaVez } from "@/lib/pendencia"
 import { confirmarPagamento } from "@/lib/confirmar-pagamento"
+import { aplicarTrocaAgendada } from "@/lib/troca-de-plano-db"
 import { decidirAviso, diasDeAtraso, AVISOS_ATRASO } from "@/lib/past-due"
 import { todayInBRT, brtMidnightUTC } from "@/lib/utils"
 import { provedor } from "@/lib/geocode"
@@ -70,7 +71,7 @@ export async function GET(req: NextRequest) {
     .create({ data: { name: "daily" }, select: { id: true } })
     .catch(() => null)
 
-  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, cobrancasEnviadas: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, notasNaoArquivadas: 0, avisosDeTeste: 0, comissoesConferidas: 0, comissoesDivergentes: 0, comissoesForaDaJanela: 0, retrato: "", dmarc: "", errors: 0 }
+  const results = { day3: 0, nps: 0, rateLimitCleanup: 0, stuckPending: 0, reconciled: 0, geocoded: 0, avisosAtraso: 0, cobrancasEnviadas: 0, contratos: 0, certificadosVencendo: 0, notasConsultadas: 0, notasRejeitadas: 0, notasNaoArquivadas: 0, avisosDeTeste: 0, comissoesConferidas: 0, comissoesDivergentes: 0, comissoesForaDaJanela: 0, trocasDePlano: 0, retrato: "", dmarc: "", errors: 0 }
 
   // ── Rede de segurança: assinatura paga na Asaas mas presa em PENDING aqui ──
   // Em 07/08/2026 uma cliente pagou e ficou sem acesso por ~1 dia: os webhooks
@@ -575,6 +576,25 @@ export async function GET(req: NextRequest) {
     results.errors++
   }
 
+  // ── Trocas de plano agendadas que já venceram ────────────────────────────
+  // O downgrade vale no fim do período pago. Quem RENOVOU já foi atendido na
+  // confirmação do pagamento (lib/confirmar-pagamento.ts); esta é a rede de
+  // segurança para a assinatura que não renovou — ela não pode ficar no plano
+  // caro para sempre só porque o pagamento não veio.
+  try {
+    const agendadas = await prisma.subscription.findMany({
+      where: { pendingPlanId: { not: null }, currentPeriodEnd: { lte: now } },
+      take: 50,
+      select: { id: true, tenantId: true, pendingPlanId: true, currentPeriodEnd: true },
+    })
+    for (const sub of agendadas) {
+      if (await aplicarTrocaAgendada(sub, now)) results.trocasDePlano++
+    }
+  } catch (e) {
+    console.error("[cron] trocas de plano agendadas falharam:", e)
+    results.errors++
+  }
+
   // ── DMARC do domínio de e-mail ───────────────────────────────────────────
   // Sem política publicada qualquer um forja noreply@servicoos.com.br — e o
   // sistema manda cobrança em nome das empresas. Ninguém vê isso em log: a
@@ -670,6 +690,7 @@ export async function GET(req: NextRequest) {
                 : ""),
             `geocodificados ${results.geocoded}`,
             `limpeza ${results.rateLimitCleanup}`,
+            `trocas de plano ${results.trocasDePlano}`,
             `dmarc ${results.dmarc}`,
           ].join("; "),
         },

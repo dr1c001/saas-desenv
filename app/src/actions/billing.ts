@@ -25,7 +25,16 @@ export async function getBillingStatus() {
       subscriptions: {
         orderBy: { createdAt: "desc" },
         take: 1,
-        select: { id: true, status: true, billingCycle: true, currentPeriodEnd: true },
+        select: {
+          id: true,
+          status: true,
+          billingCycle: true,
+          currentPeriodEnd: true,
+          // A troca de plano AGENDADA (downgrade): a tela precisa mostrar para
+          // onde a assinatura vai e quando, e oferecer desfazer.
+          pendingPlanId: true,
+          pendingPlan: { select: { id: true, name: true } },
+        },
       },
     },
   })
