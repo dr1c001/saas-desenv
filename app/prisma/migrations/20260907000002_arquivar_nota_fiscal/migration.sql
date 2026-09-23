@@ -1,0 +1,32 @@
+-- Arquivar a nota fiscal: o PDF e o XML no nosso storage.
+--
+-- ─── O que existia ──────────────────────────────────────────────────────────
+--
+-- Da nota emitida, o sistema guardava cinco campos — id, número, status, data e
+-- uma URL. A URL aponta para o servidor do EMISSOR (nfe.io). O PDF nunca era
+-- baixado, e o XML nem sequer era lido, embora o emissor o devolva.
+--
+-- ─── Por que isso é um problema ─────────────────────────────────────────────
+--
+-- 1. Juridicamente quem vale é o XML. O PDF é uma representação dele. A empresa
+--    é obrigada a guardar o documento fiscal por CINCO ANOS, e o sistema não
+--    guardava nenhum dos dois.
+--
+-- 2. O dia em que a empresa deixar a nfe.io — troca de emissor, fim de
+--    contrato, link que expira — as notas dela ficam inacessíveis pelo sistema
+--    que ela usa todo dia.
+--
+-- 3. A cobrança automática anexa a nota baixando do emissor na hora. Link fora
+--    do ar, anexo não vai.
+--
+-- ─── O caminho, e não o arquivo ─────────────────────────────────────────────
+--
+-- Guarda a CHAVE no storage, não o binário: PDF em coluna é o jeito mais rápido
+-- de um banco de 8 GB virar um de 80, e o storage já existe e já serve foto de
+-- OS, assinatura e nota de compra.
+--
+-- NULL em toda nota emitida antes de hoje. Elas são arquivadas na primeira vez
+-- que alguém pedir para baixar — ver a rota de download.
+
+ALTER TABLE "ServiceOrder" ADD COLUMN "nfsePdfPath" TEXT;
+ALTER TABLE "ServiceOrder" ADD COLUMN "nfseXmlPath" TEXT;

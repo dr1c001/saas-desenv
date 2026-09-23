@@ -1,0 +1,230 @@
+"use client"
+
+import { useRef, useState, useTransition } from "react"
+import { useTranslations } from "next-intl"
+import { Camera, ImageIcon, Loader2, Trash2, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { type EstadoFoto, type FotoExibicao } from "@/actions/attachments"
+import { MAX_FOTOS } from "@/lib/foto"
+// Compartilhada com a nota do fornecedor — ver lib/comprimir-foto.ts.
+import { comprimir } from "@/lib/comprimir-foto"
+
+// A galeria de fotos, usada pela OS E pelo orcamento.
+//
+// As ACOES chegam por parametro em vez de estarem escritas aqui dentro. Foi o
+// que evitou duplicar o arquivo inteiro quando o orcamento tambem ganhou
+// fotos: a compressao no aparelho, o envio um a um, a ampliacao e a exclusao
+// sao identicos nos dois casos — so muda quem e o dono.
+//
+// Duplicar teria criado dois lugares para consertar o dia em que a compressao
+// estiver errada, e um deles seria esquecido.
+
+/** Maior lado da imagem depois de reduzir. 1600px imprime bem em A4 e mostra
+ *  detalhe de vazamento, risco ou etiqueta de equipamento. */
+
+export function Fotos({
+  campo,
+  donoId,
+  fotos,
+  podeApagar,
+  bloqueada,
+  enviar,
+  apagar,
+}: {
+  /** O nome do campo que a action espera no formulario. */
+  campo: "orderId" | "quoteId"
+  donoId: string
+  fotos: FotoExibicao[]
+  podeApagar: boolean
+  /** Registro que nao aceita mais mudanca: OS faturada, orcamento respondido. */
+  bloqueada: boolean
+  enviar: (prev: EstadoFoto, fd: FormData) => Promise<EstadoFoto>
+  apagar: (fotoId: string) => Promise<EstadoFoto>
+}) {
+  const t = useTranslations("fotos")
+  const [enviando, startEnvio] = useTransition()
+  const [apagando, startApagar] = useTransition()
+  const [erro, setErro] = useState<string | null>(null)
+  const [ampliada, setAmpliada] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const arquivoRef = useRef<HTMLInputElement>(null)
+
+  const cheio = fotos.length >= MAX_FOTOS
+
+  async function aoEscolher(e: React.ChangeEvent<HTMLInputElement>) {
+    const escolhidos = Array.from(e.target.files ?? [])
+    if (inputRef.current) inputRef.current.value = ""
+    if (!escolhidos.length) return
+    setErro(null)
+
+    // Uma de cada vez: o servidor confere o limite a cada envio, e mandar
+    // tudo junto passaria do teto sem ninguém perceber.
+    for (const bruto of escolhidos.slice(0, MAX_FOTOS - fotos.length)) {
+      const comprimida = await comprimir(bruto)
+      const fd = new FormData()
+      fd.set(campo, donoId)
+      fd.set("foto", comprimida)
+      await new Promise<void>((pronto) =>
+        startEnvio(async () => {
+          const r = await enviar({}, fd)
+          if (r.erro) setErro(r.erro)
+          pronto()
+        })
+      )
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {t("title")} {fotos.length > 0 && `(${fotos.length}/${MAX_FOTOS})`}
+        </CardTitle>
+        {/* DOIS botões, e não um.
+            Havia só o da câmera, com `capture="environment"` — o gesto certo
+            para o técnico que está no local e fotografa na hora. Mas `capture`
+            no celular abre a câmera E SÓ: não dá para escolher uma foto já
+            tirada, e é justamente o que o "antes" costuma ser, batido antes de
+            o serviço começar. No computador o atributo é ignorado, então o
+            problema só aparecia no aparelho de quem trabalha em campo.
+            (Relatado em 01/09/2026.)
+
+            Manter os dois preserva o toque único de quem está no local e
+            libera quem já tem a foto na galeria ou no computador. */}
+        {!bloqueada && !cheio && (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={enviando}
+              onClick={() => inputRef.current?.click()}
+            >
+              {enviando ? (
+                <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Camera className="size-3.5 mr-1.5" />
+              )}
+              {enviando ? t("sending") : t("add")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={enviando}
+              onClick={() => arquivoRef.current?.click()}
+              title={t("escolherArquivo")}
+            >
+              <ImageIcon className="size-3.5 mr-1.5" />
+              {t("escolherArquivo")}
+            </Button>
+          </div>
+        )}
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          // capture="environment" abre a câmera traseira direto no celular, em
+          // vez da galeria — que é o gesto certo pra quem está no local.
+          capture="environment"
+          multiple
+          onChange={aoEscolher}
+          className="hidden"
+        />
+
+        {/* A mesma entrada, SEM `capture`: o celular abre o seletor com galeria
+            e arquivos, e o computador abre o explorador. Duas entradas em vez
+            de alternar o atributo porque `capture` é lido na hora de abrir, e
+            trocá-lo por estado dependeria de o React ter aplicado a mudança
+            antes do clique — dois `<input>` escondidos custam nada e não têm
+            corrida. */}
+        <input
+          ref={arquivoRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={aoEscolher}
+          className="hidden"
+        />
+
+        {fotos.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {bloqueada ? t("emptyLocked") : t("empty")}
+          </p>
+        ) : (
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            {fotos.map((f) => (
+              <div key={f.id} className="relative group aspect-square">
+                {f.link ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={f.link}
+                    alt=""
+                    loading="lazy"
+                    onClick={() => setAmpliada(f.link)}
+                    className="size-full object-cover rounded-md border cursor-zoom-in"
+                  />
+                ) : (
+                  <div className="size-full rounded-md border bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                    {t("unavailable")}
+                  </div>
+                )}
+                {podeApagar && !bloqueada && (
+                  <button
+                    type="button"
+                    disabled={apagando}
+                    aria-label={t("remove")}
+                    onClick={() => {
+                      if (confirm(t("confirmRemove"))) {
+                        startApagar(async () => {
+                          const r = await apagar(f.id)
+                          if (r.erro) setErro(r.erro)
+                        })
+                      }
+                    }}
+                    className="absolute top-1 right-1 rounded-full bg-background/90 border p-1 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="size-3 text-destructive" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {erro && (
+          <p className="text-sm text-destructive">{t(`errors.${erro}` as "errors.muitoGrande")}</p>
+        )}
+        {!bloqueada && fotos.length === 0 && (
+          <p className="text-xs text-muted-foreground">{t("hint")}</p>
+        )}
+      </CardContent>
+
+      {/* Ampliação: no celular a miniatura não serve pra conferir se a foto
+          ficou nítida, e refazer depois de sair do local é impossível. */}
+      {ampliada && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setAmpliada(null)}
+          className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4 cursor-zoom-out"
+        >
+          <button
+            type="button"
+            aria-label={t("close")}
+            className="absolute top-4 right-4 text-white"
+            onClick={() => setAmpliada(null)}
+          >
+            <X className="size-6" />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={ampliada} alt="" className="max-h-full max-w-full object-contain rounded" />
+        </div>
+      )}
+    </Card>
+  )
+}

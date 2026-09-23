@@ -1,0 +1,115 @@
+"use client"
+
+import Link from "next/link"
+import { useTransition } from "react"
+import { useTranslations } from "next-intl"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { FileDown, Play, Pencil } from "lucide-react"
+import { ConcluirDialog, type PecaDisponivel } from "./conclude-dialog"
+import { updateOrderStatus } from "@/actions/service-orders"
+import { enfileirar, semRede } from "@/lib/usar-fila-offline"
+
+type Item = { description: string; quantity: number; unitPrice: number; partId?: string | null }
+
+type Props = {
+  id: string
+  title: string
+  status: string
+  conclusionNote?: string | null
+  items?: Item[]
+  /** Peças do catálogo, para escolher ao concluir. Vazio sem o recurso de estoque. */
+  pecas?: PecaDisponivel[]
+  /** O que este usuário pode fazer. Vem do servidor (lib/acoes.ts): esconder o
+   *  botão é cortesia, não proteção — a Action se defende sozinha. Mas botão
+   *  que aparece e falha é pior que botão que não aparece. */
+  podeStatus?: boolean
+  podeConcluir?: boolean
+  podeEditar?: boolean
+  /** A porcentagem de comissao ja gravada nesta OS. */
+  commissionPct?: number | null
+  /** Ha responsavel? Sem alguem a quem pagar, comissao nao faz sentido. */
+  temResponsavel?: boolean
+}
+
+export function OsActionsRow({
+  id, title, status, conclusionNote, items, pecas,
+  podeStatus = true, podeConcluir = true, podeEditar = true,
+  commissionPct = null, temResponsavel = false,
+}: Props) {
+  const t = useTranslations("serviceOrdersComponents")
+  const tCommon = useTranslations("common")
+  const [isPending, startTransition] = useTransition()
+
+  function handleStart() {
+    startTransition(async () => {
+      // Mesma regra do botão da tela de detalhe (status-button.tsx): com rede
+      // vai direto, sem rede entra na fila.
+      //
+      // Este aqui ficou de fora quando a fila foi construída, e é justamente o
+      // botão do cenário que ela existe para cobrir — o técnico marca "em
+      // andamento" ao chegar no local, que costuma ser onde não há sinal. Sem
+      // isto a Server Action falhava no fetch, a promessa rejeitava dentro do
+      // transition e a tela não mudava nada: sem erro, sem faixa de pendência,
+      // e o técnico seguia achando que tinha marcado. Como essa transição é o
+      // gatilho do aviso "estamos a caminho", o cliente também não era avisado.
+      // Pior: pela tela de detalhe a MESMA ação funcionava offline, o que fazia
+      // o comportamento parecer aleatório. (Achado em auditoria, 20/08/2026.)
+      if (semRede()) {
+        await enfileirar("MUDAR_STATUS", id, { status: "IN_PROGRESS" })
+        return
+      }
+      await updateOrderStatus(id, "IN_PROGRESS")
+    })
+  }
+
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      {status === "OPEN" && podeStatus && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1 text-blue-700 border-blue-300 hover:bg-blue-50"
+          onClick={handleStart}
+          disabled={isPending}
+        >
+          <Play className="size-3.5" />
+          {t("osActionsRow.startButton")}
+        </Button>
+      )}
+      {podeConcluir && (
+        <ConcluirDialog
+          orderId={id}
+          orderTitle={title}
+          currentStatus={status}
+          initialConclusionNote={conclusionNote}
+          initialItems={items}
+          pecas={pecas}
+          initialCommissionPct={commissionPct}
+          temResponsavel={temResponsavel}
+        />
+      )}
+      {/* Editar direto da lista: antes era preciso abrir a OS pra achar o
+          botão. Some quando a OS está faturada porque updateServiceOrder
+          recusa INVOICED (NFS-e emitida, assinatura coletada) — mostrar o
+          botão ali seria convidar o usuário a preencher o formulário inteiro
+          pra levar erro no fim. (Pedido do usuário em 10/08/2026.) */}
+      {status !== "INVOICED" && podeEditar && (
+        <Link
+          href={`/service-orders/${id}/edit`}
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+        >
+          <Pencil className="size-3.5 mr-1" />
+          {tCommon("edit")}
+        </Link>
+      )}
+      <Link
+        href={`/api/pdf/service-order/${id}`}
+        target="_blank"
+        className={buttonVariants({ variant: "ghost", size: "sm" })}
+      >
+        <FileDown className="size-3.5" />
+        PDF
+      </Link>
+    </div>
+  )
+}

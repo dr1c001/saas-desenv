@@ -1,0 +1,718 @@
+<title>Manual do ServiçoOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap">
+
+<style>
+  :root {
+    --papel:#FAF9F7; --superficie:#FFFFFF; --tinta:#17191A; --cinza:#5F6467;
+    --cinza-fraco:#8A8F91; --linha:#E4E1DB; --linha-forte:#CFCBC3;
+    --verde:#0B6B4F; --verde-fraco:#E8F1ED; --ambar:#8A4B0A; --ambar-fraco:#FBF1E4;
+    --serif:"Newsreader",Georgia,serif;
+    --sans:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+    --leitura:68ch;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --papel:#121415; --superficie:#191C1D; --tinta:#EDEBE7; --cinza:#A2A7A8;
+      --cinza-fraco:#7C8183; --linha:#2A2E2F; --linha-forte:#3C4142;
+      --verde:#58C79E; --verde-fraco:#14322A; --ambar:#E2AA69; --ambar-fraco:#2E2317;
+    }
+  }
+  :root[data-theme="dark"] {
+    --papel:#121415; --superficie:#191C1D; --tinta:#EDEBE7; --cinza:#A2A7A8;
+    --cinza-fraco:#7C8183; --linha:#2A2E2F; --linha-forte:#3C4142;
+    --verde:#58C79E; --verde-fraco:#14322A; --ambar:#E2AA69; --ambar-fraco:#2E2317;
+  }
+  :root[data-theme="light"] {
+    --papel:#FAF9F7; --superficie:#FFFFFF; --tinta:#17191A; --cinza:#5F6467;
+    --cinza-fraco:#8A8F91; --linha:#E4E1DB; --linha-forte:#CFCBC3;
+    --verde:#0B6B4F; --verde-fraco:#E8F1ED; --ambar:#8A4B0A; --ambar-fraco:#FBF1E4;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--papel); color:var(--tinta); font-family:var(--sans);
+    font-size:16.5px; line-height:1.62; -webkit-font-smoothing:antialiased; }
+  .pagina { display:grid; grid-template-columns:15.5rem minmax(0,1fr); gap:3.5rem;
+    max-width:76rem; margin:0 auto; padding:0 2rem 6rem; align-items:start; }
+  .trilho { position:sticky; top:0; max-height:100vh; overflow-y:auto;
+    padding:2.5rem 0 3rem; border-right:1px solid var(--linha); font-size:.815rem; }
+  .trilho-marca { font-family:var(--serif); font-weight:600; font-size:1.05rem; margin:0 0 .15rem; }
+  .trilho-sub { color:var(--cinza-fraco); font-size:.72rem; letter-spacing:.06em;
+    text-transform:uppercase; margin:0 0 1.75rem; }
+  .trilho nav { display:flex; flex-direction:column; gap:1.4rem; }
+  .trilho-grupo { display:flex; flex-direction:column; gap:.1rem; }
+  .trilho-titulo { font-size:.7rem; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--cinza-fraco); margin:0 0 .4rem; font-weight:600; }
+  .trilho a { display:grid; grid-template-columns:2.9rem minmax(0,1fr); gap:.35rem;
+    align-items:baseline; padding:.22rem .5rem .22rem 0; color:var(--cinza);
+    text-decoration:none; border-radius:3px; }
+  .trilho a:hover { color:var(--verde); }
+  .trilho a:focus-visible { outline:2px solid var(--verde); outline-offset:2px; }
+  .trilho a .cod { font-family:var(--mono); font-size:.75rem;
+    font-variant-numeric:tabular-nums; color:var(--cinza-fraco); }
+  .trilho a:hover .cod { color:var(--verde); }
+  .conteudo { padding-top:2.5rem; min-width:0; }
+  .conteudo > * { max-width:var(--leitura); }
+  .capa { margin-bottom:3.5rem; }
+  .selo { font-family:var(--mono); font-size:.7rem; font-weight:600; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--verde); margin:0 0 .9rem; }
+  h1 { font-family:var(--serif); font-weight:600; font-size:clamp(2.3rem,5vw,3.1rem);
+    line-height:1.08; letter-spacing:-.022em; text-wrap:balance; margin:0 0 1rem; }
+  .abertura { font-size:1.12rem; line-height:1.6; color:var(--cinza); margin:0 0 1.5rem; }
+  h2 { font-family:var(--serif); font-weight:600; font-size:1.85rem; line-height:1.2;
+    letter-spacing:-.016em; text-wrap:balance; margin:0 0 .9rem; }
+  h3 { font-family:var(--serif); font-weight:600; font-size:1.24rem; line-height:1.3; margin:0 0 .5rem; }
+  h4 { font-size:.76rem; font-weight:600; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--cinza-fraco); margin:1rem 0 .5rem; }
+  p { margin:0 0 1rem; } p:last-child { margin-bottom:0; }
+  a { color:var(--verde); }
+  strong { font-weight:600; }
+  .grupo { max-width:none; display:flex; align-items:baseline; gap:1.1rem;
+    padding:3.5rem 0 1.5rem; border-bottom:2px solid var(--tinta); margin-bottom:2.5rem; }
+  .grupo-num { font-family:var(--mono); font-size:2.4rem; font-weight:600; line-height:1;
+    color:var(--verde); font-variant-numeric:tabular-nums; }
+  .grupo-nome { font-family:var(--serif); font-size:1.85rem; font-weight:600; margin:0; }
+  .grupo-desc { font-size:.9rem; color:var(--cinza); margin:0; flex:1; text-align:right;
+    align-self:flex-end; }
+  .aba { scroll-margin-top:1.5rem; padding-bottom:2.75rem; margin-bottom:2.75rem;
+    border-bottom:1px solid var(--linha); }
+  .aba:last-of-type { border-bottom:none; }
+  .aba-topo { display:flex; align-items:baseline; gap:.85rem; flex-wrap:wrap; margin-bottom:.35rem; }
+  .aba-cod { font-family:var(--mono); font-size:.87rem; font-weight:600;
+    font-variant-numeric:tabular-nums; color:var(--verde); background:var(--verde-fraco);
+    border-radius:3px; padding:.12rem .44rem; white-space:nowrap; }
+  .aba-topo h3 { margin:0; }
+  .etiqueta { font-family:var(--mono); font-size:.66rem; font-weight:600; letter-spacing:.07em;
+    text-transform:uppercase; color:var(--cinza); border:1px solid var(--linha-forte);
+    border-radius:999px; padding:.1rem .52rem; white-space:nowrap; }
+  .resumo { font-size:1.02rem; color:var(--cinza); margin:0 0 1.1rem; }
+  ul, ol { margin:0 0 1rem; padding-left:1.15rem; }
+  li { margin-bottom:.42rem; } li:last-child { margin-bottom:0; }
+  li::marker { color:var(--cinza-fraco); }
+  .fluxo { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem;
+    font-family:var(--mono); font-size:.76rem; margin:0 0 1.1rem; }
+  .fluxo span { border:1px solid var(--linha-forte); border-radius:3px; padding:.16rem .5rem;
+    background:var(--superficie); }
+  .fluxo .seta { border:none; background:none; color:var(--cinza-fraco); padding:0 .1rem; }
+  .fluxo .fim { border-color:var(--verde); color:var(--verde); }
+  .fluxo .morto { color:var(--cinza-fraco); border-style:dashed; }
+  .atencao { background:var(--ambar-fraco); border-left:3px solid var(--ambar);
+    padding:.85rem 1.1rem; margin:1.2rem 0 0; font-size:.94rem; }
+  .atencao h4 { color:var(--ambar); margin:0 0 .3rem; }
+  .rolagem { overflow-x:auto; margin:0 0 1.2rem; max-width:var(--leitura); }
+  table { border-collapse:collapse; width:100%; font-size:.93rem; min-width:30rem; }
+  th, td { text-align:left; padding:.52rem .9rem .52rem 0; border-bottom:1px solid var(--linha);
+    vertical-align:top; }
+  th { font-size:.72rem; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--cinza-fraco); font-weight:600; border-bottom-color:var(--linha-forte); }
+  td.chave { font-family:var(--mono); font-size:.85rem; white-space:nowrap; color:var(--verde); }
+  .passos { list-style:none; padding:0; counter-reset:passo; margin:0 0 1rem; }
+  .passos li { counter-increment:passo; display:grid; grid-template-columns:1.9rem minmax(0,1fr);
+    gap:.7rem; margin-bottom:.85rem; align-items:baseline; }
+  .passos li::before { content:counter(passo); font-family:var(--mono); font-size:.78rem;
+    font-weight:600; color:var(--verde); background:var(--verde-fraco); border-radius:3px;
+    padding:.1rem 0; text-align:center; }
+  .rodape { margin-top:4rem; padding-top:1.75rem; border-top:1px solid var(--linha);
+    font-size:.88rem; color:var(--cinza-fraco); }
+  @media (max-width:62rem) {
+    .pagina { grid-template-columns:minmax(0,1fr); gap:0; padding:0 1.25rem 4rem; }
+    .trilho { position:static; max-height:none; border-right:none;
+      border-bottom:1px solid var(--linha); padding:2rem 0 1.75rem; }
+    .trilho nav { display:grid; grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+      gap:1.25rem 1.5rem; }
+    .conteudo { padding-top:2rem; }
+    .grupo { flex-wrap:wrap; gap:.7rem; }
+    .grupo-desc { text-align:left; flex-basis:100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+  }
+</style>
+
+<div class="pagina">
+  <aside class="trilho">
+    <p class="trilho-marca">Manual do ServiçoOS</p>
+    <p class="trilho-sub">Índice por número</p>
+    <nav>
+      <div class="trilho-grupo">
+        <p class="trilho-titulo">Começando</p>
+        <a href="#numeracao"><span class="cod">—</span><span>Como achar as telas</span></a><a href="#primeiros"><span class="cod">—</span><span>Primeiros passos</span></a><a href="#papeis"><span class="cod">—</span><span>Quem pode o quê</span></a>
+      </div>
+      <div class="trilho-grupo">
+        <p class="trilho-titulo">1 · Operação</p>
+        <a href="#1-1"><span class="cod">1.1</span><span>Ordens de Serviço</span></a><a href="#1-2"><span class="cod">1.2</span><span>Agendamento</span></a><a href="#1-3"><span class="cod">1.3</span><span>Histórico</span></a><a href="#1-4"><span class="cod">1.4</span><span>Manutenção Interna</span></a><a href="#1-5"><span class="cod">1.5</span><span>Mapa GPS</span></a><a href="#1-6"><span class="cod">1.6</span><span>Dashboard</span></a>
+      </div>
+      <div class="trilho-grupo">
+        <p class="trilho-titulo">2 · Clientes</p>
+        <a href="#2-1"><span class="cod">2.1</span><span>Clientes</span></a><a href="#2-2"><span class="cod">2.2</span><span>Contratos</span></a>
+      </div>
+      <div class="trilho-grupo">
+        <p class="trilho-titulo">3 · Dinheiro</p>
+        <a href="#3-1"><span class="cod">3.1</span><span>Financeiro</span></a><a href="#3-2"><span class="cod">3.2</span><span>Orçamentos</span></a><a href="#3-3"><span class="cod">3.3</span><span>Recibos</span></a><a href="#3-4"><span class="cod">3.4</span><span>Config. Fiscal</span></a><a href="#3-5"><span class="cod">3.5</span><span>Assinatura</span></a>
+      </div>
+      <div class="trilho-grupo">
+        <p class="trilho-titulo">4 · Estoque e compras</p>
+        <a href="#4-1"><span class="cod">4.1</span><span>Estoque</span></a><a href="#4-2"><span class="cod">4.2</span><span>Compras</span></a><a href="#4-3"><span class="cod">4.3</span><span>Prestadores</span></a><a href="#4-4"><span class="cod">4.4</span><span>Notas de compra</span></a><a href="#4-5"><span class="cod">4.5</span><span>Cotações</span></a><a href="#4-6"><span class="cod">4.6</span><span>Fornecedores</span></a>
+      </div>
+      <div class="trilho-grupo">
+        <p class="trilho-titulo">5 · Empresa</p>
+        <a href="#5-1"><span class="cod">5.1</span><span>Equipe</span></a><a href="#5-2"><span class="cod">5.2</span><span>Relatórios</span></a><a href="#5-3"><span class="cod">5.3</span><span>Indicação</span></a><a href="#5-4"><span class="cod">5.4</span><span>Configurações</span></a><a href="#5-4-1"><span class="cod">5.4.1</span><span>Permissões</span></a><a href="#5-4-2"><span class="cod">5.4.2</span><span>Campos personalizados</span></a><a href="#5-4-3"><span class="cod">5.4.3</span><span>Vocabulário</span></a><a href="#5-4-4"><span class="cod">5.4.4</span><span>Filiais</span></a><a href="#5-4-5"><span class="cod">5.4.5</span><span>API de integração</span></a><a href="#5-5"><span class="cod">5.5</span><span>Controle de bens</span></a><a href="#5-6"><span class="cod">5.6</span><span>Balanço patrimonial</span></a>
+      </div>
+      <div class="trilho-grupo">
+        <p class="trilho-titulo">Na prática</p>
+        <a href="#ciclo"><span class="cod">—</span><span>O ciclo de uma OS, do começo ao fim</span></a><a href="#cliente-ve"><span class="cod">—</span><span>O que o seu cliente vê</span></a><a href="#celular"><span class="cod">—</span><span>Celular e sem sinal</span></a><a href="#avisos"><span class="cod">—</span><span>Avisos no celular</span></a><a href="#assistente"><span class="cod">—</span><span>A assistente de voz</span></a><a href="#duvidas"><span class="cod">—</span><span>Dúvidas comuns</span></a>
+      </div>
+    </nav>
+  </aside>
+
+  <main class="conteudo">
+    <header class="capa">
+      <p class="selo">Guia de uso · Todas as telas</p>
+      <h1>Manual do ServiçoOS</h1>
+      <p class="abertura">
+        O que cada tela faz, o que dá para fazer nela, e as armadilhas que só
+        aparecem depois. Escrito para ser consultado no meio do expediente —
+        procure pelo número da aba e leia só o verbete que interessa.
+      </p>
+      <p class="abertura">
+        Este manual também vive <strong>dentro do sistema</strong>: o botão
+        <strong>?</strong> no topo da barra lateral abre a ajuda já no verbete da
+        tela em que você está.
+      </p>
+    </header>
+
+    <div class="grupo">
+      <span class="grupo-num">—</span>
+      <h2 class="grupo-nome">Começando</h2>
+      <p class="grupo-desc">O que saber antes de mexer</p>
+    </div>
+    
+    <section class="aba" id="numeracao">
+      <div class="aba-topo">
+        
+        <h3>Como achar as telas</h3>
+        
+      </div>
+      <p class="resumo">Toda tela tem um número, e ele aparece na barra lateral na frente do nome. Quem usa o sistema todo dia decora “1.1” e chega mais rápido do que caçando na lista.</p>
+      <p>No topo da barra lateral há uma caixa de busca que aceita as duas coisas: o <strong>número</strong> (“3.2”) ou o <strong>nome</strong> (“orçamento”, e também “orcamento”, sem acento). Digite, e Enter leva ao primeiro resultado.</p>
+<p>Os grupos seguem o assunto: <strong>1</strong> é o trabalho em campo, <strong>2</strong> é a carteira de clientes, <strong>3</strong> é dinheiro, <strong>4</strong> é estoque e compras, <strong>5</strong> é a empresa. Digitar só “5.4” mostra as telas dentro de Configurações em vez de adivinhar qual delas você queria.</p>
+<div class="atencao"><h4>Você pode não ver todas</h4><p>A lista muda conforme o seu perfil e o seu plano. Se um número deste manual não existe na sua barra lateral, ou a aba está desligada em Permissões para o seu usuário, ou o recurso não faz parte do seu plano.</p></div>
+    </section>
+
+    <section class="aba" id="primeiros">
+      <div class="aba-topo">
+        
+        <h3>Primeiros passos</h3>
+        
+      </div>
+      <p class="resumo">Uma lista de seis tarefas aparece no Dashboard até você concluí-la. Não é enfeite: cada item dela sai impresso em documento que vai para o seu cliente, e corrigir depois não conserta o que já foi enviado.</p>
+      <ol class="passos"><li><span><strong>Complete os dados da empresa.</strong> Telefone e CNPJ saem em todo documento que você entrega.</span></li><li><span><strong>Envie a sua logo.</strong> Aparece no topo do orçamento, da OS e do recibo.</span></li><li><span><strong>Cadastre ou importe seus clientes.</strong> Dá para trazer de uma planilha; não precisa digitar um por um.</span></li><li><span><strong>Crie a primeira ordem de serviço.</strong> É o centro do sistema — agenda, execução, foto, assinatura e recebimento.</span></li><li><span><strong>Configure o PIX.</strong> O cliente paga direto na sua conta, por QR code impresso no documento, sem taxa.</span></li><li><span><strong>Escreva seus termos e a garantia.</strong> É o que resolve discussão depois do serviço feito.</span></li></ol>
+    </section>
+
+    <section class="aba" id="papeis">
+      <div class="aba-topo">
+        
+        <h3>Quem pode o quê</h3>
+        
+      </div>
+      <p class="resumo">Oito cargos, do mais amplo ao mais restrito. O cargo define o que a pessoa enxerga e o que ela pode fazer.</p>
+      <div class="rolagem"><table><thead><tr><th>Cargo</th><th>Alcance</th></tr></thead><tbody><tr><td class="chave">Proprietário</td><td>Dono da conta. Faz tudo, e é o único que envia o certificado digital e mexe na assinatura do plano.</td></tr><tr><td class="chave">Administrador</td><td>Faz tudo no dia a dia, inclusive definir o que a equipe vê. Não envia certificado digital.</td></tr><tr><td class="chave">Gerente</td><td>Toca a operação inteira. Fica de fora só a cobrança da assinatura.</td></tr><tr><td class="chave">Atendimento</td><td>Atende o cliente: abre chamado, agenda, consulta o que já foi feito.</td></tr><tr><td class="chave">Comercial</td><td>Vende: orçamento, cliente, contrato recorrente.</td></tr><tr><td class="chave">Financeiro</td><td>Dinheiro entrando e saindo, mais a nota fiscal.</td></tr><tr><td class="chave">Logística</td><td>Peça, compra e fornecedor.</td></tr><tr><td class="chave">Técnico</td><td>Quem está em campo. É o cargo mais restrito por padrão.</td></tr></tbody></table></div>
+<p>Os seis últimos são <strong>configuráveis</strong>: cada um tem o seu próprio conjunto de abas e ações, ajustado em <strong>5.4.1 Permissões</strong>. Só Proprietário e Administrador ficam de fora, porque não há o que configurar em quem já pode tudo.</p>
+<div class="atencao"><h4>Gerente não manda em tudo</h4><p>Parece que deveria, mas ele é configurável como os outros — porque mais cedo ou mais tarde aparece a empresa que quer um gerente que não mexe na cobrança. A lista de quem ninguém consegue restringir depois tem de ficar curta.</p></div>
+    </section>
+
+    <div class="grupo">
+      <span class="grupo-num">1</span>
+      <h2 class="grupo-nome">Operação</h2>
+      <p class="grupo-desc">O trabalho em campo</p>
+    </div>
+    
+    <section class="aba" id="1-1">
+      <div class="aba-topo">
+        <span class="aba-cod">1.1</span>
+        <h3>Ordens de Serviço</h3>
+        
+      </div>
+      <p class="resumo">O centro do sistema. Cada trabalho vira uma OS numerada, que atravessa do agendamento até o recebimento sem sair da tela.</p>
+      <div class="fluxo"><span>Aberta</span><span class="seta">→</span><span>Em andamento</span><span class="seta">→</span><span>Concluída</span><span class="seta">→</span><span class="fim">Faturada</span><span class="seta">·</span><span class="morto">Cancelada</span></div>
+<h4>Ao criar</h4><ul><li><strong>Título</strong> — o que será feito. Ex.: “Manutenção elétrica”.</li><li><strong>Cliente</strong> — obrigatório, escolhido do cadastro.</li><li><strong>Técnico responsável</strong> — opcional; dá para definir depois.</li><li><strong>Agendamento</strong> — data e hora. É o que coloca a OS no calendário e no mapa.</li><li><strong>Itens / Serviços</strong> — descrição, quantidade e preço unitário. O total se soma sozinho.</li></ul>
+<h4>Dentro da OS aberta</h4><ul><li><strong>Descrição do problema</strong> — o que o cliente relatou.</li><li><strong>Checklist de execução</strong> — etapas que quem está em campo vai marcando; mostra o progresso em “3/7 itens concluídos”.</li><li><strong>Fotos do serviço</strong> — no celular o botão abre a câmera direto. As fotos são reduzidas no próprio aparelho antes de subir, para funcionar com sinal fraco.</li><li><strong>Assinatura do cliente</strong> — colhida na tela do celular, na hora, e sai impressa no PDF.</li><li><strong>Histórico de alterações</strong> — quem mudou status, responsável, agendamento, valor ou garantia, e quando.</li></ul>
+<p>O botão <strong>Concluir</strong> abre uma janela onde você descreve os serviços realizados e confere os itens da cobrança. Ela tem duas saídas, e a diferença importa:</p>
+<ul><li><strong>Concluir (sem faturar)</strong> — o serviço está feito, mas nada entra no financeiro ainda.</li><li><strong>Concluir e Faturar</strong> — além de encerrar, gera o lançamento a receber.</li></ul>
+<h4>O que dá para enviar dali</h4><ul><li><strong>PDF</strong> — com sua logo, itens, termos, garantia, fotos e as assinaturas.</li><li><strong>WhatsApp</strong> — manda o link de acompanhamento para o cliente (exige o WhatsApp configurado, em 5.4).</li><li><strong>Portal cliente</strong> — um endereço público onde ele acompanha, assina e avalia.</li><li><strong>Emitir NFS-e</strong> — se a parte fiscal estiver configurada (3.4).</li></ul>
+<div class="atencao"><h4>OS faturada trava</h4><p>Depois de faturada, a OS não aceita mais mudança nas fotos — ela virou documento fiscal e contábil. Confira antes de faturar.</p></div>
+    </section>
+
+    <section class="aba" id="1-2">
+      <div class="aba-topo">
+        <span class="aba-cod">1.2</span>
+        <h3>Agendamento</h3>
+        
+      </div>
+      <p class="resumo">Um calendário mensal com todas as ordens que têm data marcada. É a visão de “o que a equipe faz esta semana”.</p>
+      <ul><li>Cada dia mostra as OS agendadas; quando não cabem, aparece “+3 mais”.</li><li>Para <strong>remarcar</strong>, arraste a OS para outro dia — ou toque nela e escolha o dia, o que funciona melhor no celular.</li><li>Se o técnico já tiver outro serviço naquele horário, o sistema <strong>avisa do conflito</strong> antes de confirmar.</li></ul>
+<div class="atencao"><h4>O que não se move daqui</h4><p>OS já concluída, faturada ou cancelada não é arrastável. No caso da faturada é proposital: a nota fiscal está amarrada àquela data. Para corrigir uma data de OS concluída, use a tela de edição.</p></div>
+    </section>
+
+    <section class="aba" id="1-3">
+      <div class="aba-topo">
+        <span class="aba-cod">1.3</span>
+        <h3>Histórico</h3>
+        
+      </div>
+      <p class="resumo">O arquivo morto: ordens concluídas, faturadas e canceladas, fora da tela do dia a dia.</p>
+      <p>Busca por título ou cliente, filtro por status, e as colunas mostram número, cliente, responsável, total e a data de conclusão. É onde se procura “quando foi mesmo que atendemos esse cliente”.</p>
+    </section>
+
+    <section class="aba" id="1-4">
+      <div class="aba-topo">
+        <span class="aba-cod">1.4</span>
+        <h3>Manutenção Interna</h3>
+        <span class="etiqueta">OM</span>
+      </div>
+      <p class="resumo">Ordem de Manutenção — o serviço que a <strong>sua</strong> empresa precisa, não o do cliente. Revisão da van, conserto da furadeira, manutenção do ar-condicionado do escritório.</p>
+      <ul><li>Tem <strong>Título</strong>, descrição, <strong>Prestador responsável</strong> (opcional) e agendamento.</li><li>Aceita <strong>itens</strong> com quantidade e preço, como uma OS — é assim que você sabe quanto custou manter a operação de pé.</li><li>Anda com dois botões: <strong>Iniciar manutenção</strong> e <strong>Marcar como concluída</strong>.</li></ul>
+<p>Manter isso separado das OS é o que impede que o conserto do seu próprio veículo apareça como faturamento no relatório.</p>
+    </section>
+
+    <section class="aba" id="1-5">
+      <div class="aba-topo">
+        <span class="aba-cod">1.5</span>
+        <h3>Mapa GPS</h3>
+        
+      </div>
+      <p class="resumo">Onde a equipe está agora e onde estão as ordens em aberto, no mesmo mapa. Atualiza sozinho a cada 30 segundos.</p>
+      <h4>Para o mapa ter o que mostrar</h4><ul><li>O <strong>técnico</strong> precisa ter ativado a localização no aparelho dele.</li><li>O <strong>cliente</strong> precisa ter endereço cadastrado.</li></ul>
+<p>Quando um endereço não é localizado, a OS aparece numa lista de <strong>fora do mapa</strong>. Clique, confira o endereço e salve — o mapa se corrige sozinho depois disso.</p>
+<div class="atencao"><h4>Endereço importado demora um pouco</h4><p>A busca de coordenadas roda uma vez por dia, em lotes. Clientes recém-importados de planilha aparecem no mapa aos poucos, não na mesma hora.</p></div>
+    </section>
+
+    <section class="aba" id="1-6">
+      <div class="aba-topo">
+        <span class="aba-cod">1.6</span>
+        <h3>Dashboard</h3>
+        
+      </div>
+      <p class="resumo">A tela de abertura: como o mês está indo, em quatro números e um gráfico.</p>
+      <div class="rolagem"><table><thead><tr><th>Indicador</th><th>O que conta</th></tr></thead><tbody><tr><td class="chave">Faturamento do mês</td><td>Receitas efetivamente pagas no mês, mais o valor das OS concluídas.</td></tr><tr><td class="chave">OS em aberto</td><td>Quantas estão abertas e quantas em andamento.</td></tr><tr><td class="chave">Recebimentos vencidos</td><td>O que passou do vencimento e ainda não entrou.</td></tr><tr><td class="chave">Clientes ativos</td><td>Total de clientes com situação “Ativo”.</td></tr></tbody></table></div>
+<p>Abaixo, o gráfico <strong>Receita × Despesa dos últimos 6 meses</strong> e a lista das OS ativas no momento. A lista de Primeiros passos também mora aqui, até você fechá-la.</p>
+    </section>
+
+    <div class="grupo">
+      <span class="grupo-num">2</span>
+      <h2 class="grupo-nome">Clientes</h2>
+      <p class="grupo-desc">A carteira</p>
+    </div>
+    
+    <section class="aba" id="2-1">
+      <div class="aba-topo">
+        <span class="aba-cod">2.1</span>
+        <h3>Clientes</h3>
+        
+      </div>
+      <p class="resumo">O cadastro de quem você atende — e, dentro dele, o histórico inteiro daquele cliente.</p>
+      <h4>O cadastro</h4><ul><li><strong>Dados pessoais</strong> — nome, CPF/CNPJ, telefone, WhatsApp, e-mail.</li><li><strong>Endereço</strong> — CEP, rua, número, complemento, bairro, cidade, estado. É o que põe o cliente no mapa.</li><li><strong>Situação</strong> — Ativo, Inativo ou Inadimplente.</li></ul>
+<p>Dentro da ficha dá para cadastrar os <strong>equipamentos daquele cliente</strong> — nome, marca, modelo, número de série, data de instalação e garantia até. O sistema avisa quando alguma garantia está a menos de 90 dias de vencer, o que costuma ser uma boa hora para ligar oferecendo revisão.</p>
+<h4>Importar planilha</h4><ol class="passos"><li><span>Baixe o modelo, ou use a sua planilha — basta que a primeira linha tenha os títulos das colunas.</span></li><li><span>Salve em <strong>CSV ou Excel (.xlsx)</strong>. Só a primeira aba é lida.</span></li><li><span>Envie. O resultado aparece linha a linha antes de você sair da tela.</span></li></ol>
+<p>Os títulos mais comuns são reconhecidos sozinhos (Nome, Razão Social, CPF, CNPJ, Telefone, Celular, CEP, Endereço…). O limite é de <strong>2.000 linhas por arquivo</strong>.</p>
+<div class="atencao"><h4>Reenviar a mesma planilha é seguro</h4><p>Quem já está cadastrado não entra duas vezes. Se a sua planilha é maior que 2.000 linhas, divida em partes e importe uma de cada vez sem medo de duplicar.</p></div>
+<p><strong>Contratante — quando quem paga não é quem recebe o serviço.</strong> Uma administradora fecha contrato com você, mas o serviço é feito em cada condomínio dela. Vale igual para seguradora e segurado, franquia e cada loja, construtora e cada obra.</p>
+<h4>Como montar</h4><ol class="passos"><li><span>Cadastre a <strong>contratante</strong> normalmente — a administradora, a seguradora, a franqueadora.</span></li><li><span>Cadastre cada <strong>cliente final</strong> e escolha a contratante no campo <strong>Contratante</strong>.</span></li><li><span>Ao abrir a OS, escolha o cliente final: é lá que o serviço acontece. Um campo <strong>Cobrar de</strong> aparece, já preenchido com a contratante.</span></li></ol>
+<p>A <strong>nota fiscal sai no CNPJ de quem paga</strong>, e não de onde o serviço foi feito. O documento mostra os dois lados: Contratante e Local do serviço.</p>
+<div class="atencao"><h4>Um nível só, e o extra pode ser cobrado direto</h4><p>Subcliente não pode ter subcliente: administradora → condomínio, e para. E quando o cliente final paga direto um serviço extra, é só trocar o Cobrar de naquela OS — a nota acompanha.</p></div>
+    </section>
+
+    <section class="aba" id="2-2">
+      <div class="aba-topo">
+        <span class="aba-cod">2.2</span>
+        <h3>Contratos</h3>
+        <span class="etiqueta">Recorrente</span>
+      </div>
+      <p class="resumo">Serviço que se repete — limpeza semanal, jardinagem mensal, dedetização trimestral. Você cadastra uma vez e a OS passa a nascer sozinha.</p>
+      <ul><li><strong>Frequência</strong> — semanal, quinzenal, mensal, bimestral, trimestral, semestral ou anual.</li><li><strong>Dia do mês</strong> — em meses curtos cai no último dia e volta ao dia escolhido no mês seguinte.</li><li><strong>Valor por visita</strong> — já vai preenchido na OS gerada, e dá para ajustar depois.</li><li><strong>Começa em</strong> / <strong>Termina em</strong> — deixe o fim vazio para contrato sem prazo.</li></ul>
+<p>A ordem de serviço é criada <strong>três dias antes</strong> de cada visita, com o responsável já definido, para dar tempo de organizar a rota. Um contrato pode ser Pausado e Retomado sem perder o histórico.</p>
+<div class="atencao"><h4>Excluir não apaga o que já foi feito</h4><p>Excluir um contrato só faz parar de nascer OS nova. As ordens já geradas continuam no sistema — são trabalho realizado.</p></div>
+    </section>
+
+    <div class="grupo">
+      <span class="grupo-num">3</span>
+      <h2 class="grupo-nome">Dinheiro</h2>
+      <p class="grupo-desc">Do orçamento à nota fiscal</p>
+    </div>
+    
+    <section class="aba" id="3-1">
+      <div class="aba-topo">
+        <span class="aba-cod">3.1</span>
+        <h3>Financeiro</h3>
+        
+      </div>
+      <p class="resumo">Contas a receber e a pagar, lado a lado, com três indicadores no topo.</p>
+      <ul><li><strong>Receita do mês</strong> — o que já entrou.</li><li><strong>A receber</strong> — quantos pagamentos estão pendentes.</li><li><strong>A pagar</strong> — quantas despesas estão em aberto.</li></ul>
+<p>Cada linha tem <strong>Pendente</strong>, <strong>Pago</strong> ou <strong>Vencido</strong>, e um botão Pagar para dar baixa. Receitas nascem das OS faturadas; despesas você lança aqui, com descrição, valor, vencimento, categoria (Fixa, Variável ou Outra) e a marcação de <strong>recorrente</strong>, para o aluguel não precisar ser digitado todo mês.</p>
+    </section>
+
+    <section class="aba" id="3-2">
+      <div class="aba-topo">
+        <span class="aba-cod">3.2</span>
+        <h3>Orçamentos</h3>
+        
+      </div>
+      <p class="resumo">A proposta antes do serviço — e o link onde o cliente aprova sozinho.</p>
+      <div class="fluxo"><span>Rascunho</span><span class="seta">→</span><span>Enviado</span><span class="seta">→</span><span class="fim">Aprovado</span><span class="seta">·</span><span class="morto">Recusado</span></div>
+<h4>O formulário</h4><ul><li><strong>Dados do cliente</strong> — nome, contato e endereço.</li><li><strong>Serviço</strong> — o que precisa ser feito e os materiais a serem utilizados.</li><li><strong>Valores e condições</strong> — valor, validade e observações (pagamento, prazo, garantia).</li></ul>
+<p>Dali sai um <strong>PDF</strong> com a sua logo e os seus termos, e um <strong>link online</strong>. No link, o cliente lê a proposta e clica em Aprovar orçamento ou Recusar — e você recebe o aviso no celular na hora, sem precisar cobrar resposta.</p>
+    </section>
+
+    <section class="aba" id="3-3">
+      <div class="aba-topo">
+        <span class="aba-cod">3.3</span>
+        <h3>Recibos</h3>
+        
+      </div>
+      <p class="resumo">Toda receita paga vira um recibo em PDF, pronto para entregar.</p>
+      <p>A lista mostra descrição, valor, vencimento, data do pagamento e a OS vinculada. O PDF traz o valor recebido, os dados do pagamento e as linhas de assinatura do pagador e do recebedor.</p>
+<p><strong>Recibo não é nota fiscal.</strong> Ele comprova o pagamento; a obrigação fiscal se cumpre em 3.4.</p>
+    </section>
+
+    <section class="aba" id="3-4">
+      <div class="aba-topo">
+        <span class="aba-cod">3.4</span>
+        <h3>Config. Fiscal</h3>
+        <span class="etiqueta">Só o proprietário</span>
+      </div>
+      <p class="resumo">Onde a emissão de NFS-e é ligada. São duas etapas, nesta ordem — a segunda só aparece depois da primeira.</p>
+      <h4>Etapa 1 — cadastrar a empresa</h4><ul><li>CNPJ, Inscrição Municipal, e-mail da empresa.</li><li>CEP, logradouro, número, bairro, cidade, estado.</li><li><strong>Código IBGE da cidade</strong> — sete dígitos; consulte no site do IBGE.</li><li><strong>Alíquota ISS (%)</strong> — a da sua atividade no seu município.</li></ul>
+<h4>Etapa 2 — enviar o certificado digital</h4><ul><li>O certificado <strong>A1</strong> da empresa, em .pfx ou .p12 — o mesmo arquivo que você usa no e-CAC. Até 200 KB.</li><li>A <strong>senha</strong> do certificado, que fica cifrada e não volta a aparecer em tela nenhuma.</li><li>A <strong>validade</strong> (opcional, mas vale preencher): é o que permite avisar você antes de vencer.</li></ul>
+<p>Com as duas etapas prontas, a OS ganha o botão <strong>Emitir NFS-e</strong>, e tudo acontece dentro do ServiçoOS — você não é jogado para outro site.</p>
+<div class="atencao"><h4>Certificado vencido para de emitir, sem aviso da prefeitura</h4><p>Um certificado A1 vale um ano. Vencido, a emissão falha — e sem a data de validade preenchida ninguém descobre até tentar emitir com o cliente esperando. Preencha a validade.</p></div>
+    </section>
+
+    <section class="aba" id="3-5">
+      <div class="aba-topo">
+        <span class="aba-cod">3.5</span>
+        <h3>Assinatura</h3>
+        
+      </div>
+      <p class="resumo">O seu plano do ServiçoOS: qual é, quando renova, e como trocar.</p>
+      <ul><li>Status da assinatura e data de renovação.</li><li>Troca de plano, mensal ou anual — no anual, dois meses saem de graça.</li><li><strong>Baixar contrato e termo de dados (LGPD)</strong> — o mesmo arquivo que chega por e-mail quando o pagamento é confirmado.</li><li>Cancelamento, sem multa, pelo próprio painel.</li></ul>
+<div class="atencao"><h4>Pagamento em atraso não apaga nada</h4><p>Se a cobrança não for confirmada, você recebe avisos por e-mail ao longo de 30 dias. Passado o prazo, o acesso é bloqueado para toda a equipe — mas nada é apagado. Confirmado o pagamento, tudo volta sozinho, sem taxa de reativação.</p></div>
+    </section>
+
+    <div class="grupo">
+      <span class="grupo-num">4</span>
+      <h2 class="grupo-nome">Estoque e compras</h2>
+      <p class="grupo-desc">Peça, custo e fornecedor</p>
+    </div>
+    
+    <section class="aba" id="4-1">
+      <div class="aba-topo">
+        <span class="aba-cod">4.1</span>
+        <h3>Estoque</h3>
+        
+      </div>
+      <p class="resumo">As peças que você usa nos serviços, com saldo, custo e preço de venda.</p>
+      <p>A regra que governa a tela inteira: <strong>o saldo só muda por movimento, nunca por edição direta</strong>. É o que garante que o número na tela e o histórico nunca discordem.</p>
+<div class="rolagem"><table><thead><tr><th>Movimento</th><th>O que faz</th><th>Quando usar</th></tr></thead><tbody><tr><td class="chave">Entrada</td><td>Soma ao saldo</td><td>Compra recebida fora de uma ordem de compra</td></tr><tr><td class="chave">Saída</td><td>Subtrai do saldo</td><td>Peça quebrada ou perdida</td></tr><tr><td class="chave">Ajuste</td><td>DEFINE o saldo</td><td>Contagem de inventário</td></tr></tbody></table></div>
+<p>Cada peça tem um <strong>Mínimo</strong>: abaixo dele ela vira alerta no topo da tela. Zero desliga o aviso. Peça que saiu de linha se <strong>desativa</strong>, não se apaga — o histórico continua de pé.</p>
+<div class="atencao"><h4>No Ajuste, digite o que você contou</h4><p>Não a diferença. Se a prateleira tem 8 e o sistema diz 12, o ajuste é 8. E o motivo é obrigatório: ajuste sem motivo é indistinguível de erro seis meses depois.</p></div>
+    </section>
+
+    <section class="aba" id="4-2">
+      <div class="aba-topo">
+        <span class="aba-cod">4.2</span>
+        <h3>Compras</h3>
+        
+      </div>
+      <p class="resumo">A ordem de compra para o fornecedor — e o ponto onde a peça entra no estoque de verdade.</p>
+      <div class="fluxo"><span>Rascunho</span><span class="seta">→</span><span>Enviada</span><span class="seta">→</span><span>Parcial</span><span class="seta">→</span><span class="fim">Recebida</span><span class="seta">·</span><span class="morto">Cancelada</span></div>
+<p>Você escolhe as peças, as quantidades e o custo, com fornecedor e previsão de entrega. <strong>O estoque não muda aí.</strong> Ele muda quando a mercadoria chega e você abre a compra e clica em Registrar recebimento — que já vem preenchido com o que falta, e aceita menos, se veio menos. A compra fica Parcial até o último item chegar.</p>
+<p>Confirmar o recebimento faz duas coisas: soma as quantidades ao estoque e <strong>atualiza o custo da peça</strong> com o que você acabou de pagar.</p>
+<div class="atencao"><h4>Cancelar só antes do primeiro recebimento</h4><p>Depois que a peça entrou, desfazer por aqui deixaria saldo e histórico em desacordo. Se precisar corrigir, use um movimento de estoque (4.1), que fica registrado.</p></div>
+    </section>
+
+    <section class="aba" id="4-3">
+      <div class="aba-topo">
+        <span class="aba-cod">4.3</span>
+        <h3>Prestadores</h3>
+        
+      </div>
+      <p class="resumo">Quem executa serviço <strong>para</strong> você — o terceirizado, o parceiro, o especialista que você chama.</p>
+      <p>Cadastro simples: nome, especialidade (“Elétrica”, “Hidráulica”, “TI”), telefone, CPF/CNPJ, e-mail e observações. O prestador pode ser vinculado como responsável em uma Manutenção Interna (1.4).</p>
+<div class="atencao"><h4>Prestador não é fornecedor</h4><p>São listas diferentes de propósito. Prestador vende serviço; fornecedor vende peça, e mora dentro de Compras (4.2).</p></div>
+    </section>
+
+    <section class="aba" id="4-4">
+      <div class="aba-topo">
+        <span class="aba-cod">4.4</span>
+        <h3>Notas de compra</h3>
+        
+      </div>
+      <p class="resumo">As notas que os fornecedores mandaram, todas num lugar só.</p>
+      <p>A nota é anexada <strong>dentro da compra</strong> (4.2), no momento em que chega. Esta tela existe para a outra pergunta: “onde está a nota daquele compressor que comprei em março?”.</p>
+<h4>A busca encontra por</h4><ul><li><strong>Nome do arquivo</strong> — o que você escreveu ao salvar.</li><li><strong>Fornecedor</strong> — quem vendeu.</li><li><strong>Número da compra</strong> — o que está no e-mail do pedido.</li></ul>
+<p>É também o que o contador pede todo mês, e o que hoje costuma sair de uma caixa de papel.</p>
+<div class="atencao"><h4>Remover apaga de vez</h4><p>A nota é o documento da compra. Removida, não há como recuperar — nem pelo sistema, nem pelo suporte.</p></div>
+    </section>
+
+    <section class="aba" id="4-5">
+      <div class="aba-topo">
+        <span class="aba-cod">4.5</span>
+        <h3>Cotações</h3>
+        
+      </div>
+      <p class="resumo">Peça preço a vários fornecedores e compare antes de comprar.</p>
+      <p>A ordem de compra responde <strong>o que</strong> comprar. A cotação responde <strong>de quem</strong> — que hoje se resolve ligando para três fornecedores e anotando num papel que some.</p>
+<h4>Como funciona</h4><ol class="passos"><li><span>Crie a cotação: escolha as peças, as quantidades e a quem perguntar.</span></li><li><span>Ligue ou mande mensagem para cada fornecedor. Quem digita a resposta é você, em <strong>Lançar preços</strong>.</span></li><li><span>A tela compara sozinha e mostra quem está mais barato, item a item.</span></li><li><span>Escolha um fornecedor e clique em <strong>Comprar deste</strong>. A ordem de compra nasce com os preços cotados, sem redigitar.</span></li></ol>
+<h4>A comparação mostra DUAS respostas</h4><ul><li><strong>Melhor fornecedor único</strong> — o menor total entre quem cotou tudo. Uma nota, um frete, um contato para cobrar.</li><li><strong>Comprando de cada um o mais barato</strong> — sempre custa igual ou menos. O preço é operacional: mais de uma entrega e mais de uma nota.</li><li>A diferença entre os dois é a <strong>economia ao dividir</strong> — e é o que você está comprando ao aceitar o trabalho a mais.</li></ul>
+<div class="atencao"><h4>Campo de preço vazio não é zero</h4><p>Deixar em branco significa “não cotou esse item”. Se você digitar zero, o sistema entende brinde — e zero vence a comparação.</p></div>
+    </section>
+
+    <section class="aba" id="4-6">
+      <div class="aba-topo">
+        <span class="aba-cod">4.6</span>
+        <h3>Fornecedores</h3>
+        
+      </div>
+      <p class="resumo">Quem vende peça e material para a empresa.</p>
+      <div class="atencao"><h4>Fornecedor não é prestador</h4><p><strong>Fornecedor</strong> VENDE para a empresa: peça, material, ferramenta. É quem aparece na compra (4.2) e na cotação (4.5). <strong>Prestador</strong> (4.3) PRESTA serviço para ela — manutenção, elétrica, terceirizado. São dois cadastros separados de propósito: misturados, a lista de quem cotar peça viria cheia de eletricista.</p></div>
+<p>Só o <strong>nome</strong> é obrigatório. O resto você preenche quando tiver, e pode voltar e completar a qualquer momento — cadastro pobre é melhor que cadastro que você não consegue salvar.</p>
+<h4>O que vale a pena preencher, e por quê</h4><ul><li><strong>Pessoa de contato e o telefone dela</strong> — o vendedor que resolve. É para ele que você liga, e não para a central.</li><li><strong>Condição de pagamento e prazo de entrega</strong> — é o que decide de quem comprar quando o preço empata.</li><li><strong>CNPJ</strong> — se preencher, o sistema confere se o número fecha. Documento errado não para no cadastro: sai no boleto e na nota.</li><li><strong>Chave PIX e dados bancários</strong> — para não procurar no WhatsApp na hora de pagar.</li></ul>
+<h4>Corrigir um dado errado</h4><ol class="passos"><li><span>Abra a ficha do fornecedor pelo nome, na lista.</span></li><li><span>Clique em <strong>Editar</strong>.</span></li><li><span>Corrija e salve. Nada mais é apagado nem recriado.</span></li></ol>
+<div class="atencao"><h4>Desativar, e não excluir</h4><p>Fornecedor de quem você já comprou tem histórico: as compras e as cotações em que ele deu preço. Parou de comprar dele? Use <strong>Desativar</strong> — ele some das listas de escolha e o histórico fica inteiro. <strong>Excluir</strong> só aparece para quem nunca teve movimento nenhum, que é o caso do cadastro duplicado.</p></div>
+<p>A <strong>ficha</strong> de cada fornecedor mostra tudo que você já comprou dele, com o total, e as cotações de que ele participou — inclusive as que ele não respondeu.</p>
+    </section>
+
+    <div class="grupo">
+      <span class="grupo-num">5</span>
+      <h2 class="grupo-nome">Empresa</h2>
+      <p class="grupo-desc">Equipe, números e ajustes</p>
+    </div>
+    
+    <section class="aba" id="5-1">
+      <div class="aba-topo">
+        <span class="aba-cod">5.1</span>
+        <h3>Equipe</h3>
+        
+      </div>
+      <p class="resumo">Quem tem acesso ao sistema, com que perfil, e desde quando.</p>
+      <p><strong>Convidar membro</strong> pede nome, e-mail, função (Administrador, acesso total, ou Técnico, acesso controlado), CPF/CNPJ, telefone e endereço. A pessoa recebe um e-mail e cria a própria senha — você nunca precisa saber a senha de ninguém.</p>
+<p>A lista mostra também a localização de quem está com o GPS ligado, que é a mesma informação do Mapa (1.5).</p>
+<div class="atencao"><h4>Se o e-mail de convite não chegar</h4><p>O membro já foi criado. Peça para ele usar “Esqueci minha senha” na tela de entrada, com o mesmo e-mail — funciona igual.</p></div>
+    </section>
+
+    <section class="aba" id="5-2">
+      <div class="aba-topo">
+        <span class="aba-cod">5.2</span>
+        <h3>Relatórios</h3>
+        
+      </div>
+      <p class="resumo">Os números do período, do resumo ao detalhe linha a linha.</p>
+      <ul><li><strong>DRE simplificado</strong> — receitas, despesas e o resultado: lucro ou prejuízo no período.</li><li><strong>OS por status</strong> — quantas em cada etapa.</li><li><strong>Top 10 clientes</strong> — quem mais faturou.</li><li><strong>Desempenho por técnico</strong> — concluídas, total, média, dias da abertura à conclusão e a nota que os clientes deram.</li><li><strong>Detalhe de receitas e de despesas</strong> — cada lançamento, com data e valor.</li></ul>
+<div class="atencao"><h4>Depende do plano</h4><p>No plano inicial, o relatório mostra o mês atual. Período personalizado e as análises avançadas (Top 10, desempenho por técnico e os detalhamentos) entram a partir do Pro.</p></div>
+    </section>
+
+    <section class="aba" id="5-3">
+      <div class="aba-topo">
+        <span class="aba-cod">5.3</span>
+        <h3>Indicação</h3>
+        
+      </div>
+      <p class="resumo">Seu link para indicar o ServiçoOS a outros empresários.</p>
+      <ul><li>Quem entra pelo seu link ganha <strong>10% de desconto</strong> no primeiro pagamento.</li><li>Quando o indicado assina, <strong>você ganha 20%</strong> de desconto, aplicado na sua próxima cobrança.</li><li>Sem limite de indicações.</li></ul>
+    </section>
+
+    <section class="aba" id="5-4">
+      <div class="aba-topo">
+        <span class="aba-cod">5.4</span>
+        <h3>Configurações</h3>
+        
+      </div>
+      <p class="resumo">A tela mais densa do sistema. Vale separar o que é da empresa (vale para todo mundo) do que é seu (vale só para você).</p>
+      <h4>Da empresa</h4><ul><li><strong>Empresa</strong> — nome, CNPJ, telefones, endereço, site. Sai nos PDFs.</li><li><strong>Logo</strong> — PNG, JPG ou WEBP, até 2 MB. Vai no topo dos documentos.</li><li><strong>Termos e garantia</strong> — o prazo padrão de garantia e os textos que saem impressos na OS e no orçamento, antes das assinaturas.</li><li><strong>Receber por PIX</strong> — tipo de chave, chave, nome do recebedor e cidade. O QR code passa a sair nos documentos.</li><li><strong>Avisar o cliente automaticamente</strong> — mensagem quando o serviço começa e quando termina, por WhatsApp e/ou e-mail. Começa desligado.</li><li><strong>Régua de cobrança</strong> — lembra o cliente 3 dias antes de vencer e cobra depois de vencido, sozinho. Começa desligada, e entra a partir do Pro.</li><li><strong>WhatsApp (Z-API)</strong> — ID da instância e token, obtidos criando uma conta na Z-API e lendo o QR code com o seu WhatsApp.</li><li><strong>Idioma</strong> — vale para toda a empresa, inclusive os e-mails, PDFs e mensagens que vão para os seus clientes. Pede confirmação.</li><li><strong>Exportar dados</strong> — baixa tudo num arquivo .json, pelo seu direito de portabilidade.</li></ul>
+<h4>Seu</h4><ul><li><strong>Meu perfil</strong> — seu nome, documento, telefone e endereço. O e-mail de acesso não muda aqui.</li><li><strong>Minha assinatura</strong> — você desenha a sua assinatura uma vez, e ela passa a sair sozinha nos documentos que você emite. Cada pessoa da equipe tem a dela.</li><li><strong>Avisos no celular</strong> — quais notificações você quer receber. Vale só para você.</li></ul>
+<div class="atencao"><h4>Confira a chave PIX com calma</h4><p>Se a chave estiver errada, o pagamento do seu cliente vai para outra pessoa, e o sistema não tem como desfazer isso. O dinheiro cai direto na conta da sua empresa — não passa pelo ServiçoOS, e não há taxa.</p></div>
+<h4>Régua de cobrança, passo a passo</h4><ol class="passos"><li><span>Ligue a chave <strong>Ligar a régua de cobrança</strong>. Enquanto ela estiver desligada, nada sai.</span></li><li><span>Escolha se quer <strong>lembrar antes de vencer</strong>, <strong>cobrar depois de vencido</strong>, ou os dois.</span></li><li><span>Escolha por onde: WhatsApp, e-mail, ou ambos.</span></li><li><span>Se quiser, informe um <strong>valor mínimo</strong> — abaixo dele o sistema não cobra.</span></li></ol>
+<p>A régua entra a partir do plano Pro. As mensagens saem uma vez por dia, por volta das 9h da manhã. O cliente recebe <strong>no máximo cinco</strong>: uma 3 dias antes do vencimento, e depois no dia seguinte ao vencimento e aos 7, 15 e 30 dias. Passados os 30, o sistema para de cobrar sozinho — daí em diante a conta precisa de você.</p>
+<h4>O que ela nunca faz</h4><ul><li>Cobrar uma conta que já foi paga.</li><li>Mandar mais de uma mensagem por dia para a mesma conta, mesmo que vários prazos tenham passado de uma vez.</li><li>Cobrar quem apenas recebeu o serviço: a mensagem vai para <strong>quem paga</strong>. Se o cliente tem um contratante, é o contratante que recebe.</li><li>Cobrar receita lançada à mão, sem OS — não há a quem cobrar.</li></ul>
+<p>Se você <strong>renegociar</strong> e mudar a data de vencimento, a régua recomeça sozinha a partir da data nova. Não precisa mexer em nada.</p>
+<div class="atencao"><h4>Você precisa do consentimento do seu cliente</h4><p>As mensagens saem em nome da sua empresa, para os contatos que você cadastrou — e quem responde por mensagem indesejada é você, não o ServiçoOS. Toda mensagem avisa o cliente para desconsiderar caso já tenha pago, porque a baixa de pagamento costuma atrasar alguns dias.</p></div>
+    </section>
+
+    <section class="aba" id="5-4-1">
+      <div class="aba-topo">
+        <span class="aba-cod">5.4.1</span>
+        <h3>Permissões</h3>
+        
+      </div>
+      <p class="resumo">O que o técnico enxerga e o que ele pode fazer — em dois degraus.</p>
+      <p>No topo da tela você escolhe <strong>qual cargo</strong> está configurando. Cada um tem a sua própria configuração — mexer no Técnico não mexe no Financeiro.</p>
+<ul><li><strong>Abas que o cargo enxerga</strong> — quais telas aparecem no menu de quem tem aquele cargo.</li><li><strong>O que ele pode fazer</strong> — dentro de uma aba liberada, quais ações ele executa.</li></ul>
+<p>Proprietário e administrador fazem tudo e não aparecem aqui. A mudança entra em vigor na próxima vez que a pessoa carregar a página.</p>
+<div class="atencao"><h4>Cada cargo já vem com um padrão que faz sentido</h4><p>Convidar alguém como Financeiro já abre o sistema no Financeiro, sem você configurar nada. O padrão é por cargo, e serve como ponto de partida — ajuste o que quiser a partir dele.</p></div>
+    </section>
+
+    <section class="aba" id="5-4-2">
+      <div class="aba-topo">
+        <span class="aba-cod">5.4.2</span>
+        <h3>Campos personalizados</h3>
+        
+      </div>
+      <p class="resumo">Cada ramo guarda coisas diferentes. Aqui você cria os campos que a sua empresa precisa, e eles passam a aparecer no cadastro.</p>
+      <p>Dá para criar campos no <strong>cadastro de cliente</strong> e na <strong>ordem de serviço</strong>, nos tipos Texto, Número, Data, Lista de opções e Sim / Não — com a opção de tornar o preenchimento obrigatório, e de reordenar.</p>
+<p>Exemplos que aparecem no próprio sistema: Metragem para limpeza, Raça para pet, Número de série para assistência técnica.</p>
+<div class="atencao"><h4>Remover não perde o que já foi preenchido</h4><p>O campo some do cadastro, mas os valores continuam guardados. Se você criar o campo de novo, eles reaparecem.</p></div>
+    </section>
+
+    <section class="aba" id="5-4-3">
+      <div class="aba-topo">
+        <span class="aba-cod">5.4.3</span>
+        <h3>Vocabulário</h3>
+        
+      </div>
+      <p class="resumo">Faz o sistema falar como a sua empresa fala. Se na sua o certo é “chamado”, ou “atendimento”, ou “visita”, é aqui que se troca.</p>
+      <h4>Duas palavras, cada uma em quatro formas</h4><ul><li><strong>O que você abre para cada trabalho</strong> — por padrão, “ordem de serviço”.</li><li><strong>Quem executa o trabalho</strong> — por padrão, “técnico”.</li></ul>
+<p>Para cada uma: a <strong>forma curta</strong> (usada em botões e colunas, tipo “OS”), o <strong>singular</strong>, o <strong>plural</strong> e o <strong>gênero</strong> — que é o que decide se o sistema escreve “a ordem concluída” ou “o chamado concluído”.</p>
+<p>A troca vale no menu, nos botões, nos relatórios, nos PDFs e nos e-mails que os seus clientes recebem. Há uma pré-visualização antes de salvar, e um botão para voltar ao padrão.</p>
+    </section>
+
+    <section class="aba" id="5-4-4">
+      <div class="aba-topo">
+        <span class="aba-cod">5.4.4</span>
+        <h3>Filiais</h3>
+        <span class="etiqueta">Enterprise</span>
+      </div>
+      <p class="resumo">Para quem tem mais de uma unidade. Define o que cada unidade vê e o que continua sendo da empresa toda.</p>
+      <div class="rolagem"><table><thead><tr><th>Separado por filial</th><th>Compartilhado pela empresa</th></tr></thead><tbody><tr><td class="chave">Clientes, ordens de serviço, agenda, financeiro e equipe</td><td>Estoque e peças, fornecedores e compras, orçamentos, contratos, configurações e cobrança</td></tr></tbody></table></div>
+<p>Quem tem filial vê a unidade dele e o que é da empresa toda. Proprietário e administrador veem todas, e podem filtrar por uma na tela.</p>
+<div class="atencao"><h4>Criar a primeira filial não some com a sua base</h4><p>Registro sem filial aparece para todo mundo — é o que garante isso. E filial se desativa, não se apaga: apagar levaria junto o vínculo de cada cliente, OS e receita da unidade, e o faturamento por filial do ano inteiro.</p></div>
+    </section>
+
+    <section class="aba" id="5-4-5">
+      <div class="aba-topo">
+        <span class="aba-cod">5.4.5</span>
+        <h3>API de integração</h3>
+        <span class="etiqueta">Enterprise</span>
+      </div>
+      <p class="resumo">Conecta o ServiçoOS ao site da sua empresa, ao seu ERP ou a uma automação. É a porta para quem vai programar algo.</p>
+      <ul><li>Você cria uma <strong>chave</strong> com um nome (“Formulário do site”) para saber depois onde ela está sendo usada.</li><li>Até <strong>5 chaves ativas</strong>; revogue uma que não usa antes de criar outra.</li><li>Limite de <strong>120 chamadas por minuto</strong> por chave.</li><li>A própria tela traz a documentação: endereço base, autenticação, o que existe, exemplo e paginação.</li></ul>
+<div class="atencao"><h4>A chave aparece uma única vez</h4><p>Copie na hora. O sistema guarda só um resumo dela — nem o suporte consegue mostrá-la de novo. Trate como senha: uma chave dá acesso de leitura e escrita aos dados da sua empresa.</p></div>
+    </section>
+
+    <section class="aba" id="5-5">
+      <div class="aba-topo">
+        <span class="aba-cod">5.5</span>
+        <h3>Controle de bens</h3>
+        
+      </div>
+      <p class="resumo">O que a empresa TEM: a van, as ferramentas, os computadores, a bancada.</p>
+      <div class="atencao"><h4>Bem não é peça, e não é equipamento de cliente</h4><p>São três coisas com cara parecida e naturezas opostas. <strong>Bem</strong> é o que a empresa comprou para usar. <strong>Peça</strong> (4.1) é o que ela compra para aplicar no serviço, e sai do estoque quando usada. <strong>Equipamento</strong> (2.1) é o do cliente — nem é dela.</p></div>
+<h4>O que registrar</h4><ul><li><strong>Valor e data da compra</strong> — obrigatórios. Sem eles não há depreciação, e o balanço fica sem base.</li><li><strong>Categoria</strong> — define a taxa de depreciação padrão.</li><li><strong>Onde está e com quem</strong> — a rotativa está na van do Carlos; o notebook está com a Ana.</li><li><strong>Nº de série ou placa</strong> — o que o seguro e a garantia pedem.</li></ul>
+<p>A tela calcula sozinha quanto cada bem já <strong>depreciou</strong> e quanto ele <strong>vale hoje nos livros</strong>. As taxas padrão saem da tabela da Receita Federal, e cada bem aceita a sua própria se o seu contador usar outra.</p>
+<h4>Taxas padrão por ano</h4><ul><li><strong>Veículo</strong> e <strong>informática</strong>: 20% (cinco anos).</li><li><strong>Máquina</strong>, <strong>ferramenta</strong> e <strong>móvel</strong>: 10% (dez anos).</li><li><strong>Imóvel</strong>: 4% (vinte e cinco anos).</li><li><strong>Terreno</strong>: não deprecia. Não é arredondamento — terreno não se desgasta, e é regra contábil.</li></ul>
+<h4>Quando o bem sai da empresa</h4><ol class="passos"><li><span>Use <strong>Dar baixa</strong>, e não Excluir.</span></li><li><span>Informe a data: é nela que a depreciação PARA.</span></li><li><span>Diga o motivo — vendido, perdido, descartado.</span></li><li><span>O bem some dos totais mas continua no histórico, que é o que o contador precisa para fechar o exercício.</span></li></ol>
+<div class="atencao"><h4>Estes números são gerenciais</h4><p>Servem para você saber o que tem e entregar dado organizado ao contador. O balanço com valor legal depende do regime tributário e é peça que um profissional habilitado assina. Use <strong>Exportar para o contador</strong> para mandar a lista pronta.</p></div>
+    </section>
+
+    <section class="aba" id="5-6">
+      <div class="aba-topo">
+        <span class="aba-cod">5.6</span>
+        <h3>Balanço patrimonial</h3>
+        <span class="etiqueta">Pro</span>
+      </div>
+      <p class="resumo">O que a empresa tem, o que ela deve, e o que sobra dela — num retrato só.</p>
+      <p>O balanço monta sozinho, com o que o sistema já sabe: o dinheiro que entrou e saiu (3.1), o que há para receber e para pagar, o estoque (4.1) e os bens já depreciados (5.5). Ele fecha na conta de sempre: <strong>ativo = passivo + patrimônio líquido</strong>.</p>
+<div class="atencao"><h4>Dois números o sistema não tem como saber</h4><p>O <strong>caixa inicial</strong> — quanto a empresa tinha no dia em que começou a usar o sistema — e o <strong>capital social</strong> — o que os sócios puseram nela. Sem o primeiro, o caixa aparece negativo logo no primeiro mês, e é de longe o defeito mais comum. Preencha os dois no alto da tela.</p></div>
+<h4>Os cinco grupos</h4><ul><li><strong>Ativo circulante</strong> — o que vira dinheiro em até um ano: caixa, contas a receber, estoque.</li><li><strong>Ativo não circulante</strong> — o que fica: os bens, pelo valor de compra menos a depreciação.</li><li><strong>Passivo circulante</strong> — o que se paga em até um ano.</li><li><strong>Passivo não circulante</strong> — dívidas de prazo mais longo.</li><li><strong>Patrimônio líquido</strong> — o que sobra para os sócios: capital social mais resultado acumulado.</li></ul>
+<p>O que vive fora do sistema entra em <strong>Linhas manuais</strong>: empréstimo, financiamento da van, imóvel não cadastrado, reserva de lucros. Elas aceitam valor negativo, porque conta retificadora existe — uma provisão para perdas é linha legítima do ativo.</p>
+<h4>O conferente</h4><ol class="passos"><li><span>Ele roda sozinho toda vez que a tela abre, e vem ANTES do balanço.</span></li><li><span><strong>Corrigir</strong> é o que precisa resolver antes de usar o número: caixa negativo, patrimônio líquido negativo.</span></li><li><span><strong>Revisar</strong> é o que fecha mas merece um olhar: capital social em branco, peça sem preço de custo, recebível vencido há mais de 180 dias.</span></li><li><span><strong>Saiba</strong> é explicação: por que a depreciação reduz o patrimônio aqui e não aparece como despesa no Financeiro.</span></li><li><span>Cada achado tem um atalho <strong>Resolver</strong> que leva direto à tela onde se conserta.</span></li></ol>
+<div class="atencao"><h4>Este balanço é gerencial</h4><p>Ele organiza o que o sistema sabe para você levar ao contador — e mostra o que está faltando antes de você mandar. O balanço com valor legal (Receita, banco, licitação) é peça contábil que um profissional habilitado assina. Use <strong>Exportar para o contador</strong>: o arquivo sai com as ressalvas do conferente junto, de propósito.</p></div>
+    </section>
+
+    <div class="grupo">
+      <span class="grupo-num">—</span>
+      <h2 class="grupo-nome">Na prática</h2>
+      <p class="grupo-desc">Como as telas se encadeiam</p>
+    </div>
+    
+    <section class="aba" id="ciclo">
+      <div class="aba-topo">
+        
+        <h3>O ciclo de uma OS, do começo ao fim</h3>
+        
+      </div>
+      <p class="resumo">As telas fazem sentido juntas. Este é o caminho completo de um trabalho, com o número da aba em cada etapa.</p>
+      <ol class="passos"><li><span><strong>Cliente liga.</strong> Você cadastra ou já tem a ficha dele — 2.1.</span></li><li><span><strong>Manda o orçamento.</strong> Cria em 3.2, envia o link, e o cliente aprova sozinho. Você é avisado no celular.</span></li><li><span><strong>Abre a OS.</strong> Em 1.1, com cliente, responsável, data e os itens.</span></li><li><span><strong>A data entra na agenda.</strong> Ela aparece em 1.2 e no mapa 1.5, e o técnico é avisado no celular.</span></li><li><span><strong>O técnico executa.</strong> Marca o checklist, tira as fotos e colhe a assinatura do cliente no próprio celular.</span></li><li><span><strong>Conclui e fatura.</strong> Descreve o que foi feito, confere os itens e escolhe Concluir e Faturar. A receita nasce em 3.1.</span></li><li><span><strong>Emite a nota.</strong> Botão Emitir NFS-e na própria OS, se 3.4 estiver configurado.</span></li><li><span><strong>Recebe.</strong> O cliente paga pelo QR code PIX impresso no documento; você dá baixa em 3.1 e o recibo aparece em 3.3.</span></li><li><span><strong>A OS vai para o arquivo.</strong> Some do dia a dia e fica em 1.3, e os números entram em 5.2.</span></li></ol>
+    </section>
+
+    <section class="aba" id="cliente-ve">
+      <div class="aba-topo">
+        
+        <h3>O que o seu cliente vê</h3>
+        
+      </div>
+      <p class="resumo">Ele não entra no sistema nem cria conta. Recebe links, e cada link abre uma página só dele.</p>
+      <ul><li><strong>Acompanhamento da OS</strong> — responsável, data agendada, descrição, serviços realizados e os valores.</li><li><strong>Confirmação de execução</strong> — ele assina ali mesmo, com o dedo, confirmando que o serviço foi feito.</li><li><strong>Orçamento digital</strong> — lê a proposta e clica em aprovar ou recusar.</li><li><strong>Pagamento por PIX</strong> — aponta a câmera do banco para o código, ou copia e cola a chave.</li><li><strong>Avaliação</strong> — de 0 a 10, com espaço para comentário. É a nota que alimenta o desempenho por técnico em 5.2.</li></ul>
+    </section>
+
+    <section class="aba" id="celular">
+      <div class="aba-topo">
+        
+        <h3>Celular e sem sinal</h3>
+        
+      </div>
+      <p class="resumo">O ServiçoOS é um aplicativo web: instala pelo navegador, sem passar por loja. No celular do técnico ele se comporta como app.</p>
+      <p><strong>Para instalar</strong>, abra o sistema no navegador do celular e use “Adicionar à tela de início” (Android) ou “Adicionar à Tela de Início” pelo botão de compartilhar (iPhone).</p>
+<h4>Sem sinal</h4><ul><li>O app <strong>abre</strong>, e toda tela que já foi aberta com sinal continua abrindo.</li><li><strong>Concluir</strong> uma OS e <strong>mudar o status</strong> funcionam offline: ficam guardados no aparelho e sobem sozinhos quando o sinal volta. Pode fechar o app.</li><li><strong>Criar</strong> uma OS nova precisa de conexão.</li></ul>
+<p>Uma faixa avisa quando você está offline, e mostra quantas alterações estão na fila esperando para subir.</p>
+<div class="atencao"><h4>Alterações travadas</h4><p>Se algo não puder ser enviado, o sistema avisa em vez de sobrescrever. Quase sempre é porque outra pessoa mexeu naquela OS enquanto você estava sem sinal. Confira antes de refazer.</p></div>
+    </section>
+
+    <section class="aba" id="avisos">
+      <div class="aba-topo">
+        
+        <h3>Avisos no celular</h3>
+        
+      </div>
+      <p class="resumo">Notificações que chegam no aparelho mesmo com o sistema fechado. Cada pessoa escolhe as suas, em Configurações.</p>
+      <ul><li>Quando uma OS passa a ser sua.</li><li>Quando o contrato recorrente gera uma OS para você.</li><li>Quando alguém da equipe conclui um serviço.</li><li>Quando uma OS muda de status em campo.</li><li>Quando o cliente aprova ou recusa um orçamento.</li><li>Quando o pagamento da assinatura é confirmado.</li><li>Quando a prefeitura recusa uma nota fiscal.</li><li>Quando o certificado digital está perto de vencer.</li></ul>
+<div class="atencao"><h4>O toque não se escolhe pelo sistema</h4><p>Nenhum navegador permite que um site troque o som da notificação — o toque é o do seu aparelho, e se muda nas configurações dele. O que dá para fazer aqui é receber sem som: continua chegando, só não faz barulho nem vibra.</p></div>
+    </section>
+
+    <section class="aba" id="assistente">
+      <div class="aba-topo">
+        
+        <h3>A assistente de voz</h3>
+        
+      </div>
+      <p class="resumo">Um botão de microfone em toda tela do painel. Você fala, ela responde em voz e faz o que foi pedido. É um adicional — não vem nos planos.</p>
+      <h4>O que dá para pedir</h4><ul><li><strong>Abrir telas</strong> — “abre os orçamentos”, “vai pro estoque”, “me leva pro 3.2”.</li><li><strong>Consultar</strong> — “quais ordens eu tenho hoje”, “histórico do cliente João”, “o que está faltando no estoque”.</li><li><strong>Registrar</strong> — “inicia a 24”, “cria uma ordem pro Mercado São Jorge”, “adiciona testar pressão no checklist”.</li></ul>
+<p>Ela só faz o que <strong>você</strong> poderia fazer clicando. Um técnico sem permissão de concluir não consegue concluir pela voz — a assistente nem oferece.</p>
+<div class="atencao"><h4>O que não se desfaz sempre para e pergunta</h4><p>Concluir, faturar, emitir nota e apagar mostram uma frase com o número da OS e o nome do cliente, falada em voz alta, e esperam você confirmar. Reconhecimento de fala erra, e erra mais em obra barulhenta — a confirmação existe para você perceber que ela ouviu “apaga” quando você disse “acaba”.</p></div>
+<p>Se houver dois clientes com nome parecido, ela <strong>pergunta qual</strong> em vez de escolher. E cada empresa tem uma franquia de comandos por mês, mostrada no topo do painel dela.</p>
+    </section>
+
+    <section class="aba" id="duvidas">
+      <div class="aba-topo">
+        
+        <h3>Dúvidas comuns</h3>
+        
+      </div>
+      <p class="resumo">As perguntas que mais aparecem, com a resposta curta.</p>
+      <h4>“Sumiu uma aba que eu via antes”</h4><ul><li>Ou um administrador mudou as Permissões (5.4.1), ou o recurso saiu do seu plano. Mapa e Fiscal são os dois que dependem de plano.</li></ul>
+<h4>“O cliente não aparece no mapa”</h4><ul><li>Falta endereço na ficha, ou o endereço não foi localizado. Veja a lista “fora do mapa” em 1.5. Endereços importados de planilha entram no mapa ao longo do dia seguinte.</li></ul>
+<h4>“Concluí a OS e não apareceu no financeiro”</h4><ul><li>Você escolheu Concluir (sem faturar). Reabra a OS, use Editar conclusão e escolha Salvar e Faturar.</li></ul>
+<h4>“O saldo do estoque está errado”</h4><ul><li>Não edite a peça — o saldo não se edita. Use Movimentar com o tipo Ajuste e digite o que você contou na prateleira, com o motivo.</li></ul>
+<h4>“A nota fiscal não emite”</h4><ul><li>Confira, nesta ordem: os dados fiscais estão completos em 3.4? O certificado foi enviado? Ele está dentro da validade? E o seu plano ainda tem nota disponível no mês?</li></ul>
+<h4>“A nota saiu no nome errado”</h4><ul><li>Confira o campo <strong>Cobrar de</strong> na OS. Quando o cliente tem contratante, a nota sai no CNPJ de quem paga — e o padrão é a contratante, não o cliente final.</li></ul>
+<h4>“Meus dados são meus?”</h4><ul><li>São. Exportar dados, em 5.4, baixa tudo num arquivo, a qualquer momento, sem pedir nada a ninguém.</li></ul>
+    </section>
+    <footer class="rodape">
+      <p>
+        Manual do ServiçoOS · Gerado a partir da mesma fonte que a ajuda dentro
+        do sistema, então os dois nunca divergem. Telas e limites mudam conforme
+        o plano contratado.
+      </p>
+    </footer>
+  </main>
+</div>

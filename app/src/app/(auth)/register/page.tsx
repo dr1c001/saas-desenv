@@ -1,0 +1,256 @@
+"use client"
+
+import { Suspense, useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { useTranslations } from "next-intl"
+import { signUpUser } from "@/actions/auth"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { conferirIndicacao } from "@/actions/conferir-indicacao"
+import { DESCONTO_DE_QUEM_E_INDICADO, type EstadoDaIndicacao } from "@/lib/indicacao"
+import { PublicLanguageToggle } from "@/components/layout/public-language-toggle"
+
+function RegisterForm() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const refCode = searchParams.get("ref") ?? ""
+  const t = useTranslations()
+  const [serverError, setServerError] = useState<string | null>(null)
+  const [emailSent, setEmailSent] = useState(false)
+
+  // A tela CONFERE antes de prometer.
+  //
+  // Qualquer `?ref=` fazia aparecer o banner verde de 10% — e quem concede de
+  // verdade e lib/auth.ts, so quando existe um Tenant com aquele codigo. O
+  // codigo e gerado sob demanda (actions/referral.ts) e fica nulo ate o
+  // indicador abrir /referral, entao bastava o link chegar truncado pelo
+  // WhatsApp: o visitante lia o banner, criava a conta e pagava o preco cheio.
+  //
+  // QUATRO estados, e nao dois. "Nao consegui conferir" (banco fora do ar,
+  // limite por IP) NAO pode virar "seu codigo nao vale": isso recria a mentira
+  // pelo lado oposto, no momento exato da conversao.
+  // (Achado na auditoria de 13/09/2026, grupo 9.)
+  const [estadoDaIndicacao, setEstadoDaIndicacao] = useState<EstadoDaIndicacao>("conferindo")
+  useEffect(() => {
+    if (!refCode) return
+    let vivo = true
+    conferirIndicacao(refCode)
+      .then((r) => vivo && setEstadoDaIndicacao(r))
+      .catch(() => vivo && setEstadoDaIndicacao("naoConferido"))
+    return () => {
+      vivo = false
+    }
+  }, [refCode])
+
+  // Schema construído dentro do componente pois as mensagens de validação
+  // do zod vêm do next-intl (precisam de acesso ao `t`).
+  const schema = z.object({
+    companyName: z.string().min(2, t("auth.validation.companyNameRequired")),
+    name: z.string().min(2, t("auth.validation.nameRequired")),
+    email: z.string().email(t("auth.validation.invalidEmail")),
+    password: z.string().min(6, t("auth.validation.minPasswordLength")),
+    termsAccepted: z.boolean().refine((v) => v === true, {
+      message: t("auth.validation.termsRequired"),
+    }),
+  })
+
+  type FormData = z.infer<typeof schema>
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({ resolver: zodResolver(schema) })
+
+  async function onSubmit(data: FormData) {
+    setServerError(null)
+    const { error, errorCode, needsEmailConfirmation } = await signUpUser({
+      email: data.email,
+      password: data.password,
+      name: data.name,
+      companyName: data.companyName,
+      refCode,
+      // O aceite ATRAVESSA a rede. O zod acima e UX; quem confere de
+      // verdade e a Server Action, que e endereco HTTP proprio.
+      termsAccepted: data.termsAccepted,
+    })
+    if (errorCode === "RATE_LIMIT") {
+      setServerError(t("auth.register.errors.rateLimit"))
+      return
+    }
+    if (errorCode === "TERMS_REQUIRED") {
+      setServerError(t("auth.register.errors.termsRequired"))
+      return
+    }
+    if (error) {
+      const msg = error.toLowerCase()
+      if (msg.includes("rate limit") || msg.includes("email rate")) {
+        setServerError(t("auth.register.errors.rateLimit"))
+      } else if (msg.includes("already registered") || msg.includes("already been registered")) {
+        setServerError(t("auth.register.errors.alreadyRegistered"))
+      } else {
+        // A string CRUA do Supabase Auth nunca chega ao DOM.
+        //
+        // Só dois casos eram traduzidos; todo o resto caía aqui e jogava na
+        // tela a frase do Supabase — sempre em inglês, num formulário em
+        // português, no momento exato da conversão. "Database error saving new
+        // user" e "Signups not allowed for this instance" não dizem à pessoa
+        // se ela errou algo ou se o problema é nosso.
+        //
+        // O texto cru continua existindo, no console do servidor do navegador:
+        // perder o diagnóstico seria trocar um defeito por outro.
+        // (Achado na auditoria de 13/09/2026, grupo 9.)
+        console.error("[register] erro não tratado do Supabase:", error)
+        setServerError(t("auth.register.errors.desconhecido"))
+      }
+      return
+    }
+    if (!needsEmailConfirmation) {
+      // Vai para o SISTEMA, e não para o paywall.
+      //
+      // Enquanto não havia teste, mandar para /billing era o certo: a conta
+      // nascia bloqueada e a única coisa a fazer era assinar. Com os 15 dias de
+      // volta, o recém-cadastrado tem acesso completo — e caía numa tela
+      // dizendo "sem assinatura, escolha um plano para começar a usar".
+      //
+      // É a pior primeira impressão possível: a pessoa acabou de se cadastrar
+      // por causa do "15 dias grátis" e a primeira tela diz que ela ainda não
+      // pode usar.
+      router.push("/dashboard")
+      router.refresh()
+      return
+    }
+    setEmailSent(true)
+  }
+
+  return (
+    <Card className="w-full max-w-sm">
+      <CardHeader>
+        <CardTitle className="text-2xl">{t("auth.register.title")}</CardTitle>
+        <CardDescription>
+          {refCode && estadoDaIndicacao === "valido"
+            ? t("auth.register.subtitleWithRef", { percent: DESCONTO_DE_QUEM_E_INDICADO })
+            : t("auth.register.subtitleDefault")}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {refCode && estadoDaIndicacao === "conferindo" && (
+          <div className="mb-4 rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            {t("auth.register.refChecking")}
+          </div>
+        )}
+        {refCode && estadoDaIndicacao === "valido" && (
+          <div className="mb-4 rounded-lg border border-green-300 bg-green-50 dark:bg-green-950 px-3 py-2 text-sm text-green-700 dark:text-green-300">
+            {t.rich("auth.register.refBanner", {
+              percent: DESCONTO_DE_QUEM_E_INDICADO,
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
+          </div>
+        )}
+        {refCode && estadoDaIndicacao === "invalido" && (
+          <div className="mb-4 rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            {t("auth.register.refInvalid")}
+          </div>
+        )}
+        {refCode && estadoDaIndicacao === "naoConferido" && (
+          <div className="mb-4 rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            {t("auth.register.refUnknown")}
+          </div>
+        )}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="companyName">{t("auth.register.companyNameLabel")}</Label>
+            <Input
+              id="companyName"
+              placeholder={t("auth.register.companyNamePlaceholder")}
+              {...register("companyName")}
+            />
+            {errors.companyName && <p className="text-sm text-destructive">{errors.companyName.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="name">{t("auth.register.nameLabel")}</Label>
+            <Input id="name" placeholder={t("auth.register.namePlaceholder")} {...register("name")} />
+            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="email">{t("auth.register.emailLabel")}</Label>
+            <Input id="email" type="email" placeholder={t("auth.register.emailPlaceholder")} {...register("email")} />
+            {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password">{t("auth.register.passwordLabel")}</Label>
+            <Input id="password" type="password" {...register("password")} />
+            {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <label className="flex items-start gap-2 text-sm text-muted-foreground select-none">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4 shrink-0 rounded border-input accent-primary"
+                {...register("termsAccepted")}
+              />
+              <span>
+                {t.rich("auth.register.termsAgreement", {
+                  termsLink: (chunks) => (
+                    <Link href="/terms" target="_blank" className="text-primary underline underline-offset-2">
+                      {chunks}
+                    </Link>
+                  ),
+                  privacyLink: (chunks) => (
+                    <Link href="/privacy" target="_blank" className="text-primary underline underline-offset-2">
+                      {chunks}
+                    </Link>
+                  ),
+                })}
+              </span>
+            </label>
+            {errors.termsAccepted && <p className="text-sm text-destructive">{errors.termsAccepted.message}</p>}
+          </div>
+          {serverError && <p className="text-sm text-destructive">{serverError}</p>}
+          {emailSent && (
+            <p className="text-sm text-green-600">
+              {t("auth.register.emailSentMessage")}
+            </p>
+          )}
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? t("auth.register.submitting") : t("auth.register.submit")}
+          </Button>
+        </form>
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          {t.rich("auth.register.haveAccount", {
+            link: (chunks) => (
+              <Link href="/login" className="text-primary underline-offset-4 hover:underline">
+                {chunks}
+              </Link>
+            ),
+          })}
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
+export default function RegisterPage() {
+  const t = useTranslations()
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-muted/40">
+      <PublicLanguageToggle className="self-center" />
+      <Suspense fallback={
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl">{t("auth.register.title")}</CardTitle>
+            <CardDescription>{t("common.loading")}</CardDescription>
+          </CardHeader>
+        </Card>
+      }>
+        <RegisterForm />
+      </Suspense>
+    </div>
+  )
+}

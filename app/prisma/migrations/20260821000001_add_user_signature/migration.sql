@@ -1,0 +1,21 @@
+-- A assinatura gravada de cada pessoa da empresa.
+--
+-- Comecou como defeito: a assinatura do CLIENTE era colhida na tela do celular
+-- e gravada em ServiceOrder.clientSignatureUrl, e o PDF da OS imprimia duas
+-- LINHAS EM BRANCO para assinar no papel. Tres das onze OS em producao tinham
+-- assinatura guardada, e nenhuma saiu impressa — o trabalho de colher estava
+-- sendo jogado fora.
+--
+-- E abriu a pergunta seguinte: e a assinatura de QUEM EXECUTOU? Documento de
+-- servico tem dois lados. Quem recebeu assina que recebeu; quem fez assina que
+-- fez. So um dos dois era capturado, e nenhum impresso.
+--
+-- Agora cada pessoa desenha a dela UMA vez e ela sai sozinha nos documentos que
+-- essa pessoa emite: Beto conclui a OS, sai a assinatura do Beto.
+--
+-- PNG embutido (data URI), igual ao logo da empresa: o PDF nao busca nada na
+-- rede, e reprocessar no servidor neutraliza qualquer payload escondido no
+-- desenho. Nasce NULL — quem ainda nao desenhou continua com a linha para
+-- assinar a mao, como sempre foi. Regra em lib/assinatura.ts.
+
+ALTER TABLE "User" ADD COLUMN "signatureUrl" TEXT;
