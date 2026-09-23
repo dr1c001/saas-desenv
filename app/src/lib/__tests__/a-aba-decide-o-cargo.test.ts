@@ -21,9 +21,12 @@ import { createTestDatabase, type TestDatabase } from "@/test-utils/pglite-db"
 // aba-da-rota.test.ts). A parte estrutural no fim garante que as travas antigas
 // não voltem por cópia e cola.
 //
-// Balanço e Assinatura ficaram FORA desta mudança de propósito: um é o
-// patrimônio da empresa, o outro é a conta do dono com o ServiçoOS. Nenhum dos
-// dois é trabalho de cargo operacional. (15/09/2026.)
+// Balanço e Assinatura ficaram FORA em 15/09/2026, com o argumento de que um é
+// o patrimônio da empresa e o outro é a conta do dono com o ServiçoOS. Em
+// 22/09/2026 entraram: a tela de Permissões oferecia as duas para marcar, e
+// marcar não fazia nada — o menu aparecia e a tela expulsava. Meia-medida
+// desse tipo é pior que os dois extremos, e a decisão do dono da plataforma
+// foi que a empresa marca e desmarca o que quiser.
 
 let testDb: TestDatabase
 
@@ -124,6 +127,52 @@ describe("a empresa que configurou", () => {
   })
 })
 
+describe("a empresa marca e desmarca o que quiser", () => {
+  // Balanço e Assinatura eram OWNER/ADMIN fixos no código, e a tela de
+  // Permissões oferecia as duas para marcar — marcar não fazia nada: o menu
+  // aparecia e a tela expulsava (Balanço) ou os botões voltavam em silêncio
+  // (Assinatura). (Decisão do dono da plataforma, 22/09/2026.)
+  it("um cargo COM a aba Balanço marcada recebe o Balanço", async () => {
+    const t = await empresa()
+    await testDb.db.tenant.update({
+      where: { id: t.id },
+      data: { tabsConfiguredRoles: ["GERENTE"] },
+    })
+    for (const tab of ["dashboard", "balanco", "billing"]) {
+      await testDb.db.tabPermission.create({ data: { tenantId: t.id, role: "GERENTE", tab } })
+    }
+
+    const permitidas = await abas(t.id, "GERENTE")
+    expect(permitidas).toContain("balanco")
+    expect(permitidas).toContain("billing")
+  })
+
+  it("e sem marcar, NÃO recebe — o padrão continua fechado", async () => {
+    // A mudança não é afrouxar: é obedecer a configuração. Nenhum cargo nasce
+    // com essas duas.
+    const t = await empresa()
+    for (const cargo of ["GERENTE", "FINANCEIRO", "TECHNICIAN"]) {
+      const permitidas = await abas(t.id, cargo)
+      expect(permitidas, cargo).not.toContain("balanco")
+      expect(permitidas, cargo).not.toContain("billing")
+    }
+  })
+
+  it("o dono continua vendo as duas, configurem o que configurarem", async () => {
+    const t = await empresa()
+    await testDb.db.tenant.update({
+      where: { id: t.id },
+      data: { tabsConfiguredRoles: ["OWNER", "ADMIN"] },
+    })
+
+    for (const cargo of ["OWNER", "ADMIN"]) {
+      const permitidas = await abas(t.id, cargo)
+      expect(permitidas, cargo).toContain("balanco")
+      expect(permitidas, cargo).toContain("billing")
+    }
+  })
+})
+
 describe("as travas de cargo escritas à mão não voltam", () => {
   // Estrutural, e não de comportamento: exercitar uma página do App Router
   // exigiria montar headers, sessão do Supabase e meia dúzia de componentes
@@ -137,6 +186,8 @@ describe("as travas de cargo escritas à mão não voltam", () => {
     "src/app/(dashboard)/reports/page.tsx",
     "src/app/(dashboard)/contracts/page.tsx",
     "src/app/(dashboard)/map/page.tsx",
+    // Entraram em 22/09/2026, quando a empresa passou a poder conceder as duas.
+    "src/app/(dashboard)/balanco/page.tsx",
   ]
 
   it.each(TELAS)("%s não redireciona por cargo", async (tela) => {

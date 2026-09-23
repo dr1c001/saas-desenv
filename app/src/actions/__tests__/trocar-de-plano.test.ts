@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { createTestDatabase, type TestDatabase } from "@/test-utils/pglite-db"
+import { abasDeMentira } from "@/test-utils/abas-de-mentira"
 
 // Trocar de plano pelo painel — o efeito, com banco.
 //
@@ -18,6 +19,10 @@ beforeAll(async () => {
   vi.doMock("@/lib/auth", () => ({
     getTenant: mockGetTenant,
     requireActiveSubscription: vi.fn().mockResolvedValue(undefined),
+    // A cobrança segue a ABA desde 22/09/2026: a empresa marca e desmarca
+    // "Assinatura" por cargo. A regra real, sem banco, está em
+    // test-utils/abas-de-mentira.ts — dono e administrador passam sempre.
+    ...abasDeMentira(mockGetTenant),
   }))
   vi.doMock("@/lib/asaas", () => ({
     asaas: {

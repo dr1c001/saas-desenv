@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { getTranslations } from "next-intl/server"
 import { prisma } from "@/lib/prisma"
-import { getTenant, requireActiveSubscription } from "@/lib/auth"
+import { getTenant, requireActiveSubscription, podeAba } from "@/lib/auth"
 import { requireRecurso } from "@/lib/plan"
 import { formatCurrency } from "@/lib/utils"
 import {
@@ -37,8 +37,6 @@ import type { PaymentStatus } from "@/generated/prisma/client"
 
 export type EstadoBalanco = { erro?: string; ok?: boolean }
 
-const ehAdmin = (role: string) => role === "OWNER" || role === "ADMIN"
-
 /**
  * Tenant, assinatura, recurso — e se quem chama ADMINISTRA.
  *
@@ -51,24 +49,29 @@ const ehAdmin = (role: string) => role === "OWNER" || role === "ADMIN"
  * estava nos lugares já protegidos e faltava justamente nos dois que entregavam
  * tudo. (Achado na auditoria de 13/09/2026.)
  *
- * ─── Por que OWNER/ADMIN, e não a aba ────────────────────────────────────────
+ * ─── Quem vê: a ABA, e não uma lista de cargos ───────────────────────────────
  *
- * Financeiro, Relatórios e Contratos passaram a seguir a ABA em 15/09/2026 —
- * quem tem "Financeiro" marcada dá baixa em conta, quem tem "Contratos" cria
- * contrato. O balanço ficou de fora DE PROPÓSITO: não é operação do dia, é o
- * patrimônio da empresa, com capital social e resultado acumulado. É documento
- * de dono, e a aba "balanco" existe para o MENU, não para delegar isso.
+ * Até 22/09/2026 era OWNER/ADMIN fixo, com a justificativa de que o balanço é
+ * documento de dono. Mas a tela de Permissões oferecia a aba "Balanço" para
+ * marcar — e marcá-la não fazia nada: o menu aparecia e a tela expulsava. O
+ * mesmo "menu promete, tela expulsa" que o Grupo 3 fechou em Financeiro,
+ * Relatórios, Contratos e Mapa, sobrando aqui.
  *
- * `admin` vem no retorno em vez de lançar aqui, porque as duas metades
- * respondem diferente: leitura lança (é o que `contextoDeLeitura` faz), e
- * formulário DEVOLVE `{ erro }` — é o que a tela mostra, e lançar num
- * useActionState derruba a página.
+ * A decisão do dono da plataforma (22/09/2026) foi clara: a empresa marca e
+ * desmarca o que quiser. Dono e administrador continuam vendo tudo — para eles
+ * `getAllowedTabs` devolve todas as abas —, e para os seis cargos
+ * configuráveis quem decide é a marcação.
+ *
+ * `admin` continua no retorno porque as duas metades respondem diferente:
+ * leitura lança (é o que `contextoDeLeitura` faz), e formulário DEVOLVE
+ * `{ erro }` — é o que a tela mostra, e lançar num useActionState derruba a
+ * página.
  */
 async function contexto() {
-  const { tenantId, role } = await getTenant()
+  const { tenantId } = await getTenant()
   await requireActiveSubscription(tenantId)
   await requireRecurso(tenantId, "balanco")
-  return { tenantId, admin: ehAdmin(role) }
+  return { tenantId, admin: await podeAba("balanco") }
 }
 
 /** Para quem LÊ o balanço: sem administrar, não há o que devolver. */

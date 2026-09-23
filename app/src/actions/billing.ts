@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { getTenant } from "@/lib/auth"
+import { getTenant, podeAba } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { clientIp } from "@/lib/rate-limit"
@@ -50,10 +50,19 @@ export async function getPlans() {
 }
 
 export async function subscribeToPlan(formData: FormData) {
-  const { tenantId, role, userId } = await getTenant()
+  const { tenantId, userId } = await getTenant()
   const tb = await getTranslations("billingReferral")
   const tc = await getTranslations("common")
-  if (role !== "OWNER" && role !== "ADMIN") {
+  // Quem mexe na cobrança é quem tem a ABA "Assinatura" marcada, e não uma
+  // lista de cargos escrita aqui.
+  //
+  // A tela de Permissões oferecia a aba para marcar, e marcá-la não fazia
+  // nada: o menu aparecia e os botões voltavam em silêncio. Mesmo "menu
+  // promete, tela expulsa" que o Grupo 3 fechou em Financeiro, Relatórios,
+  // Contratos e Mapa. Dono e administrador continuam passando sempre —
+  // `getAllowedTabs` devolve todas as abas para eles.
+  // (Decisão do dono da plataforma, 22/09/2026.)
+  if (!(await podeAba("billing"))) {
     redirect("/billing?error=" + encodeURIComponent(tc("noPermission")))
   }
 
@@ -286,9 +295,18 @@ export async function subscribeToPlan(formData: FormData) {
 }
 
 export async function cancelSubscription() {
-  const { tenantId, role } = await getTenant()
+  const { tenantId } = await getTenant()
   const tb = await getTranslations("billingReferral")
-  if (role !== "OWNER" && role !== "ADMIN") return
+  // Quem mexe na cobrança é quem tem a ABA "Assinatura" marcada, e não uma
+  // lista de cargos escrita aqui.
+  //
+  // A tela de Permissões oferecia a aba para marcar, e marcá-la não fazia
+  // nada: o menu aparecia e os botões voltavam em silêncio. Mesmo "menu
+  // promete, tela expulsa" que o Grupo 3 fechou em Financeiro, Relatórios,
+  // Contratos e Mapa. Dono e administrador continuam passando sempre —
+  // `getAllowedTabs` devolve todas as abas para eles.
+  // (Decisão do dono da plataforma, 22/09/2026.)
+  if (!(await podeAba("billing"))) return
 
   // ─── QUEM pode cancelar ──────────────────────────────────────────────────
   //
@@ -364,9 +382,18 @@ export async function cancelSubscription() {
  * `aplicarTrocaAgendada`, na renovação ou no cron.
  */
 export async function trocarDePlano(formData: FormData) {
-  const { tenantId, role } = await getTenant()
+  const { tenantId } = await getTenant()
   const tb = await getTranslations("billingReferral")
-  if (role !== "OWNER" && role !== "ADMIN") return
+  // Quem mexe na cobrança é quem tem a ABA "Assinatura" marcada, e não uma
+  // lista de cargos escrita aqui.
+  //
+  // A tela de Permissões oferecia a aba para marcar, e marcá-la não fazia
+  // nada: o menu aparecia e os botões voltavam em silêncio. Mesmo "menu
+  // promete, tela expulsa" que o Grupo 3 fechou em Financeiro, Relatórios,
+  // Contratos e Mapa. Dono e administrador continuam passando sempre —
+  // `getAllowedTabs` devolve todas as abas para eles.
+  // (Decisão do dono da plataforma, 22/09/2026.)
+  if (!(await podeAba("billing"))) return
 
   const planId = String(formData.get("planId") ?? "")
 
@@ -459,9 +486,18 @@ export async function trocarDePlano(formData: FormData) {
  * vez por nada.
  */
 export async function cancelarTrocaAgendada() {
-  const { tenantId, role } = await getTenant()
+  const { tenantId } = await getTenant()
   const tb = await getTranslations("billingReferral")
-  if (role !== "OWNER" && role !== "ADMIN") return
+  // Quem mexe na cobrança é quem tem a ABA "Assinatura" marcada, e não uma
+  // lista de cargos escrita aqui.
+  //
+  // A tela de Permissões oferecia a aba para marcar, e marcá-la não fazia
+  // nada: o menu aparecia e os botões voltavam em silêncio. Mesmo "menu
+  // promete, tela expulsa" que o Grupo 3 fechou em Financeiro, Relatórios,
+  // Contratos e Mapa. Dono e administrador continuam passando sempre —
+  // `getAllowedTabs` devolve todas as abas para eles.
+  // (Decisão do dono da plataforma, 22/09/2026.)
+  if (!(await podeAba("billing"))) return
 
   const sub = await prisma.subscription.findFirst({
     where: { tenantId, pendingPlanId: { not: null } },

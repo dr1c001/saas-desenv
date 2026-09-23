@@ -133,17 +133,33 @@ describe("a tabela de cargos diz a verdade", () => {
   })
 
   it("a assinatura NÃO é só do Proprietário — o Administrador contrata e cancela", () => {
-    // Decisão deliberada: Assinatura fica com dono E administrador (a conta da
-    // empresa com o ServiçoOS). Ver o Grupo 3 da auditoria.
-    //
-    // Por FUNÇÃO, e não pelo arquivo: contratar e cancelar têm de andar juntos,
-    // e uma asserção sobre o arquivo inteiro não enxergaria uma delas mudando.
-    expect(papeisQuePodem(BILLING, "cancelSubscription")).toEqual(["ADMIN", "OWNER"])
-    expect(papeisQuePodem(BILLING, "subscribeToPlan")).toEqual(["ADMIN", "OWNER"])
-    expect(papeisQuePodem(BILLING, "trocarDePlano")).toEqual(["ADMIN", "OWNER"])
-
+    // Decisão deliberada do Grupo 3: a Assinatura é a conta da empresa com o
+    // ServiçoOS, e dono e administrador mexem nela. Desde 22/09/2026 a trava é
+    // a ABA, e dono e administrador passam sempre porque `getAllowedTabs`
+    // devolve todas para eles — a lista de cargos saiu do código.
     expect(linha("Proprietário")).not.toContain("assinatura do plano")
     expect(linha("Administrador")).toMatch(/plano/)
+  })
+
+  it("Balanço e Assinatura seguem a ABA: a empresa marca e desmarca o que quiser", () => {
+    // A tela de Permissões oferecia as duas para marcar, e marcá-las não fazia
+    // nada: o menu aparecia e a tela expulsava (Balanço) ou os botões voltavam
+    // em silêncio (Assinatura). O manual ainda dizia que elas "ficam sempre"
+    // com dono e administrador. (Decisão do dono da plataforma, 22/09/2026.)
+    const BALANCO = ler("src/actions/balanco.ts")
+    for (const fn of ["subscribeToPlan", "cancelSubscription", "trocarDePlano"]) {
+      expect(papeisQuePodem(BILLING, fn), `${fn} ainda barra por cargo`).toEqual([])
+    }
+    expect(BILLING).toContain('podeAba("billing")')
+    expect(BALANCO).toContain('podeAba("balanco")')
+
+    // E o manual diz isso, em vez do contrário.
+    const config = verbete("5.4.1")
+    const textos = config.blocos
+      .map((b) => ("texto" in b ? b.texto : ""))
+      .join(" ")
+    expect(textos).toMatch(/marcar e desmarcar/i)
+    expect(textos).not.toMatch(/ficam sempre com eles/i)
   })
 
   it("a exportação de dados É só do Proprietário, e a célula dele diz isso", () => {

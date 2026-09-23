@@ -1244,7 +1244,7 @@ export const MANUAL: readonly Secao[] = [
           {
             tipo: "p",
             texto:
-              "Proprietário e administrador fazem tudo e não aparecem aqui. A mudança entra em vigor na próxima vez que a pessoa carregar a página. Duas coisas ficam sempre com eles, marque o que marcar: o *Balanço* (é o patrimônio da empresa) e a *Assinatura* (é a conta com o ServiçoOS). No Financeiro, a regra de comissão e a opção de pagar em lote também são só deles — o financeiro dá baixa nas contas, mas não muda quanto cada técnico ganha.",
+              "Proprietário e administrador fazem tudo e não aparecem aqui. A mudança entra em vigor na próxima vez que a pessoa carregar a página. *Todas* as abas são suas para marcar e desmarcar — inclusive o *Balanço* e a *Assinatura*. Pense duas vezes nessas duas: quem tem a Assinatura pode trocar de plano e cancelar, e quem tem o Balanço vê capital social e resultado acumulado. No Financeiro, a regra de comissão e a opção de pagar em lote continuam só do proprietário e do administrador — o financeiro dá baixa nas contas, mas não muda quanto cada técnico ganha.",
           },
           {
             tipo: "atencao",

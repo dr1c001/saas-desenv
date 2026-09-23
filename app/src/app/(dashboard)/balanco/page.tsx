@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
 import { AlertTriangle, CheckCircle2, Info, TriangleAlert } from "lucide-react"
-import { getTenant } from "@/lib/auth"
+import { getTenant, podeAba } from "@/lib/auth"
 import { temRecurso } from "@/lib/plan"
 import { getBalanco } from "@/actions/balanco"
 import { ehGrupoDoAtivo, type GrupoDoBalanco } from "@/lib/balanco"
@@ -48,21 +48,22 @@ const ICONE: Record<Gravidade, typeof Info> = {
 }
 
 export default async function BalancoPage() {
-  const { tenantId, role } = await getTenant()
+  const { tenantId } = await getTenant()
   // Menu escondido não é proteção — a URL continua digitável. A Action se
   // defende sozinha também (requireRecurso), e isto aqui só evita a tela de
   // erro para quem chegou aqui por engano.
   if (!(await temRecurso(tenantId, "balanco"))) redirect("/dashboard")
 
-  // E o PAPEL. A tela conferia o recurso e não o cargo — e o balanço é o
-  // documento mais completo da empresa: capital social, resultado acumulado,
-  // imobilizado. Fica OWNER/ADMIN de propósito, mesmo depois de Financeiro,
-  // Relatórios e Contratos passarem a seguir a aba (15/09/2026): é patrimônio,
-  // não operação do dia. Ver o porquê em actions/balanco.ts, `contexto`.
-  if (role !== "OWNER" && role !== "ADMIN") redirect("/dashboard")
-
+  // Sem trava de cargo aqui: o layout barra a rota pela ABA, e a empresa marca
+  // ou desmarca "Balanço" para cada cargo em 5.4.1 Permissões.
+  //
+  // Era OWNER/ADMIN fixo, com o argumento de que balanço é documento de dono —
+  // e a tela de Permissões oferecia a aba para marcar, sem que marcar fizesse
+  // nada: o menu aparecia e esta linha expulsava. Mesmo "menu promete, tela
+  // expulsa" que o Grupo 3 fechou nas outras quatro telas.
+  // (Decisão do dono da plataforma, 22/09/2026.)
   const t = await getTranslations("balanco")
-  const isAdmin = role === "OWNER" || role === "ADMIN"
+  const isAdmin = await podeAba("balanco")
   const { balanco, achados, caixaInicial, capitalSocial } = await getBalanco()
 
   // O veredito mora no conferente, e não aqui: recalculá-lo na tela deixaria

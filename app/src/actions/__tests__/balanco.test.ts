@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { createTestDatabase, type TestDatabase } from "@/test-utils/pglite-db"
+import { abasDeMentira } from "@/test-utils/abas-de-mentira"
 
 // O balanço, montado do banco.
 //
@@ -21,6 +22,9 @@ beforeAll(async () => {
     requireActiveSubscription: vi.fn().mockResolvedValue(undefined),
     filtroDeFilialAtual: vi.fn().mockResolvedValue({}),
     checarAcao: vi.fn().mockResolvedValue(null),
+    // O Balanço segue a ABA desde 22/09/2026 — a regra real, sem banco, está
+    // em test-utils/abas-de-mentira.ts.
+    ...abasDeMentira(mockGetTenant),
   }))
   vi.doMock("@/lib/plan", () => ({
     requireRecurso: vi.fn().mockResolvedValue(undefined),
