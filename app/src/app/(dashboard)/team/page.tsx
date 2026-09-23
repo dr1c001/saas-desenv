@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { getTeamMembers } from "@/actions/team"
 import { getTenant } from "@/lib/auth"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -10,6 +10,7 @@ import {
 import { UserPlus, MapPin } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { TeamRowActions } from "@/components/team/team-row-actions"
+import { SearchBar } from "@/components/shared/search-bar"
 import { getTranslations } from "next-intl/server"
 
 // Rótulos vêm de common.roles (i18n); aqui só a variante visual do Badge por papel.
@@ -19,8 +20,15 @@ const roleVariant: Record<string, "default" | "secondary" | "outline"> = {
   TECHNICIAN: "secondary",
 }
 
-export default async function TeamPage() {
-  const [members, { role }] = await Promise.all([getTeamMembers(), getTenant()])
+type SearchParams = Promise<{ q?: string | string[] }>
+
+export default async function TeamPage({ searchParams }: { searchParams: SearchParams }) {
+  // ?q=a&q=b chega como ARRAY. Tipar como string e passar adiante fazia o
+  // `.trim()` de getTeamMembers estourar e a página inteira responder 500 —
+  // por uma URL que qualquer um monta.
+  const busca = (await searchParams).q
+  const q = Array.isArray(busca) ? busca[0] : busca
+  const [members, { role, userId }] = await Promise.all([getTeamMembers({ q }), getTenant()])
   const isAdmin = role === "OWNER" || role === "ADMIN"
   const t = await getTranslations("team")
   const tc = await getTranslations("common")
@@ -41,8 +49,9 @@ export default async function TeamPage() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
           <CardTitle className="text-base">{t("list.countMembers", { count: members.length })}</CardTitle>
+          <SearchBar placeholder={t("list.searchPlaceholder")} />
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -57,6 +66,13 @@ export default async function TeamPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {members.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={isAdmin ? 6 : 5} className="text-center text-sm text-muted-foreground py-10">
+                    {t("list.emptyFiltered")}
+                  </TableCell>
+                </TableRow>
+              )}
               {members.map((m) => (
                 <TableRow key={m.id}>
                   <TableCell className="font-medium">{m.name}</TableCell>
@@ -79,7 +95,12 @@ export default async function TeamPage() {
                   <TableCell className="text-sm text-muted-foreground">{formatDate(m.createdAt)}</TableCell>
                   {isAdmin && (
                     <TableCell>
-                      <TeamRowActions memberId={m.id} currentRole={m.role} />
+                      <TeamRowActions
+                        memberId={m.id}
+                        memberName={m.name}
+                        currentRole={m.role}
+                        ehVoce={m.id === userId}
+                      />
                     </TableCell>
                   )}
                 </TableRow>

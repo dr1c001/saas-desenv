@@ -66,7 +66,14 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/offline") ||
     // /reset-password must work whether or not a (recovery) session already exists —
     // it should never bounce to /login nor to /dashboard.
-    request.nextUrl.pathname.startsWith("/reset-password")
+    request.nextUrl.pathname.startsWith("/reset-password") ||
+    // /criar-senha é a irmã dela: o destino do link de convite de equipe, onde
+    // o integrante escolhe a própria senha. Mesma razão — chega com sessão
+    // (o /api/auth/confirm acabou de criá-la) e não pode ser desviada pro
+    // /dashboard antes de a pessoa ter senha; e sem sessão precisa renderizar
+    // a própria explicação de link vencido, em vez de cair num /login que não
+    // diz o que fazer.
+    request.nextUrl.pathname.startsWith("/criar-senha")
 
   if (!session && !isAuthRoute && !isPublicRoute) {
     const url = request.nextUrl.clone()

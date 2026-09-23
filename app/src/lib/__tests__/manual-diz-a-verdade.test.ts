@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { MANUAL } from "@/lib/manual"
 import { ADICIONAIS, RECURSOS, type Recurso } from "@/lib/recursos"
+import { CARGOS_ATRIBUIVEIS } from "@/lib/cargos"
 import { recursosDoPlano } from "@/lib/plan"
 
 // O manual vende o que o código não entrega.
@@ -184,6 +185,53 @@ describe("a tabela de cargos diz a verdade", () => {
     expect(sobreOAdmin!.texto).toMatch(/cancelar/i)
     // E aponta a saída para quem NÃO quer isso.
     expect(sobreOAdmin!.texto).toMatch(/Gerente/)
+  })
+})
+
+describe("o verbete da Equipe descreve a aba que existe", () => {
+  // Ele dizia que o convite pede "função (Administrador, acesso total, ou
+  // Técnico, acesso controlado)" — dois cargos, de quando o sistema tinha três.
+  // São oito desde 24/08/2026, e a tela de convite já oferecia todos. Dizia
+  // também, desde antes de ser verdade, que "a pessoa cria a própria senha": o
+  // link levava direto ao painel e ninguém criava senha nenhuma.
+  const TEAM = ler("src/actions/team.ts")
+  const LINHA = ler("src/components/team/team-row-actions.tsx")
+  const equipe = verbete("5.1")
+  const textos = equipe.blocos.map((b) => ("texto" in b ? b.texto : "")).join(" ")
+
+  it("não nomeia dois cargos como se fossem todos", () => {
+    expect(CARGOS_ATRIBUIVEIS.length, "o teste pressupõe mais de dois cargos").toBeGreaterThan(2)
+    expect(textos).not.toMatch(/Administrador, acesso total, ou T[ée]cnico/i)
+  })
+
+  it("a senha que o texto promete é criada de verdade", () => {
+    expect(textos).toMatch(/pr[óo]pria senha/i)
+    expect(TEAM).toContain('const DESTINO_DO_CONVITE = "/criar-senha"')
+  })
+
+  it("os três botões que o texto cita existem na linha", () => {
+    expect(textos).toMatch(/reenviar o convite/i)
+    expect(textos).toMatch(/editar o cadastro/i)
+    expect(TEAM).toContain("export async function reenviarConvite(")
+    expect(TEAM).toContain("export async function atualizarIntegrante(")
+    expect(LINHA).toContain("reenviarConvite(memberId)")
+    expect(LINHA).toContain("/edit")
+  })
+
+  it("e a busca que ele cita filtra no BANCO", () => {
+    expect(textos).toMatch(/busca/i)
+    expect(TEAM).toMatch(/name: \{ contains: q/)
+  })
+
+  it("a caixa de atenção manda reenviar, e não remover e reconvidar", () => {
+    // Remover apaga a linha de User — e com ela o vínculo das OS, do histórico
+    // e da localização. Era o único caminho antes do botão de reenviar.
+    const caixa = equipe.blocos.find((b) => b.tipo === "atencao") as {
+      titulo: string
+      texto: string
+    }
+    expect(caixa.texto).toMatch(/reenviar/i)
+    expect(caixa.texto).toMatch(/n[ãa]o remova/i)
   })
 })
 

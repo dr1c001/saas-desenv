@@ -156,6 +156,16 @@
       "confirmPasswordLabel": "Confirmar nova senha",
       "submit": "Salvar nova senha",
       "success": "Senha atualizada! Redirecionando..."
+    },
+    "criarSenha": {
+      "title": "Crie sua senha",
+      "subtitle": "Escolha uma senha para entrar no ServiçoOS. Da próxima vez você entra direto, com seu e-mail e esta senha — sem precisar do link do convite.",
+      "passwordLabel": "Senha",
+      "confirmPasswordLabel": "Repita a senha",
+      "submit": "Criar senha e entrar",
+      "success": "Senha criada. Levando você para o sistema…",
+      "invalidLink": "Este link já foi usado ou expirou. Peça ao responsável pela sua empresa para reenviar o convite pela aba Equipe.",
+      "backToLogin": "Ir para a tela de entrada"
     }
   },
   "avisoClienteConfig": {
@@ -2966,7 +2976,9 @@
         "role": "Função",
         "location": "Localização",
         "since": "Desde"
-      }
+      },
+      "searchPlaceholder": "Buscar por nome ou e-mail",
+      "emptyFiltered": "Ninguém na equipe com esse nome ou e-mail."
     },
     "invite": {
       "title": "Convidar membro",
@@ -3000,7 +3012,11 @@
       }
     },
     "rowActions": {
-      "confirmRemove": "Remover este membro da equipe?"
+      "confirmRemove": "Remover este membro da equipe?",
+      "edit": "Editar cadastro",
+      "resend": "Reenviar convite",
+      "resending": "Enviando…",
+      "confirmResend": "Enviar outro convite para {name}? O link anterior deixa de valer."
     },
     "errors": {
       "emailInYourTeam": "Este e-mail já pertence à sua equipe.",
@@ -3008,7 +3024,21 @@
       "inviteFailed": "Erro ao enviar convite. Tente novamente em instantes.",
       "inviteEmailFailed": "Membro adicionado, mas o e-mail de convite falhou. Peça para {email} usar \"Esqueci minha senha\" com este e-mail para entrar.",
       "inviteSent": "Convite enviado para {email}",
-      "missingServiceKey": "Configure SUPABASE_SERVICE_ROLE_KEY no .env para enviar convites por e-mail."
+      "missingServiceKey": "Configure SUPABASE_SERVICE_ROLE_KEY no .env para enviar convites por e-mail.",
+      "memberNotFound": "Este integrante não está mais na equipe.",
+      "inviteResent": "Convite reenviado para {email}",
+      "memberUpdated": "Cadastro atualizado.",
+      "resendEmailFailed": "O convite não saiu para {email}. Tente de novo em instantes; se persistir, peça para a pessoa usar “Esqueci minha senha” na tela de entrada, com este mesmo e-mail."
+    },
+    "edit": {
+      "title": "Editar integrante",
+      "cardTitle": "Cadastro",
+      "emailLocked": "O e-mail é o login desta pessoa e não muda por aqui. Para trocar de e-mail, remova o integrante e convide no endereço novo.",
+      "ownerLocked": "O cargo do proprietário não muda.",
+      "selfLocked": "Você não altera o próprio cargo.",
+      "submit": "Salvar",
+      "submitting": "Salvando…",
+      "notFound": "Integrante não encontrado."
     }
   },
   "validation": {

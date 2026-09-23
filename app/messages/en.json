@@ -156,6 +156,16 @@
       "confirmPasswordLabel": "Confirm new password",
       "submit": "Save new password",
       "success": "Password updated! Redirecting..."
+    },
+    "criarSenha": {
+      "title": "Create your password",
+      "subtitle": "Choose a password to sign in to ServiçoOS. Next time you sign in directly with your email and this password — no invite link needed.",
+      "passwordLabel": "Password",
+      "confirmPasswordLabel": "Repeat the password",
+      "submit": "Create password and sign in",
+      "success": "Password created. Taking you to the app…",
+      "invalidLink": "This link has already been used or has expired. Ask whoever manages your company to resend the invite from the Team tab.",
+      "backToLogin": "Go to the sign-in screen"
     }
   },
   "avisoClienteConfig": {
@@ -2966,7 +2976,9 @@
         "role": "Role",
         "location": "Location",
         "since": "Member since"
-      }
+      },
+      "searchPlaceholder": "Search by name or email",
+      "emptyFiltered": "No one on the team matches that name or email."
     },
     "invite": {
       "title": "Invite member",
@@ -3000,7 +3012,11 @@
       }
     },
     "rowActions": {
-      "confirmRemove": "Remove this member from the team?"
+      "confirmRemove": "Remove this member from the team?",
+      "edit": "Edit details",
+      "resend": "Resend invite",
+      "resending": "Sending…",
+      "confirmResend": "Send {name} another invite? The previous link stops working."
     },
     "errors": {
       "emailInYourTeam": "This email already belongs to your team.",
@@ -3008,7 +3024,21 @@
       "inviteFailed": "Could not send the invite. Please try again in a moment.",
       "inviteEmailFailed": "Member added, but the invite email failed. Ask {email} to use \"Forgot my password\" with this email to sign in.",
       "inviteSent": "Invite sent to {email}",
-      "missingServiceKey": "Set SUPABASE_SERVICE_ROLE_KEY in .env to send invites by email."
+      "missingServiceKey": "Set SUPABASE_SERVICE_ROLE_KEY in .env to send invites by email.",
+      "memberNotFound": "This member is no longer on the team.",
+      "inviteResent": "Invite resent to {email}",
+      "memberUpdated": "Details updated.",
+      "resendEmailFailed": "The invite did not go out to {email}. Try again in a moment; if it keeps failing, ask them to use “Forgot my password” on the sign-in screen with this same email."
+    },
+    "edit": {
+      "title": "Edit member",
+      "cardTitle": "Details",
+      "emailLocked": "The email is this person's login and cannot be changed here. To use a different email, remove the member and invite the new address.",
+      "ownerLocked": "The owner's role cannot be changed.",
+      "selfLocked": "You cannot change your own role.",
+      "submit": "Save",
+      "submitting": "Saving…",
+      "notFound": "Member not found."
     }
   },
   "validation": {

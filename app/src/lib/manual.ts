@@ -1068,7 +1068,12 @@ export const MANUAL: readonly Secao[] = [
           {
             tipo: "p",
             texto:
-              "*Convidar membro* pede nome, e-mail, função (Administrador, acesso total, ou Técnico, acesso controlado), CPF/CNPJ, telefone e endereço. A pessoa recebe um e-mail e cria a própria senha — você nunca precisa saber a senha de ninguém.",
+              "*Convidar membro* pede nome, e-mail, cargo, CPF/CNPJ, telefone e endereço. Os cargos oferecidos são os mesmos de 5.4.1, de Administrador a Técnico (Proprietário não entra: é quem criou a conta, e não um cargo que se distribui). A pessoa recebe um e-mail, clica uma vez e escolhe a própria senha; a partir daí entra por e-mail e senha como todo mundo, e você nunca precisa saber a senha de ninguém.",
+          },
+          {
+            tipo: "p",
+            texto:
+              "Na lista, quem for proprietário ou administrador vê três botões em cada linha: *editar o cadastro* (nome, cargo, documento, telefone e endereço — o e-mail não muda, porque é o login dela), *reenviar o convite* e *remover*. A linha do proprietário não tem nenhum deles, e na sua própria linha o cargo e a remoção ficam desligados. A busca no alto do quadro procura por nome ou e-mail.",
           },
           {
             tipo: "p",
@@ -1077,9 +1082,9 @@ export const MANUAL: readonly Secao[] = [
           },
           {
             tipo: "atencao",
-            titulo: "Se o e-mail de convite não chegar",
+            titulo: "Se o convite não chegar, ou o link já não funcionar",
             texto:
-              "O membro já foi criado. Peça para ele usar “Esqueci minha senha” na tela de entrada, com o mesmo e-mail — funciona igual.",
+              "Use *Reenviar convite* na linha da pessoa: sai um link novo, e o anterior deixa de valer. Os links são de uso único e expiram — por isso a pessoa escolhe a senha logo na primeira vez. Não remova e convide de novo: remover apaga o vínculo dela com as ordens de serviço e o histórico.",
           },
         ]
       ),
