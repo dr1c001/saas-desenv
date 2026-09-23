@@ -290,7 +290,11 @@
       "missingDocument": "Fill in your company's tax ID under Settings before subscribing to a plan.",
       "cancelFailed": "We couldn't cancel right now. Please try again in a moment.",
       "providerTimeout": "Asaas did not respond in time. The attempt was recorded — wait a few minutes and reload before trying again; if it persists, contact support.",
-      "nadaACancelar": "There is no active subscription to cancel. If you are on the free trial, nothing is being charged — access simply pauses when the trial ends."
+      "nadaACancelar": "There is no active subscription to cancel. If you are on the free trial, nothing is being charged — access simply pauses when the trial ends.",
+      "subscriptionPastDue": "Your subscription is past due. Pay the outstanding invoice to reactivate — subscribing again would create a second charge on the same card while the first is still active.",
+      "trocaMesmoPlano": "That is already your plan.",
+      "trocaAssinaturaNaoAtiva": "Plan changes require an up-to-date subscription. If there is an open invoice, pay it first; if the first payment has not been confirmed yet, wait a few minutes.",
+      "trocaFalhou": "We could not change the plan right now. Nothing was changed — please try again shortly."
     }
   },
   "buscaAbas": {

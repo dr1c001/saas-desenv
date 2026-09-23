@@ -57,6 +57,19 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
   // abertura de OS.
   // Decimal do Prisma vira número aqui: o componente é de cliente e não pode
   // receber Decimal. Mesma conversão que a tela de lista já faz.
+  // O CHECKLIST: o cartão aparece para quem tem o recurso, MESMO SEM ITENS.
+  //
+  // Ele só era renderizado quando a OS já tinha item — e o campo de "adicionar"
+  // mora dentro dele. Ou seja: não havia caminho na tela para criar o PRIMEIRO
+  // item de nenhuma OS, num recurso que o Pro paga e que o manual apresenta
+  // como parte da OS. Recurso construído, cobrado, e inalcançável.
+  // (Achado na auditoria de 13/09/2026.)
+  //
+  // `|| os.checklist.length > 0` para quem REBAIXOU o plano: a Action barra
+  // criar item novo, mas deixa marcar e apagar os que já existem — esconder o
+  // cartão deixaria a lista presa na tela, sem como limpar.
+  const temChecklist = (await temRecurso(tenantId, "checklist")) || os.checklist.length > 0
+
   const pecasParaConcluir = ((await temRecurso(tenantId, "stock")) ? await getPecasAtivas() : []).map(
     (p) => ({
       id: p.id,
@@ -306,7 +319,7 @@ export default async function ServiceOrderPage({ params }: { params: Promise<{ i
         )}
       </div>
 
-      {os.checklist.length > 0 ? (
+      {temChecklist ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t("detail.checklistTitle")}</CardTitle>

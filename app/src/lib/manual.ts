@@ -147,11 +147,11 @@ export const MANUAL: readonly Secao[] = [
             linhas: [
               [
                 "Proprietário",
-                "Dono da conta. Faz tudo, e é o único que envia o certificado digital e mexe na assinatura do plano.",
+                "Dono da conta. Faz tudo, e é o único que envia o certificado digital e exporta os dados da empresa.",
               ],
               [
                 "Administrador",
-                "Faz tudo no dia a dia, inclusive definir o que a equipe vê. Não envia certificado digital.",
+                "Faz tudo no dia a dia, inclusive definir o que a equipe vê e contratar ou cancelar o plano. Não envia certificado digital.",
               ],
               ["Gerente", "Toca a operação inteira. Fica de fora só a cobrança da assinatura."],
               ["Atendimento", "Atende o cliente: abre chamado, agenda, consulta o que já foi feito."],
@@ -171,6 +171,12 @@ export const MANUAL: readonly Secao[] = [
             titulo: "Gerente não manda em tudo",
             texto:
               "Parece que deveria, mas ele é configurável como os outros — porque mais cedo ou mais tarde aparece a empresa que quer um gerente que não mexe na cobrança. A lista de quem ninguém consegue restringir depois tem de ficar curta.",
+          },
+          {
+            tipo: "atencao",
+            titulo: "Administrador mexe na cobrança",
+            texto:
+              "Quem você convida como Administrador entra em *3.5 Assinatura* e pode contratar, trocar de plano e cancelar. O cancelamento vale de verdade: a cobrança é encerrada na hora e o acesso continua até o fim do período já pago. Se você quer alguém que toque a operação inteira sem chegar perto da cobrança, o cargo é *Gerente*.",
           },
         ]
       ),
@@ -1292,7 +1298,7 @@ export const MANUAL: readonly Secao[] = [
       aba(
         "5.4.4",
         "Filiais",
-        "Para quem tem mais de uma unidade. Define o que cada unidade vê e o que continua sendo da empresa toda.",
+        "Para quem tem mais de uma unidade. Define o que cada unidade vê e o que continua sendo da empresa toda. É um adicional — não vem em nenhum plano; fale com o suporte para ligar.",
         [
           {
             tipo: "tabela",
@@ -1316,7 +1322,7 @@ export const MANUAL: readonly Secao[] = [
               "Registro sem filial aparece para todo mundo — é o que garante isso. E filial se desativa, não se apaga: apagar levaria junto o vínculo de cada cliente, OS e receita da unidade, e o faturamento por filial do ano inteiro.",
           },
         ],
-        "Enterprise"
+        "Adicional"
       ),
       aba(
         "5.4.5",

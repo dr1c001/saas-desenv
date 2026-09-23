@@ -309,6 +309,13 @@ model Subscription {
   ///
   /// Nulo nas assinaturas anteriores a 22/09/2026: ninguem inventa um IP que
   /// nao foi registrado.
+  /// O plano para o qual esta assinatura VAI mudar no fim do periodo pago.
+  ///
+  /// So o DOWNGRADE agenda: descer de plano vale no fim do que ja foi pago,
+  /// porque o contrato garante o periodo. Subir vale na hora, e nao passa por
+  /// aqui. Aplicado por lib/troca-de-plano.ts, na confirmacao do pagamento da
+  /// renovacao e, como rede de seguranca, pelo cron diario.
+  pendingPlanId          String?
   contractVersion        String?
   acceptedAt             DateTime?
   acceptedIp             String?
@@ -324,6 +331,8 @@ model Subscription {
   @@index([tenantId])
   // Webhook da Asaas chega identificando a assinatura pelo id deles.
   @@index([asaasId])
+  // O cron procura as trocas agendadas que ja venceram.
+  @@index([pendingPlanId])
 }
 
 enum BillingCycle {

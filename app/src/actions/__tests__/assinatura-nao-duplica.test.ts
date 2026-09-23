@@ -175,3 +175,54 @@ describe("o aceite fica registrado", () => {
     expect(sub!.acceptedByUserId).toBeTruthy()
   })
 })
+
+describe("quem já tem assinatura em andamento não cria outra", () => {
+  // A guarda existe desde 03/08/2026 e cobria PENDING e ACTIVE. Faltava
+  // PAST_DUE — e a irmã dela em `cancelSubscription` usa os TRÊS, com a
+  // justificativa escrita de que "nos três estados a assinatura na Asaas
+  // CONTINUA FATURANDO todo ciclo". O cliente cujo boleto venceu clicava em
+  // Assinar e criava uma SEGUNDA cobrança recorrente no mesmo cartão.
+  // (Achado em 22/09/2026, investigando o verbete 3.5 do manual.)
+  it.each(["PENDING", "ACTIVE", "PAST_DUE"] as const)(
+    "assinatura em %s barra o Assinar, e NADA é criado na Asaas",
+    async (status) => {
+      const { tenant, plano } = await cenario()
+      await testDb.db.subscription.create({
+        data: {
+          tenantId: tenant.id,
+          planId: plano.id,
+          asaasId: "sub_ja_existe",
+          status,
+          billingCycle: "MONTHLY",
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date(Date.now() + 30 * 864e5),
+        },
+      })
+
+      await assinar(plano.id)
+
+      expect(mockCriarAssinatura).not.toHaveBeenCalled()
+      expect(await testDb.db.subscription.count({ where: { tenantId: tenant.id } })).toBe(1)
+    }
+  )
+
+  it("já CANCELADA não barra: reassinar é legítimo", async () => {
+    const { tenant, plano } = await cenario()
+    await testDb.db.subscription.create({
+      data: {
+        tenantId: tenant.id,
+        planId: plano.id,
+        status: "CANCELLED",
+        billingCycle: "MONTHLY",
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(),
+        cancelledAt: new Date(),
+      },
+    })
+
+    await assinar(plano.id)
+
+    expect(mockCriarAssinatura).toHaveBeenCalledTimes(1)
+    expect(await testDb.db.subscription.count({ where: { tenantId: tenant.id } })).toBe(2)
+  })
+})

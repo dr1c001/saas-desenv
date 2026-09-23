@@ -9,7 +9,8 @@ import { VERSAO_CONTRATO } from "@/components/pdf/contrato-pdf"
 import { ehRecusaCerta } from "@/lib/tempo-limite"
 import { asaas } from "@/lib/asaas"
 import { getTranslations } from "next-intl/server"
-import { precoCobrado } from "@/lib/preco"
+import { precoCheio, precoCobrado } from "@/lib/preco"
+import { decidirTroca } from "@/lib/troca-de-plano"
 
 export async function getBillingStatus() {
   const { tenantId } = await getTenant()
@@ -49,21 +50,29 @@ export async function subscribeToPlan(formData: FormData) {
 
   // Sem isso, duplo clique/retry de rede cria duas Subscriptions reais na
   // Asaas (duas cobranças recorrentes paralelas) — nada impedia reenviar o
-  // form. Também cobre reassinar enquanto já tem uma PENDING/ACTIVE (troca
-  // de plano não é suportada ainda — precisa cancelar antes).
+  // form. Também cobre reassinar enquanto já tem uma em andamento (troca
+  // de plano não é suportada ainda — ver o verbete 3.5 do manual).
   // (Achado verificando o sistema antes da primeira venda, 2026-08-03.)
+  //
+  // PAST_DUE entrou em 22/09/2026, e faltava: a lista era ["PENDING","ACTIVE"]
+  // enquanto a irmã em `cancelSubscription` usa os TRÊS — com a justificativa
+  // escrita de que "nos três estados a assinatura na Asaas CONTINUA FATURANDO
+  // todo ciclo". Ou seja: o cliente cujo boleto venceu clicava em Assinar e
+  // criava uma SEGUNDA cobrança recorrente no mesmo cartão, com a primeira
+  // ainda faturando — exatamente a duplicidade que esta guarda existe para
+  // impedir. Quem está em atraso precisa PAGAR a fatura aberta, não assinar de
+  // novo. (Achado investigando o verbete 3.5 do manual, 22/09/2026.)
   const existingSub = await prisma.subscription.findFirst({
-    where: { tenantId, status: { in: ["PENDING", "ACTIVE"] } },
+    where: { tenantId, status: { in: ["PENDING", "ACTIVE", "PAST_DUE"] } },
   })
   if (existingSub) {
-    redirect(
-      "/billing?error=" +
-        encodeURIComponent(
-          existingSub.status === "PENDING"
-            ? tb("errors.subscriptionPending")
-            : tb("errors.subscriptionActive")
-        )
-    )
+    const motivo =
+      existingSub.status === "PENDING"
+        ? "errors.subscriptionPending"
+        : existingSub.status === "PAST_DUE"
+          ? "errors.subscriptionPastDue"
+          : "errors.subscriptionActive"
+    redirect("/billing?error=" + encodeURIComponent(tb(motivo as "errors.subscriptionActive")))
   }
 
   const planId = formData.get("planId") as string
@@ -333,4 +342,153 @@ export async function cancelSubscription() {
   })
 
   revalidatePath("/billing")
+}
+
+/**
+ * TROCAR DE PLANO, pelo painel.
+ *
+ * As regras — e o porquê de cada uma — estão em lib/troca-de-plano.ts. Aqui
+ * mora o que fala com banco e com a Asaas.
+ *
+ * O `pendente` é o downgrade: ele não muda nada agora, só anota para onde a
+ * assinatura vai no fim do período que o cliente já pagou. Quem aplica é
+ * `aplicarTrocaAgendada`, na renovação ou no cron.
+ */
+export async function trocarDePlano(formData: FormData) {
+  const { tenantId, role } = await getTenant()
+  const tb = await getTranslations("billingReferral")
+  if (role !== "OWNER" && role !== "ADMIN") return
+
+  const planId = String(formData.get("planId") ?? "")
+
+  const [sub, novo, tenant] = await Promise.all([
+    prisma.subscription.findFirst({
+      where: { tenantId, status: { in: ["ACTIVE", "PAST_DUE", "PENDING"] } },
+      orderBy: { createdAt: "desc" },
+      include: { plan: { select: { id: true, priceMonthly: true, priceYearly: true } } },
+    }),
+    prisma.plan.findUnique({
+      where: { id: planId },
+      select: { id: true, name: true, priceMonthly: true, priceYearly: true },
+    }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { customPriceMonthly: true } }),
+  ])
+
+  if (!sub || !novo) {
+    redirect("/billing?error=" + encodeURIComponent(tb("errors.nadaACancelar")))
+  }
+
+  const decisao = decidirTroca(
+    {
+      atual: {
+        id: sub.plan.id,
+        priceMonthly: Number(sub.plan.priceMonthly),
+        priceYearly: Number(sub.plan.priceYearly),
+      },
+      novo: { id: novo.id, priceMonthly: Number(novo.priceMonthly), priceYearly: Number(novo.priceYearly) },
+      ciclo: sub.billingCycle === "YEARLY" ? "YEARLY" : "MONTHLY",
+      combinado: tenant?.customPriceMonthly === null || tenant?.customPriceMonthly === undefined
+        ? null
+        : Number(tenant.customPriceMonthly),
+    },
+    sub.status
+  )
+
+  if (!decisao.ok) {
+    const chave =
+      decisao.motivo === "mesmoPlano" ? "errors.trocaMesmoPlano" : "errors.trocaAssinaturaNaoAtiva"
+    redirect("/billing?error=" + encodeURIComponent(tb(chave as "errors.trocaMesmoPlano")))
+  }
+
+  // O valor recorrente na Asaas muda AGORA nos dois casos — inclusive no
+  // downgrade, para a próxima fatura já sair pelo valor novo. O ACESSO é que
+  // espera o fim do período pago. `updatePendingPayments: true`: se a fatura
+  // do próximo ciclo já foi gerada, ela acompanha — é o que o cliente espera
+  // de quem acabou de trocar de plano.
+  if (sub.asaasId) {
+    try {
+      await asaas.updateSubscription(sub.asaasId, {
+        value: decisao.valorNovo,
+        updatePendingPayments: true,
+      })
+    } catch (e) {
+      // Sem mexer no banco: a Asaas continua cobrando o valor antigo, e o
+      // cliente continua no plano antigo. Os dois lados seguem coerentes.
+      console.error("[troca de plano] a Asaas recusou:", sub.asaasId, e)
+      redirect("/billing?error=" + encodeURIComponent(tb("errors.trocaFalhou")))
+    }
+  }
+
+  if (decisao.valeApartirDe === "agora") {
+    // SUBIR: acesso imediato. O período já pago não é recobrado — a empresa
+    // ganha o resto do ciclo no plano melhor.
+    await prisma.$transaction([
+      prisma.subscription.update({
+        where: { id: sub.id },
+        data: { planId: novo.id, pendingPlanId: null },
+      }),
+      prisma.tenant.update({ where: { id: tenantId }, data: { planId: novo.id } }),
+    ])
+  } else {
+    // DESCER: só anota. O contrato garante o período pago, e tirar recurso no
+    // meio do ciclo tiraria algo já comprado.
+    await prisma.subscription.update({
+      where: { id: sub.id },
+      data: { pendingPlanId: novo.id },
+    })
+  }
+
+  revalidatePath("/billing")
+  redirect("/billing?success=1")
+}
+
+/**
+ * Desfaz um downgrade agendado, antes de ele valer.
+ *
+ * Existe porque a alternativa seria o cliente ter de trocar de volta — e
+ * trocar de volta é um UPGRADE, que valeria na hora e mexeria na Asaas outra
+ * vez por nada.
+ */
+export async function cancelarTrocaAgendada() {
+  const { tenantId, role } = await getTenant()
+  const tb = await getTranslations("billingReferral")
+  if (role !== "OWNER" && role !== "ADMIN") return
+
+  const sub = await prisma.subscription.findFirst({
+    where: { tenantId, pendingPlanId: { not: null } },
+    orderBy: { createdAt: "desc" },
+    include: { plan: { select: { priceMonthly: true, priceYearly: true } } },
+  })
+  if (!sub) {
+    redirect("/billing?error=" + encodeURIComponent(tb("errors.nadaACancelar")))
+  }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { customPriceMonthly: true },
+  })
+
+  // O valor na Asaas volta ao do plano ATUAL — ele foi mudado no momento do
+  // agendamento para a próxima fatura já sair menor.
+  if (sub.asaasId) {
+    try {
+      await asaas.updateSubscription(sub.asaasId, {
+        value: precoCheio(
+          { priceMonthly: Number(sub.plan.priceMonthly), priceYearly: Number(sub.plan.priceYearly) },
+          tenant?.customPriceMonthly === null || tenant?.customPriceMonthly === undefined
+            ? null
+            : Number(tenant.customPriceMonthly),
+          sub.billingCycle === "YEARLY" ? "YEARLY" : "MONTHLY"
+        ),
+        updatePendingPayments: true,
+      })
+    } catch (e) {
+      console.error("[troca de plano] a Asaas recusou o desfazer:", sub.asaasId, e)
+      redirect("/billing?error=" + encodeURIComponent(tb("errors.trocaFalhou")))
+    }
+  }
+
+  await prisma.subscription.update({ where: { id: sub.id }, data: { pendingPlanId: null } })
+  revalidatePath("/billing")
+  redirect("/billing?success=1")
 }
